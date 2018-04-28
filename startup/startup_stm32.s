@@ -158,7 +158,7 @@ g_pfnVectors:
   .word	SPI2_IRQHandler           			/* SPI2 global interrupt                                                          */
   .word	USART1_IRQHandler         			/* USART1 global interrupt                                                        */
   .word	USART2_IRQHandler         			/* USART2 global interrupt                                                        */
-  .word	AES_RNG_LPUART1_IRQHandler			/* AES global interrupt RNG global interrupt and LPUART1 global interrupt through */
+  .word	LPUART1_IRQHandler					/* AES global interrupt RNG global interrupt and LPUART1 global interrupt through */
 
 /*******************************************************************************
 *
@@ -264,8 +264,8 @@ g_pfnVectors:
 	.weak	USART2_IRQHandler
 	.thumb_set USART2_IRQHandler,Default_Handler
 	
-	.weak	AES_RNG_LPUART1_IRQHandler
-	.thumb_set AES_RNG_LPUART1_IRQHandler,Default_Handler
+	.weak	LPUART1_IRQHandler
+	.thumb_set LPUART1_IRQHandler,Default_Handler
 	
 	.weak	SystemInit
 
