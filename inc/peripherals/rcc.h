@@ -14,9 +14,9 @@
 
 // See RCC_Init() function for peripherals clock prescalers settings.
 #ifdef USE_HSE
-#define SYSCLK_MHZ	16
+#define SYSCLK_KHZ	16000
 #else
-#define SYSCLK_MHZ	16
+#define SYSCLK_KHZ	16000
 #endif
 
 /*** RCC functions ***/

@@ -5,6 +5,8 @@
  *      Author: Ludovic
  */
 
+#include "gps.h"
+#include "lptim.h"
 #include "lpuart.h"
 #include "rcc.h"
 #include "rcc_reg.h"
@@ -24,27 +26,26 @@ int main(void) {
 	RCC_Init();
 	RCC_SwitchToHsi16MHz();
 
-	// Enable GPIOB clock.
-	RCC -> IOPENR |= (0b1 << 1);
-
 	// Configure PB4 as output.
+	RCC -> IOPENR |= (0b1 << 1);
 	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
 	GPIOB -> MODER |= (0b01 << 8);
 
-	// Init LPUART.
-	LPUART_Init();
-	unsigned int i = 0;
+	// Init LP timer.
+	LPTIM_Init();
 
-	while(1) {
-		// LED on.
-		GPIOB -> ODR |= (0b1 << 4);
-		LPUART_SendByte(0x46);
-		for (i=0 ; i<1000000 ; i++);
-		// LED off.
-		GPIOB -> ODR &= ~(0b1 << 4);
-		LPUART_SendString(" Ludo\n");
-		for (i=0 ; i<1000000 ; i++);
-	}
+	// Init GPS module.
+	GPS_Init();
+
+	// Wait for NMEA data.
+	while (GPS_Processing() == 0);
+
+	// Switch LPUART and GPS off.
+	LPUART_Off();
+	GPIOB -> ODR &= ~(0b1 << 5);
+
+	// LED on.
+	GPIOB -> ODR |= (0b1 << 4);
 
 #else
 	/* Start on multispeed internal oscillator (MSI) */

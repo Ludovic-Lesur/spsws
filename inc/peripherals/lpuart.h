@@ -11,6 +11,9 @@
 /*** LPUART functions ***/
 
 void LPUART_Init(void);
+void LPUART_Off(void);
+void LPUART_EnableTx(void);
+void LPUART_EnableRx(void);
 void LPUART_SendByte(unsigned char byte_to_send);
 void LPUART_SendString(char* string_to_send);
 

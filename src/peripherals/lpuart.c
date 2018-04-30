@@ -6,6 +6,7 @@
  */
 
 #include "gpio_reg.h"
+#include "gps.h"
 #include "lpuart.h"
 #include "lpuart_reg.h"
 #include "nvic.h"
@@ -14,25 +15,32 @@
 
 /*** USART local macros ***/
 
+//#define USE_TXE	// If defined, TX bytes are bufferised and transmitted under interrupt.
+//#define USE_CM	// If defined, use character match interrupt with LF character.
+
 // Baud rate.
 #define LPUART_BAUD_RATE 		9600
 // Buffer sizes.
-#define LPUART_TX_BUFFER_SIZE	32
-#define LPUART_RX_BUFFER_SIZE	32
+#ifdef USE_TXE
+#define LPUART_TX_BUFFER_SIZE	512
+#endif
+#define LPUART_RX_BUFFER_SIZE	128
 
 /*** LPUART local structures ***/
 
+#ifdef USE_TXE
 typedef struct {
+
 	unsigned char tx_buf[LPUART_TX_BUFFER_SIZE]; 	// Transmit buffer.
 	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
 	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
-	unsigned char rx_buf[LPUART_RX_BUFFER_SIZE]; 	// Receive buffer.
-	unsigned int rx_buf_idx;						// Current index in RX buffer.
 } LPUART_Context;
+
 
 /*** LPUART local global variables ***/
 
 static LPUART_Context lpuart_ctx;
+#endif
 
 /*** LPUART functions ***/
 
@@ -42,15 +50,15 @@ static LPUART_Context lpuart_ctx;
  */
 void LPUART_Init(void) {
 
-	/* Initialize context */
+#ifdef USE_TXE
+	/* Init context */
 	unsigned int idx = 0;
 	for (idx=0 ; idx<LPUART_TX_BUFFER_SIZE ; idx++) lpuart_ctx.tx_buf[idx] = 0;
 	lpuart_ctx.tx_buf_write_idx = 0;
 	lpuart_ctx.tx_buf_read_idx = 0;
-	for (idx=0 ; idx<LPUART_RX_BUFFER_SIZE ; idx++) lpuart_ctx.rx_buf[idx] = 0;
-	lpuart_ctx.rx_buf_idx = 0;
+#endif
 
-	/* Enable peripheral clock*/
+	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 
 	/* Configure TX and RX GPIOs */
@@ -64,16 +72,59 @@ void LPUART_Init(void) {
 	LPUART1 -> CR1 = 0; // Disable peripheral while configuring (UE='0'), 1 stop bit and 8 data bits (M = '00').
 	LPUART1 -> CR2 = 0; // 1 stop bit (STOP='00').
 	LPUART1 -> CR3 = 0;
-	LPUART1 -> BRR = ((SYSCLK_MHZ*1000000)/(LPUART_BAUD_RATE))*256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
-	LPUART1 -> CR1 |= (0b11 << 2); // Enable transmitter (TE='1') and receiver (RE='1').
+	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
+	LPUART1 -> BRR = ((SYSCLK_KHZ*1000)/(LPUART_BAUD_RATE))*256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Configure interrupts */
-	LPUART1 -> CR1 |= (0b1 << 5); // Enable RX interrupt (RXNEIE='1').
-	LPUART1 -> CR1 &= ~(0b1 << 7); // Disable TX interrupt (TXEIE='0'). Enabled when calling LPUART_SendByte() function.
+#ifdef USE_CM
+	LPUART1 -> CR2 &= (0xFF << 24); // Reset bits 24-31.
+	LPUART1 -> CR2 |= (NMEA_LF << 24); // LF character used to trigger CM interrupt.
+#endif
 	NVIC_EnableInterrupt(IT_LPUART1);
 
 	/* Enable peripheral */
 	LPUART1 -> CR1 |= (0b1 << 0);
+}
+
+/* DISABLE LOW POWER UART.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPUART_Off(void) {
+
+	/* Disable interrupts */
+	NVIC_DisableInterrupt(IT_LPUART1);
+
+	/* Switch peripheral off */
+	LPUART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0').
+	LPUART1 -> CR1 &= ~(0b1 << 0); // Disable peripheral.
+
+	/* Disable peripheral clock */
+	RCC -> APB1ENR &= ~(0b1 << 18); // (LPUARTEN='0').
+
+	/* Put GPIO in reset state */
+}
+
+/* ENABLE THE LPUART TRANSMITTER.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPUART_EnableTx(void) {
+		LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
+#ifdef USE_TXE
+		LPUART1 -> CR1 |= (0b1 << 7); // Enable TXE interrupt (TXEIE='1').
+#endif
+}
+
+/* ENABLE THE LPUART RECEIVER.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPUART_EnableRx(void) {
+	LPUART1 -> CR1 |= (0b1 << 2); // Enable transmitter (RE='1').
+	LPUART1 -> CR1 |= (0b1 << 5); // Enable RXNE interrupt (RXNEIE='1').
+	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.
@@ -82,15 +133,26 @@ void LPUART_Init(void) {
  */
 void LPUART_SendByte(unsigned char byte_to_send) {
 
+#ifdef USE_TXE
 	/* Fill TX buffer with new byte */
 	lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_write_idx] = byte_to_send;
 	lpuart_ctx.tx_buf_write_idx++;
-	if (lpuart_ctx.tx_buf_write_idx == LPUART_RX_BUFFER_SIZE) {
+	if (lpuart_ctx.tx_buf_write_idx == LPUART_TX_BUFFER_SIZE) {
 		lpuart_ctx.tx_buf_write_idx = 0;
 	}
 
 	/* Enable TXE interrupt */
-	LPUART1 -> CR1 |= (0b1 << 7); // TXEIE = '1'.
+	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+
+#else
+
+	/* Fill transmit data register with new byte */
+	LPUART1 -> TDR = byte_to_send;
+
+	/* Wait for transfer to complete */
+	while (((LPUART1 -> ISR) & (0b1 << 6)) == 0); // (TC='1').
+
+#endif
 }
 
 /* SEND A BYTE ARRAY THROUGH LOW POWER UART.
@@ -103,9 +165,6 @@ void LPUART_SendString(char* string_to_send) {
 	while (*string_to_send) {
 		LPUART_SendByte(*(string_to_send++));
 	}
-
-	/* Enable TXE interrupt */
-	LPUART1 -> CR1 |= (0b1 << 7); // TXEIE = '1'.
 }
 
 /* LPUART1 INTERRUPT HANDLER.
@@ -114,6 +173,7 @@ void LPUART_SendString(char* string_to_send) {
  */
 void LPUART1_IRQHandler(void) {
 
+#ifdef USE_TXE
 	/* TXE interrupt */
 	if (((LPUART1 -> ISR) & (0b1 << 7)) != 0) {
 		if ((lpuart_ctx.tx_buf_read_idx) != (lpuart_ctx.tx_buf_write_idx)) {
@@ -127,13 +187,18 @@ void LPUART1_IRQHandler(void) {
 			LPUART1 -> CR1 &= ~(0b1 << 7); // No more bytes, disable TXE interrupt (TXEIE = '0').
 		}
 	}
+#endif
 
 	/* RXNE interrupt */
 	if (((LPUART1 -> ISR) & (0b1 << 5)) != 0) {
-		lpuart_ctx.rx_buf[lpuart_ctx.rx_buf_idx] = LPUART1 -> RDR; // Read receive data register and fill incoming byte in RX buffer.
-		lpuart_ctx.rx_buf_idx++; // Increment RX index.
-		if (lpuart_ctx.rx_buf_idx == LPUART_RX_BUFFER_SIZE) {
-			lpuart_ctx.rx_buf_idx = 0; // Manage roll-over.
-		}
+		GPS_FillNmeaRxBuffer(LPUART1 -> RDR); // Read receive data register and transmit incoming byte to GPS NMEA RX buffer.
 	}
+
+#ifdef USE_CM
+	/* CM interrupt */
+	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
+		// TBC: reset index in GPS NMEA RX buffer.
+		LPUART1 -> ICR |= (0b1 << 17); // Clear CMF flag.
+	}
+#endif
 }
