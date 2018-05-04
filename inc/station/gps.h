@@ -10,8 +10,7 @@
 
 /*** GPS functions ***/
 
-void GPS_Init(void);
 void GPS_FillNmeaRxBuffer(unsigned char new_byte);
-unsigned char GPS_Processing(void);
+unsigned char GPS_Processing(unsigned char* sigfox_data, unsigned char sigfox_data_length);
 
 #endif /* STATION_GPS_H */

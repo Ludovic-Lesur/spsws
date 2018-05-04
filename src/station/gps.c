@@ -7,13 +7,15 @@
 
 #include "gpio_reg.h"
 #include "gps.h"
-#include "lptim.h"
 #include "lpuart.h"
 #include "rcc_reg.h"
+#include "tim.h"
 
 /*** GPS local macros ***/
 
 #define LOCAL_UTC_OFFSET					2 // TBD: configurable via downlink.
+
+#define GPS_TIMEOUT							60 // GPS fix time-out in seconds. TBD: configurable via downlink.
 
 #define NMEA_CR								'\r'
 #define NMEA_LF								'\n'
@@ -52,8 +54,12 @@ typedef struct {
 	unsigned char nmea_rx_buf[NMEA_RX_BUFFER_SIZE]; 	// NMEA input messages buffer.
 	unsigned int nmea_rx_buf_idx;						// Current index in buffer.
 	unsigned int nmea_rx_buf_length;					// Length of buffer.
-	/* Status flag */
+	/* Status flags */
 	unsigned char nmea_lf_flag;							// Set to '1' as soon as a complete NMEA message is received.
+	unsigned char nmea_success_flag;					// Set to '1' as soon an NMEA message was successfully parsed.
+	/* Fix duration */
+	unsigned int fix_start_time;						// Start time in seconds.
+	unsigned int fix_duration;							// Duration in seconds.
 } GPS_Context;
 
 typedef struct {
@@ -75,10 +81,18 @@ typedef struct {
 	unsigned int altitude;
 } NMEA_Data;
 
+typedef enum {
+	GPS_STATE_INIT,
+	GPS_STATE_WAIT_FIX,
+	GPS_STATE_DECODE_NMEA,
+	GPS_STATE_BUILD_SIGFOX_DATA,
+} GPS_State;
+
 /*** GPS local global variables ***/
 
 static GPS_Context gps_ctx;
 static NMEA_Data nmea_data;
+static GPS_State gps_state = GPS_STATE_INIT;
 
 /*** GPS local functions ***/
 
@@ -154,6 +168,9 @@ void GPS_Init(void) {
 	gps_ctx.nmea_rx_buf_idx = 0;
 	gps_ctx.nmea_rx_buf_length = 0;
 	gps_ctx.nmea_lf_flag = 0;
+	gps_ctx.nmea_success_flag = 0;
+	gps_ctx.fix_start_time = 0;
+	gps_ctx.fix_duration = 0;
 
 	/* Init NMEA data */
 	nmea_data.time_hours = 0;
@@ -174,9 +191,10 @@ void GPS_Init(void) {
 	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 10-11.
 	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
 	GPIOB -> ODR |= (0b1 << 5); // Switch on GPS.
+	gps_ctx.fix_start_time = TIM_TimeGetS();
 
 	/* Wait 2s to skip boot messages */
-	LPTIM_WaitMs(2000);
+	TIM_TimeWaitMs(2000);
 
 	/* Init LPUART */
 	LPUART_Init();
@@ -194,16 +212,261 @@ void GPS_Init(void) {
 		ubx_cfg_msg[7] = nmea_id_to_disable[nmea_id_idx]; // 7th byte is the ID of the message to disable.
 		GPS_SetUbxChecksum(ubx_cfg_msg, UBX_CFG_MSG_PAYLOAD_LENGTH); // Compute checksum (CK_A and CK_B).
 		for (ubx_cfg_msg_idx=0 ; ubx_cfg_msg_idx<(UBX_MSG_OVERHEAD_LENGTH+UBX_CFG_MSG_PAYLOAD_LENGTH) ; ubx_cfg_msg_idx++) {
-			LPUART_SendByte(ubx_cfg_msg[ubx_cfg_msg_idx]); // Send
+			LPUART_SendByte(ubx_cfg_msg[ubx_cfg_msg_idx]); // Send command.
 		}
 	}
 
 	/* Wait 1s to skip ACK messages */
-	LPTIM_WaitMs(1000);
+	TIM_TimeWaitMs(1000);
 
 	/* Start reception and wait for GPS to fix*/
 	LPUART_EnableRx();
 }
+
+/* DECODE THE CURRENT NMEA RX BUFFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void GPS_DecodeNmea(void) {
+	unsigned char error_found = 0;
+
+	/* Copy current context into a local one to avoid modification during decoding process */
+	unsigned char local_nmea_rx_buf[NMEA_RX_BUFFER_SIZE];
+	unsigned char char_idx;
+	for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) local_nmea_rx_buf[char_idx] = gps_ctx.nmea_rx_buf[char_idx];
+	unsigned int local_nmea_rx_buf_length = gps_ctx.nmea_rx_buf_length;
+
+	/* Verify checksum */
+	unsigned char received_checksum = (AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-4]) << 4) + AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-3]);
+	unsigned char computed_checksum = GPS_GetNmeaChecksum(local_nmea_rx_buf, local_nmea_rx_buf_length);
+	if (computed_checksum == received_checksum) {
+
+		/* Extract NMEA data (see GGA message format on p.114 of NEO-M8 programming manual) */
+		unsigned char idx = 0;
+		unsigned char sep_idx = 0;
+		unsigned char sep_range = 0;
+		unsigned char alt_field_length = 0;
+		unsigned char alt_number_of_digits = 0;
+		for (idx=0 ; idx<local_nmea_rx_buf_length ; idx++) {
+			if (local_nmea_rx_buf[idx] == NMEA_SEP) {
+				sep_range++;
+				unsigned int k = 0; // Generic index used in local for loops.
+				switch (sep_range) {
+
+				/* Field 1 = address = <ID><message*/
+				case 1:
+
+					if (idx == NMEA_GGA_ADDRESS_FIELD_LENGTH) {
+						/* Check if message = 'GGA' */
+						if ((local_nmea_rx_buf[3] != 'G') || (local_nmea_rx_buf[4] != 'G') || (local_nmea_rx_buf[5] != 'A')) {
+							error_found = 1;
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 2 = time = <hhmmss.ss> */
+				case 2:
+					if ((idx-sep_idx) == (NMEA_GGA_TIME_FIELD_LENGTH+1)) {
+						nmea_data.time_hours = LOCAL_UTC_OFFSET + AsciiToDecimal(local_nmea_rx_buf[sep_idx+1])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+2]);
+						nmea_data.time_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+3])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+4]);
+						nmea_data.time_seconds = AsciiToDecimal(local_nmea_rx_buf[sep_idx+5])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+6]);
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 3 = latitude = <ddmm.mmmmm> */
+				case 3:
+					if ((idx-sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH+1)) {
+						nmea_data.lat_degrees = AsciiToDecimal(local_nmea_rx_buf[sep_idx+1])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+2]);
+						nmea_data.lat_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+3])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+4]);
+						for (k=0 ; k<5 ; k++) {
+							nmea_data.lat_seconds = nmea_data.lat_seconds + Pow10(4-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+6+k]);
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 4 = <N> or <S> */
+				case 4:
+					if ((idx-sep_idx) == (NMEA_GGA_NS_FIELD_LENGTH+1)) {
+						switch (local_nmea_rx_buf[sep_idx+1]) {
+						case NMEA_GGA_NORTH:
+							nmea_data.lat_north = 1;
+							break;
+						case NMEA_GGA_SOUTH:
+							nmea_data.lat_north = 0;
+							break;
+						default:
+							nmea_data.lat_north = 0;
+							error_found = 1;
+							break;
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 5 = longitude = <dddmm.mmmmm */
+				case 5:
+					if ((idx-sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH+1)) {
+						for (k=0 ; k<3 ; k++) {
+							nmea_data.long_degrees = nmea_data.long_degrees + Pow10(2-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+1+k]);
+						}
+						nmea_data.long_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+4])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+5]);
+						for (k=0 ; k<5 ; k++) {
+							nmea_data.long_seconds = nmea_data.long_seconds + Pow10(4-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+7+k]);
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 6 = <E> or <O> */
+				case 6:
+					if ((idx-sep_idx) == (NMEA_GGA_EO_FIELD_LENGTH+1)) {
+						switch (local_nmea_rx_buf[sep_idx+1]) {
+						case NMEA_GGA_EAST:
+							nmea_data.long_east = 1;
+							break;
+						case NMEA_GGA_WEST:
+							nmea_data.long_east = 0;
+							break;
+						default:
+							nmea_data.long_east = 0;
+							error_found = 1;
+							break;
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 10 = altitude */
+				case 10:
+					alt_field_length = (idx-sep_idx)-1;
+					if (alt_field_length >= 1) {
+
+						/* Get number of digits of integer part (search dot) */
+						for (alt_number_of_digits=0 ; alt_number_of_digits<alt_field_length ; alt_number_of_digits++) {
+							if (local_nmea_rx_buf[sep_idx+1+alt_number_of_digits] == NMEA_DOT) {
+								break; // Dot found, stop counting integer part length.
+							}
+						}
+
+						/* Compute integer part */
+						if (alt_number_of_digits > 0) {
+							for (k=0 ; k<alt_number_of_digits ; k++) {
+								nmea_data.altitude = nmea_data.altitude + Pow10(alt_number_of_digits-1-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+1+k]);
+							}
+
+							/* Rounding operation if fractionnal part exists (not required for success) */
+							if ((idx-(sep_idx+alt_number_of_digits)-1) >= 2) {
+								if (AsciiToDecimal(local_nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
+									nmea_data.altitude++; // Add '1' to altitude.
+								}
+							}
+						}
+						else {
+							error_found = 1;
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Field 11 = altitude unit */
+				case 11:
+					if ((idx-sep_idx) == (NMEA_GGA_ALT_UNIT_FIELD_LENGTH+1)) {
+						if (local_nmea_rx_buf[sep_idx+1] == NMEA_METERS) {
+							gps_ctx.nmea_success_flag = 1; // Last field retrieved, decoding process successed.
+						}
+						else {
+							error_found = 1;
+						}
+					}
+					else {
+						error_found = 1;
+					}
+					break;
+
+				/* Unused fields */
+				default:
+					break;
+				}
+				sep_idx = idx; // Update separator index.
+			}
+
+			/* Check syntax error flag */
+			if (error_found == 1) {
+				break; // Exit decoding loop as soon as an error occured.
+			}
+		}
+	}
+}
+
+/* BUILD SIGFOX DATA STARTING FROM NMEA FIELDS.
+ * @param sigfox_data:			Bytes array that will contain GPS data.
+ * @param sigfox_data_length:	Length of 'sigfox_data' in bytes.
+ * @return:						None.
+ */
+void GPS_BuildSigfoxData(unsigned char* sigfox_data, unsigned char sigfox_data_length) {
+
+	/* Reset fields */
+	unsigned char idx = 0;
+	for (idx=0 ; idx<sigfox_data_length ; idx++) {
+		sigfox_data[idx] = 0;
+	}
+
+	/* Fill frame if success */
+	if (gps_ctx.nmea_success_flag == 1) {
+		// Latitude degrees.
+		sigfox_data[0] = nmea_data.lat_degrees;
+		// Latitude minutes.
+		nmea_data.lat_minutes = (nmea_data.lat_minutes & 0x3F); // Ensure minutes are on 6 bits.
+		sigfox_data[1] |= (nmea_data.lat_minutes << 2);
+		// Latitude seconds.
+		nmea_data.lat_seconds = (nmea_data.lat_seconds & 0x0001FFFF); // Ensure seconds are on 17 bits.
+		sigfox_data[1] |= ((nmea_data.lat_seconds & 0x00018000) >> 15); // Keep bits 15-16.
+		sigfox_data[2] |= ((nmea_data.lat_seconds & 0x00007F80) >> 7); // Keep bits 7-14.
+		sigfox_data[3] |= ((nmea_data.lat_seconds & 0x0000007F) << 1); // Keep bits 0-6.
+		// Latitude N/S.
+		nmea_data.lat_north = (nmea_data.lat_north & 0x01); // Ensure north flag is a bit.
+		sigfox_data[3] |= nmea_data.lat_north;
+		// Longitude degrees.
+		sigfox_data[4] = nmea_data.long_degrees;
+		// Longitude minutes.
+		nmea_data.long_minutes = (nmea_data.long_minutes & 0x3F); // Ensure minutes are on 6 bits.
+		sigfox_data[5] |= (nmea_data.long_minutes << 2);
+		// Longitude seconds.
+		nmea_data.long_seconds = (nmea_data.long_seconds & 0x0001FFFF); // Ensure seconds are on 17 bits.
+		sigfox_data[5] |= ((nmea_data.long_seconds & 0x00018000) >> 15); // Keep bits 15-16.
+		sigfox_data[6] |= ((nmea_data.long_seconds & 0x00007F80) >> 7); // Keep bits 7-14.
+		sigfox_data[7] |= ((nmea_data.long_seconds & 0x0000007F) << 1); // Keep bits 0-6.
+		// Longitude E/O.
+		nmea_data.long_east = (nmea_data.long_east & 0x01); // Ensure east flag is a bit.
+		sigfox_data[7] |= nmea_data.long_east;
+		// Altitude in m.
+		nmea_data.altitude = (nmea_data.altitude & 0x0000FFFF); // Ensure altitude is on 16 bits.
+		sigfox_data[8] |= ((nmea_data.altitude & 0x0000FF00) >> 8);
+		sigfox_data[9] |= (nmea_data.altitude & 0x000000FF);
+	}
+
+	/* Send fix duration in all cases */
+	sigfox_data[10] = gps_ctx.fix_duration;
+}
+
+/*** GPS functions ***/
 
 /* FILL NMEA RX BUFFER (CALLED BY LPUART RXNE INTERRUPT).
  * @param new_byte:		New byte to store.
@@ -233,202 +496,58 @@ void GPS_FillNmeaRxBuffer(unsigned char new_byte) {
 }
 
 /* MAIN ROUTINE OF GPS MODULE.
- * @param:			None.
- * @return success:	Boolean indicating the state of GPS messages decoding.
- * 					0 = fix not complete.
- * 					1 = all NMEA fields retrieved.
+ * @param sigfox_data:			Bytes array that will contain GPS data.
+ * @param sigfox_data_length:	Length of 'sigfox_data' in bytes.
+ * @return end:					Set to '1' as soon as GPS processing is complete (position retrieved or time-out).
  */
-unsigned char GPS_Processing(void) {
-	unsigned char error_found = 0;
-	unsigned char success = 0;
+unsigned char GPS_Processing(unsigned char* sigfox_data, unsigned char sigfox_data_length) {
+	unsigned char end = 0;
 
-	/* Start decoding if complete NMEA message is received */
-	if (gps_ctx.nmea_lf_flag == 1) {
+	/* State machine */
+	switch (gps_state) {
 
-		/* Copy current context into a local one to avoid modification during decoding process */
-		unsigned char local_nmea_rx_buf[NMEA_RX_BUFFER_SIZE];
-		unsigned char char_idx;
-		for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) local_nmea_rx_buf[char_idx] = gps_ctx.nmea_rx_buf[char_idx];
-		unsigned int local_nmea_rx_buf_length = gps_ctx.nmea_rx_buf_length;
+	/* Init */
+	case GPS_STATE_INIT:
+		GPS_Init();
+		gps_state = GPS_STATE_WAIT_FIX;
+		break;
 
-		/* Verify checksum */
-		unsigned char received_checksum = (AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-4]) << 4) + AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-3]);
-		unsigned char computed_checksum = GPS_GetNmeaChecksum(local_nmea_rx_buf, local_nmea_rx_buf_length);
-		if (computed_checksum == received_checksum) {
-
-			/* Extract NMEA data (see GGA message format on p.114 of NEO-M8 programming manual) */
-			unsigned char idx = 0;
-			unsigned char sep_idx = 0;
-			unsigned char sep_range = 0;
-			unsigned char alt_field_length = 0;
-			unsigned char alt_number_of_digits = 0;
-			for (idx=0 ; idx<local_nmea_rx_buf_length ; idx++) {
-				if (local_nmea_rx_buf[idx] == NMEA_SEP) {
-					sep_range++;
-					unsigned int k = 0; // Generic index used in local for loops.
-					switch (sep_range) {
-
-					/* Field 1 = address = <ID><message*/
-					case 1:
-
-						if (idx == NMEA_GGA_ADDRESS_FIELD_LENGTH) {
-							/* Check if message = 'GGA' */
-							if ((local_nmea_rx_buf[3] != 'G') || (local_nmea_rx_buf[4] != 'G') || (local_nmea_rx_buf[5] != 'A')) {
-								error_found = 1;
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 2 = time = <hhmmss.ss> */
-					case 2:
-						if ((idx-sep_idx) == (NMEA_GGA_TIME_FIELD_LENGTH+1)) {
-							nmea_data.time_hours = LOCAL_UTC_OFFSET + AsciiToDecimal(local_nmea_rx_buf[sep_idx+1])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+2]);
-							nmea_data.time_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+3])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+4]);
-							nmea_data.time_seconds = AsciiToDecimal(local_nmea_rx_buf[sep_idx+5])*10 + AsciiToDecimal(local_nmea_rx_buf[sep_idx+6]);
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 3 = latitude = <ddmm.mmmmm> */
-					case 3:
-						if ((idx-sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH+1)) {
-							nmea_data.lat_degrees = AsciiToDecimal(local_nmea_rx_buf[sep_idx+1])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+2]);
-							nmea_data.lat_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+3])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+4]);
-							for (k=0 ; k<5 ; k++) {
-								nmea_data.lat_seconds = nmea_data.lat_seconds + Pow10(4-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+6+k]);
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 4 = <N> or <S> */
-					case 4:
-						if ((idx-sep_idx) == (NMEA_GGA_NS_FIELD_LENGTH+1)) {
-							switch (local_nmea_rx_buf[sep_idx+1]) {
-							case NMEA_GGA_NORTH:
-								nmea_data.lat_north = 1;
-								break;
-							case NMEA_GGA_SOUTH:
-								nmea_data.lat_north = 0;
-								break;
-							default:
-								nmea_data.lat_north = 0;
-								error_found = 1;
-								break;
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 5 = longitude = <dddmm.mmmmm */
-					case 5:
-						if ((idx-sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH+1)) {
-							for (k=0 ; k<3 ; k++) {
-								nmea_data.long_degrees = nmea_data.long_degrees + Pow10(2-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+1+k]);
-							}
-							nmea_data.long_minutes = AsciiToDecimal(local_nmea_rx_buf[sep_idx+4])*10+AsciiToDecimal(local_nmea_rx_buf[sep_idx+5]);
-							for (k=0 ; k<5 ; k++) {
-								nmea_data.long_seconds = nmea_data.long_seconds + Pow10(4-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+7+k]);
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 6 = <E> or <O> */
-					case 6:
-						if ((idx-sep_idx) == (NMEA_GGA_EO_FIELD_LENGTH+1)) {
-							switch (local_nmea_rx_buf[sep_idx+1]) {
-							case NMEA_GGA_EAST:
-								nmea_data.long_east = 1;
-								break;
-							case NMEA_GGA_WEST:
-								nmea_data.long_east = 0;
-								break;
-							default:
-								nmea_data.long_east = 0;
-								error_found = 1;
-								break;
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 10 = altitude */
-					case 10:
-						alt_field_length = (idx-sep_idx)-1;
-						if (alt_field_length >= 1) {
-
-							/* Get number of digits of integer part (search dot) */
-							for (alt_number_of_digits=0 ; alt_number_of_digits<alt_field_length ; alt_number_of_digits++) {
-								if (local_nmea_rx_buf[sep_idx+1+alt_number_of_digits] == NMEA_DOT) {
-									break; // Dot found, stop counting integer part length.
-								}
-							}
-
-							/* Compute integer part */
-							if (alt_number_of_digits > 0) {
-								for (k=0 ; k<alt_number_of_digits ; k++) {
-									nmea_data.altitude = nmea_data.altitude + Pow10(alt_number_of_digits-1-k)*AsciiToDecimal(local_nmea_rx_buf[sep_idx+1+k]);
-								}
-
-								/* Rounding operation if fractionnal part exists (not required for success) */
-								if ((idx-(sep_idx+alt_number_of_digits)-1) >= 2) {
-									if (AsciiToDecimal(local_nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
-										nmea_data.altitude++; // Add '1' to altitude.
-									}
-								}
-							}
-							else {
-								error_found = 1;
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Field 11 = altitude unit */
-					case 11:
-						if ((idx-sep_idx) == (NMEA_GGA_ALT_UNIT_FIELD_LENGTH+1)) {
-							if (local_nmea_rx_buf[sep_idx+1] == NMEA_METERS) {
-								success = 1; // Last field retrieved, decoding process successed.
-							}
-							else {
-								error_found = 1;
-							}
-						}
-						else {
-							error_found = 1;
-						}
-						break;
-
-					/* Unused fields */
-					default:
-						break;
-					}
-					sep_idx = idx; // Update separator index.
-				}
-
-				/* Check syntax error flag */
-				if (error_found == 1) {
-					break; // Exit decoding loop as soon as an error occured.
-				}
+	/* Wait fix */
+	case GPS_STATE_WAIT_FIX:
+		if (gps_ctx.nmea_lf_flag == 1) {
+			gps_state = GPS_STATE_DECODE_NMEA;
+		}
+		else {
+			if (TIM_TimeGetS() >= (gps_ctx.fix_start_time + GPS_TIMEOUT)) {
+				gps_ctx.fix_duration = GPS_TIMEOUT; // Set duration to time-out.
+				gps_state = GPS_STATE_BUILD_SIGFOX_DATA;
 			}
 		}
+		break;
+
+	/* Decode NMEA */
+	case GPS_STATE_DECODE_NMEA:
+		GPS_DecodeNmea();
 		gps_ctx.nmea_lf_flag = 0; // Wait for new frame.
+		if (gps_ctx.nmea_success_flag == 1) {
+			gps_ctx.fix_duration = TIM_TimeGetS()-gps_ctx.fix_start_time; // Save duration.
+			gps_state = GPS_STATE_BUILD_SIGFOX_DATA;
+		}
+		else {
+			gps_state = GPS_STATE_WAIT_FIX;
+		}
+		break;
+
+	/* Build Sigfox data */
+	case GPS_STATE_BUILD_SIGFOX_DATA:
+		GPS_BuildSigfoxData(sigfox_data, sigfox_data_length);
+		end = 1;
+		break;
+
+	/* Unknown state */
+	default:
+		break;
 	}
-	return success;
+
+	return end;
 }

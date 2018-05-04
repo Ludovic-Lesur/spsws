@@ -28,13 +28,3 @@ void LPTIM_Init(void) {
 	LPTIM1 -> CR |= (0b1 << 0); // (ENABLE='1').
 }
 
-void LPTIM_WaitMs(unsigned int ms_to_wait) {
-	LPTIM1 -> ARR = SYSCLK_KHZ;
-	unsigned int ms = 0;
-	for (ms=0 ; ms<ms_to_wait ; ms++) {
-		LPTIM1 -> CR |= (0b1 << 1); // Start timer in single mode (SNGSTRT='1').
-		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0); // Wait for counter to reach autoreload value (ARRM='1').
-		LPTIM1 -> ICR |= (0b1 << 1); // Clear ARRM flag (ARRMCF='1').
-	}
-}
-

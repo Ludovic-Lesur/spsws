@@ -5,12 +5,12 @@
  *      Author: Ludovic
  */
 
+#include "gpio_reg.h"
 #include "gps.h"
-#include "lptim.h"
 #include "lpuart.h"
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "gpio_reg.h"
+#include "tim.h"
 
 #define MAIN_DEBUG
 
@@ -26,19 +26,17 @@ int main(void) {
 	RCC_Init();
 	RCC_SwitchToHsi16MHz();
 
+	// Init time.
+	TIM_TimeInit();
+
 	// Configure PB4 as output.
 	RCC -> IOPENR |= (0b1 << 1);
 	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
 	GPIOB -> MODER |= (0b01 << 8);
 
-	// Init LP timer.
-	LPTIM_Init();
-
-	// Init GPS module.
-	GPS_Init();
-
 	// Wait for NMEA data.
-	while (GPS_Processing() == 0);
+	unsigned char sigfox_gps_data[11] = {0};
+	while (GPS_Processing(sigfox_gps_data, 11) == 0);
 
 	// Switch LPUART and GPS off.
 	LPUART_Off();

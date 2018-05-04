@@ -11,6 +11,5 @@
 /*** LPTIM functions ***/
 
 void LPTIM_Init(void);
-void LPTIM_WaitMs(unsigned int ms_to_wait);
 
 #endif /* PERIPHERALS_LPTIM_H */
