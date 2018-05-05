@@ -5,6 +5,7 @@
  *      Author: Ludovic
  */
 
+#include "adc.h"
 #include "gpio_reg.h"
 #include "gps.h"
 #include "lpuart.h"
@@ -37,13 +38,18 @@ int main(void) {
 	// Wait for NMEA data.
 	unsigned char sigfox_gps_data[11] = {0};
 	while (GPS_Processing(sigfox_gps_data, 11) == 0);
+	GPIOB -> ODR |= (0b1 << 4); // LED on.
 
-	// Switch LPUART and GPS off.
-	LPUART_Off();
-	GPIOB -> ODR &= ~(0b1 << 5);
+	// Init ADC.
+	ADC_Init();
 
-	// LED on.
-	GPIOB -> ODR |= (0b1 << 4);
+	// Get actual supply voltage.
+	unsigned int mcu_vdd;
+	ADC_GetMcuVddMv(&mcu_vdd);
+
+	// Get MCU internal temperature.
+	int mcu_temp;
+	ADC_GetMcuTempDegrees(&mcu_temp);
 
 #else
 	/* Start on multispeed internal oscillator (MSI) */

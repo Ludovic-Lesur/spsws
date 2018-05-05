@@ -17,9 +17,9 @@
 void RCC_Init(void) {
 
 	/* Prescalers (HCLK, PCLK1 and PCLK2 must not exceed 32MHz) */
-	RCC -> CFGR &= ~(0b1111 << 4); // HCLK=SYSCLK (HPRE='0000').
-	RCC -> CFGR &= ~(0b111 << 8); // PCLK1=HCLK (PPRE1='000').
-	RCC -> CFGR &= ~(0b111 << 11); // PCLK2=HCLK (PPRE2='000').
+	RCC -> CFGR &= ~(0b1111 << 4); // HCLK = SYSCLK (HPRE='0000').
+	RCC -> CFGR &= ~(0b111 << 8); // PCLK1 = HCLK (PPRE1='000').
+	RCC -> CFGR &= ~(0b111 << 11); // PCLK2 = HCLK (PPRE2='000').
 
 	/* Peripherals clock source */
 	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.

@@ -540,6 +540,10 @@ unsigned char GPS_Processing(unsigned char* sigfox_data, unsigned char sigfox_da
 
 	/* Build Sigfox data */
 	case GPS_STATE_BUILD_SIGFOX_DATA:
+		// Switch LPUART and GPS off.
+		LPUART_Off();
+		GPIOB -> ODR &= ~(0b1 << 5);
+		// Build frame.
 		GPS_BuildSigfoxData(sigfox_data, sigfox_data_length);
 		end = 1;
 		break;
