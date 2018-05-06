@@ -103,7 +103,7 @@ void LPUART_Off(void) {
 	/* Disable peripheral clock */
 	RCC -> APB1ENR &= ~(0b1 << 18); // (LPUARTEN='0').
 
-	/* Put GPIO in reset state */
+	/* Put GPIOs in reset state */
 }
 
 /* ENABLE THE LPUART TRANSMITTER.

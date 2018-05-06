@@ -9,8 +9,10 @@
 #include "gpio_reg.h"
 #include "gps.h"
 #include "lpuart.h"
+#include "pwr.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "scb_reg.h"
 #include "tim.h"
 
 #define MAIN_DEBUG
@@ -20,6 +22,9 @@
  * @return: 0.
  */
 int main(void) {
+
+	/* Reset deep sleep flag on wake-up */
+	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
 
 #ifdef MAIN_DEBUG
 
@@ -36,9 +41,9 @@ int main(void) {
 	GPIOB -> MODER |= (0b01 << 8);
 
 	// Wait for NMEA data.
+	GPIOB -> ODR |= (0b1 << 4); // LED on.
 	unsigned char sigfox_gps_data[11] = {0};
 	while (GPS_Processing(sigfox_gps_data, 11) == 0);
-	GPIOB -> ODR |= (0b1 << 4); // LED on.
 
 	// Init ADC.
 	ADC_Init();
@@ -51,7 +56,14 @@ int main(void) {
 	int mcu_temp;
 	ADC_GetMcuTempDegrees(&mcu_temp);
 
+	// LED off.
+	GPIOB -> ODR &= ~(0b1 << 4);
+
+	// Enter standby mode.
+	PWR_EnterStandbyMode();
+
 #else
+
 	/* Start on multispeed internal oscillator (MSI) */
 	RCC_Init();
 	RCC_SwitchToMsi65kHz();
@@ -74,18 +86,13 @@ int main(void) {
 		RCC_SwitchToHse();
 
 		/* Reset hardware timer */
-
-		/* Initialize LPUART */
-
-
 	}
 
 	/* Disable main LDO regulator */
 	GPIOC -> ODR &= ~(0b1 << 15); // Set PC15 to low.
 
-	/* Configure wake-up pin */
-
 	/* Enter stand-by mode */
+	PWR_EnterStandbyMode();
 
 #endif
 
