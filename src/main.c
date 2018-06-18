@@ -6,6 +6,9 @@
  */
 
 #include "adc.h"
+#ifdef CONTINUOUS_MODE
+#include "exti.h"
+#endif
 #include "gpio_reg.h"
 #include "gps.h"
 #include "i2c.h"
@@ -16,9 +19,8 @@
 #include "scb_reg.h"
 #include "tim.h"
 
-#define MAIN_DEBUG
-
-/* MAIN FUNCTION.
+#ifdef INTERMITTENT_MODE
+/* MAIN FUNCTION FOR INTERMITTENT MODE.
  * @param: 	None.
  * @return: 0.
  */
@@ -26,8 +28,6 @@ int main(void) {
 
 	/* Reset deep sleep flag on wake-up */
 	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
-
-#ifdef MAIN_DEBUG
 
 	// Init clock.
 	RCC_Init();
@@ -81,39 +81,40 @@ int main(void) {
 	// Enter standby mode.
 	PWR_EnterStandbyMode();
 
-#else
-
-	/* Start on multispeed internal oscillator (MSI) */
-	RCC_Init();
-	RCC_SwitchToMsi131kHz();
-
-	/* Hold power by setting the SHDN pin of the main LDO regulator */
-	RCC -> IOPENR |= (0b1 << 2); // Enable GPIOC clock.
-	GPIOC -> MODER &= ~(0b11 << 30); // Reset bits 8-9.
-	GPIOC -> MODER |= (0b01 << 30); // Configure PC15 as output.
-	GPIOC -> ODR |= (0b1 << 15); // Set PC15 to high.
-
-	/* Configure wake-up pin as input */
-	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= ~(0b11 << 4); // Configure PA2 as input.
-
-	/* Check hardware timer status */
-	/* If the pin is high, last uplink sequence was more than an hour ago -> run new sequence */
-	if (((GPIOA -> IDR) & (0b1 << 2)) != 0) {
-
-		/* Switch to external clock (TCXO) */
-		RCC_SwitchToHse();
-
-		/* Reset hardware timer */
-	}
-
-	/* Disable main LDO regulator */
-	GPIOC -> ODR &= ~(0b1 << 15); // Set PC15 to low.
-
-	/* Enter stand-by mode */
-	PWR_EnterStandbyMode();
-
+	return 0;
+}
 #endif
 
-	return (0);
+#ifdef CONTINUOUS_MODE
+/* MAIN FUNCTION FOR CONTINUOUS MODE.
+ * @param: 	None.
+ * @return: 0.
+ */
+int main(void) {
+
+	/* Reset deep sleep flag on wake-up */
+	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
+
+	// Init clock.
+	RCC_Init();
+	RCC_SwitchToHsi16MHz();
+
+	// Init time.
+	TIM_TimeInit();
+
+	// Configure PB4 as output.
+	RCC -> IOPENR |= (0b1 << 1);
+	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 8);
+
+	// LED off.
+	GPIOB -> ODR &= ~(0b1 << 4);
+
+	// Configure external interrupt.
+	EXTI_Init();
+
+	while(1);
+
+	return 0;
 }
+#endif

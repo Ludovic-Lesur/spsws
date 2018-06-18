@@ -8,7 +8,7 @@
 #ifndef REGISTERS_DMA_REG_H
 #define REGISTERS_DMA_REG_H
 
-/*** DMA registerss ***/
+/*** DMA registers ***/
 
 typedef struct {
 	volatile unsigned int ISR;    	// DMA interrupt status register.
