@@ -5,20 +5,20 @@
  *      Author: Ludovic
  */
 
+#include "dma.h"
 #include "gpio_reg.h"
 #include "gps.h"
 #include "lpuart.h"
+#include "pwr.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
 /*** GPS local macros ***/
 
-#define LOCAL_UTC_OFFSET					2 // TBD: configurable via downlink.
+#define LOCAL_UTC_OFFSET					2
 
 #define GPS_TIMEOUT							60 // GPS fix time-out in seconds. TBD: configurable via downlink.
 
-#define NMEA_CR								'\r'
-#define NMEA_LF								'\n'
 #define NMEA_SEP							','
 #define NMEA_DOT							'.'
 #define NMEA_NUMBER_OF_ID_TO_DISABLE		17
@@ -38,8 +38,8 @@
 #define NMEA_GGA_ALT_UNIT_FIELD_LENGTH		1
 #define NMEA_METERS							'M'
 
-#define NMEA_CHECKSUM_START_OFFSET			1
-#define NMEA_CHECKSUM_END_OFFSET			5
+#define NMEA_CHECKSUM_START_OFFSET			1 // To skip '$'.
+#define NMEA_CHECKSUM_END_OFFSET			5 // To skip '*xx\r\n'.
 
 #define UBX_MSG_OVERHEAD_LENGTH				8
 #define UBX_CHECKSUM_OVERHEAD_LENGTH		4
@@ -51,9 +51,14 @@
 
 typedef struct {
 	/* Buffers */
-	unsigned char nmea_rx_buf[NMEA_RX_BUFFER_SIZE]; 	// NMEA input messages buffer.
-	unsigned int nmea_rx_buf_idx;						// Current index in buffer.
-	unsigned int nmea_rx_buf_length;					// Length of buffer.
+	unsigned char nmea_rx_buf1[NMEA_RX_BUFFER_SIZE]; 	// NMEA input messages buffer 1.
+#ifdef USE_DMA
+	unsigned char nmea_rx_buf2[NMEA_RX_BUFFER_SIZE]; 	// NMEA input messages buffer 2.
+	unsigned char fill_rx_buf1;							// 0 = buffer 2 is currently filled by DMA, buffer 1 is ready to be parsed.
+														// 1 = buffer 1 is currently filled by DMA, buffer 2 is ready to be parsed.
+#else
+	unsigned int nmea_rx_buf1_idx;						// Current index in buffer 1
+#endif
 	/* Status flags */
 	unsigned char nmea_lf_flag;							// Set to '1' as soon as a complete NMEA message is received.
 	unsigned char nmea_success_flag;					// Set to '1' as soon an NMEA message was successfully parsed.
@@ -96,12 +101,24 @@ static GPS_State gps_state = GPS_STATE_INIT;
 
 /*** GPS local functions ***/
 
+/* CONVERTS THE ASCII CODE OF A DECIMAL CHARACTER TO THE CORRESPONDING VALUE.
+ * @param c:			Hexadecimal character to convert.
+ * @return hexa_value:	Result of conversion.
+ */
+unsigned char AsciiToDecimal(unsigned char c) {
+	unsigned char value = 0;
+	if ((c >= '0') && (c <= '9')) {
+		value = c - '0';
+	}
+	return value;
+}
+
 /* COMPUTE AND APPEND CHECKSUM TO AN UBX MESSAGE.
  * @param ubx_command:		Complete UBX message for which checksum must be computed.
  * @param payload_length:	Length of the payload (in bytes) for this message.
  * @return:					None.
  */
-void GPS_SetUbxChecksum(unsigned char* ubx_command, unsigned char payload_length) {
+void GPS_ComputeUbxChecksum(unsigned char* ubx_command, unsigned char payload_length) {
 	// See algorithme on p.136 of NEO-M8 programming manual.
 	unsigned char ck_a = 0;
 	unsigned char ck_b = 0;
@@ -115,30 +132,36 @@ void GPS_SetUbxChecksum(unsigned char* ubx_command, unsigned char payload_length
 	ubx_command[checksum_idx+1] = ck_b;
 }
 
-/* COMPUTE THE CHECKSUM OF THE CURRENT NMEA MESSAGE.
+/* GET THE CHECKSUM OF A GIVEN NMEA MESSAGE.
  * @param:		None;
  * @return ck:	Computed checksum.
  */
-unsigned char GPS_GetNmeaChecksum(unsigned char* nmea_rx_buf, unsigned int nmea_rx_buf_length) {
-	// See algorithme on p.105 of NEO-M8 programming manual.
-	unsigned char ck = 0;
-	unsigned int checksum_idx = 0;
-	for (checksum_idx=NMEA_CHECKSUM_START_OFFSET ; checksum_idx<(nmea_rx_buf_length-NMEA_CHECKSUM_END_OFFSET) ; checksum_idx++) {
-		ck = ck ^ nmea_rx_buf[checksum_idx]; // Exclusive OR of all characters between '$' and '*xx'.
+unsigned char GPS_GetNmeaChecksum(unsigned char* local_nmea_rx_buf) {
+	// See NMEA messages format on p.105 of NEO-M8 programming manual.
+	unsigned local_nmea_rx_buf_length = 0;
+	while ((local_nmea_rx_buf[local_nmea_rx_buf_length] != '\0') && (local_nmea_rx_buf_length < NMEA_RX_BUFFER_SIZE)) {
+		local_nmea_rx_buf_length++;
 	}
+	unsigned char ck = (AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-4]) << 4) + AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-3]);
 	return ck;
 }
 
-/* CONVERTS THE ASCII CODE OF A DECIMAL CHARACTER TO THE CORRESPONDING VALUE.
- * @param c:			Hexadecimal character to convert.
- * @return hexa_value:	Result of conversion.
+/* COMPUTE THE CHECKSUM OF A GIVEN NMEA MESSAGE.
+ * @param:		None;
+ * @return ck:	Computed checksum.
  */
-unsigned char AsciiToDecimal(unsigned char c) {
-	unsigned char value = 0;
-	if ((c >= '0') && (c <= '9')) {
-		value = c - '0';
+unsigned char GPS_ComputeNmeaChecksum(unsigned char* local_nmea_rx_buf) {
+	// See algorithme on p.105 of NEO-M8 programming manual.
+	unsigned char ck = 0;
+	unsigned int checksum_idx = 0;
+	unsigned local_nmea_rx_buf_length = 0;
+	while ((local_nmea_rx_buf[local_nmea_rx_buf_length] != '\0') && (local_nmea_rx_buf_length < NMEA_RX_BUFFER_SIZE)) {
+		local_nmea_rx_buf_length++;
 	}
-	return value;
+	for (checksum_idx=NMEA_CHECKSUM_START_OFFSET ; checksum_idx<(local_nmea_rx_buf_length-NMEA_CHECKSUM_END_OFFSET) ; checksum_idx++) {
+		ck = ck ^ local_nmea_rx_buf[checksum_idx]; // Exclusive OR of all characters between '$' and '*xx'.
+	}
+	return ck;
 }
 
 /* COMPUTE A POWER A 10.
@@ -164,9 +187,12 @@ void GPS_Init(void) {
 
 	/* Init context */
 	unsigned int char_idx = 0;
-	for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) gps_ctx.nmea_rx_buf[char_idx] = 0;
-	gps_ctx.nmea_rx_buf_idx = 0;
-	gps_ctx.nmea_rx_buf_length = 0;
+	for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) gps_ctx.nmea_rx_buf1[char_idx] = 0;
+#ifdef USE_DMA
+	for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) gps_ctx.nmea_rx_buf2[char_idx] = 0;
+#else
+	gps_ctx.nmea_rx_buf1_idx = 0;
+#endif
 	gps_ctx.nmea_lf_flag = 0;
 	gps_ctx.nmea_success_flag = 0;
 	gps_ctx.fix_start_time = 0;
@@ -210,7 +236,7 @@ void GPS_Init(void) {
 	// Send commands.
 	for (nmea_id_idx=0 ; nmea_id_idx<NMEA_NUMBER_OF_ID_TO_DISABLE ; nmea_id_idx++) {
 		ubx_cfg_msg[7] = nmea_id_to_disable[nmea_id_idx]; // 7th byte is the ID of the message to disable.
-		GPS_SetUbxChecksum(ubx_cfg_msg, UBX_CFG_MSG_PAYLOAD_LENGTH); // Compute checksum (CK_A and CK_B).
+		GPS_ComputeUbxChecksum(ubx_cfg_msg, UBX_CFG_MSG_PAYLOAD_LENGTH); // Compute checksum (CK_A and CK_B).
 		for (ubx_cfg_msg_idx=0 ; ubx_cfg_msg_idx<(UBX_MSG_OVERHEAD_LENGTH+UBX_CFG_MSG_PAYLOAD_LENGTH) ; ubx_cfg_msg_idx++) {
 			LPUART_SendByte(ubx_cfg_msg[ubx_cfg_msg_idx]); // Send command.
 		}
@@ -218,6 +244,14 @@ void GPS_Init(void) {
 
 	/* Wait 1s to skip ACK messages */
 	TIM_TimeWaitMs(1000);
+
+	/* Start DMA if used */
+#ifdef USE_DMA
+	DMA_LpuartRxInit();
+	DMA_LpuartRxSetDestAddr((unsigned int) &(gps_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	gps_ctx.fill_rx_buf1 = 1;
+	DMA_LpuartRxStart();
+#endif
 
 	/* Start reception and wait for GPS to fix*/
 	LPUART_EnableRx();
@@ -227,18 +261,13 @@ void GPS_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void GPS_DecodeNmea(void) {
+void GPS_DecodeNmea(unsigned char* local_nmea_rx_buf) {
 	unsigned char error_found = 0;
 
-	/* Copy current context into a local one to avoid modification during decoding process */
-	unsigned char local_nmea_rx_buf[NMEA_RX_BUFFER_SIZE];
-	unsigned char char_idx;
-	for (char_idx=0 ; char_idx<NMEA_RX_BUFFER_SIZE ; char_idx++) local_nmea_rx_buf[char_idx] = gps_ctx.nmea_rx_buf[char_idx];
-	unsigned int local_nmea_rx_buf_length = gps_ctx.nmea_rx_buf_length;
-
 	/* Verify checksum */
-	unsigned char received_checksum = (AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-4]) << 4) + AsciiToDecimal(local_nmea_rx_buf[local_nmea_rx_buf_length-3]);
-	unsigned char computed_checksum = GPS_GetNmeaChecksum(local_nmea_rx_buf, local_nmea_rx_buf_length);
+	unsigned char received_checksum = GPS_GetNmeaChecksum(local_nmea_rx_buf);
+	unsigned char computed_checksum = GPS_ComputeNmeaChecksum(local_nmea_rx_buf);
+
 	if (computed_checksum == received_checksum) {
 
 		/* Extract NMEA data (see GGA message format on p.114 of NEO-M8 programming manual) */
@@ -247,13 +276,13 @@ void GPS_DecodeNmea(void) {
 		unsigned char sep_range = 0;
 		unsigned char alt_field_length = 0;
 		unsigned char alt_number_of_digits = 0;
-		for (idx=0 ; idx<local_nmea_rx_buf_length ; idx++) {
+		while ((local_nmea_rx_buf[idx] != '\0') && (idx < NMEA_RX_BUFFER_SIZE)) {
 			if (local_nmea_rx_buf[idx] == NMEA_SEP) {
 				sep_range++;
 				unsigned int k = 0; // Generic index used in local for loops.
 				switch (sep_range) {
 
-				/* Field 1 = address = <ID><message*/
+				/* Field 1 = address = <ID><message> */
 				case 1:
 
 					if (idx == NMEA_GGA_ADDRESS_FIELD_LENGTH) {
@@ -314,7 +343,7 @@ void GPS_DecodeNmea(void) {
 					}
 					break;
 
-				/* Field 5 = longitude = <dddmm.mmmmm */
+				/* Field 5 = longitude = <dddmm.mmmmm> */
 				case 5:
 					if ((idx-sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH+1)) {
 						for (k=0 ; k<3 ; k++) {
@@ -389,7 +418,7 @@ void GPS_DecodeNmea(void) {
 				case 11:
 					if ((idx-sep_idx) == (NMEA_GGA_ALT_UNIT_FIELD_LENGTH+1)) {
 						if (local_nmea_rx_buf[sep_idx+1] == NMEA_METERS) {
-							gps_ctx.nmea_success_flag = 1; // Last field retrieved, decoding process successed.
+							gps_ctx.nmea_success_flag = 1; // Last field retrieved, decoding process succeeded.
 						}
 						else {
 							error_found = 1;
@@ -411,6 +440,9 @@ void GPS_DecodeNmea(void) {
 			if (error_found == 1) {
 				break; // Exit decoding loop as soon as an error occured.
 			}
+
+			/* Increment index */
+			idx++;
 		}
 	}
 }
@@ -468,6 +500,33 @@ void GPS_BuildSigfoxData(unsigned char* sigfox_data, unsigned char sigfox_data_l
 
 /*** GPS functions ***/
 
+#ifdef USE_DMA
+/* SET NMEA LF FLAG TO START DECODING (CALLED BY LPUART CM INTERRUPT).
+ * @param:	None.
+ * @return:	None.
+ */
+void GPS_SwitchDmaBuffer(void) {
+
+	/* Stop and start DMA transfer to switch buffer */
+	DMA_LpuartRxStop();
+	if (gps_state == GPS_STATE_WAIT_FIX) {
+
+		/* Switch buffer only if previous processing is complete */
+		if (gps_ctx.fill_rx_buf1 == 1) {
+			DMA_LpuartRxSetDestAddr((unsigned int) &(gps_ctx.nmea_rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
+			gps_ctx.fill_rx_buf1 = 0;
+		}
+		else {
+			DMA_LpuartRxSetDestAddr((unsigned int) &(gps_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
+			gps_ctx.fill_rx_buf1 = 1;
+		}
+
+		/* Set LF flag to start decoding current buffer */
+		gps_ctx.nmea_lf_flag = 1;
+	}
+	DMA_LpuartRxStart();
+}
+#else
 /* FILL NMEA RX BUFFER (CALLED BY LPUART RXNE INTERRUPT).
  * @param new_byte:		New byte to store.
  * @return:				None.
@@ -475,25 +534,25 @@ void GPS_BuildSigfoxData(unsigned char* sigfox_data, unsigned char sigfox_data_l
 void GPS_FillNmeaRxBuffer(unsigned char new_byte) {
 
 	/* Fill NMEA RX buffer with incomming byte */
-	gps_ctx.nmea_rx_buf[gps_ctx.nmea_rx_buf_idx] = new_byte;
+	gps_ctx.nmea_rx_buf1[gps_ctx.nmea_rx_buf1_idx] = new_byte;
 
 	/* Detect LF character (end of frame in NMEA protocol) */
 	if (new_byte == NMEA_LF) {
 
-		/* Save message informations */
-		gps_ctx.nmea_rx_buf_length = gps_ctx.nmea_rx_buf_idx+1; // Save current frame length.
-		gps_ctx.nmea_rx_buf_idx = 0; // Reset index.
+		/* Reset index */
+		gps_ctx.nmea_rx_buf1_idx = 0; // Reset index.
 
 		/* Set LF flag to start decoding */
 		gps_ctx.nmea_lf_flag = 1;
 	}
 	else {
-		gps_ctx.nmea_rx_buf_idx++; // Increment RX index.
-		if (gps_ctx.nmea_rx_buf_idx == NMEA_RX_BUFFER_SIZE) {
-			gps_ctx.nmea_rx_buf_idx = 0; // Manage char index roll-over.
+		gps_ctx.nmea_rx_buf1_idx++; // Increment RX index.
+		if (gps_ctx.nmea_rx_buf1_idx == NMEA_RX_BUFFER_SIZE) {
+			gps_ctx.nmea_rx_buf1_idx = 0; // Manage char index roll-over.
 		}
 	}
 }
+#endif
 
 /* MAIN ROUTINE OF GPS MODULE.
  * @param sigfox_data:			Bytes array that will contain GPS data.
@@ -514,20 +573,30 @@ unsigned char GPS_Processing(unsigned char* sigfox_data, unsigned char sigfox_da
 
 	/* Wait fix */
 	case GPS_STATE_WAIT_FIX:
-		if (gps_ctx.nmea_lf_flag == 1) {
-			gps_state = GPS_STATE_DECODE_NMEA;
+		//PWR_EnterLowPowerSleepMode(); // Enter low power sleep mode while waiting for a new frame (wake-up by LPUART CM interrupt).
+		if (TIM_TimeGetS() >= (gps_ctx.fix_start_time + GPS_TIMEOUT)) {
+			gps_ctx.fix_duration = GPS_TIMEOUT; // Set duration to time-out.
+			gps_state = GPS_STATE_BUILD_SIGFOX_DATA;
 		}
 		else {
-			if (TIM_TimeGetS() >= (gps_ctx.fix_start_time + GPS_TIMEOUT)) {
-				gps_ctx.fix_duration = GPS_TIMEOUT; // Set duration to time-out.
-				gps_state = GPS_STATE_BUILD_SIGFOX_DATA;
+			if (gps_ctx.nmea_lf_flag == 1) {
+				gps_state = GPS_STATE_DECODE_NMEA;
 			}
 		}
 		break;
 
-	/* Decode NMEA */
+	/* Decode NMEA message */
 	case GPS_STATE_DECODE_NMEA:
-		GPS_DecodeNmea();
+#ifdef USE_DMA
+		if (gps_ctx.fill_rx_buf1 == 1) {
+			GPS_DecodeNmea(gps_ctx.nmea_rx_buf2); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
+		}
+		else {
+			GPS_DecodeNmea(gps_ctx.nmea_rx_buf1); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
+		}
+#else
+		GPS_DecodeNmea(gps_ctx.nmea_rx_buf1);
+#endif
 		gps_ctx.nmea_lf_flag = 0; // Wait for new frame.
 		if (gps_ctx.nmea_success_flag == 1) {
 			gps_ctx.fix_duration = TIM_TimeGetS()-gps_ctx.fix_start_time; // Save duration.
@@ -540,11 +609,10 @@ unsigned char GPS_Processing(unsigned char* sigfox_data, unsigned char sigfox_da
 
 	/* Build Sigfox data */
 	case GPS_STATE_BUILD_SIGFOX_DATA:
-		// Switch LPUART and GPS off.
-		LPUART_Off();
-		GPIOB -> ODR &= ~(0b1 << 5);
-		// Build frame.
-		GPS_BuildSigfoxData(sigfox_data, sigfox_data_length);
+		DMA_LpuartRxOff(); // Stop transfer and switch DMA off.
+		LPUART_Off(); // Switch LPUART off.
+		GPIOB -> ODR &= ~(0b1 << 5); // Switch GPS module off.
+		GPS_BuildSigfoxData(sigfox_data, sigfox_data_length); // Build frame.
 		end = 1;
 		break;
 

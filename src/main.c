@@ -8,6 +8,7 @@
 #include "adc.h"
 #include "gpio_reg.h"
 #include "gps.h"
+#include "i2c.h"
 #include "lpuart.h"
 #include "pwr.h"
 #include "rcc.h"
@@ -30,7 +31,7 @@ int main(void) {
 
 	// Init clock.
 	RCC_Init();
-	RCC_SwitchToHsi16MHz();
+	RCC_SwitchToMsi131kHz();
 
 	// Init time.
 	TIM_TimeInit();
@@ -44,6 +45,24 @@ int main(void) {
 	GPIOB -> ODR |= (0b1 << 4); // LED on.
 	unsigned char sigfox_gps_data[11] = {0};
 	while (GPS_Processing(sigfox_gps_data, 11) == 0);
+
+/*	// Init I2C.
+	I2C_Init();
+
+	unsigned char command_byte[1] = {0x46};
+	unsigned char rx[2];
+	while(1) {
+		I2C_SendBytes(I2C_TEMPERATURE_SENSOR_ADDRESS, command_byte, 1);
+		//I2C_GetBytes(I2C_TEMPERATURE_SENSOR_ADDRESS, rx, 2);
+		GPIOB -> ODR |= (0b1 << 4);
+		TIM_TimeWaitMs(500);
+		GPIOB -> ODR &= ~(0b1 << 4);
+		TIM_TimeWaitMs(500);
+	}
+*/
+
+	// Switch to HSI for ADC.
+	RCC_SwitchToHsi16MHz();
 
 	// Init ADC.
 	ADC_Init();
@@ -66,7 +85,7 @@ int main(void) {
 
 	/* Start on multispeed internal oscillator (MSI) */
 	RCC_Init();
-	RCC_SwitchToMsi65kHz();
+	RCC_SwitchToMsi131kHz();
 
 	/* Hold power by setting the SHDN pin of the main LDO regulator */
 	RCC -> IOPENR |= (0b1 << 2); // Enable GPIOC clock.

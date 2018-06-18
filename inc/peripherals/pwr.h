@@ -10,6 +10,7 @@
 
 /*** PWR functions ***/
 
+void PWR_EnterLowPowerSleepMode(void);
 void PWR_EnterStandbyMode(void);
 
 #endif /* PERIPHERALS_PWR_H */

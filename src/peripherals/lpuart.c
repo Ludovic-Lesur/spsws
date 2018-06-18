@@ -16,7 +16,6 @@
 /*** USART local macros ***/
 
 //#define USE_TXE	// If defined, TX bytes are bufferised and transmitted under interrupt.
-//#define USE_CM	// If defined, use character match interrupt with LF character.
 
 // Baud rate.
 #define LPUART_BAUD_RATE 		9600
@@ -69,19 +68,19 @@ void LPUART_Init(void) {
 	GPIOA -> AFRL |= 0x00006600; // Link PA2 and PA3 to AF6.
 
 	/* Configure peripheral */
-	LPUART1 -> CR1 = 0; // Disable peripheral while configuring (UE='0'), 1 stop bit and 8 data bits (M = '00').
+	LPUART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M = '00').
 	LPUART1 -> CR2 = 0; // 1 stop bit (STOP='00').
 	LPUART1 -> CR3 = 0;
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
-	LPUART1 -> BRR = ((SYSCLK_KHZ*1000)/(LPUART_BAUD_RATE))*256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> BRR = ((RCC_GetSysclkKhz()*1000)/(LPUART_BAUD_RATE))*256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	LPUART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
-	/* Configure interrupts */
-#ifdef USE_CM
+#ifdef USE_DMA
+	/* Configure DMA and CM interrupt */
 	LPUART1 -> CR2 &= (0xFF << 24); // Reset bits 24-31.
 	LPUART1 -> CR2 |= (NMEA_LF << 24); // LF character used to trigger CM interrupt.
+	LPUART1 -> CR3 |= (0b1 << 6); // Enable DMA transfer for reception (DMAR='1'). Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).
 #endif
-	NVIC_EnableInterrupt(IT_LPUART1);
 
 	/* Enable peripheral */
 	LPUART1 -> CR1 |= (0b1 << 0);
@@ -104,6 +103,7 @@ void LPUART_Off(void) {
 	RCC -> APB1ENR &= ~(0b1 << 18); // (LPUARTEN='0').
 
 	/* Put GPIOs in reset state */
+	GPIOA -> MODER &= ~(0b1111 << 4); // Configure PA2 and PA3 as input.
 }
 
 /* ENABLE THE LPUART TRANSMITTER.
@@ -114,6 +114,7 @@ void LPUART_EnableTx(void) {
 		LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
 #ifdef USE_TXE
 		LPUART1 -> CR1 |= (0b1 << 7); // Enable TXE interrupt (TXEIE='1').
+		NVIC_EnableInterrupt(IT_LPUART1);
 #endif
 }
 
@@ -122,9 +123,13 @@ void LPUART_EnableTx(void) {
  * @return:	None.
  */
 void LPUART_EnableRx(void) {
-	LPUART1 -> CR1 |= (0b1 << 2); // Enable transmitter (RE='1').
-	LPUART1 -> CR1 |= (0b1 << 5); // Enable RXNE interrupt (RXNEIE='1').
+	LPUART1 -> CR1 |= (0b1 << 2); // Enable receiver (RE='1').
+#ifdef USE_DMA
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
+#else
+	LPUART1 -> CR1 |= (0b1 << 5); // Enable RXNE interrupt (RXNEIE='1').
+#endif
+	NVIC_EnableInterrupt(IT_LPUART1);
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.
@@ -189,16 +194,16 @@ void LPUART1_IRQHandler(void) {
 	}
 #endif
 
+#ifdef USE_DMA
+	/* CM interrupt */
+	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
+		GPS_SwitchDmaBuffer(); // Tell GPS module to switch DMA buffer address and start decoding the current one.
+		LPUART1 -> ICR |= (0b1 << 17); // Clear CM flag.
+	}
+#else
 	/* RXNE interrupt */
 	if (((LPUART1 -> ISR) & (0b1 << 5)) != 0) {
 		GPS_FillNmeaRxBuffer(LPUART1 -> RDR); // Read receive data register and transmit incoming byte to GPS NMEA RX buffer.
-	}
-
-#ifdef USE_CM
-	/* CM interrupt */
-	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
-		// TBC: reset index in GPS NMEA RX buffer.
-		LPUART1 -> ICR |= (0b1 << 17); // Clear CMF flag.
 	}
 #endif
 }

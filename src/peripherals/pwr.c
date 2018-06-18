@@ -12,6 +12,28 @@
 
 /*** PWR functions ***/
 
+/* FUNCTION TO ENTER LOW POWER SLEEP MODE.
+ * @param:	None.
+ * @return:	None.
+ */
+void PWR_EnterLowPowerSleepMode(void) {
+
+	/* Enable power interface clock */
+	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
+
+	/* Switch internal voltage reference off in low power mode */
+	PWR -> CR |= (0b1 << 9); // ULP='1'.
+
+	/* Enter low power sleep mode */
+	SCB -> SCR &= ~(0b1 << 1); // Do not return in low power sleep mode after wake-up (SLEEPONEXIT='0').
+	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
+	__asm volatile ("wfi"); // Wait For Interrupt core instruction.
+}
+
+/* FUNCTION TO ENTER STANDBY MODE.
+ * @param:	None.
+ * @return:	None.
+ */
 void PWR_EnterStandbyMode(void) {
 
 	/* Enable power interface clock */
@@ -34,4 +56,3 @@ void PWR_EnterStandbyMode(void) {
 	SCB -> SCR |= (0b1 << 2); // SLEEPDEEP='1'.
 	__asm volatile ("wfi"); // Wait For Interrupt core instruction.
 }
-
