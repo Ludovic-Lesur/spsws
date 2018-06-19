@@ -13,10 +13,13 @@
 #include "gps.h"
 #include "i2c.h"
 #include "lpuart.h"
+#include "mcu_api.h"
+#include "nvm.h"
 #include "pwr.h"
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "scb_reg.h"
+#include "sigfox_types.h"
 #include "tim.h"
 
 #ifdef INTERMITTENT_MODE
@@ -35,6 +38,9 @@ int main(void) {
 
 	// Init time.
 	TIM_TimeInit();
+
+	// Read and update all NVM variables.
+	NVM_Init();
 
 	// Configure PB4 as output.
 	RCC -> IOPENR |= (0b1 << 1);
@@ -67,13 +73,10 @@ int main(void) {
 	// Init ADC.
 	ADC_Init();
 
-	// Get actual supply voltage.
-	unsigned int mcu_vdd;
-	ADC_GetMcuVddMv(&mcu_vdd);
-
-	// Get MCU internal temperature.
-	int mcu_temp;
-	ADC_GetMcuTempDegrees(&mcu_temp);
+	// Get MCU and temperature.
+	sfx_u16 mcu_vdd;
+	sfx_s16 mcu_temperature;
+	MCU_API_get_voltage_temperature(&mcu_vdd, &mcu_vdd, &mcu_temperature);
 
 	// LED off.
 	GPIOB -> ODR &= ~(0b1 << 4);

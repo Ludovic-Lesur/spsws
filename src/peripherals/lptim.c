@@ -21,7 +21,7 @@ void LPTIM_Init(void) {
 	/* Configure peripheral */
 	LPTIM1 -> CFGR &= ~(0b111 << 9); // Prescaler=1, input clock=SYSCLK. (PRES='000').
 
-	/* Configure interrupts ***/
+	/* Configure interrupts */
 	LPTIM1 -> IER |= (0b1 << 1); // Enable autoreload match interrupt (ARRMIE='1').
 
 	/* Enable peripheral */

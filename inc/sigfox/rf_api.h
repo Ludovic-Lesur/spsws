@@ -135,7 +135,7 @@ sfx_u8 RF_API_stop(void);
  * \retval SFX_ERR_NONE:                    No error
  * \retval RF_ERR_API_SEND:                 Send data stream error
  *******************************************************************/
-sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size);
+sfx_u8 RF_API_send(sfx_u8* stream, sfx_modulation_type_t type, sfx_u8 size);
 
 /*!******************************************************************
  * \fn sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type)
@@ -195,7 +195,7 @@ sfx_u8 RF_API_change_frequency(sfx_u32 frequency);
  *
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
-sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * state);
+sfx_u8 RF_API_wait_frame(sfx_u8* frame, sfx_s16* rssi, sfx_rx_state_enum_t* state);
 
 /*!******************************************************************
  * \fn sfx_u8 RF_API_wait_for_clear_channel (sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_state_enum_t * state);
@@ -217,7 +217,7 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
  *
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
-sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_state_enum_t * state);
+sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_state_enum_t* state);
 
 /*!******************************************************************
  * \fn sfx_u8 RF_API_get_version(sfx_u8 **version, sfx_u8 *size)
@@ -229,6 +229,6 @@ sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_
  * \retval SFX_ERR_NONE:                No error
  * \retval RF_ERR_API_GET_VERSION:      Get Version error 
  *******************************************************************/
-sfx_u8 RF_API_get_version(sfx_u8 **version, sfx_u8 *size);
+sfx_u8 RF_API_get_version(sfx_u8** version, sfx_u8* size);
 
 #endif /* SIGFOX_RF_API_H */

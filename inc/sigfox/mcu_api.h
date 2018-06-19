@@ -51,6 +51,7 @@
 #ifndef SIGFOX_MCU_API_H
 #define SIGFOX_MCU_API_H
 
+#include "aes.h"
 #include "sigfox_api.h"
 #include "sigfox_types.h"
 
@@ -118,7 +119,7 @@
  * \retval SFX_ERR_NONE:              No error
  * \retval MCU_ERR_API_MALLOC         Malloc error
  *******************************************************************/
-sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8 **returned_pointer);
+sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8** returned_pointer);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_free(sfx_u8 *ptr)
@@ -130,7 +131,7 @@ sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8 **returned_pointer);
  * \retval SFX_ERR_NONE:                         No error
  * \retval MCU_ERR_API_FREE:                     Free error
  *******************************************************************/
-sfx_u8 MCU_API_free(sfx_u8 *ptr);
+sfx_u8 MCU_API_free(sfx_u8* ptr);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_get_voltage_temperature(sfx_u16 *voltage_idle, sfx_u16 *voltage_tx, sfx_s16 *temperature)
@@ -145,9 +146,7 @@ sfx_u8 MCU_API_free(sfx_u8 *ptr);
  * \retval SFX_ERR_NONE:                         No error
  * \retval MCU_ERR_API_VOLT_TEMP:                Get voltage/temperature error
  *******************************************************************/
-sfx_u8 MCU_API_get_voltage_temperature(sfx_u16 *voltage_idle,
-                                       sfx_u16 *voltage_tx,
-                                       sfx_s16 *temperature);
+sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_delay(sfx_delay_t delay_type)
@@ -181,11 +180,7 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type);
  * \retval SFX_ERR_NONE:                         No error
  * \retval MCU_ERR_API_AES:                      AES Encryption error
  *******************************************************************/
-sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8 *encrypted_data,
-                                   sfx_u8 *data_to_encrypt,
-                                   sfx_u8 aes_block_len,
-                                   sfx_u8 key[16],
-                                   sfx_credentials_use_key_t use_key);
+sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encrypt, sfx_u8 aes_block_len, sfx_u8 key[AES_BLOCK_SIZE], sfx_credentials_use_key_t use_key);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) 
@@ -312,7 +307,7 @@ sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi);
  * \retval SFX_ERR_NONE:                         No error
  * \retval MCU_ERR_API_GET_VERSION:              Get Version error 
  *******************************************************************/
-sfx_u8 MCU_API_get_version(sfx_u8 **version, sfx_u8 *size);
+sfx_u8 MCU_API_get_version(sfx_u8** version, sfx_u8* size);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH], sfx_bool *payload_encryption_enabled)
@@ -326,7 +321,7 @@ sfx_u8 MCU_API_get_version(sfx_u8 **version, sfx_u8 *size);
  * \retval SFX_ERR_NONE:                         No error
  * \retval MCU_ERR_API_GET_ID_PAYLOAD_ENCR_FLAG: Error when getting device ID or payload encryption flag
  *******************************************************************/
-sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH], sfx_bool *payload_encryption_enabled);
+sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH], sfx_bool* payload_encryption_enabled);
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_get_initial_pac(sfx_u8 initial_pac[PAC_LENGTH])

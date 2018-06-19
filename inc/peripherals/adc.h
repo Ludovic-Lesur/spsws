@@ -11,7 +11,8 @@
 /*** ADC functions ***/
 
 void ADC_Init(void);
-void ADC_GetMcuVddMv(unsigned int* mcu_supply_voltage_mv);
-void ADC_GetMcuTempDegrees(int* mcu_temp_degrees);
+void ADC_Off(void);
+void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv);
+void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees);
 
 #endif /* PERIPHERALS_ADC_H */

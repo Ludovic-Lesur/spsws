@@ -28,7 +28,7 @@ void ADC_Init(void) {
 	/* Configure analog GPIOs */
 
 	/* Disable ADC before configure it */
-	ADC1 -> CR = 0;
+	ADC1 -> CR = 0; // ADEN='0'.
 
 	/* ADC calibration */
 	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
@@ -45,11 +45,24 @@ void ADC_Init(void) {
 	while (((ADC1 -> ISR) & (0b1 << 0)) == 0); // Wait for ADC to be ready (ADRDY='1').
 }
 
+/* SWITCH ADC OFF.
+ * @param:	None.
+ * @return:	None.
+ */
+void ADC_Off(void) {
+
+	/* Disable ADC before configure it */
+	ADC1 -> CR &= ~(0b1 << 0); // ADEN='0'.
+
+	/* Disable peripheral clock */
+	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
+}
+
 /* GET THE ACTUAL SUPPLY VOLTAGE THANKS TO THE INTERNAL VOLTAGE REFERENCE.
  * @param mcu_supply_voltage_mv:	Pointer to value that will contain MCU supply voltage in mV.
  * @return:							None.
  */
-void ADC_GetMcuVddMv(unsigned int* mcu_supply_voltage_mv) {
+void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
 
 	/* Select ADC_IN17 input channel*/
 	ADC1 -> CHSELR = 0;
@@ -70,7 +83,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_supply_voltage_mv) {
 
 	/* Compute temperature according to MCU factory calibration (see p.301 of RM0377 datasheet) */
 	vcc_mv = (VREFINT_VCC_CALIB_MV * VREFINT_CAL) / (raw_supply_voltage_12bits);
-	(*mcu_supply_voltage_mv) = vcc_mv;
+	(*mcu_vdd_mv) = vcc_mv;
 
 	/* Switch internal voltage reference off */
 	ADC1 -> CCR &= ~(0b1 << 22); // VREFEN='0'.
@@ -80,7 +93,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_supply_voltage_mv) {
  * @param mcu_temp_degrees:	Pointer to value that will contain MCU temperature in °C.
  * @return:					None.
  */
-void ADC_GetMcuTempDegrees(int* mcu_temp_degrees) {
+void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
 
 	/* Select ADC_IN18 input channel*/
 	ADC1 -> CHSELR = 0;
@@ -102,7 +115,7 @@ void ADC_GetMcuTempDegrees(int* mcu_temp_degrees) {
 	int raw_temp_calib_mv = (raw_temp_sensor_12bits * vcc_mv) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
 	int temp_calib_degrees = raw_temp_calib_mv * ((int)(TS_CAL2_TEMP-TS_CAL1_TEMP));
 	temp_calib_degrees = (temp_calib_degrees) / ((int)(TS_CAL2 - TS_CAL1));
-	(*mcu_temp_degrees) = temp_calib_degrees + TS_CAL1_TEMP;
+	(*mcu_temperature_degrees) = temp_calib_degrees + TS_CAL1_TEMP;
 
 	/* Switch temperature sensor off */
 	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.

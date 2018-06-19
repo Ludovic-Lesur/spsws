@@ -388,7 +388,6 @@ typedef enum
     SFX_NVMEM_BLOCK_SIZE = 7,
 } sfx_nvmem_t;
 
-
 /********************************
  * \enum sfx_rf_mode_t
  * \brief Functionnal mode for RF chip

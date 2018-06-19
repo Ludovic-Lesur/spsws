@@ -29,7 +29,6 @@
 
 #ifdef USE_TXE
 typedef struct {
-
 	unsigned char tx_buf[LPUART_TX_BUFFER_SIZE]; 	// Transmit buffer.
 	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
 	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
