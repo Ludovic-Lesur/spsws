@@ -8,7 +8,7 @@
 #ifndef REGISTERS_GPIO_REG_H
 #define REGISTERS_GPIO_REG_H
 
-/*** GPIOx registers ***/
+/*** GPIO registers ***/
 
 typedef struct {
 	volatile unsigned int MODER;    	// GPIO port mode register.
@@ -24,7 +24,7 @@ typedef struct {
 	volatile unsigned int BRR;   		// GPIO port bir reset register.
 } GPIO_BaseAddress;
 
-/*** GPIOx base addresses ***/
+/*** GPIO base addresses ***/
 
 #define GPIOA	((GPIO_BaseAddress*) ((unsigned int) 0x50000000))
 #define GPIOB	((GPIO_BaseAddress*) ((unsigned int) 0x50000400))

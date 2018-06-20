@@ -32,6 +32,7 @@
 									<listOptionValue builtIn="false" value="${ProjDirPath}/inc/station"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/inc/peripherals"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc/sigfox&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc/sx1232&quot;"/>
 								</option>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.493672440" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.1675128882" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
@@ -110,6 +111,7 @@
 									<listOptionValue builtIn="false" value="${ProjDirPath}/inc/station"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/inc/peripherals"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc/sigfox&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc/sx1232&quot;"/>
 								</option>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.846873007" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.102219551" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
@@ -152,12 +154,6 @@
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="SigfoxWeatherStation.fr.ac6.managedbuild.target.gnu.cross.exe.848471945" name="Executable" projectType="fr.ac6.managedbuild.target.gnu.cross.exe"/>
 	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440;fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.65442874;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.493672440">
-			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Continuous_Station">
@@ -177,5 +173,14 @@
 		<configuration configurationName="IntermittentMode">
 			<resource resourceType="PROJECT" workspacePath="/SPSWS"/>
 		</configuration>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440;fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.65442874;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.493672440">
+			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055;fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.388162457;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.846873007">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

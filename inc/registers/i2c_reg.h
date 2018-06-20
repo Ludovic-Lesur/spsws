@@ -27,7 +27,7 @@ typedef struct {
 /*** I2C base addresses ***/
 
 #define I2C1	((I2C_BaseAddress*) ((unsigned int) 0x40005400))
-#define I2C2	((I2C_BaseAddress*) ((unsigned int) 0x40005800))
-#define I2C3	((I2C_BaseAddress*) ((unsigned int) 0x40007800))
+//#define I2C2	((I2C_BaseAddress*) ((unsigned int) 0x40005800))
+//#define I2C3	((I2C_BaseAddress*) ((unsigned int) 0x40007800))
 
 #endif /* REGISTERS_I2C_REG_H */
