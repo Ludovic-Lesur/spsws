@@ -6,6 +6,7 @@
  */
 
 #include "rf_api.h"
+
 #include "sigfox_api.h"
 #include "sigfox_types.h"
 

@@ -6,6 +6,7 @@
  */
 
 #include "lptim.h"
+
 #include "lptim_reg.h"
 #include "nvic.h"
 #include "rcc.h"

@@ -6,6 +6,7 @@
  */
 
 #include "dma.h"
+
 #include "dma_reg.h"
 #include "lpuart_reg.h"
 #include "rcc_reg.h"
@@ -61,7 +62,8 @@ void DMA_LpuartRxSetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf
  * @return:	None.
  */
 void DMA_LpuartRxStart(void) {
-	DMA1 -> CCR3 |= (0b1 << 0); // Enable DMA channel (EN='1').
+	// Enable DMA channel.
+	DMA1 -> CCR3 |= (0b1 << 0); // EN='1'.
 }
 
 /* STOP TRANSFER OF LPUART RX BYTES.
@@ -69,5 +71,6 @@ void DMA_LpuartRxStart(void) {
  * @return:	None.
  */
 void DMA_LpuartRxStop(void) {
-	DMA1 -> CCR3 &= ~(0b1 << 0); // Disable DMA channel (EN='0').
+	// Disable DMA channel.
+	DMA1 -> CCR3 &= ~(0b1 << 0); // EN='0'.
 }

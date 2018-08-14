@@ -5,9 +5,10 @@
  *      Author: Ludovic
  */
 
+#include "tim.h"
+
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "tim.h"
 #include "tim_reg.h"
 
 /*** TIM functions ***/
@@ -27,8 +28,8 @@ void TIM_TimeInit(void) {
 	TIM22 -> CR1 &= ~(0b1 << 0); // Disable TIM22 (CEN='0').
 	TIM22 -> CNT = 0; // Reset counter.
 
-	/* Configure TIM21 as master to overflow every millisecond */
-	TIM21 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
+	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
+	TIM21 -> PSC = SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
 	TIM21 -> ARR = 1000; // 999 ?
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').
@@ -36,6 +37,10 @@ void TIM_TimeInit(void) {
 	/* Configure TIM22 as slave to count seconds */
 	TIM22 -> SMCR &= ~(0b111 << 4); // TS = '000' to select ITR0 = TIM1 as trigger input.
 	TIM22 -> SMCR |= (0b111 << 0); // SMS = '111' to enable slave mode with external clock.
+
+	/* Generate event to update registers */
+	TIM21 -> EGR |= (0b1 << 0); // UG='1'.
+	TIM22 -> EGR |= (0b1 << 0); // UG='1'.
 
 	/* Start timers */
 	TIM22 -> CR1 |= (0b1 << 0); // Enable TIM22 (CEN='1').
@@ -46,7 +51,7 @@ void TIM_TimeInit(void) {
  * @param:	None.
  * @return:	Number of seconds ellapsed since start-up.
  */
-unsigned int TIM_TimeGetS(void) {
+unsigned int TIM_TimeGetSeconds(void) {
 	return (TIM22 -> CNT);
 }
 
@@ -54,15 +59,15 @@ unsigned int TIM_TimeGetS(void) {
  * @param:	None.
  * @return:	Number of milliseconds ellapsed since start-up.
  */
-unsigned int TIM_TimeGetMs(void) {
-	return (TIM_TimeGetS()*1000 + (TIM21 -> CNT));
+unsigned int TIM_TimeGetMilliseconds(void) {
+	return (TIM_TimeGetSeconds()*1000 + (TIM21 -> CNT));
 }
 
 /* DELAY FUNCTION.
  * @param msToWait:	Number of milliseconds to wait.
  * @return:			None.
  */
-void TIM_TimeWaitMs(unsigned int ms_to_wait) {
-	unsigned int start_ms = TIM_TimeGetMs();
-	while (TIM_TimeGetMs() < (start_ms + ms_to_wait));
+void TIM_TimeWaitMilliseconds(unsigned int ms_to_wait) {
+	unsigned int start_ms = TIM_TimeGetMilliseconds();
+	while (TIM_TimeGetMilliseconds() < (start_ms + ms_to_wait));
 }

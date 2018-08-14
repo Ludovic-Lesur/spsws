@@ -5,9 +5,10 @@
  *      Author: Ludovic
  */
 
+#include "spi.h"
+
 #include "gpio_reg.h"
 #include "rcc_reg.h"
-#include "spi.h"
 #include "spi_reg.h"
 
 /*** SPI functions ***/

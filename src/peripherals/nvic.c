@@ -6,6 +6,7 @@
  */
 
 #include "nvic.h"
+
 #include "nvic_reg.h"
 
 /*** NVIC functions ***/

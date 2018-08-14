@@ -8,6 +8,7 @@
 #ifdef CONTINUOUS_MODE
 
 #include "exti.h"
+
 #include "exti_reg.h"
 #include "gpio_reg.h"
 #include "nvic.h"

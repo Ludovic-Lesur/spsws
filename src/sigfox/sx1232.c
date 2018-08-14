@@ -5,9 +5,10 @@
  *      Author: Ludovic
  */
 
+#include "sx1232.h"
+
 #include "gpio_reg.h"
 #include "spi.h"
-#include "sx1232.h"
 #include "sx1232_reg.h"
 
 /*** SX1232 local functions ***/
@@ -21,10 +22,11 @@ void SX1232_RegisterWrite(unsigned char addr, unsigned char data_to_write) {
 	/* Check addr is a 7-bits value */
 	if (addr < (0b1 << 7)) {
 		/* Build SPI frame */
-		unsigned char spi_command = (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
+		unsigned char sx1232_spi_command = 0;
+		sx1232_spi_command |= (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
 		/* Write access sequence */
 		GPIOA -> ODR &= ~(0b1 << 4); // Falling edge on NSS pin (OD4='0').
-		SPI_SendByte(spi_command);
+		SPI_SendByte(sx1232_spi_command);
 		SPI_SendByte(data_to_write);
 		GPIOA -> ODR |= (0b1 << 4); // Set NSS pin (OD4='1').
 	}
@@ -39,10 +41,11 @@ void SX1232_RegisterRead(unsigned char addr, unsigned char* data_to_read) {
 	/* Check addr is a 7-bits value */
 	if (addr < (0b1 << 7)) {
 		/* Build SPI frame */
-		unsigned char spi_command = addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
+		unsigned char sx1232_spi_command = 0;
+		sx1232_spi_command |= addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
 		/* Write access sequence */
 		GPIOA -> ODR &= ~(0b1 << 4); // Falling edge on NSS pin (OD4='0').
-		SPI_SendByte(spi_command);
+		SPI_SendByte(sx1232_spi_command);
 		SPI_ReadByte(data_to_read);
 		GPIOA -> ODR |= (0b1 << 4); // Set NSS pin (OD4='1').
 	}

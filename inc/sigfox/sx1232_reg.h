@@ -1,7 +1,7 @@
 /*
  * sx1232_reg.h
  *
- *  Created on: 20 juin 2018
+ *  Created on: 20 june 2018
  *      Author: Ludovic
  */
 

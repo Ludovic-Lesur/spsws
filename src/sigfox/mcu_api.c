@@ -5,9 +5,10 @@
  *      Author: Ludovic
  */
 
+#include "mcu_api.h"
+
 #include "adc.h"
 #include "aes.h"
-#include "mcu_api.h"
 #include "nvm.h"
 #include "sigfox_types.h"
 

@@ -5,8 +5,9 @@
  *      Author: Ludovic
  */
 
-#include "gpio_reg.h"
 #include "i2c.h"
+
+#include "gpio_reg.h"
 #include "i2c_reg.h"
 #include "rcc.h"
 #include "rcc_reg.h"
@@ -39,7 +40,7 @@ void I2C_Init(void) {
 	I2C1 -> TIMINGR &= ~(0b1111 << 28); // I2CCLK = PCLK1 = SYSCLK (PRESC='0000').
 	I2C1 -> TIMINGR &= 0xFF00FFFF; // No delay (SCLDEL='0000' and SDADEL='0000').
 	I2C1 -> TIMINGR &= 0xFFFF0000; // Reset bits 0-15.
-	unsigned int scl_half_period = ((RCC_GetSysclkKhz()/I2CCLK_KHZ)-1)/2; // See p.641 of RM0377 datasheet.
+	unsigned int scl_half_period = ((SYSCLK_KHZ/I2CCLK_KHZ)-1)/2; // See p.641 of RM0377 datasheet.
 	I2C1 -> TIMINGR |= (scl_half_period << 8) + scl_half_period; // Set SCL frequency.
 	I2C1 -> CR1 &= ~(0b1 << 17); // Clock stretching enabled (NOSTRETCH='0').
 	I2C1 -> CR2 &= ~(0b1 << 11); // 7-bits addressing mode (ADD10='0').

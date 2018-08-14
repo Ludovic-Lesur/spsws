@@ -157,7 +157,7 @@ g_pfnVectors:
   .word 0 // SPI1
   .word	0 // SPI2
   .word	0 // USART1
-  .word	0 // USART2
+  .word	USART2_IRQHandler // USART2
   .word	LPUART1_IRQHandler // AES, RNG and LPUART1.
 
 /*******************************************************************************
@@ -195,6 +195,9 @@ g_pfnVectors:
 	.weak	LPUART1_IRQHandler
 	.thumb_set LPUART1_IRQHandler,Default_Handler
 	
+	.weak	USART2_IRQHandler
+	.thumb_set USART2_IRQHandler,Default_Handler
+
 	.weak	SystemInit
 
 /************************ (C) COPYRIGHT Ac6 *****END OF FILE****/

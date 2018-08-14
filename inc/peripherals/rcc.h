@@ -10,14 +10,15 @@
 
 /*** RCC macros ***/
 
-//#define USE_HSE	// To be defined if external oscillator is used.
+// System clock frequency in kHz.
+#define SYSCLK_KHZ	16000
+// To be defined if external oscillator is used.
+//#define USE_HSE
 
 /*** RCC functions ***/
 
 void RCC_Init(void);
-unsigned int RCC_GetSysclkKhz(void);
-void RCC_SwitchToMsi131kHz(void);
 void RCC_SwitchToHsi16MHz(void);
-void RCC_SwitchToHse(void);
+void RCC_SwitchToHse16MHz(void);
 
 #endif /* PERIPHERALS_RCC_H */
