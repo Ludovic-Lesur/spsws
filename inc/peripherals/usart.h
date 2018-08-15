@@ -11,6 +11,7 @@
 /*** USART functions ***/
 
 void USART_Init(void);
-void USART_SendString(char* string_to_send);
+void USART_Off(void);
+void USART_SendString(unsigned char* string_to_send);
 
 #endif /* PERIPHERALS_USART_H_ */

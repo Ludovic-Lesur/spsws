@@ -71,11 +71,11 @@ static NEOM8N_Context neom8n_ctx;
 
 /*** NEO-M8N local functions ***/
 
-/* CONVERTS THE ASCII CODE OF A DECIMAL CHARACTER TO THE CORRESPONDING VALUE.
+/* CONVERTS THE ASCII CODE OF AN HEXADECIMAL CHARACTER TO THE CORRESPONDING VALUE.
  * @param c:			Hexadecimal character to convert.
  * @return hexa_value:	Result of conversion.
  */
-unsigned char AsciiToDecimal(unsigned char c) {
+unsigned char AsciiToHexa(unsigned char c) {
 	unsigned char value = 0;
 	if ((c >= '0') && (c <= '9')) {
 		value = c - '0';
@@ -133,7 +133,7 @@ unsigned char NEOM8N_GetNmeaChecksum(unsigned char* nmea_rx_buf) {
 		checksum_start_char_idx++;
 	}
 	if (checksum_start_char_idx < NMEA_RX_BUFFER_SIZE) {
-		ck = (AsciiToDecimal(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + AsciiToDecimal(nmea_rx_buf[checksum_start_char_idx+2]);
+		ck = (AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+2]);
 	}
 	return ck;
 }
@@ -207,9 +207,9 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 				/* Field 2 = time = <hhmmss.ss> */
 				case 2:
 					if ((idx-sep_idx) == (NMEA_ZDA_TIME_FIELD_LENGTH+1)) {
-						(*gps_timestamp).time_hours = AsciiToDecimal(nmea_rx_buf[sep_idx+1])*10 + AsciiToDecimal(nmea_rx_buf[sep_idx+2]);
-						(*gps_timestamp).time_minutes = AsciiToDecimal(nmea_rx_buf[sep_idx+3])*10 + AsciiToDecimal(nmea_rx_buf[sep_idx+4]);
-						(*gps_timestamp).time_seconds = AsciiToDecimal(nmea_rx_buf[sep_idx+5])*10 + AsciiToDecimal(nmea_rx_buf[sep_idx+6]);
+						(*gps_timestamp).time_hours = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).time_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+4]);
+						(*gps_timestamp).time_seconds = AsciiToHexa(nmea_rx_buf[sep_idx+5])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+6]);
 					}
 					else {
 						error_found = 1;
@@ -219,7 +219,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 				/* Field 3 = day = <dd> */
 				case 3:
 					if ((idx-sep_idx) == (NMEA_ZDA_DAY_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date_day = AsciiToDecimal(nmea_rx_buf[sep_idx+1])*10 + AsciiToDecimal(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).date_day = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -228,7 +228,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 
 				case 4:
 					if ((idx-sep_idx) == (NMEA_ZDA_MONTH_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date_month = AsciiToDecimal(nmea_rx_buf[sep_idx+1])*10 + AsciiToDecimal(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).date_month = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -239,7 +239,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 					if ((idx-sep_idx) == (NMEA_ZDA_YEAR_FIELD_LENGTH+1)) {
 						(*gps_timestamp).date_year = 0;
 						for (k=0 ; k<NMEA_ZDA_YEAR_FIELD_LENGTH ; k++) {
-							(*gps_timestamp).date_year += Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k)*AsciiToDecimal(nmea_rx_buf[sep_idx+1+k]);
+							(*gps_timestamp).date_year += Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 						}
 						// Last field retrieved, parsing process succeeded.
 						neom8n_ctx.nmea_zda_parsing_success = 1;
@@ -318,11 +318,11 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, GPS_PositionData* gp
 				/* Field 3 = latitude = <ddmm.mmmmm> */
 				case 3:
 					if ((idx-sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH+1)) {
-						(*gps_position).lat_degrees = AsciiToDecimal(nmea_rx_buf[sep_idx+1])*10+AsciiToDecimal(nmea_rx_buf[sep_idx+2]);
-						(*gps_position).lat_minutes = AsciiToDecimal(nmea_rx_buf[sep_idx+3])*10+AsciiToDecimal(nmea_rx_buf[sep_idx+4]);
+						(*gps_position).lat_degrees = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10+AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_position).lat_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10+AsciiToHexa(nmea_rx_buf[sep_idx+4]);
 						(*gps_position).lat_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).lat_seconds += Pow10(4-k)*AsciiToDecimal(nmea_rx_buf[sep_idx+6+k]);
+							(*gps_position).lat_seconds += Pow10(4-k)*AsciiToHexa(nmea_rx_buf[sep_idx+6+k]);
 						}
 					}
 					else {
@@ -356,12 +356,12 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, GPS_PositionData* gp
 					if ((idx-sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH+1)) {
 						(*gps_position).long_degrees = 0;
 						for (k=0 ; k<3 ; k++) {
-							(*gps_position).long_degrees += Pow10(2-k)*AsciiToDecimal(nmea_rx_buf[sep_idx+1+k]);
+							(*gps_position).long_degrees += Pow10(2-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 						}
-						(*gps_position).long_minutes = AsciiToDecimal(nmea_rx_buf[sep_idx+4])*10+AsciiToDecimal(nmea_rx_buf[sep_idx+5]);
+						(*gps_position).long_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+4])*10+AsciiToHexa(nmea_rx_buf[sep_idx+5]);
 						(*gps_position).long_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).long_seconds += Pow10(4-k)*AsciiToDecimal(nmea_rx_buf[sep_idx+7+k]);
+							(*gps_position).long_seconds += Pow10(4-k)*AsciiToHexa(nmea_rx_buf[sep_idx+7+k]);
 						}
 					}
 					else {
@@ -406,12 +406,12 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, GPS_PositionData* gp
 						if (alt_number_of_digits > 0) {
 							(*gps_position).altitude = 0;
 							for (k=0 ; k<alt_number_of_digits ; k++) {
-								(*gps_position).altitude += Pow10(alt_number_of_digits-1-k)*AsciiToDecimal(nmea_rx_buf[sep_idx+1+k]);
+								(*gps_position).altitude += Pow10(alt_number_of_digits-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 							}
 
 							/* Rounding operation if fractionnal part exists (not required for success) */
 							if ((idx-(sep_idx+alt_number_of_digits)-1) >= 2) {
-								if (AsciiToDecimal(nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
+								if (AsciiToHexa(nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
 									(*gps_position).altitude++; // Add '1' to altitude.
 								}
 							}

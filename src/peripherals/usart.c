@@ -66,39 +66,43 @@ void USART_Init(void) {
 
 	/* Enable transmitter */
 	USART2 -> CR1 |= (0b1 << 3); // TE='1'.
-	USART2 -> CR1 |= (0b1 << 7); // TXEIE='1'.
-	NVIC_EnableInterrupt(IT_USART2);
+	NVIC_DisableInterrupt(IT_USART2);
 
 	/* Enable peripheral */
 	USART2 -> CR1 |= (0b1 << 0);
 }
 
-/* SEND A BYTE THROUGH USART.
- * @param byte_to_send:	Byte to send.
- * @return:				None.
+/* SWITCH USART2 PERIPHERAL OFF.
+ * @param:	None.
+ * @return:	None.
  */
-void USART_SendByte(unsigned char byte_to_send) {
+void USART_Off(void) {
 
-	/* Fill TX buffer with new byte */
-	usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = byte_to_send;
-	usart_ctx.tx_buf_write_idx++;
-	if (usart_ctx.tx_buf_write_idx == USART_TX_BUFFER_SIZE) {
-		usart_ctx.tx_buf_write_idx = 0;
-	}
+	/* Disable peripheral */
+	USART2 -> CR1 &= ~(0b1 << 0);
 
-	/* Enable TXE interrupt */
-	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	/* Disable peripheral clock */
+	RCC -> APB1ENR &= ~(0b1 << 17); // USART2EN='0'.
 }
 
 /* SEND A BYTE ARRAY THROUGH USART.
  * @param string_to_send:	Byte array to send.
  * @return:					None.
  */
-void USART_SendString(char* string_to_send) {
-	/* Fill TX buffer with new bytes */
+void USART_SendString(unsigned char* string_to_send) {
+	// Disable interrupt.
+	NVIC_DisableInterrupt(IT_USART2);
+	// Fill TX buffer with new bytes.
 	while (*string_to_send) {
-		USART_SendByte(*(string_to_send++));
+		usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = *(string_to_send++);
+		usart_ctx.tx_buf_write_idx++;
+		if (usart_ctx.tx_buf_write_idx == USART_TX_BUFFER_SIZE) {
+			usart_ctx.tx_buf_write_idx = 0;
+		}
 	}
+	// Enable interrupt.
+	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	NVIC_EnableInterrupt(IT_USART2);
 }
 
 /* USART2 INTERRUPT HANDLER.

@@ -8,7 +8,7 @@
 #ifndef SX1232_SX1232_REG_H_
 #define SX1232_SX1232_REG_H_
 
-/*** SX1232 register addresses ***/
+/*** SX1232 register map ***/
 
 #define SX1232_REG_FIFO				0x00
 #define SX1232_REG_OPMODE			0x01

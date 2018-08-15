@@ -151,7 +151,6 @@ void GPS_GetNvmParameters(void) {
 	// Previous GPS timestamp.
 	NVM_ReadByte(NVM_GPS_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, &gps_previous_timestamp.date_day);
 	NVM_ReadByte(NVM_GPS_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, &gps_previous_timestamp.date_month);
-	//NVM_ReadShort(NVM_GPS_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, &gps_previous_timestamp.date_year);
 	unsigned char year_msb;
 	NVM_ReadByte(NVM_GPS_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, &year_msb);
 	unsigned char year_lsb;
@@ -219,10 +218,9 @@ void GPS_Init(void) {
 	gps_position.altitude = 0;
 }
 
-/* BUILD SIGFOX DATA STARTING FROM NMEA FIELDS.
- * @param sigfox_data:			Bytes array that will contain GPS data.
- * @param sigfox_data_length:	Length of 'sigfox_data' in bytes.
- * @return:						None.
+/* BUILD SIGFOX DATA STARTING FROM GPS POSITION AND STATUS.
+ * @param:	None.
+ * @return:	None.
  */
 void GPS_BuildSigfoxData(void) {
 
@@ -399,8 +397,8 @@ void GPS_Processing(void) {
 				gps_ctx.gps_state = GPS_STATE_SIGFOX;
 			}
 			else {
-				if (((gps_ctx.gps_status_byte & GPS_PREVIOUS_TIMESTAMP_DATA_VALID_BIT_OFFSET) != 0) &&
-				    ((gps_ctx.gps_status_byte & GPS_CURRENT_TIMESTAMP_DATA_VALID_BIT_OFFSET) != 0) &&
+				if (((gps_ctx.gps_status_byte & (0b1 << GPS_PREVIOUS_TIMESTAMP_DATA_VALID_BIT_OFFSET)) != 0) &&
+				    ((gps_ctx.gps_status_byte & (0b1 << GPS_CURRENT_TIMESTAMP_DATA_VALID_BIT_OFFSET)) != 0) &&
 					(HWT_WasResetReason())) {
 					// Compute effective duration and calibrate hardware timer thanks to GPS timestamp.
 					gps_ctx.gps_state = GPS_STATE_CALIBRATE_HARDWARE_TIMER;
@@ -418,8 +416,8 @@ void GPS_Processing(void) {
 			GPS_BuildSigfoxData();
 			// TBD: send.
 			// Compute next state.
-			if (((gps_ctx.gps_status_byte & GPS_PREVIOUS_TIMESTAMP_DATA_VALID_BIT_OFFSET) != 0) &&
-				((gps_ctx.gps_status_byte & GPS_CURRENT_TIMESTAMP_DATA_VALID_BIT_OFFSET) != 0) &&
+			if (((gps_ctx.gps_status_byte & (0b1 << GPS_PREVIOUS_TIMESTAMP_DATA_VALID_BIT_OFFSET)) != 0) &&
+				((gps_ctx.gps_status_byte & (0b1 << GPS_CURRENT_TIMESTAMP_DATA_VALID_BIT_OFFSET)) != 0) &&
 				(HWT_WasResetReason())) {
 				// Compute effective duration and calibrate hardware timer thanks to GPS timestamp.
 				gps_ctx.gps_state = GPS_STATE_CALIBRATE_HARDWARE_TIMER;
@@ -446,3 +444,13 @@ void GPS_Processing(void) {
 		}
 	}
 }
+
+#ifdef HARDWARE_TIMER
+/* GET GPS STATUS BYTE.
+ * @param gps_status_byte:	Pointer to char that will contain GPS status byte.
+ * @return:					None.
+ */
+void GPS_GetStatusByte(unsigned char* gps_status_byte) {
+	(*gps_status_byte) = gps_ctx.gps_status_byte;
+}
+#endif

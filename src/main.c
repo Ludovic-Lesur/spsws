@@ -55,7 +55,7 @@ SPSWS_Context spsws_ctx;
 
 /*** SPSWS main function ***/
 
-#if (defined INTERMITTENT_MODE) || (defined HARDWARE_TIMER)
+#ifdef INTERMITTENT_MODE
 /* MAIN FUNCTION FOR INTERMITTENT MODE.
  * @param: 	None.
  * @return: 0.
@@ -65,13 +65,13 @@ int main(void) {
 	/* Reset deep sleep flag on wake-up */
 	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
 
-	// LED on.
+	// Configure debug LED as output.
 	RCC -> IOPENR |= (0b1 << 1);
 	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
 	GPIOB -> MODER |= (0b01 << 8);
 
 	/* Init context */
-	spsws_ctx.spsws_state = SPSWS_STATE_RESET_HANDLER;
+	spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 	spsws_ctx.spsws_iwdg_reset = 0;
 
 	/* Main loop */
@@ -129,11 +129,6 @@ int main(void) {
 			// Init clock.
 			RCC_Init();
 			RCC_SwitchToHsi16MHz();
-#ifdef HARDWARE_TIMER
-			// Send Sigfox frame at start-up.
-			USART_Init();
-			//USART_SendString("AT$SF=00\r\n");
-#endif
 			// Init time.
 			TIM_TimeInit();
 			// Init NVM.
@@ -232,6 +227,102 @@ int main(void) {
 	EXTI_Init();
 
 	while(1);
+
+	return 0;
+}
+#endif
+
+#ifdef HARDWARE_TIMER
+/* RETURN THE ASCII CODE OF A GIVEN HEXADIMAL VALUE.
+ * @param value:	Hexadecimal value to convert.
+ * @return c:		Correspoding ASCII code.
+ */
+unsigned char HexaToAscii(unsigned char value) {
+	unsigned char c = 0;
+	if ((value >= 0) && (value <= 9)) {
+		c = value + '0';
+	}
+	else {
+		if ((value >= 10) && (value <= 15)) {
+			c = value + 'A' - 10;
+		}
+	}
+	return c;
+}
+
+/* MAIN FUNCTION FOR HARDWARE TIMER TEST.
+ * @param: 	None.
+ * @return: 0.
+ */
+int main(void) {
+
+	// Reset deep sleep flag on wake-up
+	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
+
+	// Init clock.
+	RCC_Init();
+	RCC_SwitchToHsi16MHz();
+
+	// Init time ans external components to start-up.
+	TIM_TimeInit();
+	TIM_TimeWaitMilliseconds(5000);
+
+	// Debug LED on.
+	RCC -> IOPENR |= (0b1 << 1);
+	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 8);
+	GPIOB -> ODR |= (0b1 << 4);
+
+	// Send start message through Sigfox.
+	USART_Init();
+	USART_SendString((unsigned char*) "AT$SF=00\r\n");
+	TIM_TimeWaitMilliseconds(7000);
+
+	// Init HWT.
+	HWT_Init(1);
+
+	// Get timestamp and calibrate HWT.
+	GPS_Processing();
+
+	// Send stats message through Sigfox.
+	unsigned char gps_status_byte = 0;
+	GPS_GetStatusByte(&gps_status_byte);
+	unsigned int hwt_absolute_error = 0;
+	unsigned char hwt_feedback_value = 0;
+	unsigned char hwt_feedback_direction = 0;
+	HWT_GetParameters(&hwt_absolute_error, &hwt_feedback_value, &hwt_feedback_direction);
+	unsigned char sigfox_uart_cmd[22] = {0};
+	sigfox_uart_cmd[0] = 'A';
+	sigfox_uart_cmd[1] = 'T';
+	sigfox_uart_cmd[2] = '$';
+	sigfox_uart_cmd[3] = 'S';
+	sigfox_uart_cmd[4] = 'F';
+	sigfox_uart_cmd[5] = '=';
+	sigfox_uart_cmd[6] = HexaToAscii((gps_status_byte & 0xF0) >> 4);
+	sigfox_uart_cmd[7] = HexaToAscii(gps_status_byte & 0x0F);
+	sigfox_uart_cmd[8] = HexaToAscii((hwt_absolute_error & 0xF0000000) >> 28);
+	sigfox_uart_cmd[9] = HexaToAscii((hwt_absolute_error & 0x0F000000) >> 24);
+	sigfox_uart_cmd[10] = HexaToAscii((hwt_absolute_error & 0x00F00000) >> 20);
+	sigfox_uart_cmd[11] = HexaToAscii((hwt_absolute_error & 0x000F0000) >> 16);
+	sigfox_uart_cmd[12] = HexaToAscii((hwt_absolute_error & 0x0000F000) >> 12);
+	sigfox_uart_cmd[13] = HexaToAscii((hwt_absolute_error & 0x00000F00) >> 8);
+	sigfox_uart_cmd[14] = HexaToAscii((hwt_absolute_error & 0x000000F0) >> 4);
+	sigfox_uart_cmd[15] = HexaToAscii(hwt_absolute_error & 0x0000000F);
+	sigfox_uart_cmd[16] = HexaToAscii((hwt_feedback_value & 0xF0) >> 4);
+	sigfox_uart_cmd[17] = HexaToAscii(hwt_feedback_value & 0x0F);
+	sigfox_uart_cmd[18] = HexaToAscii((hwt_feedback_direction & 0xF0) >> 4);
+	sigfox_uart_cmd[19] = HexaToAscii(hwt_feedback_direction & 0x0F);
+	sigfox_uart_cmd[20] = '\r';
+	sigfox_uart_cmd[21] = '\n';
+	USART_SendString(sigfox_uart_cmd);
+	TIM_TimeWaitMilliseconds(7000);
+	USART_Off();
+
+	// LED off.
+	GPIOB -> ODR &= ~(0b1 << 4);
+
+	// Enter standby mode.
+	PWR_EnterStandbyMode();
 
 	return 0;
 }

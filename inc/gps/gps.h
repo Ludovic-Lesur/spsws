@@ -17,5 +17,8 @@
 /*** GPS functions ***/
 
 void GPS_Processing(void);
+#ifdef HARDWARE_TIMER
+void GPS_GetStatusByte(unsigned char* gps_status_byte);
+#endif
 
 #endif /* GPS_GPS_H */
