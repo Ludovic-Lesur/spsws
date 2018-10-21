@@ -11,6 +11,7 @@
 #include "aes.h"
 #include "nvm.h"
 #include "sigfox_types.h"
+#include "tim.h"
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8 **returned_pointer)
@@ -99,12 +100,20 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
 sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 	switch (delay_type) {
 	case SFX_DLY_INTER_FRAME_TX:
+		// 0 to 2s in Uplink DC.
+		TIM_TimeWaitMilliseconds(500);
 		break;
 	case SFX_DLY_INTER_FRAME_TRX:
+		// 500 ms in Uplink/Downlink FH & Downlink DC.
+		TIM_TimeWaitMilliseconds(500);
 		break;
 	case SFX_DLY_OOB_ACK:
+		// 1.4s to 4s for Downlink OOB.
+		TIM_TimeWaitMilliseconds(2000);
 		break;
 	case SFX_DLY_CS_SLEEP:
+		// Delay between several trials of Carrier Sense (for the first frame only).
+		TIM_TimeWaitMilliseconds(1000);
 		break;
 	default:
 		break;
@@ -141,7 +150,9 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 	switch (use_key) {
 		case CREDENTIALS_PRIVATE_KEY:
 			// Retrieve device key from NVM.
-			NVM_GetSigfoxKey(local_key);
+			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
+				NVM_ReadByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+byte_idx, &(local_key[byte_idx]));
+			}
 			break;
 		case CREDENTIALS_KEY_IN_ARGUMENT:
 			// Use key in argument.
@@ -193,24 +204,17 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// |______|_______|______|______|
 
 	// PN.
-	unsigned short pn_value = 0;
-	NVM_GetSigfoxPn(&pn_value);
-	read_data[SFX_NVMEM_PN] = ((pn_value & 0xFF00) >> 8);
-	read_data[SFX_NVMEM_PN+1] = (pn_value & 0x00FF);
+	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
+	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN+1]));
 	// Sequence number.
-	unsigned short seq_num_value = 0;
-	NVM_GetSigfoxSeqNum(&seq_num_value);
-	read_data[SFX_NVMEM_SEQ_NUM] = ((seq_num_value & 0xFF00) >> 8);
-	read_data[SFX_NVMEM_SEQ_NUM+1] = (seq_num_value & 0x00FF);
+	NVM_ReadByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_SEQ_NUM]));
+	NVM_ReadByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_SEQ_NUM+1]));
 	// FH.
-	unsigned short fh_value = 0;
-	NVM_GetSigfoxFh(&fh_value);
-	read_data[SFX_NVMEM_FH] = ((fh_value & 0xFF00) >> 8);
-	read_data[SFX_NVMEM_FH+1] = (fh_value & 0x00FF);
+	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_FH]));
+	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
 	// RL.
-	unsigned char rl_value = 0;
-	NVM_GetSigfoxRl(&rl_value);
-	read_data[SFX_NVMEM_RL] = rl_value;
+	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
+	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_RL+1]));
 
 	return SFX_ERR_NONE;
 }
@@ -241,17 +245,17 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// |______|_______|______|______|
 
 	// PN.
-	unsigned short pn_value = (data_to_write[SFX_NVMEM_PN] << 8) + data_to_write[SFX_NVMEM_PN+1];
-	NVM_SetSigfoxPn(pn_value);
+	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
+	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN+1]);
 	// Sequence number.
-	unsigned short seq_num_value = (data_to_write[SFX_NVMEM_SEQ_NUM] << 8) + data_to_write[SFX_NVMEM_SEQ_NUM+1];
-	NVM_SetSigfoxSeqNum(seq_num_value);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_SEQ_NUM]);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_SEQ_NUM+1]);
 	// FH.
-	unsigned short fh_value = (data_to_write[SFX_NVMEM_FH] << 8) + data_to_write[SFX_NVMEM_FH+1];
-	NVM_SetSigfoxFh(fh_value);
+	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_FH]);
+	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
 	// RL.
-	unsigned short rl_value = data_to_write[SFX_NVMEM_RL];
-	NVM_SetSigfoxRl(rl_value);
+	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
+	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_RL+1]);
 
 	return SFX_ERR_NONE;
 }
@@ -377,11 +381,9 @@ sfx_u8 MCU_API_get_version(sfx_u8** version, sfx_u8* size) {
  *******************************************************************/
 sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH], sfx_bool* payload_encryption_enabled) {
 	// Get device ID.
-	unsigned char sfx_id[SIGFOX_ID_SIZE] = {0};
-	NVM_GetSigfoxId(sfx_id);
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
-		dev_id[byte_idx] = (sfx_u8)(sfx_id[byte_idx]);
+		NVM_ReadByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+byte_idx, &(dev_id[byte_idx]));
 	}
 	// No payload encryption.
 	(*payload_encryption_enabled) = SFX_FALSE;
@@ -402,11 +404,9 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
  *******************************************************************/
 sfx_u8 MCU_API_get_initial_pac(sfx_u8 initial_pac[PAC_LENGTH]) {
 	// Get device initial PAC.
-	unsigned char sfx_initial_pac[SIGFOX_PAC_SIZE] = {0};
-	NVM_GetSigfoxInitialPac(sfx_initial_pac);
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<PAC_LENGTH ; byte_idx++) {
-		initial_pac[byte_idx] = (sfx_u8)(sfx_initial_pac[byte_idx]);
+		NVM_ReadByte(NVM_SIGFOX_INITIAL_PAC_ADDRESS_OFFSET+byte_idx, &(initial_pac[byte_idx]));
 	}
 	return SFX_ERR_NONE;
 }

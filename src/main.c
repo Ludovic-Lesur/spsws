@@ -6,14 +6,15 @@
  */
 
 #include "adc.h"
-#ifdef CONTINUOUS_MODE
+#ifdef CM_RTC
 #include "exti.h"
 #endif
+#include "geoloc.h"
 #include "gpio_reg.h"
-#include "gps.h"
+#ifdef IM_HWT
 #include "hwt.h"
+#endif
 #include "i2c.h"
-#include "iwdg.h"
 #include "lpuart.h"
 #include "mcu_api.h"
 #include "nvm.h"
@@ -24,7 +25,7 @@
 #include "scb_reg.h"
 #include "sigfox_types.h"
 #include "tim.h"
-#ifdef HARDWARE_TIMER
+#ifdef ATM
 #include "usart.h"
 #endif
 
@@ -32,19 +33,17 @@
 
 // SPSWS state machine.
 typedef enum {
-	SPSWS_STATE_RESET_HANDLER,
-	SPSWS_STATE_INIT,
-	SPSWS_STATE_GPS,
-	SPSWS_STATE_SENSORS,
-	SPSWS_STATE_CONFIG_STATUS,
-	SPSWS_STATE_WATCHDOG_RESET_HANDLER,
-	SPSWS_STATE_SLEEP
+	SPSWS_STATE_POR, // State at power on reset.
+	SPSWS_STATE_INIT, // State after every wake-up from standby mode.
+	SPSWS_STATE_GEOLOC, // GEOLOC processing.
+	SPSWS_STATE_SENSORS, // Sensors processing.
+	SPSWS_STATE_CONFIG_STATUS, // Downlink management.
+	SPSWS_STATE_SLEEP // Standby mode.
 } SPSWS_State;
 
 // SPSWS context.
 typedef struct {
 	SPSWS_State spsws_state;
-	unsigned char spsws_iwdg_reset;
 	sfx_u16 spsws_mcu_vdd;
 	sfx_s16 spsws_mcu_temperature;
 } SPSWS_Context;
@@ -55,8 +54,8 @@ SPSWS_Context spsws_ctx;
 
 /*** SPSWS main function ***/
 
-#ifdef INTERMITTENT_MODE
-/* MAIN FUNCTION FOR INTERMITTENT MODE.
+#ifdef IM_RTC
+/* MAIN FUNCTION FOR INTERMITTENT MODE USING RTC.
  * @param: 	None.
  * @return: 0.
  */
@@ -71,8 +70,7 @@ int main(void) {
 	GPIOB -> MODER |= (0b01 << 8);
 
 	/* Init context */
-	spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-	spsws_ctx.spsws_iwdg_reset = 0;
+	spsws_ctx.spsws_state = SPSWS_STATE_POR;
 
 	/* Main loop */
 	while(1) {
@@ -80,51 +78,15 @@ int main(void) {
 		/* Perform main state machine */
 		switch (spsws_ctx.spsws_state) {
 
-		/* Reset state */
-		case SPSWS_STATE_RESET_HANDLER:
-			// Enable power interface clock.
-			RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
-			// Check reset reason.
-			if (((RCC -> CSR) & (0b1 << 29)) != 0) {
-				if ((PWR -> CSR) & (0b1 << 1)) {
-					// RESET = Watchdog reset while in stanby-mode -> go back to stand-by mode without starting IWDG.
-					spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
-				}
-				else {
-					// RESET = Watchdog reset during previous program execution -> software failure.
-					spsws_ctx.spsws_iwdg_reset = 1;
-					//IWDG_Init();
-					spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-				}
-			}
-			else {
-				if ((PWR -> CSR) & (0b1 << 1)) {
-					if (HWT_Expired() == 1) {
-						// RESET = Hardware timer wake-up.
-						spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-					}
-					else {
-						// Program should never come here (wake-up from stand-by mode without watchdog and without hardware timer).
-						spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
-					}
-					HWT_Init(1);
-					spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-				}
-				else {
-					// RESET = Power-on reset (POR).
-					HWT_Init(0);
-					// Check hardware timer output.
-					if (HWT_Expired() == 1) {
-						spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-					}
-					else {
-						spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
-					}
-				}
-			}
+		/* Power on reset state */
+		case SPSWS_STATE_POR:
+			// Init RTC.
+
+			// Wait for RTC wake-up.
+			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 
-		/* Init modules and peripherals */
+		/* Init peripherals */
 		case SPSWS_STATE_INIT:
 			// Init clock.
 			RCC_Init();
@@ -134,17 +96,12 @@ int main(void) {
 			// Init NVM.
 			NVM_Init();
 			// Compute next state.
-			if (spsws_ctx.spsws_iwdg_reset == 1) {
-				spsws_ctx.spsws_state = SPSWS_STATE_WATCHDOG_RESET_HANDLER;
-			}
-			else {
-				spsws_ctx.spsws_state = SPSWS_STATE_GPS;
-			}
+			spsws_ctx.spsws_state = SPSWS_STATE_GEOLOC;
 			break;
 
-		/* GPS and time management */
-		case SPSWS_STATE_GPS:
-			GPS_Processing();
+		/* GEOLOC and time management */
+		case SPSWS_STATE_GEOLOC:
+			GEOLOC_Processing();
 			spsws_ctx.spsws_state = SPSWS_STATE_SENSORS;
 			break;
 
@@ -174,18 +131,14 @@ int main(void) {
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 
-		/* Handler when a watchdog reset is detected */
-		case SPSWS_STATE_WATCHDOG_RESET_HANDLER:
-			// TBC: end a specific Sigfox message to indicate watchdog reset occured.
-			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
-			break;
-
 		/* Sleep mode state */
 		case SPSWS_STATE_SLEEP:
 			// LED off.
 			GPIOB -> ODR &= ~(0b1 << 4);
 			// Enter standby mode.
 			PWR_EnterStandbyMode();
+			// Wake-up.
+			spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 			break;
 
 		/* Unknown state */
@@ -198,8 +151,8 @@ int main(void) {
 }
 #endif
 
-#ifdef CONTINUOUS_MODE
-/* MAIN FUNCTION FOR CONTINUOUS MODE.
+#ifdef CM_RTC
+/* MAIN FUNCTION FOR CONTINUOUS MODE USING RTC.
  * @param: 	None.
  * @return: 0.
  */
@@ -232,7 +185,7 @@ int main(void) {
 }
 #endif
 
-#ifdef HARDWARE_TIMER
+#ifdef IM_HWT
 /* RETURN THE ASCII CODE OF A GIVEN HEXADIMAL VALUE.
  * @param value:	Hexadecimal value to convert.
  * @return c:		Correspoding ASCII code.
@@ -250,7 +203,7 @@ unsigned char HexaToAscii(unsigned char value) {
 	return c;
 }
 
-/* MAIN FUNCTION FOR HARDWARE TIMER TEST.
+/* MAIN FUNCTION FOR INTERMITTENT MODE USING HARDWARE TIMER.
  * @param: 	None.
  * @return: 0.
  */
@@ -263,9 +216,12 @@ int main(void) {
 	RCC_Init();
 	RCC_SwitchToHsi16MHz();
 
-	// Init time ans external components to start-up.
+	// Configure wake-up pin as input.
+	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
+	GPIOA -> MODER &= ~(0b11 << 0); // Reset bits 0-1.
+
+	// Init time.
 	TIM_TimeInit();
-	TIM_TimeWaitMilliseconds(5000);
 
 	// Debug LED on.
 	RCC -> IOPENR |= (0b1 << 1);
@@ -273,25 +229,34 @@ int main(void) {
 	GPIOB -> MODER |= (0b01 << 8);
 	GPIOB -> ODR |= (0b1 << 4);
 
+	// Wait for external components to start-up.
+	TIM_TimeInit();
+	TIM_TimeWaitMilliseconds(5000);
+
 	// Send start message through Sigfox.
-	USART_Init();
-	USART_SendString((unsigned char*) "AT$SF=00\r\n");
+	//USART_Init();
+	//USART_SendString((unsigned char*) "AT$SB=0\r\n");
 	TIM_TimeWaitMilliseconds(7000);
 
 	// Init HWT.
 	HWT_Init(1);
 
-	// Get timestamp and calibrate HWT.
-	GPS_Processing();
+	// Get GEOLOC timestamp and calibrate HWT.
+	GEOLOC_Processing();
 
 	// Send stats message through Sigfox.
 	unsigned char gps_status_byte = 0;
-	GPS_GetStatusByte(&gps_status_byte);
+	GEOLOC_GetStatusByte(&gps_status_byte);
 	unsigned int hwt_absolute_error = 0;
 	unsigned char hwt_feedback_value = 0;
 	unsigned char hwt_feedback_direction = 0;
 	HWT_GetParameters(&hwt_absolute_error, &hwt_feedback_value, &hwt_feedback_direction);
-	unsigned char sigfox_uart_cmd[22] = {0};
+	unsigned int hwt_voltage_reference_mv = 0;
+	ADC_Init();
+	ADC_GetHwtVoltageReferenceMv(&hwt_voltage_reference_mv);
+	ADC_Off();
+	// Build AT command.
+	unsigned char sigfox_uart_cmd[26] = {0};
 	sigfox_uart_cmd[0] = 'A';
 	sigfox_uart_cmd[1] = 'T';
 	sigfox_uart_cmd[2] = '$';
@@ -312,18 +277,37 @@ int main(void) {
 	sigfox_uart_cmd[17] = HexaToAscii(hwt_feedback_value & 0x0F);
 	sigfox_uart_cmd[18] = HexaToAscii((hwt_feedback_direction & 0xF0) >> 4);
 	sigfox_uart_cmd[19] = HexaToAscii(hwt_feedback_direction & 0x0F);
-	sigfox_uart_cmd[20] = '\r';
-	sigfox_uart_cmd[21] = '\n';
-	USART_SendString(sigfox_uart_cmd);
+	sigfox_uart_cmd[20] = HexaToAscii((hwt_voltage_reference_mv & 0x000F000) >> 12);
+	sigfox_uart_cmd[21] = HexaToAscii((hwt_voltage_reference_mv & 0x0000F00) >> 8);
+	sigfox_uart_cmd[22] = HexaToAscii((hwt_voltage_reference_mv & 0x00000F0) >> 4);
+	sigfox_uart_cmd[23] = HexaToAscii(hwt_voltage_reference_mv & 0x000000F);
+	sigfox_uart_cmd[24] = '\r';
+	sigfox_uart_cmd[25] = '\n';
+	//USART_SendString(sigfox_uart_cmd);
 	TIM_TimeWaitMilliseconds(7000);
-	USART_Off();
+	//USART_Off();
 
-	// LED off.
-	GPIOB -> ODR &= ~(0b1 << 4);
+	// Check if HWT has not expired yet (effective duration < MCU run duration).
+	if (HWT_Expired() == 1) {
+		// TBD: trigger software reset.
+	}
+	else {
+		// LED off.
+		GPIOB -> ODR &= ~(0b1 << 4);
+		// Enter standby mode.
+		PWR_EnterStandbyMode();
+	}
 
-	// Enter standby mode.
-	PWR_EnterStandbyMode();
+	return 0;
+}
+#endif
 
+#ifdef ATM
+/* MAIN FUNCTION FOR AT MODE.
+ * @param: 	None.
+ * @return: 0.
+ */
+int main (void) {
 	return 0;
 }
 #endif

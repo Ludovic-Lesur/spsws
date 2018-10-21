@@ -10,25 +10,6 @@
 #include "nvm_reg.h"
 #include "rcc_reg.h"
 
-// Sigfox and station parameters are stored in NVM according to the following mapping (index 0 = NVM_START_ADDRESS):
-// Acronyms:	ID = identifier.
-//				PAC = product authentification code.
-//				PN =
-//				SEQ = sequence number.
-//				FH =
-//				RL =
-//				GPS = global positioning system.
-//				PGT = previous GPS timestamp.
-//				DLK = downlink.
-// _______________________________________________________________________________________________________________________________________________________________________________________________
-// |                                                   |                                                                                                                                          |
-// |                 Sigfox parameters                 |                                                               Station parameters                                                         |
-// |___________________________________________________|__________________________________________________________________________________________________________________________________________|
-// |0    3|4    19|20   27|28  29|30   31|32  33|  34  | 35  | 36    | 37       | 38       | 39    | 40      | 41      | 42      | 43    | 44     | 45	   | 46     | 47      | 48      | 49      |
-// |      |       |       |      |       |      |      | PGT | PGT   | PGT      | PGT      | PGT   | PGT     | PGT     | GPS     | GPS   | GPS    | GPS    | DLK    | SENSORS | SENSORS | SENSORS |
-// |  ID  |  KEY  |  PAC  |  PN  |  SEQ  |  FH  |  RL  | DAY | MONTH | YEAR MSB | YEAR LSB | HOURS | MINUTES | SECONDS | TIMEOUT | COUNT | PERIOD | STATUS | STATUS | COUNT   | PERIOD  | STATUS  |
-// |______|_______|_______|______|_______|______|______|_____|_______|__________|__________|_______|_________|_________|_________|_______|________|________|________|_________|_________|_________|
-
 /*** NVM local macros ***/
 
 // If defined, force Sigfox parameters re-flashing at start-up (values defined in NVM_SigfoxParametersReflash() function).

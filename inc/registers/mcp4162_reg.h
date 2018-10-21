@@ -5,8 +5,8 @@
  *      Author: Ludovic
  */
 
-#ifndef HWT_MCP4162_REG_H_
-#define HWT_MCP4162_REG_H_
+#ifndef REGISTERS_MCP4162_REG_H_
+#define REGISTERS_MCP4162_REG_H_
 
 /*** MCP4162 register map ***/
 
@@ -27,4 +27,4 @@
 #define MCP4162_REG_DATA8			0x0E
 #define MCP4162_REG_DATA9			0x0F
 
-#endif /* HWT_MCP4162_REG_H_ */
+#endif /* REGISTERS_MCP4162_REG_H_ */

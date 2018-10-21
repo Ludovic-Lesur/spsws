@@ -5,8 +5,6 @@
  *      Author: Ludovic
  */
 
-#ifdef CONTINUOUS_MODE
-
 #ifndef REGISTERS_EXTI_REG_H_
 #define REGISTERS_EXTI_REG_H_
 
@@ -26,5 +24,3 @@ typedef struct {
 #define EXTI	((EXTI_BaseAddress*) ((unsigned int) 0x40010400))
 
 #endif /* REGISTERS_EXTI_REG_H_ */
-
-#endif

@@ -5,8 +5,6 @@
  *      Author: Ludovic
  */
 
-#ifdef CONTINUOUS_MODE
-
 #ifndef REGISTERS_SYSCFG_REG_H_
 #define REGISTERS_SYSCFG_REG_H_
 
@@ -29,5 +27,3 @@ typedef struct {
 #define SYSCFG	((SYSCFG_BaseAddress*) ((unsigned int) 0x40010000))
 
 #endif /* REGISTERS_SYSCFG_REG_H_ */
-
-#endif

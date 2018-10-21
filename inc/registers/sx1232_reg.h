@@ -5,8 +5,8 @@
  *      Author: Ludovic
  */
 
-#ifndef SX1232_SX1232_REG_H_
-#define SX1232_SX1232_REG_H_
+#ifndef REGISTERS_SX1232_REG_H_
+#define REGISTERS_SX1232_REG_H_
 
 /*** SX1232 register map ***/
 
@@ -87,4 +87,4 @@
 // 0x6D-0x6F = reserved.
 #define SX1232_REG_BITRATEFRAC		0x70
 
-#endif /* SX1232_SX1232_REG_H_ */
+#endif /* REGISTERS_SX1232_REG_H_ */

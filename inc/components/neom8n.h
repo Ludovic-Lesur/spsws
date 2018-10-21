@@ -5,15 +5,15 @@
  *      Author: Ludovic
  */
 
-#ifndef GPS_NEOM8N_H_
-#define GPS_NEOM8N_H_
+#ifndef COMPONENTS_NEOM8N_H_
+#define COMPONENTS_NEOM8N_H_
 
 /*** NEOM8N macros ***/
 
-#define NMEA_CR					'\r'
-#define NMEA_LF					'\n'
+#define NMEA_CR		'\r'
+#define NMEA_LF		'\n'
 
-/*** NEO-M8N structures ***/
+/*** NEOM8N structures ***/
 
 typedef struct {
 	// Date.
@@ -24,6 +24,8 @@ typedef struct {
 	unsigned char time_hours;
 	unsigned char time_minutes;
 	unsigned char time_seconds;
+	// Absolute time (since MCU start-up) in seconds when GPS timestamp is retrieved (used to know MCU start-up timestamp).
+	unsigned char mcu_time_seconds;
 } GPS_TimestampData;
 
 typedef struct {
@@ -47,7 +49,7 @@ typedef enum {
 	NEOM8N_TIMEOUT			// Parsing failure (= timeout).
 } NEOM8N_ReturnCode;
 
-/*** NEO-M8N functions ***/
+/*** NEOM8N functions ***/
 
 void NEOM8N_Init(void);
 void NEOM8N_Off(void);
@@ -56,4 +58,4 @@ unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp);
 NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned char timeout_seconds);
 void NEOM8N_SwitchDmaBuffer(void);
 
-#endif /* GPS_NEOM8N_H_ */
+#endif /* COMPONENTS_NEOM8N_H_ */

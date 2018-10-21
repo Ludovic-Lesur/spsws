@@ -9,17 +9,16 @@
 
 #include "dma.h"
 #include "gpio_reg.h"
-#include "iwdg.h"
 #include "lpuart.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
-/*** NEO-M8N local macros ***/
+/*** NEOM8N local macros ***/
 
-#define UBX_MSG_OVERHEAD_LENGTH				8 // 6 bytes header + 2 bytes checksum.
-#define UBX_CHECKSUM_OVERHEAD_LENGTH		4
-#define UBX_CHECKSUM_OFFSET					2
-#define UBX_CFG_MSG_PAYLOAD_LENGTH			8
+#define NEOM8N_MSG_OVERHEAD_LENGTH			8 // 6 bytes header + 2 bytes checksum.
+#define NEOM8N_CHECKSUM_OVERHEAD_LENGTH		4
+#define NEOM8N_CHECKSUM_OFFSET				2
+#define NEOM8N_CFG_MSG_PAYLOAD_LENGTH		8
 
 #define NMEA_RX_BUFFER_SIZE					128
 
@@ -50,7 +49,7 @@
 
 #define NMEA_CHECKSUM_START_CHAR			'*' // To skip '$'.
 
-/*** NEO-M8N local structures ***/
+/*** NEOM8N local structures ***/
 
 typedef struct {
 	// Buffers.
@@ -65,11 +64,11 @@ typedef struct {
 	unsigned char nmea_gga_data_valid;					// set to '1' if retrieved NMEA GGA data is valid.
 } NEOM8N_Context;
 
-/*** NEO-M8N local global variables ***/
+/*** NEOM8N local global variables ***/
 
 static NEOM8N_Context neom8n_ctx;
 
-/*** NEO-M8N local functions ***/
+/*** NEOM8N local functions ***/
 
 /* CONVERTS THE ASCII CODE OF AN HEXADECIMAL CHARACTER TO THE CORRESPONDING VALUE.
  * @param c:			Hexadecimal character to convert.
@@ -101,23 +100,23 @@ unsigned int Pow10(unsigned char n) {
 	return result;
 }
 
-/* COMPUTE AND APPEND CHECKSUM TO AN UBX MESSAGE.
- * @param ubx_command:		Complete UBX message for which checksum must be computed.
+/* COMPUTE AND APPEND CHECKSUM TO AN NEOM8N MESSAGE.
+ * @param neom8n_command:		Complete NEOM8N message for which checksum must be computed.
  * @param payload_length:	Length of the payload (in bytes) for this message.
  * @return:					None.
  */
-void NEOM8N_ComputeUbxChecksum(unsigned char* ubx_command, unsigned char payload_length) {
+void NEOM8N_ComputeUbxChecksum(unsigned char* neom8n_command, unsigned char payload_length) {
 	// See algorithme on p.136 of NEO-M8 programming manual.
 	unsigned char ck_a = 0;
 	unsigned char ck_b = 0;
 	unsigned int checksum_idx = 0;
-	for (checksum_idx=UBX_CHECKSUM_OFFSET ; checksum_idx<(UBX_CHECKSUM_OFFSET+UBX_CHECKSUM_OVERHEAD_LENGTH+payload_length) ; checksum_idx++) {
-		ck_a = ck_a + ubx_command[checksum_idx];
+	for (checksum_idx=NEOM8N_CHECKSUM_OFFSET ; checksum_idx<(NEOM8N_CHECKSUM_OFFSET+NEOM8N_CHECKSUM_OVERHEAD_LENGTH+payload_length) ; checksum_idx++) {
+		ck_a = ck_a + neom8n_command[checksum_idx];
 		ck_b = ck_b + ck_a;
 	}
-	// Fill two last bytes of the UBX message with CK_A and CK_B.
-	ubx_command[checksum_idx] = ck_a;
-	ubx_command[checksum_idx+1] = ck_b;
+	// Fill two last bytes of the NEOM8N message with CK_A and CK_B.
+	neom8n_command[checksum_idx] = ck_a;
+	neom8n_command[checksum_idx+1] = ck_b;
 }
 
 /* GET THE CHECKSUM OF A GIVEN NMEA MESSAGE.
@@ -482,7 +481,7 @@ unsigned char NEOM8N_PositionIsValid(GPS_PositionData local_gps_position) {
 	return gps_position_valid;
 }
 
-/* SEND UBX COMMANDS TO SELECT NMEA MESSAGES TO OUTPUT.
+/* SEND NEOM8N COMMANDS TO SELECT NMEA MESSAGES TO OUTPUT.
  * @param nmea_message_id_mask:	Binary mask to enable or disable each NMEA standard message, coded as follow:
  * 								0b <ZDA> <VTG> <VLW> <TXT> <RMC> <GSV> <GST> <GSA> <GRS> <GPQ> <GND> <GNQ> <GLQ> <GLL> <GGA> <GBS> <GBQ> <DTM>.
  * @return:						None.
@@ -491,31 +490,31 @@ void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
 	// See p.110 for NMEA messages ID.
 	unsigned char nmea_message_id[18] = {0x0A, 0x44, 0x09, 0x00, 0x01, 0x43, 0x42, 0x0D, 0x40, 0x06, 0x02, 0x07, 0x03, 0x04, 0x41, 0x0F, 0x05, 0x08};
 	unsigned char nmea_message_id_idx = 0;
-	// See p.174 for UBX message format.
-	unsigned char ubx_cfg_msg[UBX_MSG_OVERHEAD_LENGTH+UBX_CFG_MSG_PAYLOAD_LENGTH] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	unsigned char ubx_cfg_msg_idx = 0;
+	// See p.174 for NEOM8N message format.
+	unsigned char neom8n_cfg_msg[NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	unsigned char neom8n_cfg_msg_idx = 0;
 	// Send commands.
 	for (nmea_message_id_idx=0 ; nmea_message_id_idx<18 ; nmea_message_id_idx++) {
 		// Byte 7 = is the ID of the message to enable or disable.
-		ubx_cfg_msg[7] = nmea_message_id[nmea_message_id_idx];
+		neom8n_cfg_msg[7] = nmea_message_id[nmea_message_id_idx];
 		// Bytes 8-13 = message rate.
 		unsigned char rate_value = 0;
 		if ((nmea_message_id_mask & (0b1 << nmea_message_id_idx)) != 0) {
 			rate_value = 1;
 		}
-		for (ubx_cfg_msg_idx=8 ; ubx_cfg_msg_idx<14 ; ubx_cfg_msg_idx++) {
-			ubx_cfg_msg[ubx_cfg_msg_idx] = rate_value;
+		for (neom8n_cfg_msg_idx=8 ; neom8n_cfg_msg_idx<14 ; neom8n_cfg_msg_idx++) {
+			neom8n_cfg_msg[neom8n_cfg_msg_idx] = rate_value;
 		}
-		// Bytes 14-15 = UBX checksum (CK_A and CK_B).
-		NEOM8N_ComputeUbxChecksum(ubx_cfg_msg, UBX_CFG_MSG_PAYLOAD_LENGTH);
-		for (ubx_cfg_msg_idx=0 ; ubx_cfg_msg_idx<(UBX_MSG_OVERHEAD_LENGTH+UBX_CFG_MSG_PAYLOAD_LENGTH) ; ubx_cfg_msg_idx++) {
-			LPUART_SendByte(ubx_cfg_msg[ubx_cfg_msg_idx]); // Send command.
+		// Bytes 14-15 = NEOM8N checksum (CK_A and CK_B).
+		NEOM8N_ComputeUbxChecksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
+		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
+			LPUART_SendByte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 		}
 		TIM_TimeWaitMilliseconds(100);
 	}
 }
 
-/*** NEO-M8N functions ***/
+/*** NEOM8N functions ***/
 
 /* INIT NEO-M8N MODULE.
  * @param:	None.
@@ -576,8 +575,6 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned
 	unsigned int fix_start_time = TIM_TimeGetSeconds();
 	// Loop until data is retrieved or timeout expired.
 	while ((TIM_TimeGetSeconds() < fix_start_time+timeout_seconds) && (neom8n_ctx.nmea_zda_data_valid == 0)) {
-		// Reload watchdog counter.
-		IWDG_Reload();
 		// Check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
 			// Decode incoming NMEA message.
@@ -625,10 +622,10 @@ unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp) {
 	unsigned char gps_timestamp_valid = 0;
 	if ((local_gps_timestamp.date_day >= 1) && (local_gps_timestamp.date_day <= 31) &&
 		(local_gps_timestamp.date_month >= 1) && (local_gps_timestamp.date_month <= 12) &&
-		(local_gps_timestamp.date_year >= 0) && (local_gps_timestamp.date_day <= 99) &&
-		(local_gps_timestamp.time_hours >= 0) && (local_gps_timestamp.date_day <= 23) &&
-		(local_gps_timestamp.time_minutes >= 0) && (local_gps_timestamp.date_day <= 59) &&
-		(local_gps_timestamp.time_seconds >= 0) && (local_gps_timestamp.date_day <= 59)) {
+		(local_gps_timestamp.date_year >= 0) && (local_gps_timestamp.date_year <= 9999) &&
+		(local_gps_timestamp.time_hours >= 0) && (local_gps_timestamp.time_hours <= 23) &&
+		(local_gps_timestamp.time_minutes >= 0) && (local_gps_timestamp.time_minutes <= 59) &&
+		(local_gps_timestamp.time_seconds >= 0) && (local_gps_timestamp.time_seconds <= 59)) {
 		gps_timestamp_valid = 1;
 	}
 	return gps_timestamp_valid;
@@ -653,8 +650,6 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned ch
 	unsigned int fix_start_time = TIM_TimeGetSeconds();
 	// Loop until data is retrieved or timeout expired.
 	while ((TIM_TimeGetSeconds() < fix_start_time+timeout_seconds) && (neom8n_ctx.nmea_gga_data_valid == 0)) {
-		// Reload watchdog counter.
-		IWDG_Reload();
 		// Check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
 			// Decode incoming NMEA message.

@@ -8,6 +8,7 @@
 #include "adc.h"
 
 #include "adc_reg.h"
+#include "gpio_reg.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
@@ -65,7 +66,7 @@ void ADC_Off(void) {
  */
 void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
 
-	/* Select ADC_IN17 input channel*/
+	/* Select ADC_IN17 input channel */
 	ADC1 -> CHSELR = 0;
 	ADC1 -> CHSELR |= (0b1 << 17);
 
@@ -82,7 +83,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
 	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
 	unsigned int raw_supply_voltage_12bits = (ADC1 -> DR);
 
-	/* Compute temperature according to MCU factory calibration (see p.301 of RM0377 datasheet) */
+	/* Compute voltage according to MCU factory calibration (see p.301 of RM0377 datasheet) */
 	vcc_mv = (VREFINT_VCC_CALIB_MV * VREFINT_CAL) / (raw_supply_voltage_12bits);
 	(*mcu_vdd_mv) = vcc_mv;
 
@@ -120,4 +121,31 @@ void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
 
 	/* Switch temperature sensor off */
 	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.
+}
+
+/* GET THE CURRENT HWT VOLTAGE REFERENCE (ADJUSTED VIA DIGITAL POTENTIOMETER).
+ * @param mcu_temp_degrees:	Pointer to value that will contain HWT voltage reference in mV.
+ * @return:					None.
+ */
+void ADC_GetHwtVoltageReferenceMv(unsigned int* hwt_voltage_reference_mv) {
+
+	/* Configure PA1 as analog input */
+	RCC -> IOPENR |= (0b1 << 0);
+	GPIOA -> MODER |= (0b11 << 2);
+
+	/* Get actual MCU supply voltage */
+	unsigned int mcu_vdd_mv = 0;
+	ADC_GetMcuVddMv(&mcu_vdd_mv);
+
+	/* Select ADC_IN1 input channel*/
+	ADC1 -> CHSELR = 0;
+	ADC1 -> CHSELR |= (0b1 << 1);
+
+	/* Read raw result */
+	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
+	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
+	unsigned int raw_hwt_voltage_reference_12bits = (ADC1 -> DR);
+
+	/* Convert result into mV */
+	(*hwt_voltage_reference_mv) = (raw_hwt_voltage_reference_12bits*mcu_vdd_mv)/(4095);
 }

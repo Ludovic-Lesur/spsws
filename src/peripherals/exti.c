@@ -5,8 +5,6 @@
  *      Author: Ludovic
  */
 
-#ifdef CONTINUOUS_MODE
-
 #include "exti.h"
 
 #include "exti_reg.h"
@@ -55,5 +53,3 @@ void EXTI4_15_IRQHandler(void) {
 		EXTI -> PR |= (0b1 << 11); // PIF11='1' (writing '1' clears the bit).
 	}
 }
-
-#endif

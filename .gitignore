@@ -1,8 +1,7 @@
-Debug/
-
 *.cfg
-/
-ContinuousMode/
 
-IntermittentMode/
-/HardwareTimer/
+ATM/
+CM_RTC/
+IM_HWT/
+IM_RTC/
+

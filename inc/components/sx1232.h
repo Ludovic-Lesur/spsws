@@ -5,11 +5,11 @@
  *      Author: Ludovic
  */
 
-#ifndef SX1232_SX1232_H_
-#define SX1232_SX1232_H_
+#ifndef COMPONENTS_SX1232_H_
+#define COMPONENTS_SX1232_H_
 
 /*** SX1232 functions ***/
 
 void SX1232_Init(void);
 
-#endif /* SX1232_SX1232_H_ */
+#endif /* COMPONENTS_SX1232_H_ */

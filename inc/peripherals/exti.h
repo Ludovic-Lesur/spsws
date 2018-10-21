@@ -5,8 +5,6 @@
  *      Author: Ludovic
  */
 
-#ifdef CONTINUOUS_MODE
-
 #ifndef PERIPHERALS_EXTI_H_
 #define PERIPHERALS_EXTI_H_
 
@@ -15,5 +13,3 @@
 void EXTI_Init(void);
 
 #endif /* PERIPHERALS_EXTI_H_ */
-
-#endif
