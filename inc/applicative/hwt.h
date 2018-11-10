@@ -5,15 +5,15 @@
  *      Author: Ludovic
  */
 
-#ifndef APPLICATIVE_HWT_H_
-#define APPLICATIVE_HWT_H_
+#ifndef HWT_H_
+#define HWT_H_
+
+#include "neom8n.h"
 
 /*** Hardware Timer functions ***/
 
-void HWT_Init(unsigned char was_reset_reason);
-unsigned char HWT_WasResetReason(void);
 unsigned char HWT_Expired(void);
-void HWT_Calibrate(unsigned int hwt_effective_duration_seconds);
-void HWT_GetParameters(unsigned int* hwt_absolute_error, unsigned char* hwt_feedback_value, unsigned char* hwt_feedback_direction);
+void HWT_Reset(void);
+void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retrieved, GPS_TimestampData gps_timestamp);
 
 #endif /* APPLICATIVE_HWT_H_ */

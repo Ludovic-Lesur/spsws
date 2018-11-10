@@ -538,10 +538,10 @@ void NEOM8N_Init(void) {
 	DMA_LpuartRxInit();
 
 	/* Switch GPS module on */
-	RCC -> IOPENR |= (0b1 << 1); // Enable GPIOB clock.
-	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 10-11.
-	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
-	GPIOB -> ODR |= (0b1 << 5); // Switch on GPS.
+	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
+	GPIOA -> MODER &= ~(0b11 << 24); // Reset bits 24-25.
+	GPIOA -> MODER |= (0b01 << 24); // Configure PA12 as output.
+	GPIOA -> ODR |= (0b1 << 12); // Switch GPS on.
 }
 
 /* SWITCH NEO-M8N MODULE OFF.
@@ -553,7 +553,7 @@ void NEOM8N_Off(void) {
 	DMA_LpuartRxOff();
 	LPUART_Off();
 	// Switch GPS module off.
-	GPIOB -> ODR &= ~(0b1 << 5);
+	GPIOA -> ODR &= ~(0b1 << 12);
 }
 
 /* GET CURRENT GPS TIMESTAMP VIA ZDA NMEA  MESSAGES.

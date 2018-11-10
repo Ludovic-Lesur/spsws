@@ -74,8 +74,8 @@
 					</fileInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.1901035515" name="usart_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/usart_reg.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="registers/usart_reg.h|peripherals/usart.h|hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h|peripherals/exti.h|registers/syscfg_reg.h|registers/exti_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
-						<entry excluding="hwt/hwt.c|peripherals/usart.c|hwt/mcp4162.c|peripherals/exti.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
+						<entry excluding="hwt/hwt.c|hwt/mcp4162.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
 					</sourceEntries>
 				</configuration>
@@ -142,13 +142,14 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.1939283234" name="exti.h" rcbsApplicability="disable" resourcePath="inc/peripherals/exti.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.1091094991" name="usart.h" rcbsApplicability="disable" resourcePath="inc/peripherals/usart.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.2059551405" name="syscfg_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/syscfg_reg.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.1816331517" name="exti_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/exti_reg.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.201625055.546480000" name="usart_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/usart_reg.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="registers/usart_reg.h|peripherals/usart.h|hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
-						<entry excluding="hwt/hwt.c|peripherals/usart.c|hwt/mcp4162.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
+						<entry excluding="hwt/hwt.c|hwt/mcp4162.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
 					</sourceEntries>
 				</configuration>
@@ -228,8 +229,8 @@
 					</fileInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.26768691.1592852511" name="usart_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/usart_reg.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="registers/usart_reg.h|peripherals/usart.h|peripherals/exti.h|registers/syscfg_reg.h|registers/exti_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
-						<entry excluding="peripherals/usart.c|peripherals/exti.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
 					</sourceEntries>
 				</configuration>
@@ -309,8 +310,8 @@
 					</fileInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.332324440.856839124.inc/registers/usart_reg.h" name="usart_reg.h" rcbsApplicability="disable" resourcePath="inc/registers/usart_reg.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h|peripherals/exti.h|registers/syscfg_reg.h|registers/exti_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
-						<entry excluding="hwt/hwt.c|hwt/mcp4162.c|peripherals/exti.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="hwt/hwt.h|hwt/mcp4162.h|hwt/mcp4162_reg.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
+						<entry excluding="hwt/hwt.c|hwt/mcp4162.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
 					</sourceEntries>
 				</configuration>
@@ -323,6 +324,8 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="IM_HWT"/>
+		<configuration configurationName="CM_RTC"/>
 		<configuration configurationName="ContinuousMode">
 			<resource resourceType="PROJECT" workspacePath="/SPSWS"/>
 		</configuration>
@@ -334,6 +337,7 @@
 		<configuration configurationName="Continuous Station">
 			<resource resourceType="PROJECT" workspacePath="/SPSWS"/>
 		</configuration>
+		<configuration configurationName="ATM"/>
 		<configuration configurationName="IM_RTC">
 			<resource resourceType="PROJECT" workspacePath="/SPSWS"/>
 		</configuration>

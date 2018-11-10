@@ -14,8 +14,6 @@ void ADC_Init(void);
 void ADC_Off(void);
 void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv);
 void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees);
-#ifdef IM_HWT
 void ADC_GetHwtVoltageReferenceMv(unsigned int* hwt_voltage_reference);
-#endif
 
 #endif /* PERIPHERALS_ADC_H */

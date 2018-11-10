@@ -49,13 +49,13 @@ void I2C_Init(void) {
 	I2C1 -> CR1 |= (0b1 << 0);
 }
 
-/* SEND BYTES TO A SLAVE OVER I2C BUS (see algorithme on p.607 of RM0377 datasheet).
+/* WRITE DATA ON I2C BUS (see algorithme on p.607 of RM0377 datasheet).
  * @param slave_address:	Slave address on 7 bits.
  * @param tx_buf:			Array containing the byte(s) to send.
  * @param tx_buf_length:	Number of bytes to send (length of 'tx_buf').
  * @return:					None.
  */
-void I2C_SendBytes(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length) {
+void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length) {
 
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
@@ -86,13 +86,13 @@ void I2C_SendBytes(unsigned char slave_address, unsigned char* tx_buf, unsigned 
 	while (((I2C1 -> ISR) & (0b1 << 6)) == 0);
 }
 
-/* GET BYTES FROM A SLAVE OVER I2C BUS (see algorithme on p.611 of RM0377 datasheet).
+/* READ BYTES FROM I2C BUS (see algorithme on p.611 of RM0377 datasheet).
  * @param slave_address:	Slave address on 7 bits.
  * @param rx_buf:			Array that will contain the byte(s) to receive.
  * @param rx_buf_length:	Number of bytes to receive (length of 'rx_buf').
  * @return:					None.
  */
-void I2C_GetBytes(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
 
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.

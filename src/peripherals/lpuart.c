@@ -50,10 +50,10 @@ void LPUART_Init(void) {
 
 	/* Configure TX and RX GPIOs */
 	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= ~(0b1111 << 4); // Reset bits 4-7.
-	GPIOA -> MODER |= (0b1010 << 4); // Configure PA2 and PA3 as alternate function.
-	GPIOA -> AFRL &= 0xFFFF00FF; // Reset bits 8-15.
-	GPIOA -> AFRL |= 0x00006600; // Link PA2 and PA3 to AF6.
+	GPIOA -> MODER &= ~(0b1111 << 26); // Reset bits 26-27.
+	GPIOA -> MODER |= (0b1010 << 26); // Configure PA13 and PA14 as alternate function.
+	GPIOA -> AFRH &= 0xF00FFFFF; // Reset bits 20-27.
+	GPIOA -> AFRH |= 0x06600000; // Link PA13 and PA14 to AF6.
 
 	/* Configure peripheral */
 	LPUART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -114,7 +114,7 @@ void LPUART_Off(void) {
 	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
 
 	/* Put GPIOs in reset state */
-	GPIOA -> MODER &= ~(0b1111 << 4); // Configure PA2 and PA3 as input.
+	GPIOA -> MODER &= ~(0b1111 << 26); // Configure PA13 and PA14 as input.
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.

@@ -15,6 +15,8 @@
 
 /*** USART local macros ***/
 
+// If defined, use TXE interrupt for sending data.
+//#define USE_TXE_INTERRUPT
 // Baud rate.
 #define USART_BAUD_RATE 		9600
 // TX buffer size.
@@ -31,6 +33,47 @@ typedef struct {
 /*** USART local global variables ***/
 
 static USART_Context usart_ctx;
+
+/*** USART local functions ***/
+
+/* FILL USART TX BUFFER WITH A NEW BYTE.
+ * @param tx_byte:	Byte to append.
+ * @return:			None.
+ */
+void USART_FillTxBuffer(unsigned char tx_byte) {
+	// Fill buffer.
+	usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = tx_byte;
+	// Manage index roll-over.
+	usart_ctx.tx_buf_write_idx++;
+	if (usart_ctx.tx_buf_write_idx == USART_TX_BUFFER_SIZE) {
+		usart_ctx.tx_buf_write_idx = 0;
+	}
+}
+
+/* CONVERTS A 4-BIT WORD TO THE ASCII CODE OF THE CORRESPONDING HEXADECIMAL CHARACTER.
+ * @param n:	The word to converts.
+ * @return:		The results of conversion.
+ */
+char USART_HexaToAscii(unsigned char hexa_value) {
+	char hexa_ascii = 0;
+	if (hexa_value <= 15) {
+		hexa_ascii = (hexa_value <= 9 ? (char) (hexa_value + '0') : (char) (hexa_value + ('A' - 10)));
+	}
+	return hexa_ascii;
+}
+
+/* COMPUTE A POWER A 10.
+ * @param power:	The desired power.
+ * @return result:	Result of computation.
+ */
+unsigned int USART_Pow10(unsigned char power) {
+	unsigned int result = 0;
+	unsigned int pow10_buf[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+	if (power <= 9) {
+		result = pow10_buf[power];
+	}
+	return result;
+}
 
 /*** USART functions ***/
 
@@ -85,20 +128,100 @@ void USART_Off(void) {
 	RCC -> APB1ENR &= ~(0b1 << 17); // USART2EN='0'.
 }
 
-/* SEND A BYTE ARRAY THROUGH USART.
- * @param string_to_send:	Byte array to send.
- * @return:					None.
+/* SEND A BYTE THROUGH USART.
+ * @param byte_to_send:	The byte to send.
+ * @param format:		Display format (see ByteDisplayFormat enumeration in usart.h).
+ * @return: 			None.
  */
-void USART_SendString(unsigned char* string_to_send) {
+void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
+	// Disable interrupt.
+	NVIC_DisableInterrupt(IT_USART2);
+	// Common variables.
+	unsigned char first_non_zero_found = 0;
+	unsigned int idx;
+	unsigned char current_value = 0;
+	unsigned int current_power = 0;
+	unsigned int previous_decade = 0;
+	// Fill TX buffer according to format.
+	switch (format) {
+	case USART_Binary:
+		// Print "0b" prefix.
+		USART_FillTxBuffer('0');
+		USART_FillTxBuffer('b');
+		// Maximum 32 bits.
+		for (idx=31 ; idx>=0 ; idx--) {
+			if (tx_value & (0b1 << idx)) {
+				USART_FillTxBuffer('1'); // = '1'.
+				first_non_zero_found = 1;
+			}
+			else {
+				if ((first_non_zero_found != 0) || (idx == 0)) {
+					USART_FillTxBuffer('0'); // = '0'.
+				}
+			}
+			if (idx == 0) {
+				break;
+			}
+		}
+		break;
+	case USART_Hexadecimal:
+		// Print "0b" prefix.
+		USART_FillTxBuffer('0');
+		USART_FillTxBuffer('x');
+		// Maximum 4 bytes.
+		for (idx=3 ; idx>=0 ; idx--) {
+			current_value = (tx_value & (0xFF << (8*idx))) >> (8*idx);
+			if (current_value != 0) {
+				first_non_zero_found = 1;
+			}
+			if ((first_non_zero_found != 0) || (idx == 0)) {
+				USART_FillTxBuffer(USART_HexaToAscii((current_value & 0xF0) >> 4));
+				USART_FillTxBuffer(USART_HexaToAscii(current_value & 0x0F));
+			}
+			if (idx == 0) {
+				break;
+			}
+		}
+		break;
+	case USART_Decimal:
+		// Maximum 10 digits.
+		for (idx=9 ; idx>=0 ; idx--) {
+			current_power = USART_Pow10(idx);
+			current_value = (tx_value - previous_decade) / current_power;
+			previous_decade += current_value * current_power;
+			if (current_value != 0) {
+				first_non_zero_found = 1;
+			}
+			if ((first_non_zero_found != 0) || (idx == 0)) {
+				USART_FillTxBuffer(current_value + '0');
+			}
+			if (idx == 0) {
+				break;
+			}
+		}
+		break;
+	case USART_ASCII:
+		// Raw byte.
+		if (tx_value <= 0xFF) {
+			USART_FillTxBuffer(tx_value);
+		}
+		break;
+	}
+	// Enable interrupt.
+	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	NVIC_EnableInterrupt(IT_USART2);
+}
+
+/* SEND A BYTE ARRAY THROUGH USART.
+ * @param tx_string:	Byte array to send.
+ * @return:				None.
+ */
+void USART_SendString(char* tx_string) {
 	// Disable interrupt.
 	NVIC_DisableInterrupt(IT_USART2);
 	// Fill TX buffer with new bytes.
-	while (*string_to_send) {
-		usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = *(string_to_send++);
-		usart_ctx.tx_buf_write_idx++;
-		if (usart_ctx.tx_buf_write_idx == USART_TX_BUFFER_SIZE) {
-			usart_ctx.tx_buf_write_idx = 0;
-		}
+	while (*tx_string) {
+		USART_FillTxBuffer((unsigned char) *(tx_string++));
 	}
 	// Enable interrupt.
 	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
