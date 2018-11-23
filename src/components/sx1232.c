@@ -8,55 +8,72 @@
 #include "sx1232.h"
 
 #include "gpio_reg.h"
+#include "rcc_reg.h"
 #include "spi.h"
 #include "sx1232_reg.h"
 
-/*** SX1232 local functions ***/
+/*** SX1232 functions ***/
 
 /* SX1232 SINGLE ACCESS WRITE FUNCTION.
- * @param addr:				Register address (7 bits).
- * @param data_to_write:	Value to write in register.
- * @return:					None.
+ * @param addr:		Register address (7 bits).
+ * @param valie:	Value to write in register.
+ * @return:			None.
  */
-void SX1232_RegisterWrite(unsigned char addr, unsigned char data_to_write) {
+void SX1232_WriteRegister(unsigned char addr, unsigned char value) {
 	/* Check addr is a 7-bits value */
 	if (addr < (0b1 << 7)) {
 		/* Build SPI frame */
 		unsigned char sx1232_spi_command = 0;
 		sx1232_spi_command |= (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
 		/* Write access sequence */
-		GPIOA -> ODR &= ~(0b1 << 4); // Falling edge on NSS pin (OD4='0').
-		SPI_SendByte(sx1232_spi_command);
-		SPI_SendByte(data_to_write);
-		GPIOA -> ODR |= (0b1 << 4); // Set NSS pin (OD4='1').
+		GPIOB -> ODR &= ~(0b1 << 0); // Falling edge on CS pin.
+		SPI_WriteByte(sx1232_spi_command);
+		SPI_WriteByte(value);
+		GPIOB -> ODR |= (0b1 << 0); // Set CS pin.
 	}
 }
 
 /* SX1232 SINGLE ACCESS READ FUNCTION.
- * @param addr:				Register address (7 bits).
- * @param data_to_read:		Pointer to byte that will contain the register Value to read.
- * @return:					None.
+ * @param addr:		Register address (7 bits).
+ * @param value:	Pointer to byte that will contain the register Value to read.
+ * @return:			None.
  */
-void SX1232_RegisterRead(unsigned char addr, unsigned char* data_to_read) {
+void SX1232_ReadRegister(unsigned char addr, unsigned char* value) {
 	/* Check addr is a 7-bits value */
 	if (addr < (0b1 << 7)) {
 		/* Build SPI frame */
 		unsigned char sx1232_spi_command = 0;
 		sx1232_spi_command |= addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
 		/* Write access sequence */
-		GPIOA -> ODR &= ~(0b1 << 4); // Falling edge on NSS pin (OD4='0').
-		SPI_SendByte(sx1232_spi_command);
-		SPI_ReadByte(data_to_read);
-		GPIOA -> ODR |= (0b1 << 4); // Set NSS pin (OD4='1').
+		GPIOB -> ODR &= ~(0b1 << 0); // Falling edge on CS pin.
+		SPI_WriteByte(sx1232_spi_command);
+		SPI_ReadByte(sx1232_spi_command, value);
+		GPIOB -> ODR |= (0b1 << 0); // Set CS pin.
 	}
 }
-
-/*** SX1232 functions ***/
 
 /* INIT SX1232 TRANSCEIVER.
  * @param:	None.
  * @return:	None.
  */
 void SX1232_Init(void) {
+
+	/* Init SPI peripheral */
+	SPI_Init();
+
+	/* Configure CS GPIO */
+	RCC -> IOPENR |= (0b11 << 1);
+	GPIOB -> MODER &= ~(0b11 << 0); // Reset bits 0-1.
+	GPIOB -> MODER |= (0b01 << 0);
+	GPIOB -> ODR |= (0b1 << 0); // CS high (idle state).
+}
+
+void SX1232_Start(void) {
+
+	/* Configure SPI */
+	SPI_SetClockPolarity(0);
+
+	/* Enable TCXO input */
+	SX1232_WriteRegister(SX1232_REG_TCXO, 0x19);
 	// TBC.
 }

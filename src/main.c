@@ -16,6 +16,8 @@
 #endif
 #include "i2c.h"
 #include "lpuart.h"
+#include "max11136.h"
+#include "max5495.h"
 #include "mcu_api.h"
 #include "neom8n.h"
 #include "nvm.h"
@@ -24,7 +26,11 @@
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "scb_reg.h"
+#include "sht3x.h"
 #include "sigfox_types.h"
+#include "spi.h"
+#include "sx1232.h"
+#include "sx1232_reg.h"
 #include "tim.h"
 #include "usart.h"
 
@@ -271,13 +277,25 @@ int main (void) {
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 	}
-
-	// Enable debug power supply.
-	GPIOA -> MODER &= ~(0b11 << 22); // Reset bits 8-9.
-	GPIOA -> MODER |= (0b01 << 22);
-	GPIOA -> ODR |= (0b1 << 11);
+	TIM_TimeWaitMilliseconds(100);
 
 	USART_Init();
+	I2C_Init();
+
+	SX1232_Init();
+	MAX11136_Init();
+	MAX5495_Init();
+
+	// Enable RF power supply.
+	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
+	GPIOB -> MODER |= (0b01 << 2);
+	GPIOB -> ODR |= (0b1 << 1);
+	TIM_TimeWaitMilliseconds(1000);
+	// Enable sensors power supply.
+	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 10);
+	GPIOB -> ODR |= (0b1 << 5);
+	TIM_TimeWaitMilliseconds(1000);
 
 	/*while (1) {
 		USART_SendString("Test UART : ");
@@ -296,7 +314,7 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	while (1) {
+	/*while (1) {
 		// Retrieve GPS position and timestamp.
 		GEOLOC_Process(&spsws_ctx.spsws_timestamp_from_geoloc, &spsws_ctx.spsws_timestamp_retrieved_from_geoloc);
 		// Blink LED.
@@ -304,7 +322,40 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
+	}*/
+
+
+	//unsigned char tmp_sht = 0;
+	//unsigned char hum_sht = 0;
+	unsigned short max11136_result[MAX11136_NUMBER_OF_CHANNELS];
+	while (1) {
+		//SHT3X_ReadTemperatureHumidity(&tmp_sht, &hum_sht);
+		MAX11136_ConvertAllChannels(max11136_result);
+		TIM_TimeWaitMilliseconds(1000);
+		GPIOA -> ODR |= (0b1 << 2);
+		for (i=0 ; i<50000 ; i++);
+		GPIOA -> ODR &= ~(0b1 << 2);
+		for (i=0 ; i<50000 ; i++);
 	}
+
+	/*unsigned char sx1232_version = 0;
+	unsigned char sx1232_reg_tcxo = 0;
+	SX1232_Start();
+	while (1) {
+		SX1232_ReadRegister(SX1232_REG_TCXO, &sx1232_reg_tcxo);
+		SX1232_ReadRegister(SX1232_REG_VERSION, &sx1232_version);
+		USART_SendString("SX1232 revision = ");
+		USART_SendValue(sx1232_version, USART_Hexadecimal);
+		USART_SendString("\n");
+		USART_SendString("SX1232 reg tcxo = ");
+		USART_SendValue(sx1232_reg_tcxo, USART_Hexadecimal);
+		USART_SendString("\n");
+		TIM_TimeWaitMilliseconds(1000);
+		GPIOA -> ODR |= (0b1 << 2);
+		for (i=0 ; i<50000 ; i++);
+		GPIOA -> ODR &= ~(0b1 << 2);
+		for (i=0 ; i<50000 ; i++);
+	}*/
 
 	return 0;
 }

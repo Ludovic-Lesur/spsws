@@ -344,8 +344,9 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 
 		/* Switch GPS module off */
 		case HWT_STATE_OFF:
-			// Switch GPS module off.
-			NEOM8N_Off();
+			// Stop LPUART, DMA and GPS module.
+			NEOM8N_StopRx();
+			GPIOA -> ODR &= ~(0b1 << 12);
 			// Compute next state.
 			if (((hwt_ctx.hwt_status_byte & HWT_STATUS_BYTE_PREVIOUS_TIMESTAMP_VALID_BIT_INDEX) != 0) && (was_wake_up_reason != 0)) {
 				// Hardware timer was wake-up reason, previous and current timestamp are both valid -> perform calibration.
@@ -396,7 +397,8 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Unknown state */
 		default:
 			// Unknwon state.
-			NEOM8N_Off();
+			NEOM8N_StopRx();
+			GPIOA -> ODR &= ~(0b1 << 12);
 			hwt_ctx.hwt_state = HWT_STATE_END;
 			break;
 		}

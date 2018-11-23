@@ -52,7 +52,7 @@ typedef enum {
 /*** NEOM8N functions ***/
 
 void NEOM8N_Init(void);
-void NEOM8N_Off(void);
+void NEOM8N_StopRx(void);
 NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned char timeout_seconds);
 unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp);
 NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned char timeout_seconds);

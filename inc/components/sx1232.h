@@ -10,6 +10,9 @@
 
 /*** SX1232 functions ***/
 
+void SX1232_WriteRegister(unsigned char addr, unsigned char value);
+void SX1232_ReadRegister(unsigned char addr, unsigned char* value);
 void SX1232_Init(void);
+void SX1232_Start(void);
 
 #endif /* COMPONENTS_SX1232_H_ */

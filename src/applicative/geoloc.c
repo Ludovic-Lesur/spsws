@@ -8,8 +8,10 @@
 #include "geoloc.h"
 
 #include "at.h"
+#include "gpio_reg.h"
 #include "neom8n.h"
 #include "nvm.h"
+#include "rcc_reg.h"
 #include "tim.h"
 
 /*** GEOLOC local macros ***/
@@ -88,6 +90,12 @@ void GEOLOC_Init(void) {
 	for (byte_idx=0 ; byte_idx<GEOLOC_SIGFOX_DATA_LENGTH ; byte_idx++) geoloc_ctx.geoloc_sigfox_data[byte_idx] = 0;
 	// Status byte.
 	geoloc_ctx.geoloc_status_byte = 0;
+
+	/* Switch GPS module on */
+	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
+	GPIOA -> MODER &= ~(0b11 << 24); // Reset bits 24-25.
+	GPIOA -> MODER |= (0b01 << 24); // Configure PA12 as output.
+	GPIOA -> ODR |= (0b1 << 12); // Switch GPS on.
 
 	/* Init GPS module */
 	NEOM8N_Init();
@@ -230,8 +238,9 @@ void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_r
 
 		/* Switch GPS module off */
 		case GEOLOC_STATE_OFF:
-			// Switch GPS module off.
-			//NEOM8N_Off();
+			// Stop LPUART, DMA and GPS.
+			NEOM8N_Off();
+			//GPIOA -> ODR &= ~(0b1 << 12);
 			// Send Sigfox frame to report position.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_SIGFOX;
 			break;

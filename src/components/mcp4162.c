@@ -36,8 +36,8 @@ void MCP4162_UpdateContext(void) {
 	unsigned short spi_command_read = 0;
 	spi_command_read |= (MCP4162_REG_STATUS << 12) | (0b11 << 10);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendShort(spi_command_read);
-	SPI_ReadShort(&mcp4162_ctx.mcp4162_status);
+	SPI_WriteShort(spi_command_read);
+	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_status);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
 
@@ -45,8 +45,8 @@ void MCP4162_UpdateContext(void) {
 	spi_command_read = 0;
 	spi_command_read |= (MCP4162_REG_TCON << 12) | (0b11 << 10);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendShort(spi_command_read);
-	SPI_ReadShort(&mcp4162_ctx.mcp4162_tcon);
+	SPI_WriteShort(spi_command_read);
+	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_tcon);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
 
@@ -54,8 +54,8 @@ void MCP4162_UpdateContext(void) {
 	spi_command_read = 0;
 	spi_command_read |= (MCP4162_REG_VW0 << 12) | (0b11 << 10);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendShort(spi_command_read);
-	SPI_ReadShort(&mcp4162_ctx.mcp4162_vw0);
+	SPI_WriteShort(spi_command_read);
+	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_vw0);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
 }
@@ -75,7 +75,6 @@ void MCP4162_Init(void) {
 
 	/* Init SPI */
 	SPI_Init();
-	SPI_SetDataLength(SPI_DATA_8BITS);
 }
 
 /* INCREMENT POTENTIOMETER VALUE BY ONE STEP.
@@ -87,7 +86,7 @@ void MCP4162_Increment(void) {
 	unsigned char spi_command_increment = 0;
 	spi_command_increment |= (MCP4162_REG_VW0 << 4) | (0b01 << 2);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendByte(spi_command_increment);
+	SPI_WriteShort(spi_command_increment);
 	TIM_TimeWaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
@@ -102,7 +101,7 @@ void MCP4162_Decrement(void) {
 	unsigned char spi_command_increment = 0;
 	spi_command_increment |= (MCP4162_REG_VW0 << 4) | (0b10 << 2);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendByte(spi_command_increment);
+	SPI_WriteShort(spi_command_increment);
 	TIM_TimeWaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
@@ -117,7 +116,7 @@ void MCP4162_SetStep(unsigned char step_number) {
 	unsigned short spi_command_write = 0;
 	spi_command_write |= (MCP4162_REG_VW0 << 12) | (0b00 << 10) | step_number;
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
-	SPI_SendShort(spi_command_write);
+	SPI_WriteShort(spi_command_write);
 	TIM_TimeWaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
 	TIM_TimeWaitMilliseconds(10);
