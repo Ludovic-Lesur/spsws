@@ -6,14 +6,11 @@
  */
 
 #include "adc.h"
-#ifdef CM_RTC
+#include "at.h"
 #include "exti.h"
-#endif
 #include "geoloc.h"
 #include "gpio_reg.h"
-#ifdef IM_HWT
 #include "hwt.h"
-#endif
 #include "i2c.h"
 #include "lpuart.h"
 #include "max11136.h"
@@ -32,6 +29,7 @@
 #include "sx1232.h"
 #include "sx1232_reg.h"
 #include "tim.h"
+#include "ultimeter.h"
 #include "usart.h"
 
 /*** SPSWS global structures ***/
@@ -260,7 +258,9 @@ int main (void) {
 	RCC_SwitchToHsi16MHz();
 
 	// Init time.
-	TIM_TimeInit();
+	TIM21_Init();
+	TIM22_Init();
+	EXTI_Init();
 	NVM_Init();
 
 	// Configure debug LED as output (PA2)
@@ -277,25 +277,16 @@ int main (void) {
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 	}
-	TIM_TimeWaitMilliseconds(100);
+	TIM22_WaitMilliseconds(100);
 
 	USART_Init();
+	AT_Init();
 	I2C_Init();
 
-	SX1232_Init();
-	MAX11136_Init();
-	MAX5495_Init();
-
-	// Enable RF power supply.
-	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
-	GPIOB -> MODER |= (0b01 << 2);
-	GPIOB -> ODR |= (0b1 << 1);
-	TIM_TimeWaitMilliseconds(1000);
-	// Enable sensors power supply.
-	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
-	GPIOB -> MODER |= (0b01 << 10);
-	GPIOB -> ODR |= (0b1 << 5);
-	TIM_TimeWaitMilliseconds(1000);
+	//SX1232_Init();
+	//MAX11136_Init();
+	//MAX5495_Init();
+	// SPI_PowerOn();
 
 	/*while (1) {
 		USART_SendString("Test UART : ");
@@ -324,19 +315,18 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-
+	/*
 	//unsigned char tmp_sht = 0;
 	//unsigned char hum_sht = 0;
-	unsigned short max11136_result[MAX11136_NUMBER_OF_CHANNELS];
 	while (1) {
 		//SHT3X_ReadTemperatureHumidity(&tmp_sht, &hum_sht);
-		MAX11136_ConvertAllChannels(max11136_result);
+		MAX11136_ConvertAllChannels();
 		TIM_TimeWaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
-	}
+	}*/
 
 	/*unsigned char sx1232_version = 0;
 	unsigned char sx1232_reg_tcxo = 0;
@@ -356,6 +346,12 @@ int main (void) {
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 	}*/
+
+	ULTIMETER_Init();
+	ULTIMETER_StartContinuousMeasure();
+	while (1) {
+		AT_Task();
+	}
 
 	return 0;
 }

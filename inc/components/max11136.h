@@ -10,12 +10,12 @@
 
 /*** MAX11136 macros ***/
 
-#define MAX11136_NUMBER_OF_CHANNELS	8
-#define MAX11136_RESOLUTION			12
+#define MAX11136_FULL_SCALE		4095 // 12-bits result.
 
 /*** MAX11136 functions ***/
 
 void MAX11136_Init(void);
-void MAX11136_ConvertAllChannels(unsigned short* max11136_result);
+unsigned char MAX11136_ConvertAllChannels(void);
+void MAX11136_GetChannelVoltage12bits(unsigned char channel, unsigned short* channel_voltage_12bits);
 
 #endif /* MAX11136_H */

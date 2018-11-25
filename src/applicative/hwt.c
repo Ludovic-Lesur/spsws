@@ -291,7 +291,7 @@ void HWT_Reset(void) {
 	GPIOB -> MODER |= (0b01 << 6);
 	// Close relay, wait 2s while capacitor is charged and release relay.
 	GPIOB -> ODR |= (0b1 << 3);
-	TIM_TimeWaitMilliseconds(2000);
+	TIM22_WaitMilliseconds(2000);
 	GPIOB -> ODR &= ~(0b1 << 3);
 }
 
@@ -319,7 +319,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 			switch (neom8n_result) {
 			case NEOM8N_SUCCESS:
 				// Update status.
-				hwt_ctx.hwt_fix_duration_seconds = TIM_TimeGetSeconds()-hwt_ctx.hwt_fix_start_time_seconds;
+				hwt_ctx.hwt_fix_duration_seconds = TIM22_GetSeconds()-hwt_ctx.hwt_fix_start_time_seconds;
 				hwt_ctx.hwt_status_byte |= (0b1 << HWT_STATUS_BYTE_ZDA_PARSING_SUCCESS_BIT_INDEX);
 				hwt_ctx.hwt_status_byte |= (0b1 << HWT_STATUS_BYTE_ZDA_DATA_VALID_BIT_INDEX);
 				break;

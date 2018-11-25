@@ -76,7 +76,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
 
 	/* Wake-up internal voltage reference */
 	ADC1 -> CCR |= (0b1 << 22); // VREFEN='1'.
-	TIM_TimeWaitMilliseconds(10); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
+	TIM22_WaitMilliseconds(10); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
 
 	/* Read raw supply voltage */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.

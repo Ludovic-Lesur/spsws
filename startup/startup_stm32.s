@@ -149,7 +149,7 @@ g_pfnVectors:
   .word	0 // TIM6 and DAC
   .word	0 // TIM7 and DAC
   .word	0 // Reserved
-  .word	0 // TIM21
+  .word	TIM21_IRQHandler // TIM21
   .word	0 // I2C3
   .word	0 // TIM22
   .word	0 // I2C1
@@ -197,6 +197,9 @@ g_pfnVectors:
 	
 	.weak	USART2_IRQHandler
 	.thumb_set USART2_IRQHandler,Default_Handler
+
+	.weak	TIM21_IRQHandler
+	.thumb_set TIM21_IRQHandler,Default_Handler
 
 	.weak	SystemInit
 

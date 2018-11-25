@@ -39,7 +39,7 @@ void MCP4162_UpdateContext(void) {
 	SPI_WriteShort(spi_command_read);
 	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_status);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 
 	/* Read TCON register */
 	spi_command_read = 0;
@@ -48,7 +48,7 @@ void MCP4162_UpdateContext(void) {
 	SPI_WriteShort(spi_command_read);
 	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_tcon);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 
 	/* Read WL0 register */
 	spi_command_read = 0;
@@ -57,7 +57,7 @@ void MCP4162_UpdateContext(void) {
 	SPI_WriteShort(spi_command_read);
 	SPI_ReadShort(spi_command_read, &mcp4162_ctx.mcp4162_vw0);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 }
 
 /*** MCP4162 functions ***/
@@ -87,9 +87,9 @@ void MCP4162_Increment(void) {
 	spi_command_increment |= (MCP4162_REG_VW0 << 4) | (0b01 << 2);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
 	SPI_WriteShort(spi_command_increment);
-	TIM_TimeWaitMilliseconds(1);
+	TIM22_WaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 }
 
 /* DECREMENT POTENTIOMETER VALUE BY ONE STEP.
@@ -102,9 +102,9 @@ void MCP4162_Decrement(void) {
 	spi_command_increment |= (MCP4162_REG_VW0 << 4) | (0b10 << 2);
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
 	SPI_WriteShort(spi_command_increment);
-	TIM_TimeWaitMilliseconds(1);
+	TIM22_WaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 }
 
 /* SET DIGITAL POTENTIOMETER STEP.
@@ -117,7 +117,7 @@ void MCP4162_SetStep(unsigned char step_number) {
 	spi_command_write |= (MCP4162_REG_VW0 << 12) | (0b00 << 10) | step_number;
 	GPIOA -> ODR &= ~(0b1 << 4); // CS='LOW'.
 	SPI_WriteShort(spi_command_write);
-	TIM_TimeWaitMilliseconds(1);
+	TIM22_WaitMilliseconds(1);
 	GPIOA -> ODR |= (0b1 << 4); // CS='HIGH'.
-	TIM_TimeWaitMilliseconds(10);
+	TIM22_WaitMilliseconds(10);
 }

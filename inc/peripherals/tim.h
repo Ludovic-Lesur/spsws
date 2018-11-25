@@ -10,9 +10,16 @@
 
 /*** TIM functions ***/
 
-void TIM_TimeInit(void);
-unsigned int TIM_TimeGetSeconds(void);
-unsigned int TIM_TimeGetMilliseconds(void);
-void TIM_TimeWaitMilliseconds(unsigned int ms_to_wait);
+void TIM21_Init(void);
+
+void TIM22_Init(void);
+unsigned int TIM22_GetSeconds(void);
+unsigned int TIM22_GetMilliseconds(void);
+void TIM22_WaitMilliseconds(unsigned int ms_to_wait);
+
+void TIM2_Init(void);
+void TIM2_Restart(void);
+void TIM2_Stop(void);
+volatile unsigned int TIM2_GetCounter(void);
 
 #endif /* PERIPHERALS_TIM_H */

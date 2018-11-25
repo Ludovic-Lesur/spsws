@@ -12,6 +12,21 @@
 #include "gpio_reg.h"
 #include "spi.h"
 
+/*** MAX11136 local macros ***/
+
+#define MAX11136_NUMBER_OF_CHANNELS		8
+
+/*** MAX11136 local structures ***/
+
+typedef struct {
+	unsigned short max11136_result_12bits[MAX11136_NUMBER_OF_CHANNELS];
+	unsigned char max11136_status; // Bit 'i' indicates if a result was successfully retrieved for channel 'i'.
+} MAX11136_Context;
+
+/*** MAX11136 local global variables ***/
+
+MAX11136_Context max11136_ctx;
+
 /*** MAX11136 local functions ***/
 
 /* MAX11136 REGISTER WRITE FUNCTION.
@@ -47,6 +62,11 @@ void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
  */
 void MAX11136_Init(void) {
 
+	/* Init context */
+	unsigned char idx = 0;
+	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
+	max11136_ctx.max11136_status = 0;
+
 	/* Init SPI peripheral */
 	SPI_Init();
 
@@ -60,11 +80,11 @@ void MAX11136_Init(void) {
 	GPIOB -> MODER &= ~(0b11 << 6); // Configure PB3 as input.
 }
 
-/* GET ADC CONVERSION RESULT ON ALL CHANNELS.
- * @param max11136_result:	Pointer to array that will contain ADC result on 12-bits.
- * @return:					None.
+/* PERFORM ADC CONVERSION ON ALL CHANNELS.
+ * @param:					None.
+ * @return max11136_status:	Conversion result status (see context).
  */
-void MAX11136_ConvertAllChannels(unsigned short* max11136_result) {
+unsigned char MAX11136_ConvertAllChannels(void) {
 
 	/* Configure SPI */
 	SPI_SetClockPolarity(1);
@@ -79,16 +99,41 @@ void MAX11136_ConvertAllChannels(unsigned short* max11136_result) {
 	// Reset the FIFO: RESET='01'.
 	// Auto shutdown: PM='01'.
 	// Start conversion: SWCNV='1'.
-	MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BA2);
+	MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 
 	/* Wait for conversions to complete */
 	while (((GPIOB -> IDR) & (0b1 << 3)) != 0); // Wait for EOC to be pulled low.
 
 	/* Read results in FIFO */
 	unsigned char idx = 0;
+	unsigned short max11136_dout = 0;
+	unsigned char channel = 0;
+	// For each channel...
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) {
+		// Get data from SPI.
 		GPIOB -> ODR &= ~(0b1 << 4); // Falling edge on CS pin.
-		SPI_ReadShort(0x0000, &max11136_result[idx]);
+		SPI_ReadShort(0x0000, &max11136_dout);
 		GPIOB -> ODR |= (0b1 << 4); // Set CS pin.
+		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
+		channel = (max11136_dout & 0xF000) >> 12;
+		if (channel < MAX11136_NUMBER_OF_CHANNELS) {
+			// Fill data.
+			max11136_ctx.max11136_result_12bits[channel] = max11136_dout & 0x0FFF;
+			// Update status.
+			max11136_ctx.max11136_status |= (0b1 << channel);
+		}
+	}
+	return max11136_ctx.max11136_status;
+}
+
+/* GET CHANNEL RESULT.
+ * @param channel:					ADC channel to get.
+ * @param channel_voltage_12bits:	Pointer to short that will contain the channel result on 12-bits.
+ * @return:							None.
+ */
+void MAX11136_GetChannel12bits(unsigned char channel, unsigned short* channel_voltage_12bits) {
+	// Check parameter.
+	if (channel < MAX11136_NUMBER_OF_CHANNELS) {
+		*(channel_voltage_12bits) = max11136_ctx.max11136_result_12bits[channel];
 	}
 }

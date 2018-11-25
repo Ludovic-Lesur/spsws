@@ -57,6 +57,25 @@ void SPI_SetClockPolarity(unsigned char polarity) {
 	}
 }
 
+/* SWITCH ALL SPI SLAVES ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void SPI_PowerOn(void) {
+
+	/* Enable RF power supply */
+	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
+	GPIOB -> MODER |= (0b01 << 2);
+	GPIOB -> ODR |= (0b1 << 1);
+	TIM22_WaitMilliseconds(100);
+
+	/* Enable sensors power supply */
+	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 10);
+	GPIOB -> ODR |= (0b1 << 5);
+	TIM22_WaitMilliseconds(100);
+}
+
 /* SEND A BYTE THROUGH SPI.
  * @param tx_data:	Data to send (8-bits).
  * @return:			None.

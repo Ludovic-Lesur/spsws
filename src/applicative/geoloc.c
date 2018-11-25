@@ -164,12 +164,12 @@ void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_r
 		/* Retrieve GPS position */
 		case GEOLOC_STATE_GET_POSITION:
 			// Start NEOM8N message parsing.
-			geoloc_ctx.geoloc_fix_start_time_seconds = TIM_TimeGetSeconds();
+			geoloc_ctx.geoloc_fix_start_time_seconds = TIM22_GetSeconds();
 			neom8n_result = NEOM8N_GetPosition(&geoloc_ctx.gps_position, geoloc_ctx.geoloc_timeout_seconds);
 			switch (neom8n_result) {
 			case NEOM8N_SUCCESS:
 				// Update status.
-				geoloc_ctx.geoloc_fix_duration_seconds = TIM_TimeGetSeconds()-geoloc_ctx.geoloc_fix_start_time_seconds;
+				geoloc_ctx.geoloc_fix_duration_seconds = TIM22_GetSeconds()-geoloc_ctx.geoloc_fix_start_time_seconds;
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_GGA_PARSING_SUCCESS_BIT_INDEX);
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_GGA_DATA_VALID_BIT_INDEX);
 #ifdef ATM
@@ -208,7 +208,7 @@ void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_r
 			switch (neom8n_result) {
 			case NEOM8N_SUCCESS:
 				// Update status.
-				geoloc_ctx.geoloc_fix_duration_seconds = TIM_TimeGetSeconds()-geoloc_ctx.geoloc_fix_start_time_seconds;
+				geoloc_ctx.geoloc_fix_duration_seconds = TIM22_GetSeconds()-geoloc_ctx.geoloc_fix_start_time_seconds;
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_ZDA_PARSING_SUCCESS_BIT_INDEX);
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_ZDA_DATA_VALID_BIT_INDEX);
 				(*timestamp_retrieved) = 1;
@@ -239,7 +239,7 @@ void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_r
 		/* Switch GPS module off */
 		case GEOLOC_STATE_OFF:
 			// Stop LPUART, DMA and GPS.
-			NEOM8N_Off();
+			NEOM8N_StopRx();
 			//GPIOA -> ODR &= ~(0b1 << 12);
 			// Send Sigfox frame to report position.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_SIGFOX;

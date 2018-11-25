@@ -12,6 +12,7 @@
 
 void SPI_Init(void);
 void SPI_SetClockPolarity(unsigned char polarity);
+void SPI_PowerOn(void);
 void SPI_WriteByte(unsigned char tx_data);
 void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data);
 void SPI_WriteShort(unsigned short tx_data);
