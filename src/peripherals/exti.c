@@ -61,15 +61,18 @@ void EXTI_Init(void) {
 	GPIOA -> PUPDR |= (0b01 << 16) | (0b01 << 30);
 
 	/* Attach rising edge external interrupt on PA15 (DIO2) and PA8 (DIO3) pins */
-	//EXTI -> IMR = 0x00008100; // IM8='1' and IM15='1', all other masked.
-	EXTI -> IMR = 0x00008000; // IM15='1', all other masked.
-	EXTI -> EMR = 0; // All events masked.
-	//EXTI -> RTSR = 0x00008100; // Rising edge trigger on PA8 and PA15.
-	EXTI -> RTSR = 0x00008000; // Rising edge trigger on PA15.
+	//EXTI -> IMR |= (0b1 << 15) | (0b1 << 8); // IM8='1' and IM15='1', all other masked.
+	EXTI -> IMR |= (0b1 << 15); // IM15='1', all other masked.
+	//EXTI -> RTSR |= (0b1 << 15) | (0b1 << 8); // Rising edge trigger on PA8 and PA15.
+	EXTI -> RTSR |= (0b1 << 15); // Rising edge trigger on PA15.
 	EXTI -> FTSR = 0; // None falling edge trigger.
 	EXTI -> SWIER = 0; // None software interrupt.
 	SYSCFG -> EXTICR3 &= 0xFFFFFFF0; // Select port A: EXTI8='0000'.
 	SYSCFG -> EXTICR4 &= 0xFFFF0FFF; // Select port A: EXTI15='0000'.
+
+	/* Enable RTC alarm interrupt (line 17) */
+	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
+	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
 
 	/* Disable interrupt by default */
 	NVIC_DisableInterrupt(IT_EXTI4_15);

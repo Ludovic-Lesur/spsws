@@ -106,7 +106,7 @@ void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
 
 	/* Wake-up temperature sensor */
 	ADC1 -> CCR |= (0b1 << 23); // TSEN='1'.
-	TIM_TimeWaitMilliseconds(1); // Wait al least 10µs (see p.89 of STM32L031x4/6 datasheet).
+	TIM22_WaitMilliseconds(1); // Wait al least 10µs (see p.89 of STM32L031x4/6 datasheet).
 
 	/* Read raw temperature */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.

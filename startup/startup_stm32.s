@@ -131,7 +131,7 @@ g_pfnVectors:
   .word	SysTick_Handler
   .word	0 // Watchdog
   .word	0 // PVD
-  .word	0 // RTC
+  .word	RTC_IRQHandler // RTC
   .word	0 // Flash
   .word	0 // RCC
   .word	EXTI0_1_IRQHandler // EXTI lines [1:0] interrupts
@@ -183,6 +183,9 @@ g_pfnVectors:
 	.weak	SysTick_Handler
 	.thumb_set SysTick_Handler,Default_Handler
 	
+	.weak	RTC_IRQHandler
+	.thumb_set RTC_IRQHandler,Default_Handler
+
 	.weak	EXTI0_1_IRQHandler
 	.thumb_set EXTI0_1_IRQHandler,Default_Handler
 

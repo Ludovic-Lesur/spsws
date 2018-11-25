@@ -28,6 +28,7 @@
 #include "spi.h"
 #include "sx1232.h"
 #include "sx1232_reg.h"
+#include "rtc.h"
 #include "tim.h"
 #include "ultimeter.h"
 #include "usart.h"
@@ -253,15 +254,21 @@ int main (void) {
 	/* Reset deep sleep flag on wake-up */
 	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
 
-	// Init clock.
+	// Init clocks.
 	RCC_Init();
-	RCC_SwitchToHsi16MHz();
+	RCC_SwitchToInternal16MHz();
+	RTC_Init();
 
-	// Init time.
+	// Init peripherals.
+	EXTI_Init();
 	TIM21_Init();
 	TIM22_Init();
-	EXTI_Init();
+	USART_Init();
+	I2C_Init();
 	NVM_Init();
+
+	// Init applicative layers.
+	AT_Init();
 
 	// Configure debug LED as output (PA2)
 	RCC -> IOPENR |= (0b11 << 0);
@@ -279,14 +286,10 @@ int main (void) {
 	}
 	TIM22_WaitMilliseconds(100);
 
-	USART_Init();
-	AT_Init();
-	I2C_Init();
-
 	//SX1232_Init();
 	//MAX11136_Init();
 	//MAX5495_Init();
-	// SPI_PowerOn();
+	//SPI_PowerOn();
 
 	/*while (1) {
 		USART_SendString("Test UART : ");

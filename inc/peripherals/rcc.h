@@ -18,7 +18,7 @@
 /*** RCC functions ***/
 
 void RCC_Init(void);
-void RCC_SwitchToHsi16MHz(void);
-void RCC_SwitchToHse16MHz(void);
+void RCC_SwitchToInternal16MHz(void);
+void RCC_SwitchToTcxo16MHz(void);
 
 #endif /* PERIPHERALS_RCC_H */

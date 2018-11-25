@@ -7,6 +7,7 @@
 
 #include "rcc.h"
 
+#include "gpio_reg.h"
 #include "rcc_reg.h"
 
 /*** RCC functions ***/
@@ -24,13 +25,18 @@ void RCC_Init(void) {
 
 	/* Peripherals clock source */
 	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.
+
+	/* Configure TCXO power enable pin (PB8) as output */
+	RCC -> IOPENR |= (0b11 << 1);
+	GPIOB -> MODER &= ~(0b11 << 16); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 16);
 }
 
 /* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16 MHz internal RC).
  * @param:	None.
  * @return:	None.
  */
-void RCC_SwitchToHsi16MHz(void) {
+void RCC_SwitchToInternal16MHz(void) {
 
 	/* Init HSI */
 	RCC -> CR |= (0b1 << 0); // Enable HSI (HSI16ON='1').
@@ -42,15 +48,22 @@ void RCC_SwitchToHsi16MHz(void) {
 	/* Disable MSI and HSE */
 	RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
 	RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
+
+	/* Disable TCXO power supply */
+	GPIOB -> ODR &= ~(0b1 << 8);
 }
 
 /* CONFIGURE AND USE HSE AS SYSTEM CLOCK (16 MHz TCXO).
  * @param:	None.
  * @return:	None.
  */
-void RCC_SwitchToHse16MHz(void) {
+void RCC_SwitchToTcxo16MHz(void) {
+
+	/* Enable TCXO power supply (PB8) */
+	GPIOB -> ODR |= (0b1 << 8);
 
 	/* Init HSE */
+	RCC -> CR |= (0b1 << 18); // Bypass oscillator (HSEBYP='1').
 	RCC -> CR |= (0b1 << 16); // Enable HSE (HSEON='1').
 	while (((RCC -> CR) & (0b1 << 17)) == 0); // Wait for HSE to be stable (HSERDY='1').
 	RCC -> CFGR &= ~(0b11 << 0); // Reset bits 0-1.
