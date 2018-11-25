@@ -57,8 +57,8 @@ typedef struct {
 	// State.
 	HWT_State hwt_state;
 	// Previous and current timestamp.
-	GPS_TimestampData hwt_previous_timestamp;
-	GPS_TimestampData hwt_current_timestamp;
+	Timestamp hwt_previous_timestamp;
+	Timestamp hwt_current_timestamp;
 	// Fix duration and timeout.
 	unsigned char hwt_timeout_seconds; // Timestamp fix timeout in seconds (retrieved from NVM).
 	unsigned char hwt_fix_start_time_seconds; // Absolute time (since MCU start-up) of fix start in seconds.
@@ -87,9 +87,9 @@ static HWT_Context hwt_ctx;
 unsigned char HWT_DateChanged(void) {
 	unsigned char result = 0;
 	// Compare all fields.
-	if ((hwt_ctx.hwt_previous_timestamp.date_day != hwt_ctx.hwt_current_timestamp.date_day) ||
-		(hwt_ctx.hwt_previous_timestamp.date_month != hwt_ctx.hwt_current_timestamp.date_month) ||
-		(hwt_ctx.hwt_previous_timestamp.date_year != hwt_ctx.hwt_current_timestamp.date_year)) {
+	if ((hwt_ctx.hwt_previous_timestamp.date != hwt_ctx.hwt_current_timestamp.date) ||
+		(hwt_ctx.hwt_previous_timestamp.month != hwt_ctx.hwt_current_timestamp.month) ||
+		(hwt_ctx.hwt_previous_timestamp.year != hwt_ctx.hwt_current_timestamp.year)) {
 		result = 1;
 	}
 	// Note: the result is positive when previous data is invalid (0 value in all fields) and current one is valid.
@@ -103,28 +103,28 @@ unsigned char HWT_DateChanged(void) {
  */
 void HWT_ComputeEffectiveDuration(void) {
 	// Convert previous timestamp into a number of seconds since January 1st of the previous year.
-	unsigned int previous_timestamp_seconds = (hwt_ctx.hwt_previous_timestamp.date_month-1)*AVERAGE_NUMBER_OF_SECONDS_PER_MONTH;
-	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.date_day-1)*NUMBER_OF_SECONDS_PER_DAY;
-	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.time_hours)*NUMBER_OF_SECONDS_PER_HOUR;
-	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.time_minutes)*NUMBER_OF_SECONDS_PER_MINUTE;
-	previous_timestamp_seconds += hwt_ctx.hwt_previous_timestamp.time_seconds;
+	unsigned int previous_timestamp_seconds = (hwt_ctx.hwt_previous_timestamp.month-1)*AVERAGE_NUMBER_OF_SECONDS_PER_MONTH;
+	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.date-1)*NUMBER_OF_SECONDS_PER_DAY;
+	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.hours)*NUMBER_OF_SECONDS_PER_HOUR;
+	previous_timestamp_seconds += (hwt_ctx.hwt_previous_timestamp.minutes)*NUMBER_OF_SECONDS_PER_MINUTE;
+	previous_timestamp_seconds += hwt_ctx.hwt_previous_timestamp.seconds;
 	// Compute number of year(s) between previous and current timestamp.
 	unsigned int delta_year = 0;
-	if ((hwt_ctx.hwt_current_timestamp.date_year == 0) && (hwt_ctx.hwt_previous_timestamp.date_year == 99)) {
+	if ((hwt_ctx.hwt_current_timestamp.year == 0) && (hwt_ctx.hwt_previous_timestamp.year == 99)) {
 		delta_year = 1;
 	}
 	else {
-		unsigned short previous_year = hwt_ctx.hwt_previous_timestamp.date_year;
-		unsigned short current_year = hwt_ctx.hwt_current_timestamp.date_year;
+		unsigned short previous_year = hwt_ctx.hwt_previous_timestamp.year;
+		unsigned short current_year = hwt_ctx.hwt_current_timestamp.year;
 		delta_year = current_year-previous_year;
 	}
 	// Convert current timestamp into a number of seconds since January 1st of the previous year.
 	unsigned int current_timestamp_seconds = delta_year*AVERAGE_NUMBER_OF_SECONDS_PER_YEAR;
-	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.date_month-1)*AVERAGE_NUMBER_OF_SECONDS_PER_MONTH;
-	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.date_day-1)*NUMBER_OF_SECONDS_PER_DAY;
-	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.time_hours)*NUMBER_OF_SECONDS_PER_HOUR;
-	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.time_minutes)*NUMBER_OF_SECONDS_PER_MINUTE;
-	current_timestamp_seconds += hwt_ctx.hwt_current_timestamp.time_seconds;
+	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.month-1)*AVERAGE_NUMBER_OF_SECONDS_PER_MONTH;
+	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.date-1)*NUMBER_OF_SECONDS_PER_DAY;
+	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.hours)*NUMBER_OF_SECONDS_PER_HOUR;
+	current_timestamp_seconds += (hwt_ctx.hwt_current_timestamp.minutes)*NUMBER_OF_SECONDS_PER_MINUTE;
+	current_timestamp_seconds += hwt_ctx.hwt_current_timestamp.seconds;
 	// Compensate GPS fix durations.
 	unsigned int current_mcu_start_time_seconds = current_timestamp_seconds-hwt_ctx.hwt_current_timestamp.mcu_time_seconds;
 	unsigned int previous_mcu_start_time_seconds = previous_timestamp_seconds-hwt_ctx.hwt_previous_timestamp.mcu_time_seconds;
@@ -187,24 +187,24 @@ void HWT_Init(unsigned char was_wake_up_reason, unsigned char timestamp_retrieve
 
 	/* Init context */
 	// Current timestamp.
-	hwt_ctx.hwt_current_timestamp.date_day = 0;
-	hwt_ctx.hwt_current_timestamp.date_month = 0;
-	hwt_ctx.hwt_current_timestamp.date_year = 0;
-	hwt_ctx.hwt_current_timestamp.time_hours = 0;
-	hwt_ctx.hwt_current_timestamp.time_minutes = 0;
-	hwt_ctx.hwt_current_timestamp.time_seconds = 0;
+	hwt_ctx.hwt_current_timestamp.date = 0;
+	hwt_ctx.hwt_current_timestamp.month = 0;
+	hwt_ctx.hwt_current_timestamp.year = 0;
+	hwt_ctx.hwt_current_timestamp.hours = 0;
+	hwt_ctx.hwt_current_timestamp.minutes = 0;
+	hwt_ctx.hwt_current_timestamp.seconds = 0;
 	hwt_ctx.hwt_current_timestamp.mcu_time_seconds = 0;
 	// Previous timestamp.
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.date_day);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.date_month);
+	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.date);
+	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.month);
 	unsigned char year_msb;
 	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, &year_msb);
 	unsigned char year_lsb;
 	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET+1, &year_lsb);
-	hwt_ctx.hwt_previous_timestamp.date_year = (year_msb << 8) + year_lsb;
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.time_hours);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.time_minutes);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.time_seconds);
+	hwt_ctx.hwt_previous_timestamp.year = (year_msb << 8) + year_lsb;
+	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.hours);
+	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.minutes);
+	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.seconds);
 	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MCU_TIME_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.mcu_time_seconds);
 	// Fix duration and timeout.
 	NVM_ReadByte(NVM_GPS_TIMEOUT_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_timeout_seconds);
@@ -219,7 +219,7 @@ void HWT_Init(unsigned char was_wake_up_reason, unsigned char timestamp_retrieve
 	for (byte_idx=0 ; byte_idx<HWT_SIGFOX_DATA_LENGTH ; byte_idx++) hwt_ctx.hwt_sigfox_data[byte_idx] = 0;
 	// Status byte.
 	hwt_ctx.hwt_status_byte = 0;
-	if (NEOM8N_TimestampIsValid(hwt_ctx.hwt_previous_timestamp) == 1) {
+	if (NEOM8N_TimestampIsValid(&hwt_ctx.hwt_previous_timestamp) == 1) {
 		hwt_ctx.hwt_status_byte |= (0b1 << HWT_STATUS_BYTE_PREVIOUS_TIMESTAMP_VALID_BIT_INDEX);
 	}
 	// State.
@@ -301,7 +301,7 @@ void HWT_Reset(void) {
  * @param timestamp_retrieved:	'1' if GPS timestamp was previously retrived (parameter is directly usable), '0' otherwise.
  * @return:						None.
  */
-void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retrieved, GPS_TimestampData gps_timestamp) {
+void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retrieved, Timestamp* gps_timestamp) {
 
 	HWT_Init(was_wake_up_reason, timestamp_retrieved);
 	unsigned char neom8n_result = 0;
@@ -345,7 +345,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Switch GPS module off */
 		case HWT_STATE_OFF:
 			// Stop LPUART, DMA and GPS module.
-			NEOM8N_StopRx();
+			NEOM8N_PowerOff();
 			GPIOA -> ODR &= ~(0b1 << 12);
 			// Compute next state.
 			if (((hwt_ctx.hwt_status_byte & HWT_STATUS_BYTE_PREVIOUS_TIMESTAMP_VALID_BIT_INDEX) != 0) && (was_wake_up_reason != 0)) {
@@ -378,13 +378,13 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* NVM update */
 		case HWT_STATE_UPDATE_NVM:
 			// Store current timestamp in NVM whatever the result.
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.date_day);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.date_month);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, ((hwt_ctx.hwt_current_timestamp.date_year & 0x0000FF00) >> 8));
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET+1, (hwt_ctx.hwt_current_timestamp.date_year & 0x000000FF));
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.time_hours);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.time_minutes);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.time_seconds);
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.date);
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.month);
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, ((hwt_ctx.hwt_current_timestamp.year & 0x0000FF00) >> 8));
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET+1, (hwt_ctx.hwt_current_timestamp.year & 0x000000FF));
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.hours);
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.minutes);
+			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.seconds);
 			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MCU_TIME_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.mcu_time_seconds);
 			// Compute next state.
 			hwt_ctx.hwt_state = HWT_STATE_END;
@@ -397,7 +397,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Unknown state */
 		default:
 			// Unknwon state.
-			NEOM8N_StopRx();
+			NEOM8N_PowerOff();
 			GPIOA -> ODR &= ~(0b1 << 12);
 			hwt_ctx.hwt_state = HWT_STATE_END;
 			break;

@@ -167,7 +167,7 @@ unsigned char NEOM8N_ComputeNmeaChecksum(unsigned char* nmea_rx_buf) {
  * @param nmea_rx_buf:	NMEA message to decode.
  * @return:				None.
  */
-void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* gps_timestamp) {
+void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_timestamp) {
 	unsigned char error_found = 0;
 	unsigned char idx = 0;
 
@@ -206,9 +206,9 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 				/* Field 2 = time = <hhmmss.ss> */
 				case 2:
 					if ((idx-sep_idx) == (NMEA_ZDA_TIME_FIELD_LENGTH+1)) {
-						(*gps_timestamp).time_hours = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
-						(*gps_timestamp).time_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+4]);
-						(*gps_timestamp).time_seconds = AsciiToHexa(nmea_rx_buf[sep_idx+5])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+6]);
+						(*gps_timestamp).hours = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+4]);
+						(*gps_timestamp).seconds = AsciiToHexa(nmea_rx_buf[sep_idx+5])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+6]);
 					}
 					else {
 						error_found = 1;
@@ -218,7 +218,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 				/* Field 3 = day = <dd> */
 				case 3:
 					if ((idx-sep_idx) == (NMEA_ZDA_DAY_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date_day = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).date = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -227,7 +227,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 
 				case 4:
 					if ((idx-sep_idx) == (NMEA_ZDA_MONTH_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date_month = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).month = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -236,9 +236,9 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
 
 				case 5:
 					if ((idx-sep_idx) == (NMEA_ZDA_YEAR_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date_year = 0;
+						(*gps_timestamp).year = 0;
 						for (k=0 ; k<NMEA_ZDA_YEAR_FIELD_LENGTH ; k++) {
-							(*gps_timestamp).date_year += Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
+							(*gps_timestamp).year += Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 						}
 						// Last field retrieved, parsing process succeeded.
 						neom8n_ctx.nmea_zda_parsing_success = 1;
@@ -276,7 +276,7 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, GPS_TimestampData* g
  * @param nmea_rx_buf:	NMEA message to decode.
  * @return:						None.
  */
-void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, GPS_PositionData* gps_position) {
+void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_position) {
 	unsigned char error_found = 0;
 	unsigned char idx = 0;
 
@@ -468,14 +468,14 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, GPS_PositionData* gp
  * @param local_gps_position:	GPS position structure to analyse.
  * @return gps_position_valid:	1 if GPS position is valid, 0 otherwise.
  */
-unsigned char NEOM8N_PositionIsValid(GPS_PositionData local_gps_position) {
+unsigned char NEOM8N_PositionIsValid(Position* local_gps_position) {
 	unsigned char gps_position_valid = 0;
-	if ((local_gps_position.lat_degrees >= 0) && (local_gps_position.lat_degrees <= 89) &&
-		(local_gps_position.lat_minutes >= 0) && (local_gps_position.lat_minutes <= 59) &&
-		(local_gps_position.lat_seconds >= 0) && (local_gps_position.lat_seconds <= 99999) &&
-		(local_gps_position.long_degrees >= 0) && (local_gps_position.long_degrees <= 179) &&
-		(local_gps_position.long_minutes >= 0) && (local_gps_position.long_minutes <= 59) &&
-		(local_gps_position.long_seconds >= 0) && (local_gps_position.long_seconds <= 99999)) {
+	if ((local_gps_position -> lat_degrees >= 0) && (local_gps_position -> lat_degrees <= 89) &&
+		(local_gps_position -> lat_minutes >= 0) && (local_gps_position -> lat_minutes <= 59) &&
+		(local_gps_position -> lat_seconds >= 0) && (local_gps_position -> lat_seconds <= 99999) &&
+		(local_gps_position -> long_degrees >= 0) && (local_gps_position -> long_degrees <= 179) &&
+		(local_gps_position -> long_minutes >= 0) && (local_gps_position -> long_minutes <= 59) &&
+		(local_gps_position -> long_seconds >= 0) && (local_gps_position -> long_seconds <= 99999)) {
 		gps_position_valid = 1;
 	}
 	return gps_position_valid;
@@ -533,19 +533,36 @@ void NEOM8N_Init(void) {
 	neom8n_ctx.nmea_gga_parsing_success = 0;
 	neom8n_ctx.nmea_gga_data_valid = 0;
 
+	/* Configure power enable pin (PA12) as output */
+	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
+	GPIOA -> MODER &= ~(0b11 << 24); // Reset bits 24-25.
+	GPIOA -> MODER |= (0b01 << 24); // Configure PA12 as output.
+
 	/* Init LPUART and DMA */
 	LPUART_Init();
 	DMA_LpuartRxInit();
 }
 
-/* STOP RECEIVING DATA FROM NEO-M8N MODULE.
+/* SWITCH GPS MODULE ON.
  * @param:	None.
  * @return:	None.
  */
-void NEOM8N_StopRx(void) {
-	// Switch DMA and LPUART off.
+void NEOM8N_PowerOn(void) {
+	/* Enable GPS power supply */
+	GPIOA -> ODR |= (0b1 << 12);
+}
+
+/* SWITCH GPS MODULE ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void NEOM8N_PowerOff(void) {
+	/* Switch DMA and LPUART off */
 	DMA_LpuartRxOff();
 	LPUART_Off();
+
+	/* Disable GPS power supply */
+	GPIOA -> ODR &= ~(0b1 << 12);
 }
 
 /* GET CURRENT GPS TIMESTAMP VIA ZDA NMEA  MESSAGES.
@@ -553,7 +570,7 @@ void NEOM8N_StopRx(void) {
  * @param timeout_seconds:	Timeout in seconds.
  * @return return_code:		See NEOM8N_ReturnCode structure in neom8n.h.
  */
-NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned char timeout_seconds) {
+NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char timeout_seconds) {
 	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
 	// Select ZDA message to get complete timestamp.
 	NEOM8N_SelectNmeaMessages(NMEA_ZDA_MASK);
@@ -579,7 +596,7 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned
 			if (neom8n_ctx.nmea_zda_parsing_success == 1) {
 				return_code = NEOM8N_INVALID_DATA;
 				// Check data.
-				if (NEOM8N_TimestampIsValid(*gps_timestamp) == 1) {
+				if (NEOM8N_TimestampIsValid(gps_timestamp) == 1) {
 					neom8n_ctx.nmea_zda_data_valid = 1;
 					return_code = NEOM8N_SUCCESS;
 				}
@@ -596,12 +613,12 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned
 	DMA_LpuartRxStop();
 	// Reset GPS timestamp data in case of failure.
 	if (return_code != NEOM8N_SUCCESS) {
-		(*gps_timestamp).date_day = 0;
-		(*gps_timestamp).date_month = 0;
-		(*gps_timestamp).date_year = 0;
-		(*gps_timestamp).time_hours = 0;
-		(*gps_timestamp).time_minutes = 0;
-		(*gps_timestamp).time_seconds = 0;
+		(*gps_timestamp).date = 0;
+		(*gps_timestamp).month = 0;
+		(*gps_timestamp).year = 0;
+		(*gps_timestamp).hours = 0;
+		(*gps_timestamp).minutes = 0;
+		(*gps_timestamp).seconds = 0;
 	}
 	return return_code;
 }
@@ -610,14 +627,14 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned
  * @param gps_timestamp:		GPS timestamp structure to analyse.
  * @return gps_timestamp_valid:	1 if GPS timestamp is valid, 0 otherwise.
  */
-unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp) {
+unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp) {
 	unsigned char gps_timestamp_valid = 0;
-	if ((local_gps_timestamp.date_day >= 1) && (local_gps_timestamp.date_day <= 31) &&
-		(local_gps_timestamp.date_month >= 1) && (local_gps_timestamp.date_month <= 12) &&
-		(local_gps_timestamp.date_year >= 0) && (local_gps_timestamp.date_year <= 9999) &&
-		(local_gps_timestamp.time_hours >= 0) && (local_gps_timestamp.time_hours <= 23) &&
-		(local_gps_timestamp.time_minutes >= 0) && (local_gps_timestamp.time_minutes <= 59) &&
-		(local_gps_timestamp.time_seconds >= 0) && (local_gps_timestamp.time_seconds <= 59)) {
+	if ((local_gps_timestamp -> date >= 1) && (local_gps_timestamp -> date <= 31) &&
+		(local_gps_timestamp -> month >= 1) && (local_gps_timestamp -> month <= 12) &&
+		(local_gps_timestamp -> year >= 0) && (local_gps_timestamp -> year <= 9999) &&
+		(local_gps_timestamp -> hours >= 0) && (local_gps_timestamp -> hours <= 23) &&
+		(local_gps_timestamp -> minutes >= 0) && (local_gps_timestamp -> minutes <= 59) &&
+		(local_gps_timestamp -> seconds >= 0) && (local_gps_timestamp -> seconds <= 59)) {
 		gps_timestamp_valid = 1;
 	}
 	return gps_timestamp_valid;
@@ -628,7 +645,7 @@ unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp) {
  * @param timeout_seconds:	Timeout in seconds.
  * @return return_code:		See NEOM8N_ReturnCode structure in neom8n.h.
  */
-NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned char timeout_seconds) {
+NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds) {
 	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
 	// Select GGA message to get complete position.
 	NEOM8N_SelectNmeaMessages(NMEA_GGA_MASK);
@@ -654,7 +671,7 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned ch
 			if (neom8n_ctx.nmea_gga_parsing_success == 1) {
 				return_code = NEOM8N_INVALID_DATA;
 				// Check data.
-				if (NEOM8N_PositionIsValid(*gps_position) == 1) {
+				if (NEOM8N_PositionIsValid(gps_position) == 1) {
 					neom8n_ctx.nmea_gga_data_valid = 1;
 					return_code = NEOM8N_SUCCESS;
 				}

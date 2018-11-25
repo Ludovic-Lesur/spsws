@@ -14,6 +14,6 @@
 
 unsigned char HWT_Expired(void);
 void HWT_Reset(void);
-void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retrieved, GPS_TimestampData gps_timestamp);
+void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retrieved, Timestamp* gps_timestamp);
 
 #endif /* APPLICATIVE_HWT_H_ */

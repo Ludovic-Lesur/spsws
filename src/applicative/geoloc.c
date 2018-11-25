@@ -44,7 +44,7 @@ typedef struct {
 	// State.
 	GEOLOC_State geoloc_state;
 	// Position data.
-	GPS_PositionData gps_position;
+	Position gps_position;
 	// Fix duration and timeout.
 	unsigned char geoloc_timeout_seconds; // Geolocation fix timeout in seconds (retrieved from NVM).
 	unsigned char geoloc_fix_start_time_seconds; // Absolute time (since MCU start-up) of fix start in seconds.
@@ -91,14 +91,9 @@ void GEOLOC_Init(void) {
 	// Status byte.
 	geoloc_ctx.geoloc_status_byte = 0;
 
-	/* Switch GPS module on */
-	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= ~(0b11 << 24); // Reset bits 24-25.
-	GPIOA -> MODER |= (0b01 << 24); // Configure PA12 as output.
-	GPIOA -> ODR |= (0b1 << 12); // Switch GPS on.
-
 	/* Init GPS module */
 	NEOM8N_Init();
+	NEOM8N_PowerOn();
 }
 
 /* BUILD SIGFOX DATA STARTING FROM GPS POSITION AND STATUS.
@@ -149,7 +144,7 @@ void GEOLOC_BuildSigfoxData(void) {
  * @param timestamp_retrieved:	'1' if GPS timestamp xas successfully retrieved, '0' otherwise.
  * @return:						None.
  */
-void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_retrieved) {
+void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved) {
 
 	GEOLOC_Init();
 	(*timestamp_retrieved) = 0;
@@ -239,8 +234,7 @@ void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_r
 		/* Switch GPS module off */
 		case GEOLOC_STATE_OFF:
 			// Stop LPUART, DMA and GPS.
-			NEOM8N_StopRx();
-			//GPIOA -> ODR &= ~(0b1 << 12);
+			NEOM8N_PowerOff();
 			// Send Sigfox frame to report position.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_SIGFOX;
 			break;

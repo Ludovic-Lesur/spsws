@@ -70,10 +70,6 @@ void EXTI_Init(void) {
 	SYSCFG -> EXTICR3 &= 0xFFFFFFF0; // Select port A: EXTI8='0000'.
 	SYSCFG -> EXTICR4 &= 0xFFFF0FFF; // Select port A: EXTI15='0000'.
 
-	/* Enable RTC alarm interrupt (line 17) */
-	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
-	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
-
 	/* Disable interrupt by default */
 	NVIC_DisableInterrupt(IT_EXTI4_15);
 }

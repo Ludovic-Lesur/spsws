@@ -17,16 +17,16 @@
 
 typedef struct {
 	// Date.
-	unsigned char date_day;
-	unsigned char date_month;
-	unsigned short date_year;
+	unsigned short year;
+	unsigned char month;
+	unsigned char date;
 	// Time.
-	unsigned char time_hours;
-	unsigned char time_minutes;
-	unsigned char time_seconds;
+	unsigned char hours;
+	unsigned char minutes;
+	unsigned char seconds;
 	// Absolute time (since MCU start-up) in seconds when GPS timestamp is retrieved (used to know MCU start-up timestamp).
 	unsigned char mcu_time_seconds;
-} GPS_TimestampData;
+} Timestamp;
 
 typedef struct {
 	// Latitude.
@@ -41,7 +41,7 @@ typedef struct {
 	unsigned char long_east; // 0='O', 1='E'.
 	// Altitude.
 	unsigned int altitude;
-} GPS_PositionData;
+} Position;
 
 typedef enum {
 	NEOM8N_SUCCESS,			// Parsing successful and data valid.
@@ -49,13 +49,17 @@ typedef enum {
 	NEOM8N_TIMEOUT			// Parsing failure (= timeout).
 } NEOM8N_ReturnCode;
 
-/*** NEOM8N functions ***/
+/*** NEOM8N user functions ***/
 
 void NEOM8N_Init(void);
-void NEOM8N_StopRx(void);
-NEOM8N_ReturnCode NEOM8N_GetTimestamp(GPS_TimestampData* gps_timestamp, unsigned char timeout_seconds);
-unsigned char NEOM8N_TimestampIsValid(GPS_TimestampData local_gps_timestamp);
-NEOM8N_ReturnCode NEOM8N_GetPosition(GPS_PositionData* gps_position, unsigned char timeout_seconds);
+void NEOM8N_PowerOn(void);
+void NEOM8N_PowerOff(void);
+NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char timeout_seconds);
+unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp);
+NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds);
+
+/*** NEOM8N utility functions ***/
+
 void NEOM8N_SwitchDmaBuffer(void);
 
 #endif /* COMPONENTS_NEOM8N_H_ */

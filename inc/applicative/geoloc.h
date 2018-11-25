@@ -12,6 +12,6 @@
 
 /*** GEOLOC functions ***/
 
-void GEOLOC_Process(GPS_TimestampData* gps_timestamp, unsigned char* timestamp_retrieved);
+void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved);
 
 #endif /* APPLICATIVE_GEOLOC_H */

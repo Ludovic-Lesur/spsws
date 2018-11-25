@@ -50,7 +50,7 @@ typedef struct {
 	SPSWS_State spsws_state;
 	sfx_u16 spsws_mcu_vdd;
 	sfx_s16 spsws_mcu_temperature;
-	GPS_TimestampData spsws_timestamp_from_geoloc;
+	Timestamp spsws_timestamp_from_geoloc;
 	unsigned char spsws_timestamp_retrieved_from_geoloc;
 } SPSWS_Context;
 
@@ -275,6 +275,19 @@ int main (void) {
 	GPIOA -> MODER &= ~(0b11 << 4); // Reset bits 8-9.
 	GPIOA -> MODER |= (0b01 << 4);
 
+	// RTC first calibration.
+	Timestamp main_timestamp;
+	NEOM8N_Init();
+	NEOM8N_PowerOn();
+	while (RTC_GetCalibrationStatus() == 0) {
+		NEOM8N_ReturnCode neom8n_return_code = NEOM8N_GetTimestamp(&main_timestamp, 60);
+		if (neom8n_return_code == NEOM8N_SUCCESS) {
+			RTC_Calibrate(&main_timestamp);
+			AT_PrintGpsTimestamp(&main_timestamp);
+		}
+	}
+	NEOM8N_PowerOff();
+
 	// POR blink.
 	unsigned int i = 0;
 	unsigned int k = 0;
@@ -350,10 +363,13 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	ULTIMETER_Init();
-	ULTIMETER_StartContinuousMeasure();
+	//ULTIMETER_Init();
+	//ULTIMETER_StartContinuousMeasure();
 	while (1) {
-		AT_Task();
+		RTC_GetTimestamp(&main_timestamp);
+		AT_PrintRtcTimestamp(&main_timestamp);
+		while (RTC_GetIrqStatus() == 0);
+		RTC_ClearIrqStatus();
 	}
 
 	return 0;

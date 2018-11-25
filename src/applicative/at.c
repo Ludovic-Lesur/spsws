@@ -354,6 +354,45 @@ void AT_DecodeRxBuffer(void) {
 	}
 }
 
+/* PRINT A TIMESTAMP ON USART.
+ * @param timestamp_to_print:	Pointer to the timestamp to print.
+ * @return:						None.
+ */
+void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
+	// Year.
+	USART_SendValue((timestamp_to_print -> year), USART_Decimal);
+	USART_SendString("-");
+	// Month.
+	if ((timestamp_to_print -> month) < 10) {
+		USART_SendValue(0, USART_Decimal);
+	}
+	USART_SendValue((timestamp_to_print -> month), USART_Decimal);
+	USART_SendString("-");
+	// Day.
+	if ((timestamp_to_print -> date) < 10) {
+		USART_SendValue(0, USART_Decimal);
+	}
+	USART_SendValue((timestamp_to_print -> date), USART_Decimal);
+	USART_SendString(" ");
+	// Hours.
+	if ((timestamp_to_print -> hours) < 10) {
+		USART_SendValue(0, USART_Decimal);
+	}
+	USART_SendValue((timestamp_to_print -> hours), USART_Decimal);
+	USART_SendString(":");
+	// Minutes.
+	if ((timestamp_to_print -> minutes) < 10) {
+		USART_SendValue(0, USART_Decimal);
+	}
+	USART_SendValue((timestamp_to_print -> minutes), USART_Decimal);
+	USART_SendString(":");
+	// Seconds.
+	if ((timestamp_to_print -> seconds) < 10) {
+		USART_SendValue(0, USART_Decimal);
+	}
+	USART_SendValue((timestamp_to_print -> seconds), USART_Decimal);
+}
+
 /*** AT functions ***/
 
 /* INIT AT MANAGER.
@@ -386,45 +425,25 @@ void AT_Task(void) {
 	}
 }
 
+/* PRINT RTC TIMESTAMP ON USART.
+ * @param rtc_timestamp:	Pointer to RTC timestamp to print.
+ * @return:					None.
+ */
+void AT_PrintRtcTimestamp(Timestamp* rtc_timestamp) {
+	// Header.
+	USART_SendString("RTC timestamp ");
+	AT_PrintTimestamp(rtc_timestamp);
+	USART_SendString("\n");
+}
+
 /* PRINT GPS TIMESTAMP ON USART.
  * @param gps_timestamp:	Pointer to GPS timestamp to print.
  * @return:					None.
  */
-void AT_PrintGpsTimestamp(GPS_TimestampData* gps_timestamp) {
+void AT_PrintGpsTimestamp(Timestamp* gps_timestamp) {
 	// Header.
-	USART_SendString("---> GPS Timestamp ");
-	// Year.
-	USART_SendValue((gps_timestamp -> date_year), USART_Decimal);
-	USART_SendString("-");
-	// Month.
-	if ((gps_timestamp -> date_month) < 10) {
-		USART_SendValue(0, USART_Decimal);
-	}
-	USART_SendValue((gps_timestamp -> date_month), USART_Decimal);
-	USART_SendString("-");
-	// Day.
-	if ((gps_timestamp -> date_day) < 10) {
-		USART_SendValue(0, USART_Decimal);
-	}
-	USART_SendValue((gps_timestamp -> date_day), USART_Decimal);
-	USART_SendString(" ");
-	// Hours.
-	if ((gps_timestamp -> time_hours) < 10) {
-		USART_SendValue(0, USART_Decimal);
-	}
-	USART_SendValue((gps_timestamp -> time_hours), USART_Decimal);
-	USART_SendString(":");
-	// Minutes.
-	if ((gps_timestamp -> time_minutes) < 10) {
-		USART_SendValue(0, USART_Decimal);
-	}
-	USART_SendValue((gps_timestamp -> time_minutes), USART_Decimal);
-	USART_SendString(":");
-	// Seconds.
-	if ((gps_timestamp -> time_seconds) < 10) {
-		USART_SendValue(0, USART_Decimal);
-	}
-	USART_SendValue((gps_timestamp -> time_seconds), USART_Decimal);
+	USART_SendString("GPS timestamp ");
+	AT_PrintTimestamp(gps_timestamp);
 	USART_SendString("\n");
 }
 
@@ -432,9 +451,9 @@ void AT_PrintGpsTimestamp(GPS_TimestampData* gps_timestamp) {
  * @param gps_position:	Pointer to GPS position to print.
  * @return:				None.
  */
-void AT_PrintGpsPosition(GPS_PositionData* gps_position) {
+void AT_PrintGpsPosition(Position* gps_position) {
 	// Header.
-	USART_SendString("---> GPS position ");
+	USART_SendString("GPS position ");
 	// Latitude.
 	USART_SendString("Lat=");
 	USART_SendValue((gps_position -> lat_degrees), USART_Decimal);

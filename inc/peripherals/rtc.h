@@ -13,6 +13,11 @@
 /*** RTC functions ***/
 
 void RTC_Init(void);
-void RTC_Calibrate(GPS_TimestampData* gps_timestamp);
+void RTC_Calibrate(Timestamp* gps_timestamp);
+unsigned char RTC_GetCalibrationStatus(void);
+void RTC_GetTimestamp(Timestamp* rtc_timestamp);
+
+unsigned char RTC_GetIrqStatus(void);
+void RTC_ClearIrqStatus(void);
 
 #endif /* RTC_H */

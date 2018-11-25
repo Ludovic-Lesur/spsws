@@ -48,8 +48,9 @@
 
 void AT_Init(void);
 void AT_Task(void);
-void AT_PrintGpsTimestamp(GPS_TimestampData* gps_timestamp);
-void AT_PrintGpsPosition(GPS_PositionData* gps_position);
+void AT_PrintRtcTimestamp(Timestamp* rtc_timestamp);
+void AT_PrintGpsTimestamp(Timestamp* gps_timestamp);
+void AT_PrintGpsPosition(Position* gps_position);
 
 /*** AT utility functions ***/
 
