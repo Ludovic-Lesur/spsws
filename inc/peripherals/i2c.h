@@ -11,6 +11,8 @@
 /*** I2C functions ***/
 
 void I2C_Init(void);
+void I2C_PowerOn(void);
+void I2C_PowerOff(void);
 void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length);
 void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length);
 

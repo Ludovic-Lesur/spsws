@@ -11,6 +11,7 @@
 #include "i2c_reg.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "tim.h"
 
 /*** I2C functions ***/
 
@@ -31,6 +32,11 @@ void I2C_Init(void) {
 	GPIOB -> AFRL &= 0x00FFFFFF; // Reset bits 24-31.
 	GPIOB -> AFRL |= 0x11000000; // Link PB6 and PB7 to AF1.
 
+	/* Configure power enable pin (PB5) */
+	RCC -> IOPENR |= (0b11 << 1); // Enable GPIOB clock.
+	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 10-11.
+	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
+
 	/* Configure peripheral */
 	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').
 	I2C1 -> CR1 &= ~(0b11111 << 8); // Analog filter enabled (ANFOFF='0') and digital filter disabled (DNF='0000').
@@ -44,6 +50,27 @@ void I2C_Init(void) {
 	I2C1 -> CR1 |= (0b1 << 0);
 }
 
+/* SWITCH ALL I2C SLAVES ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void I2C_PowerOn(void) {
+
+	/* Switch SHT3x, DPS310 and SI1133 on */
+	GPIOB -> ODR |= (0b01 << 5);
+	TIM22_WaitMilliseconds(100);
+}
+
+/* SWITCH ALL I2C SLAVES ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void I2C_PowerOFF(void) {
+
+	/* Switch SHT3x, DPS310 and SI1133 oFF */
+	GPIOB -> ODR &= ~(0b01 << 5);
+}
+
 /* WRITE DATA ON I2C BUS (see algorithme on p.607 of RM0377 datasheet).
  * @param slave_address:	Slave address on 7 bits.
  * @param tx_buf:			Array containing the byte(s) to send.
@@ -51,6 +78,9 @@ void I2C_Init(void) {
  * @return:					None.
  */
 void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length) {
+
+	/* Wait for I2C bus to be ready */
+	while (((I2C1 -> ISR) & (0b1 << 15)) != 0); // Wait for BUSY='0'.
 
 	/* Clear all flags */
 	I2C1 -> ICR |= 0x00003F38;
@@ -67,6 +97,7 @@ void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char
 
 	/* Generate start condition */
 	I2C1 -> CR2 |= (0b1 << 13); // START='1'.
+	while (((I2C1 -> CR2) & (0b1 << 13)) != 0); // Wait for START bit to be cleared by hardware.
 
 	/* Send bytes */
 	unsigned char byte_idx = 0;
@@ -79,6 +110,9 @@ void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char
 		}
 	}
 
+	/* Wait for last byte to be sent */
+	while (((I2C1 -> ISR) & (0b1 << 6)) == 0); // Wait for TC='1'.
+
 	/* Generate stop condition. */
 	I2C1 -> CR2 |= (0b1 << 14);
 }
@@ -90,6 +124,9 @@ void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char
  * @return:					None.
  */
 void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+
+	/* Wait for I2C bus to be ready */
+	while (((I2C1 -> ISR) & (0b1 << 15)) != 0); // Wait for BUSY='0'.
 
 	/* Clear all flags */
 	I2C1 -> ICR |= 0x00003F38;
@@ -107,17 +144,17 @@ void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char 
 
 	/* Generate start condition */
 	I2C1 -> CR2 |= (0b1 << 13); // START='1'.
+	while (((I2C1 -> CR2) & (0b1 << 13)) != 0); // Wait for START bit to be cleared by hardware.
 
-	/* Send bytes */
+	/* Get bytes */
 	unsigned char byte_idx = 0;
 	while (byte_idx < rx_buf_length) {
-
-		/* Wait for incoming data (RXNE='1') */
-		while (((I2C1 -> ISR) & (0b1 << 2)) == 0);
-
-		/* Fill RX buffer with new byte */
-		rx_buf[byte_idx] = I2C1 -> RXDR;
-		byte_idx++;
+		// Wait for incoming data (RXNE='1').
+		if (((I2C1 -> ISR) & (0b1 << 2)) != 0) {
+			// Fill RX buffer with new byte */
+			rx_buf[byte_idx] = I2C1 -> RXDR;
+			byte_idx++;
+		}
 	}
 
 	/* Send a NACK after last byte */

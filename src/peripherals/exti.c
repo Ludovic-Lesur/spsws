@@ -23,12 +23,8 @@
 /*** EXTI local structures ***/
 
 typedef struct {
-	// Channel 15.
 	unsigned int exti15_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
-	unsigned int exti15_rising_edge_time; // Software filter to avoid glitches.
-	// Channel 8.
 	unsigned int exti8_phase_shift; // TIM2 counter value when edge interrupt detected on wind direction input.
-	unsigned int exti8_rising_edge_time; // Software filter to avoid glitches.
 } EXTI_Context;
 
 /*** EXTI local global variables ***/
@@ -44,12 +40,8 @@ volatile EXTI_Context exti_ctx;
 void EXTI_Init(void) {
 
 	/* Init context */
-	// Channel 15.
 	exti_ctx.exti15_period = 0;
-	exti_ctx.exti15_rising_edge_time = 0;
-	// Channel 8.
 	exti_ctx.exti8_phase_shift = 0;
-	exti_ctx.exti8_rising_edge_time = 0;
 
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
@@ -58,13 +50,10 @@ void EXTI_Init(void) {
 	RCC -> IOPENR |= (0b1 << 0); // GPIOAEN='1'.
 	GPIOA -> MODER &= ~(0b11 << 30); // MODE15='00'.
 	GPIOA -> MODER &= ~(0b11 << 16); // MODE8='00'.
-	GPIOA -> PUPDR |= (0b01 << 16) | (0b01 << 30);
 
 	/* Attach rising edge external interrupt on PA15 (DIO2) and PA8 (DIO3) pins */
-	//EXTI -> IMR |= (0b1 << 15) | (0b1 << 8); // IM8='1' and IM15='1', all other masked.
-	EXTI -> IMR |= (0b1 << 15); // IM15='1', all other masked.
-	//EXTI -> RTSR |= (0b1 << 15) | (0b1 << 8); // Rising edge trigger on PA8 and PA15.
-	EXTI -> RTSR |= (0b1 << 15); // Rising edge trigger on PA15.
+	EXTI -> IMR |= (0b1 << 15) | (0b1 << 8); // IM8='1' and IM15='1', all other masked.
+	EXTI -> RTSR |= (0b1 << 15) | (0b1 << 8); // Rising edge trigger on PA8 and PA15.
 	EXTI -> FTSR = 0; // None falling edge trigger.
 	EXTI -> SWIER = 0; // None software interrupt.
 	SYSCFG -> EXTICR3 &= 0xFFFFFFF0; // Select port A: EXTI8='0000'.
@@ -84,6 +73,18 @@ void EXTI4_15_IRQHandler(void) {
 	if (((EXTI -> PR) & (0b1 << 15)) != 0) {
 		// Clear flag.
 		EXTI -> PR |= (0b1 << 15); // PIF15='1' (writing '1' clears the bit).
+		// Rising edge on speed signal.
+		ULTIMETER_IncrementWindSpeedCount();
+		// Capture period.
+		TIM2_Stop();
+		exti_ctx.exti15_period = TIM2_GetCounter();
+		// Compute direction
+		if ((exti_ctx.exti15_period > 0) && (exti_ctx.exti8_phase_shift <= exti_ctx.exti15_period)) {
+			unsigned char direction_pourcent = (exti_ctx.exti8_phase_shift * 100) / (exti_ctx.exti15_period);
+			ULTIMETER_UpdateWindDirection(direction_pourcent);
+		}
+		// Start new cycle.
+		TIM2_Restart();
 	}
 
 
@@ -91,5 +92,7 @@ void EXTI4_15_IRQHandler(void) {
 	if (((EXTI -> PR) & (0b1 << 8)) != 0) {
 		// Clear flag.
 		EXTI -> PR |= (0b1 << 8); // PIF8='1' (writing '1' clears the bit).
+		// Rising edge on direction signal.
+		exti_ctx.exti8_phase_shift = TIM2_GetCounter();
 	}
 }

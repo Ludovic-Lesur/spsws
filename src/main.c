@@ -276,7 +276,7 @@ int main (void) {
 	GPIOA -> MODER |= (0b01 << 4);
 
 	// RTC first calibration.
-	Timestamp main_timestamp;
+	/*Timestamp main_timestamp;
 	NEOM8N_Init();
 	NEOM8N_PowerOn();
 	while (RTC_GetCalibrationStatus() == 0) {
@@ -286,7 +286,7 @@ int main (void) {
 			AT_PrintGpsTimestamp(&main_timestamp);
 		}
 	}
-	NEOM8N_PowerOff();
+	NEOM8N_PowerOff();*/
 
 	// POR blink.
 	unsigned int i = 0;
@@ -331,18 +331,18 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	/*
-	//unsigned char tmp_sht = 0;
-	//unsigned char hum_sht = 0;
+	signed char tmp_sht = 0;
+	unsigned char hum_sht = 0;
+	I2C_PowerOn();
 	while (1) {
-		//SHT3X_ReadTemperatureHumidity(&tmp_sht, &hum_sht);
-		MAX11136_ConvertAllChannels();
-		TIM_TimeWaitMilliseconds(1000);
+		SHT3X_ReadTemperatureHumidity(&tmp_sht, &hum_sht);
+		//MAX11136_ConvertAllChannels();
+		TIM22_WaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
-	}*/
+	}
 
 	/*unsigned char sx1232_version = 0;
 	unsigned char sx1232_reg_tcxo = 0;
@@ -363,14 +363,15 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	//ULTIMETER_Init();
-	//ULTIMETER_StartContinuousMeasure();
+	/*ULTIMETER_Init();
+	ULTIMETER_StartContinuousMeasure();
 	while (1) {
-		RTC_GetTimestamp(&main_timestamp);
-		AT_PrintRtcTimestamp(&main_timestamp);
-		while (RTC_GetIrqStatus() == 0);
-		RTC_ClearIrqStatus();
-	}
+		//RTC_GetTimestamp(&main_timestamp);
+		//AT_PrintRtcTimestamp(&main_timestamp);
+		//while (RTC_GetIrqStatus() == 0);
+		//RTC_ClearIrqStatus();
+		//AT_Task();
+	}*/
 
 	return 0;
 }

@@ -31,6 +31,13 @@ void SPI_Init(void) {
 	//GPIOA -> PUPDR &= 0xFFFF03FF; // Reset bits 10-15.
 	//GPIOA -> PUPDR |= (0b01 << 12); // Pull-up resistors on all pins.
 
+	/* Configure power enable pins (PB1 / PB5) */
+	RCC -> IOPENR |= (0b1 << 1); // Enable GPIOB clock.
+	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
+	GPIOB -> MODER |= (0b01 << 2); // Configure PB1 as output.
+	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
+	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
+
 	/* Configure peripheral */
 	SPI1 -> CR1 = 0; // Disable peripheral before configuration (SPE='0').
 	SPI1 -> CR1 |= (0b1 << 2); // Master mode (MSTR='1').
@@ -63,17 +70,26 @@ void SPI_SetClockPolarity(unsigned char polarity) {
  */
 void SPI_PowerOn(void) {
 
-	/* Enable RF power supply */
-	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
-	GPIOB -> MODER |= (0b01 << 2);
+	/* Enable SX1232 power supply */
 	GPIOB -> ODR |= (0b1 << 1);
 	TIM22_WaitMilliseconds(100);
 
-	/* Enable sensors power supply */
-	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
-	GPIOB -> MODER |= (0b01 << 10);
+	/* Enable MAX11136 power supply */
 	GPIOB -> ODR |= (0b1 << 5);
 	TIM22_WaitMilliseconds(100);
+}
+
+/* SWITCH ALL SPI SLAVES OFF.
+ * @param:	None.
+ * @return:	None.
+ */
+void SPI_PowerOff(void) {
+
+	/* Disable SX1232 power supply */
+	GPIOB -> ODR &= ~(0b1 << 1);
+
+	/* Disable MAX11136 power supply */
+	GPIOB -> ODR &= ~(0b1 << 5);
 }
 
 /* SEND A BYTE THROUGH SPI.

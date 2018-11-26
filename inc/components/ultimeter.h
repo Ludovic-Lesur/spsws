@@ -17,8 +17,9 @@
 void ULTIMETER_Init(void);
 void ULTIMETER_StartContinuousMeasure(void);
 void ULTIMETER_StopContinuousMeasure(void);
-void ULTIMETER_GetAverageWindSpeed(unsigned char average_wind_speed_kmh);
-void ULTIMETER_GetPeakWindSpeed(unsigned char peak_wind_speed_kmh);
+void ULTIMETER_GetAverageWindSpeed(unsigned char* average_wind_speed_kmh);
+void ULTIMETER_GetPeakWindSpeed(unsigned char* peak_wind_speed_kmh);
+void ULTIMETER_GetAverageWindDirection(unsigned char* average_wind_direction_pourcent);
 
 /*** Ultimeter utility functions ***/
 

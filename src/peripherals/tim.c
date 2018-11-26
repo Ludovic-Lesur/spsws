@@ -34,14 +34,24 @@ void TIM21_IRQHandler(void) {
 
 	/* Store wind measurements if period reached */
 	if (ultimeter_seconds_count == ULTIMETER_MEASUREMENT_PERIOD_SECONDS) {
-		// Disable timer and interrupt.
-		//TIM2_Stop();
-		//NVIC_DisableInterrupt(IT_EXTI4_15);
 		// Store data.
-		//ULTIMETER_StoreMeasurements();
-		// Re-enable interrupt.
+		ULTIMETER_StoreMeasurements();
+		// Print data.
+		unsigned char mean_speed = 0;
+		unsigned char peak_speed = 0;
+		unsigned char mean_direction = 0;
+		ULTIMETER_GetAverageWindSpeed(&mean_speed);
+		ULTIMETER_GetPeakWindSpeed(&peak_speed);
+		ULTIMETER_GetAverageWindDirection(&mean_direction);
+		USART_SendString("mean_speed=");
+		USART_SendValue(mean_speed, USART_Decimal);
+		USART_SendString("km/h peak_speed=");
+		USART_SendValue(peak_speed, USART_Decimal);
+		USART_SendString("km/h mean_direction=");
+		USART_SendValue(mean_direction, USART_Decimal);
+		USART_SendString("\n");
+		// Reset counter.
 		ultimeter_seconds_count = 0;
-		//NVIC_EnableInterrupt(IT_EXTI4_15);
 	}
 }
 
@@ -149,9 +159,6 @@ void TIM2_Init(void) {
 		psc_value = 0xFFFF;
 	}
 	TIM2 -> PSC = psc_value; // Timer is clocked by SYSCLK (see RCC_Init() function).
-
-	// Bypass for debug.
-	TIM2 -> PSC = SYSCLK_KHZ;
 }
 
 /* START TIM2.
