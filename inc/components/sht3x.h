@@ -10,6 +10,7 @@
 
 /*** SHT3x functions ***/
 
-void SHT3X_ReadTemperatureHumidity(signed char* temperature_degrees, unsigned char* humidity_percent);
+void SHT3X_GetTemperature(signed char* temperature_degrees);
+void SHT3X_GetHumidity(unsigned char* humidity_percent);
 
 #endif /* COMPONENTS_SHT3X_H_ */

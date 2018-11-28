@@ -83,7 +83,7 @@ void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0); // Wait for BUSY='0'.
 
 	/* Clear all flags */
-	I2C1 -> ICR |= 0x00003F38;
+	//I2C1 -> ICR |= 0x00003F38;
 
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
@@ -129,12 +129,12 @@ void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char 
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0); // Wait for BUSY='0'.
 
 	/* Clear all flags */
-	I2C1 -> ICR |= 0x00003F38;
+	//I2C1 -> ICR |= 0x00003F38;
 
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
 	I2C1 -> CR2 |= (rx_buf_length << 16); // NBYTES = rx_buf_length.
-	I2C1 -> CR2 |= (0b1 << 25); // Stop condition automatically generated when NBYTES is reached (AUTOEND='1').
+	//I2C1 -> CR2 |= (0b1 << 25); // Stop condition automatically generated when NBYTES is reached (AUTOEND='1').
 
 	/* Send 7-bits slave address with write request */
 	I2C1 -> CR2 |= (0b1 << 10); // Read request (RD_WRN='1').
@@ -157,6 +157,7 @@ void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char 
 		}
 	}
 
-	/* Send a NACK after last byte */
+	/* Send a NACK and STOP condition after last byte */
 	I2C1 -> CR2 |= (0b1 << 15);
+	I2C1 -> CR2 |= (0b1 << 14);
 }

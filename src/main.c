@@ -7,6 +7,7 @@
 
 #include "adc.h"
 #include "at.h"
+#include "dps310.h"
 #include "exti.h"
 #include "geoloc.h"
 #include "gpio_reg.h"
@@ -331,12 +332,17 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	signed char tmp_sht = 0;
-	unsigned char hum_sht = 0;
+	//signed char tmp_sht = 0;
+	//unsigned char hum_sht = 0;
+	signed char tmp_dps = 0;
+	unsigned int pressure_dps = 0;
 	I2C_PowerOn();
 	while (1) {
-		SHT3X_ReadTemperatureHumidity(&tmp_sht, &hum_sht);
+		//SHT3X_GetTemperature(&tmp_sht);
+		//SHT3X_GetHumidity(&hum_sht);
 		//MAX11136_ConvertAllChannels();
+		DPS310_GetTemperature(&tmp_dps);
+		DPS310_GetPressure(&pressure_dps);
 		TIM22_WaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
