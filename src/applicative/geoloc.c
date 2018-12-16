@@ -7,11 +7,9 @@
 
 #include "geoloc.h"
 
-#include "at.h"
-#include "gpio_reg.h"
+#include "lpuart.h"
 #include "neom8n.h"
 #include "nvm.h"
-#include "rcc_reg.h"
 #include "tim.h"
 
 /*** GEOLOC local macros ***/
@@ -93,7 +91,7 @@ void GEOLOC_Init(void) {
 
 	/* Init GPS module */
 	NEOM8N_Init();
-	NEOM8N_PowerOn();
+	LPUART_PowerOn();
 }
 
 /* BUILD SIGFOX DATA STARTING FROM GPS POSITION AND STATUS.
@@ -167,10 +165,6 @@ void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved
 				geoloc_ctx.geoloc_fix_duration_seconds = TIM22_GetSeconds()-geoloc_ctx.geoloc_fix_start_time_seconds;
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_GGA_PARSING_SUCCESS_BIT_INDEX);
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_GGA_DATA_VALID_BIT_INDEX);
-#ifdef ATM
-				// Print position.
-				AT_PrintGpsPosition(&geoloc_ctx.gps_position);
-#endif
 				// Compute next state.
 				geoloc_ctx.geoloc_state = GEOLOC_STATE_GET_TIMESTAMP;
 				break;
@@ -207,10 +201,6 @@ void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_ZDA_PARSING_SUCCESS_BIT_INDEX);
 				geoloc_ctx.geoloc_status_byte |= (0b1 << GEOLOC_STATUS_BYTE_ZDA_DATA_VALID_BIT_INDEX);
 				(*timestamp_retrieved) = 1;
-#ifdef ATM
-				// Print timestamp.
-				AT_PrintGpsTimestamp(gps_timestamp);
-#endif
 				break;
 			case NEOM8N_INVALID_DATA:
 				// Update status.
@@ -234,7 +224,7 @@ void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved
 		/* Switch GPS module off */
 		case GEOLOC_STATE_OFF:
 			// Stop LPUART, DMA and GPS.
-			NEOM8N_PowerOff();
+			LPUART_PowerOff();
 			// Send Sigfox frame to report position.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_SIGFOX;
 			break;

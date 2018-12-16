@@ -7,6 +7,15 @@
 
 #include "at.h"
 
+#include "dps310.h"
+#include "i2c.h"
+#include "lpuart.h"
+#include "max11136.h"
+#include "sht3x.h"
+#include "si1133.h"
+#include "sigfox_api.h"
+#include "spi.h"
+#include "sx1232.h"
 #include "usart.h"
 
 /*** AT local macros ***/
@@ -200,11 +209,11 @@ unsigned short AT_GetParameter(AT_ParameterType param_type, unsigned char last_p
 	unsigned char dec_digit_idx = 0; // Used instead of i to ignore offset.
 	// Search separator if required.
 	if (last_param == 1) {
-		at_ctx.end_idx = at_ctx.at_rx_buf_idx-1; // -1 to ignore <CR>.
+		at_ctx.end_idx = at_ctx.at_rx_buf_idx-2; // -2 to ignore current position + <CR>/<LF>.
 	}
 	else {
 		if (AT_SearchSeparator() == 1) {
-			at_ctx.end_idx = at_ctx.separator_idx-1; // -1 to ignore separator.
+			at_ctx.end_idx = at_ctx.separator_idx-2; // -2 to ignore current position and separator.
 		}
 		else {
 			// Error -> none separator found.
@@ -327,31 +336,48 @@ void AT_ReplyError(unsigned short error_code) {
 	USART_SendValue(AT_CR_CHAR, USART_ASCII);
 }
 
-/* PARSE THE CURRENT AT COMMAND BUFFER.
+/* PRINT ADC RESULTS.
  * @param:	None.
  * @return:	None.
  */
-void AT_DecodeRxBuffer(void) {
-	// At this step, 'at_buf_idx' is on the <CR> character.
-
-	/* Empty or too short command */
-	if (at_ctx.at_rx_buf_idx < AT_COMMAND_MIN_SIZE) {
-		// Reply error.
-		AT_ReplyError(AT_OUT_ERROR_UNKNOWN_COMMAND);
-	}
-	else {
-		/* Test command */
-		/* AT<CR> */
-		if (AT_CompareCommand(AT_IN_COMMAND_TEST) == AT_NO_ERROR) {
-			// Nothing to do, only reply OK to acknowledge serial link.
-			AT_ReplyOk();
-		}
-
-		/* Unknown command */
-		else {
-			AT_ReplyError(AT_OUT_ERROR_UNKNOWN_COMMAND);
-		}
-	}
+void AT_PrintAdcResults(void) {
+	unsigned short result_12bits = 0;
+	// Compute effective supply voltage.
+	MAX11136_GetChannelVoltage12bits(7, &result_12bits);
+	unsigned int vcc_mv= (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / (result_12bits);
+	// AIN0.
+	MAX11136_GetChannelVoltage12bits(0, &result_12bits);
+	USART_SendString("AIN0=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN1.
+	MAX11136_GetChannelVoltage12bits(1, &result_12bits);
+	USART_SendString("mV AIN1=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN2.
+	MAX11136_GetChannelVoltage12bits(2, &result_12bits);
+	USART_SendString("mV AIN2=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN3.
+	MAX11136_GetChannelVoltage12bits(3, &result_12bits);
+	USART_SendString("mV AIN3=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN4.
+	MAX11136_GetChannelVoltage12bits(4, &result_12bits);
+	USART_SendString("mV AIN4=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN5.
+	MAX11136_GetChannelVoltage12bits(5, &result_12bits);
+	USART_SendString("mV AIN5=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN6.
+	MAX11136_GetChannelVoltage12bits(6, &result_12bits);
+	USART_SendString("mV AIN6=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	// AIN7.
+	MAX11136_GetChannelVoltage12bits(7, &result_12bits);
+	USART_SendString("mV AIN7=");
+	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_Decimal);
+	USART_SendString("mV\n");
 }
 
 /* PRINT A TIMESTAMP ON USART.
@@ -391,38 +417,6 @@ void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 		USART_SendValue(0, USART_Decimal);
 	}
 	USART_SendValue((timestamp_to_print -> seconds), USART_Decimal);
-}
-
-/*** AT functions ***/
-
-/* INIT AT MANAGER.
- * @param:	None.
- * @return:	None.
- */
-void AT_Init(void) {
-
-	/* Init context */
-	// AT command buffer.
-	unsigned int idx = 0;
-	for (idx=0 ; idx<AT_BUFFER_SIZE ; idx++) at_ctx.at_rx_buf[idx] = 0;
-	at_ctx.at_rx_buf_idx = 0;
-	at_ctx.at_line_end_flag = 0;
-	// Parsing variables.
-	at_ctx.start_idx = 0;
-	at_ctx.end_idx = 0;
-	at_ctx.separator_idx = 0;
-}
-
-/* MAIN TASK OF AT COMMAND MANAGER.
- * @param:	None.
- * @return:	None.
- */
-void AT_Task(void) {
-	// Trigger decode function if line end found.
-	if (at_ctx.at_line_end_flag) {
-		AT_DecodeRxBuffer();
-		AT_Init();
-	}
 }
 
 /* PRINT RTC TIMESTAMP ON USART.
@@ -476,6 +470,139 @@ void AT_PrintGpsPosition(Position* gps_position) {
 	USART_SendString(" Alt=");
 	USART_SendValue((gps_position -> altitude), USART_Decimal);
 	USART_SendString("m\n");
+}
+
+/* PARSE THE CURRENT AT COMMAND BUFFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void AT_DecodeRxBuffer(void) {
+	// At this step, 'at_buf_idx' is 1 character after the first line end character (<CR> or <LF>).
+
+	/* Empty or too short command */
+	if (at_ctx.at_rx_buf_idx < AT_COMMAND_MIN_SIZE) {
+		// Reply error.
+		AT_ReplyError(AT_OUT_ERROR_UNKNOWN_COMMAND);
+	}
+	else {
+
+		/* Test command AT<CR> */
+		if (AT_CompareCommand(AT_IN_COMMAND_TEST) == AT_NO_ERROR) {
+			// Nothing to do, only reply OK to acknowledge serial link.
+			AT_ReplyOk();
+		}
+
+		/* ADC command AT$ADC<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
+			// Trigger ADC convertion.
+			SPI_PowerOn();
+			MAX11136_ConvertAllChannels();
+			SPI_PowerOff();
+			// Print results.
+			AT_PrintAdcResults();
+		}
+
+		/* GPS command AT$GPS=<timeout_seconds><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
+			unsigned int timeout_seconds = 0;
+			// Search timeout parameter.
+			unsigned short get_param_result = AT_GetParameter(AT_Decimal, 1, &timeout_seconds);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start GPS fix.
+				USART_SendString("Running...\n");
+				Position gps_position;
+				LPUART_PowerOn();
+				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+				LPUART_PowerOff();
+				switch (get_position_result) {
+				case NEOM8N_SUCCESS:
+					AT_PrintGpsPosition(&gps_position);
+					break;
+				case NEOM8N_INVALID_DATA:
+					USART_SendString("Invalid data received from GPS.\n");
+					break;
+				case NEOM8N_TIMEOUT:
+					USART_SendString("Timeout.\n");
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				// Error in parameter.
+				AT_ReplyError(get_param_result);
+			}
+		}
+
+		/* TIME command AT$TIME=<timeout_seconds><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
+			unsigned int timeout_seconds = 0;
+			// Search timeout parameter.
+			unsigned short get_param_result = AT_GetParameter(AT_Decimal, 1, &timeout_seconds);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start GPS fix.
+				USART_SendString("Running...\n");
+				Timestamp gps_timestamp;
+				LPUART_PowerOn();
+				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+				LPUART_PowerOff();
+				switch (get_timestamp_result) {
+				case NEOM8N_SUCCESS:
+					AT_PrintGpsTimestamp(&gps_timestamp);
+					break;
+				case NEOM8N_INVALID_DATA:
+					USART_SendString("Invalid data received from GPS.\n");
+					break;
+				case NEOM8N_TIMEOUT:
+					USART_SendString("Timeout.\n");
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				// Error in parameter.
+				AT_ReplyError(get_param_result);
+			}
+		}
+
+		/* Unknown command */
+		else {
+			AT_ReplyError(AT_OUT_ERROR_UNKNOWN_COMMAND);
+		}
+	}
+}
+
+/*** AT functions ***/
+
+/* INIT AT MANAGER.
+ * @param:	None.
+ * @return:	None.
+ */
+void AT_Init(void) {
+
+	/* Init context */
+	// AT command buffer.
+	unsigned int idx = 0;
+	for (idx=0 ; idx<AT_BUFFER_SIZE ; idx++) at_ctx.at_rx_buf[idx] = 0;
+	at_ctx.at_rx_buf_idx = 0;
+	at_ctx.at_line_end_flag = 0;
+	// Parsing variables.
+	at_ctx.start_idx = 0;
+	at_ctx.end_idx = 0;
+	at_ctx.separator_idx = 0;
+}
+
+/* MAIN TASK OF AT COMMAND MANAGER.
+ * @param:	None.
+ * @return:	None.
+ */
+void AT_Task(void) {
+	// Trigger decode function if line end found.
+	if (at_ctx.at_line_end_flag) {
+		AT_DecodeRxBuffer();
+		AT_Init();
+	}
 }
 
 /* FILL AT COMMAND BUFFER WITH A NEW BYTE FROM USART.

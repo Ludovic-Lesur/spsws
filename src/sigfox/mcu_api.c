@@ -13,6 +13,10 @@
 #include "sigfox_types.h"
 #include "tim.h"
 
+/*** MCU API local global variables ***/
+
+sfx_u8 malloc_buffer[200];
+
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8 **returned_pointer)
  * \brief Allocate memory for library usage (Memory usage = size (Bytes))
@@ -34,8 +38,7 @@
  *******************************************************************/
 sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8** returned_pointer) {
 	// Allocate local buffer in RAM and return its address.
-	sfx_u8 local_buffer[size];
-	(*returned_pointer) = local_buffer;
+	(*returned_pointer) = &malloc_buffer[0];
 	return SFX_ERR_NONE;
 }
 
@@ -214,7 +217,6 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
 	// RL.
 	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
-	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_RL+1]));
 
 	return SFX_ERR_NONE;
 }
@@ -255,7 +257,6 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
 	// RL.
 	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
-	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_RL+1]);
 
 	return SFX_ERR_NONE;
 }

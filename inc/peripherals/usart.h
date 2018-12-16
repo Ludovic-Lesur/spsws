@@ -5,8 +5,8 @@
  *      Author: Ludovic
  */
 
-#ifndef PERIPHERALS_USART_H_
-#define PERIPHERALS_USART_H_
+#ifndef USART_H
+#define USART_H
 
 /*** USART structures ***/
 
@@ -20,8 +20,10 @@ typedef enum {
 /*** USART functions ***/
 
 void USART_Init(void);
+void USART_PowerOn(void);
+void USART_PowerOff(void);
 void USART_Off(void);
 void USART_SendValue(unsigned int value, UsartDisplayFormat display_format);
 void USART_SendString(char* tx_string);
 
-#endif /* PERIPHERALS_USART_H_ */
+#endif /* USART_H */

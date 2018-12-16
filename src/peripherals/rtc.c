@@ -9,7 +9,6 @@
 
 #include "at.h"
 #include "exti_reg.h"
-#include "gpio_reg.h"
 #include "nvic.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
@@ -42,7 +41,6 @@ void RTC_IRQHandler(void) {
 		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 		// Toggle debug LED.
-		GPIOA -> ODR ^= (0b1 << 2);
 		rtc_ctx.rtc_irq_happened = 1;
 	}
 

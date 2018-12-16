@@ -8,7 +8,8 @@
 #include "exti.h"
 
 #include "exti_reg.h"
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "syscfg_reg.h"
@@ -46,10 +47,9 @@ void EXTI_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
 
-	/* Configure PA15 (DIO2) and PA8 (DIO3) as input */
-	RCC -> IOPENR |= (0b1 << 0); // GPIOAEN='1'.
-	GPIOA -> MODER &= ~(0b11 << 30); // MODE15='00'.
-	GPIOA -> MODER &= ~(0b11 << 16); // MODE8='00'.
+	/* Configure DIO2 and DIO3 as input */
+	GPIO_Configure(GPIO_DIO2, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_DIO3, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
 
 	/* Attach rising edge external interrupt on PA15 (DIO2) and PA8 (DIO3) pins */
 	EXTI -> IMR |= (0b1 << 15) | (0b1 << 8); // IM8='1' and IM15='1', all other masked.

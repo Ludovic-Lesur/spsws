@@ -45,15 +45,13 @@ typedef struct {
 
 typedef enum {
 	NEOM8N_SUCCESS,			// Parsing successful and data valid.
-	NEOM8N_INVALID_DATA,	// Parsing successfuul but data invalid.
+	NEOM8N_INVALID_DATA,	// Parsing successful but data invalid.
 	NEOM8N_TIMEOUT			// Parsing failure (= timeout).
 } NEOM8N_ReturnCode;
 
 /*** NEOM8N user functions ***/
 
 void NEOM8N_Init(void);
-void NEOM8N_PowerOn(void);
-void NEOM8N_PowerOff(void);
 NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char timeout_seconds);
 unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp);
 NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds);

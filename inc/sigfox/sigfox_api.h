@@ -171,8 +171,8 @@
 #define SFX_ERR_INT_GET_DEVICE_INFO_CERTIFICATE                  (sfx_u8)(0x9F)  /*!< Error when checking the validty of the device info - Certificate is not the appropriate one */
 
 
-#define SFX_ERR_API_SET_RC_SYNC_PERIOD                                     (sfx_u8)(0xB0) /*!< Set RC Sync frame transmission period failed */
-#define SFX_ERR_API_SET_RC_SYNC_PERIOD_VALUE                               (sfx_u8)(0xB1) /*!< Error in the RC Sync period value */
+#define SFX_ERR_API_SET_RC_SYNC_PERIOD                           (sfx_u8)(0xB0) /*!< Set RC Sync frame transmission period failed */
+#define SFX_ERR_API_SET_RC_SYNC_PERIOD_VALUE                     (sfx_u8)(0xB1) /*!< Error in the RC Sync period value */
 
 
 

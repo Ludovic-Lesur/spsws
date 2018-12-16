@@ -8,7 +8,6 @@
 #include "adc.h"
 
 #include "adc_reg.h"
-#include "gpio_reg.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
@@ -60,7 +59,7 @@ void ADC_Off(void) {
 	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
 }
 
-/* GET THE ACTUAL SUPPLY VOLTAGE THANKS TO THE INTERNAL VOLTAGE REFERENCE.
+/* GET THE EFFECTIVE SUPPLY VOLTAGE THANKS TO THE INTERNAL VOLTAGE REFERENCE.
  * @param mcu_supply_voltage_mv:	Pointer to value that will contain MCU supply voltage in mV.
  * @return:							None.
  */
@@ -121,31 +120,4 @@ void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
 
 	/* Switch temperature sensor off */
 	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.
-}
-
-/* GET THE CURRENT HWT VOLTAGE REFERENCE (ADJUSTED VIA DIGITAL POTENTIOMETER).
- * @param mcu_temp_degrees:	Pointer to value that will contain HWT voltage reference in mV.
- * @return:					None.
- */
-void ADC_GetHwtVoltageReferenceMv(unsigned int* hwt_voltage_reference_mv) {
-
-	/* Configure PA1 as analog input */
-	RCC -> IOPENR |= (0b1 << 0);
-	GPIOA -> MODER |= (0b11 << 2);
-
-	/* Get actual MCU supply voltage */
-	unsigned int mcu_vdd_mv = 0;
-	ADC_GetMcuVddMv(&mcu_vdd_mv);
-
-	/* Select ADC_IN1 input channel*/
-	ADC1 -> CHSELR = 0;
-	ADC1 -> CHSELR |= (0b1 << 1);
-
-	/* Read raw result */
-	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
-	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
-	unsigned int raw_hwt_voltage_reference_12bits = (ADC1 -> DR);
-
-	/* Convert result into mV */
-	(*hwt_voltage_reference_mv) = (raw_hwt_voltage_reference_12bits*mcu_vdd_mv)/(4095);
 }

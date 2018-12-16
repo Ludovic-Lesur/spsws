@@ -7,9 +7,10 @@
 
 #include "hwt.h"
 
-#include "adc.h"
-#include "gpio_reg.h"
-#include "mcp4162.h"
+#include "lpuart.h"
+#include "mapping.h"
+#include "max11136.h"
+#include "max5495.h"
 #include "neom8n.h"
 #include "nvm.h"
 #include "rcc_reg.h"
@@ -165,11 +166,11 @@ void HWT_Calibrate(void) {
 			switch (hwt_ctx.hwt_feedback_direction) {
 			case 0:
 				// Voltage reference is too low -> increase potentiometer value.
-				MCP4162_Increment();
+				//MAX5495_Increment();
 				break;
 			case 1:
 				// Voltage reference is too high -> decrease potentiometer value.
-				MCP4162_Decrement();
+				//MAX5495_Decrement();
 				break;
 			default:
 				// Incorrect value.
@@ -242,7 +243,7 @@ void HWT_Init(unsigned char was_wake_up_reason, unsigned char timestamp_retrieve
 	}
 
 	/* Init digital potentiometer */
-	MCP4162_Init();
+	MAX5495_Init();
 }
 
 /* BUILD SIGFOX DATA STARTING FROM HWT STATUS.
@@ -259,7 +260,7 @@ void HWT_BuildSigfoxData(void) {
 	hwt_ctx.hwt_sigfox_data[4] = hwt_ctx.hwt_feedback_value_steps;
 	// Reference voltage.
 	unsigned int hwt_reference_voltage_mv = 0;
-	ADC_GetHwtVoltageReferenceMv(&hwt_reference_voltage_mv);
+	// TBD with MAX11136 AIN3.
 	hwt_ctx.hwt_sigfox_data[5] = (hwt_reference_voltage_mv & 0x0000FF00) >> 8;
 	hwt_ctx.hwt_sigfox_data[6] = hwt_reference_voltage_mv & 0x000000FF;
 	// Fix duration.
@@ -275,10 +276,12 @@ void HWT_BuildSigfoxData(void) {
  * @return:	'1' if hardware timer expired, '0' otherwise.
  */
 unsigned char HWT_Expired(void) {
-	// Enable GPIOA clock.
-	RCC -> IOPENR |= (0b1 << 0);
-	// Check HWT output on PA0.
-	return (((GPIOA -> IDR) & (0b1 << 0)) >> 0);
+	// Check HWT output.
+	unsigned char hwt_state = 0;
+#ifdef IM_HWT
+	hwt_state = GPIO_Read(GPIO_HWT_OUT);
+#endif
+	return hwt_state;
 }
 
 /* RESET HARDWARE TIMER.
@@ -286,13 +289,12 @@ unsigned char HWT_Expired(void) {
  * @return:	None.
  */
 void HWT_Reset(void) {
-	RCC -> IOPENR |= (0b1 << 1);
-	GPIOB -> MODER &= ~(0b11 << 6); // Reset bits 6-7.
-	GPIOB -> MODER |= (0b01 << 6);
-	// Close relay, wait 2s while capacitor is charged and release relay.
-	GPIOB -> ODR |= (0b1 << 3);
+	// Close relay to reset hardware timer.
+#ifdef IM_HWT
+	GPIO_Write(GPIO_HWT_RESET, 1);
 	TIM22_WaitMilliseconds(2000);
-	GPIOB -> ODR &= ~(0b1 << 3);
+	GPIO_Write(GPIO_HWT_RESET, 0);
+#endif
 }
 
 /* MAIN ROUTINE OF HARDWARE TIMER.
@@ -345,8 +347,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Switch GPS module off */
 		case HWT_STATE_OFF:
 			// Stop LPUART, DMA and GPS module.
-			NEOM8N_PowerOff();
-			GPIOA -> ODR &= ~(0b1 << 12);
+			LPUART_PowerOff();
 			// Compute next state.
 			if (((hwt_ctx.hwt_status_byte & HWT_STATUS_BYTE_PREVIOUS_TIMESTAMP_VALID_BIT_INDEX) != 0) && (was_wake_up_reason != 0)) {
 				// Hardware timer was wake-up reason, previous and current timestamp are both valid -> perform calibration.
@@ -397,8 +398,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Unknown state */
 		default:
 			// Unknwon state.
-			NEOM8N_PowerOff();
-			GPIOA -> ODR &= ~(0b1 << 12);
+			LPUART_PowerOff();
 			hwt_ctx.hwt_state = HWT_STATE_END;
 			break;
 		}

@@ -7,13 +7,16 @@
 
 #include "adc.h"
 #include "at.h"
+#include "dma.h"
 #include "dps310.h"
 #include "exti.h"
 #include "geoloc.h"
-#include "gpio_reg.h"
+#include "gpio.h"
 #include "hwt.h"
 #include "i2c.h"
 #include "lpuart.h"
+#include "lptim.h"
+#include "mapping.h"
 #include "max11136.h"
 #include "max5495.h"
 #include "mcu_api.h"
@@ -25,6 +28,7 @@
 #include "rcc_reg.h"
 #include "scb_reg.h"
 #include "sht3x.h"
+#include "si1133.h"
 #include "sigfox_types.h"
 #include "spi.h"
 #include "sx1232.h"
@@ -255,72 +259,85 @@ int main (void) {
 	/* Reset deep sleep flag on wake-up */
 	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
 
-	// Init clocks.
-	RCC_Init();
-	RCC_SwitchToInternal16MHz();
-	RTC_Init();
+	/* GPIO */
+	GPIO_Init();
 
-	// Init peripherals.
+	/* Init clocks */
+	RCC_Init();
+	RCC_SwitchToTcxo16MHz();
+	//RTC_Init();
+
+	/* Init peripherals */
+	// Memory.
+	NVM_Init();
+	// External interrupts.
 	EXTI_Init();
+	// Timers.
 	TIM21_Init();
 	TIM22_Init();
+	LPTIM1_Init();
+	// DMA.
+	DMA_Init();
+	// Interfaces.
+	LPUART_Init();
 	USART_Init();
 	I2C_Init();
-	NVM_Init();
+	SPI_Init();
 
-	// Init applicative layers.
+	/* Init components */
+	MAX11136_Init();
+	SX1232_Init();
+	NEOM8N_Init();
+
+	/* Init applicative layers */
 	AT_Init();
 
-	// Configure debug LED as output (PA2)
-	RCC -> IOPENR |= (0b11 << 0);
-	GPIOA -> MODER &= ~(0b11 << 4); // Reset bits 8-9.
-	GPIOA -> MODER |= (0b01 << 4);
-
-	// RTC first calibration.
-	/*Timestamp main_timestamp;
-	NEOM8N_Init();
-	NEOM8N_PowerOn();
-	while (RTC_GetCalibrationStatus() == 0) {
-		NEOM8N_ReturnCode neom8n_return_code = NEOM8N_GetTimestamp(&main_timestamp, 60);
-		if (neom8n_return_code == NEOM8N_SUCCESS) {
-			RTC_Calibrate(&main_timestamp);
-			AT_PrintGpsTimestamp(&main_timestamp);
-		}
-	}
-	NEOM8N_PowerOff();*/
-
-	// POR blink.
-	unsigned int i = 0;
+	/* POR blink */
 	unsigned int k = 0;
-	for (k=0 ; k<5 ; k++) {
-		GPIOA -> ODR |= (0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-		GPIOA -> ODR &= ~(0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
+	for (k=0 ; k<20 ; k++) {
+		GPIO_Toggle(GPIO_LED);
+		TIM22_WaitMilliseconds(50);
 	}
-	TIM22_WaitMilliseconds(100);
-
-	//SX1232_Init();
-	//MAX11136_Init();
-	//MAX5495_Init();
-	//SPI_PowerOn();
 
 	/*while (1) {
 		USART_SendString("Test UART : ");
-		USART_SendValue(0, USART_Binary);
+		USART_SendValue(46, USART_Binary);
 		USART_SendString(" ");
-		USART_SendValue(0, USART_Hexadecimal);
+		USART_SendValue(46, USART_Hexadecimal);
 		USART_SendString(" ");
-		USART_SendValue(0, USART_Decimal);
+		USART_SendValue(46, USART_Decimal);
 		USART_SendString(" ");
-		USART_SendValue(0, USART_ASCII);
+		USART_SendValue(46, USART_ASCII);
 		USART_SendString("\n");
-		TIM_TimeWaitMilliseconds(1000);
+		TIM22_WaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 	}*/
+
+	/* Main loop */
+	USART_PowerOn();
+	while (1) {
+		AT_Task();
+	}
+
+	// RTC first calibration.
+	/*Timestamp main_timestamp;
+	LPUART_PowerOn();
+	while (RTC_GetCalibrationStatus() == 0) {
+		NEOM8N_ReturnCode neom8n_return_code = NEOM8N_GetTimestamp(&main_timestamp, 60);
+		if (neom8n_return_code == NEOM8N_SUCCESS) {
+			RTC_Calibrate(&main_timestamp);
+		}
+	}
+	LPUART_PowerOff();*/
+
+	/*sfx_rc_t rc = RC1;
+	SIGFOX_API_open(&rc);
+	sfx_u8 customer_data[4] = {0x55, 0x44, 0x4F, 0x46};
+	sfx_u8 customer_response[8] = {0x00};
+	SIGFOX_API_send_frame(customer_data, 4, customer_response, 2, 0);*/
 
 	/*while (1) {
 		// Retrieve GPS position and timestamp.
@@ -332,37 +349,32 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 	}*/
 
-	//signed char tmp_sht = 0;
-	//unsigned char hum_sht = 0;
+	/*
+	signed char tmp_sht = 0;
+	unsigned char hum_sht = 0;
 	signed char tmp_dps = 0;
 	unsigned int pressure_dps = 0;
+	unsigned char uv_index_si = 0;
 	I2C_PowerOn();
+	SPI_PowerOn();
 	while (1) {
-		//SHT3X_GetTemperature(&tmp_sht);
-		//SHT3X_GetHumidity(&hum_sht);
-		//MAX11136_ConvertAllChannels();
+		SHT3X_GetTemperature(&tmp_sht);
+		SHT3X_GetHumidity(&hum_sht);
+		MAX11136_ConvertAllChannels();
 		DPS310_GetTemperature(&tmp_dps);
 		DPS310_GetPressure(&pressure_dps);
+		SI1133_GetUvIndex(&uv_index_si);
 		TIM22_WaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
-	}
+	}*/
 
-	/*unsigned char sx1232_version = 0;
-	unsigned char sx1232_reg_tcxo = 0;
-	SX1232_Start();
+	/*SPI_PowerOn();
+	SX1232_SetOscillator(SX1232_TCXO);
 	while (1) {
-		SX1232_ReadRegister(SX1232_REG_TCXO, &sx1232_reg_tcxo);
-		SX1232_ReadRegister(SX1232_REG_VERSION, &sx1232_version);
-		USART_SendString("SX1232 revision = ");
-		USART_SendValue(sx1232_version, USART_Hexadecimal);
-		USART_SendString("\n");
-		USART_SendString("SX1232 reg tcxo = ");
-		USART_SendValue(sx1232_reg_tcxo, USART_Hexadecimal);
-		USART_SendString("\n");
-		TIM_TimeWaitMilliseconds(1000);
+		TIM22_WaitMilliseconds(1000);
 		GPIOA -> ODR |= (0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);

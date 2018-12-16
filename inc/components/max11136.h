@@ -10,7 +10,8 @@
 
 /*** MAX11136 macros ***/
 
-#define MAX11136_FULL_SCALE		4095 // 12-bits result.
+#define MAX11136_FULL_SCALE				4095 // 12-bits result.
+#define MAX11136_BANDGAP_VOLTAGE_MV		2048 // Bandgap reference attached to AIN7.
 
 /*** MAX11136 functions ***/
 

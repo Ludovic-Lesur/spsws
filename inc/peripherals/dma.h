@@ -10,10 +10,10 @@
 
 /*** DMA functions ***/
 
-void DMA_LpuartRxInit(void);
-void DMA_LpuartRxOff(void);
-void DMA_LpuartRxSetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size);
-void DMA_LpuartRxStart(void);
-void DMA_LpuartRxStop(void);
+void DMA_Init(void);
+void DMA_Off(void);
+void DMA_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size);
+void DMA_Start(void);
+void DMA_Stop(void);
 
 #endif /* PERIPHERALS_DMA_H */

@@ -7,7 +7,8 @@
 
 #include "spi.h"
 
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "rcc_reg.h"
 #include "spi_reg.h"
 #include "tim.h"
@@ -23,20 +24,26 @@ void SPI_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
 
-	/* Configure SCK, MISO and MOSI GPIOs (NSS is configured in each component driver) */
-	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= 0xFFFF03FF; // Reset bits 10-15.
-	GPIOA -> MODER |= (0b101010 << 10); // Configure PA5, PA6 and PA7 as alternate function.
-	GPIOA -> AFRL &= 0x000FFFFF; // Link PA5, PA6 and PA7 to AF0.
-	//GPIOA -> PUPDR &= 0xFFFF03FF; // Reset bits 10-15.
-	//GPIOA -> PUPDR |= (0b01 << 12); // Pull-up resistors on all pins.
+	/* Configure power enable pins */
+	GPIO_Configure(GPIO_RF_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_RF_POWER_ENABLE, 0);
+	GPIO_Configure(GPIO_SENSORS_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
 
-	/* Configure power enable pins (PB1 / PB5) */
-	RCC -> IOPENR |= (0b1 << 1); // Enable GPIOB clock.
-	GPIOB -> MODER &= ~(0b11 << 2); // Reset bits 2-3.
-	GPIOB -> MODER |= (0b01 << 2); // Configure PB1 as output.
-	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 8-9.
-	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
+	/* Configure SCK, MISO and MOSI (first as high impedance) */
+	GPIO_Configure(GPIO_SPI1_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+
+	/* Configure CS pins (first as output low) */
+	GPIO_Configure(GPIO_SX1232_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_SX1232_CS, 0);
+	GPIO_Configure(GPIO_MAX11136_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_MAX11136_CS, 0);
+#ifdef IM_HWT
+	GPIO_Configure(GPIO_MAX5495_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_MAX5495_CS, 0);
+#endif
 
 	/* Configure peripheral */
 	SPI1 -> CR1 = 0; // Disable peripheral before configuration (SPE='0').
@@ -70,13 +77,25 @@ void SPI_SetClockPolarity(unsigned char polarity) {
  */
 void SPI_PowerOn(void) {
 
-	/* Enable SX1232 power supply */
-	GPIOB -> ODR |= (0b1 << 1);
+	/* Switch SX1232 on */
+	GPIO_Write(GPIO_RF_POWER_ENABLE, 1);
+	GPIO_Write(GPIO_SX1232_CS, 1); // CS high (idle state).
 	TIM22_WaitMilliseconds(100);
 
-	/* Enable MAX11136 power supply */
-	GPIOB -> ODR |= (0b1 << 5);
+	/* Switch MAX11136 on */
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 1);
+	GPIO_Write(GPIO_MAX11136_CS, 1); // CS high (idle state).
 	TIM22_WaitMilliseconds(100);
+
+#ifdef IM_HWT
+	/* MAX5495 */
+	GPIO_Write(GPIO_MAX5495_CS, 1); // CS high (idle state).
+#endif
+
+	/* Enable SPI alternate function */
+	GPIO_Configure(GPIO_SPI1_SCK, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MOSI, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MISO, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
 }
 
 /* SWITCH ALL SPI SLAVES OFF.
@@ -85,11 +104,23 @@ void SPI_PowerOn(void) {
  */
 void SPI_PowerOff(void) {
 
-	/* Disable SX1232 power supply */
-	GPIOB -> ODR &= ~(0b1 << 1);
+	/* Disable SPI alternate function */
+	GPIO_Configure(GPIO_SPI1_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
-	/* Disable MAX11136 power supply */
-	GPIOB -> ODR &= ~(0b1 << 5);
+	/* Switch SX1232 off */
+	GPIO_Write(GPIO_RF_POWER_ENABLE, 0);
+	GPIO_Write(GPIO_SX1232_CS, 0); // CS low (to avoid powering slaves via SPI bus).
+
+	/* Switch MAX11136 off */
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
+	GPIO_Write(GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
+
+#ifdef IM_HWT
+	/* MAX5495 */
+	GPIO_Write(GPIO_MAX5495_CS, 0; // CS low (to avoid powering slaves via SPI bus).
+#endif
 }
 
 /* SEND A BYTE THROUGH SPI.
@@ -139,8 +170,8 @@ void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
 	/* Read data */
 	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
 
-	/* Wait for transfers to complete */
-	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
+	/* Wait for reception to complete */
+	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for RXNE='0' and BSY='0'.
 }
 
 /* READ A SHORT FROM SPI.
@@ -160,6 +191,6 @@ void SPI_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
 	/* Read data */
 	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
 
-	/* Wait for transfers to complete */
-	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
+	/* Wait for reception to complete */
+	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for RXNE='0' and BSY='0'.
 }

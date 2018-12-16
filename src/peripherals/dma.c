@@ -15,7 +15,7 @@
  * @param:	None.
  * @return:	None.
  */
-void DMA_LpuartRxInit(void) {
+void DMA_Init(void) {
 
 	/* Enable peripheral clock */
 	RCC -> AHBENR |= (0b1 << 0); // DMAEN='1'.
@@ -38,7 +38,7 @@ void DMA_LpuartRxInit(void) {
  * @param:	None.
  * @return:	None.
  */
-void DMA_LpuartRxOff(void) {
+void DMA_Off(void) {
 
 	/* Stop transfer */
 	DMA_LpuartRxStop();
@@ -52,7 +52,7 @@ void DMA_LpuartRxOff(void) {
  * @param dest_buf_size:	Size of destination buffer (16 bits word).
  * @return:					None.
  */
-void DMA_LpuartRxSetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
+void DMA_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
 	DMA1 -> CMAR3 = dest_buf_addr;
 	DMA1 -> CNDTR3 = dest_buf_size;
 }
@@ -61,7 +61,7 @@ void DMA_LpuartRxSetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf
  * @param:	None.
  * @return:	None.
  */
-void DMA_LpuartRxStart(void) {
+void DMA_Start(void) {
 	// Enable DMA channel.
 	DMA1 -> CCR3 |= (0b1 << 0); // EN='1'.
 }
@@ -70,7 +70,7 @@ void DMA_LpuartRxStart(void) {
  * @param:	None.
  * @return:	None.
  */
-void DMA_LpuartRxStop(void) {
+void DMA_Stop(void) {
 	// Disable DMA channel.
 	DMA1 -> CCR3 &= ~(0b1 << 0); // EN='0'.
 }

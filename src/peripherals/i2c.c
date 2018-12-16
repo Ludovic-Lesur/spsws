@@ -7,7 +7,8 @@
 
 #include "i2c.h"
 
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "i2c_reg.h"
 #include "rcc.h"
 #include "rcc_reg.h"
@@ -24,18 +25,13 @@ void I2C_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 21); // I2C1EN='1'.
 
-	/* Configure SCL and SDA GPIOs */
-	RCC -> IOPENR |= (0b1 << 1); // Enable GPIOB clock.
-	GPIOB -> OTYPER |= (0b11 << 6); // Open drain on PB6 and PB7.
-	GPIOB -> MODER &= ~(0b1111 << 12); // Reset bits 18-21.
-	GPIOB -> MODER |= (0b1010 << 12); // Configure PB6 and PB7 as alternate function.
-	GPIOB -> AFRL &= 0x00FFFFFF; // Reset bits 24-31.
-	GPIOB -> AFRL |= 0x11000000; // Link PB6 and PB7 to AF1.
+	/* Configure power enable pin */
+	GPIO_Configure(GPIO_SENSORS_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
 
-	/* Configure power enable pin (PB5) */
-	RCC -> IOPENR |= (0b11 << 1); // Enable GPIOB clock.
-	GPIOB -> MODER &= ~(0b11 << 10); // Reset bits 10-11.
-	GPIOB -> MODER |= (0b01 << 10); // Configure PB5 as output.
+	/* Configure SCL and SDA (first as high impedance) */
+	GPIO_Configure(GPIO_I2C1_SCL, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_I2C1_SDA, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').
@@ -57,18 +53,26 @@ void I2C_Init(void) {
 void I2C_PowerOn(void) {
 
 	/* Switch SHT3x, DPS310 and SI1133 on */
-	GPIOB -> ODR |= (0b01 << 5);
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 1);
 	TIM22_WaitMilliseconds(100);
+
+	/* Enable I2C alternate function */
+	GPIO_Configure(GPIO_I2C1_SCL, AlternateFunction, OpenDrain, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_I2C1_SDA, AlternateFunction, OpenDrain, HighSpeed, NoPullUpNoPullDown);
 }
 
 /* SWITCH ALL I2C SLAVES ON.
  * @param:	None.
  * @return:	None.
  */
-void I2C_PowerOFF(void) {
+void I2C_PowerOff(void) {
+
+	/* Disable I2C alternate function */
+	GPIO_Configure(GPIO_I2C1_SCL, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_I2C1_SDA, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Switch SHT3x, DPS310 and SI1133 oFF */
-	GPIOB -> ODR &= ~(0b01 << 5);
+	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
 }
 
 /* WRITE DATA ON I2C BUS (see algorithme on p.607 of RM0377 datasheet).
@@ -115,6 +119,9 @@ void I2C_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char
 
 	/* Generate stop condition. */
 	I2C1 -> CR2 |= (0b1 << 14);
+	while (((I2C1 -> ISR) & (0b1 << 5)) == 0); // Wait for STOPF='1'.
+	// Clear flag.
+	I2C1 -> ICR |= (0b1 << 5); // STOPCF='1'.
 }
 
 /* READ BYTES FROM I2C BUS (see algorithme on p.611 of RM0377 datasheet).
@@ -160,4 +167,7 @@ void I2C_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char 
 	/* Send a NACK and STOP condition after last byte */
 	I2C1 -> CR2 |= (0b1 << 15);
 	I2C1 -> CR2 |= (0b1 << 14);
+	while (((I2C1 -> ISR) & (0b1 << 5)) == 0); // Wait for STOPF='1'.
+	// Clear flag.
+	I2C1 -> ICR |= (0b1 << 5); // STOPCF='1'.
 }

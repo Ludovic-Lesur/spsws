@@ -5,11 +5,16 @@
  *      Author: Ludovic
  */
 
-#ifndef PERIPHERALS_LPTIM_H
-#define PERIPHERALS_LPTIM_H
+#ifndef LPTIM_H
+#define LPTIM_H
 
 /*** LPTIM functions ***/
 
-void LPTIM_Init(void);
+void LPTIM1_Init(void);
+void LPTIM1_Start(unsigned short period_us);
+unsigned char LPTIM1_GetArrmFlag(void);
+void LPTIM1_ClearArrmFlag(void);
+void LPTIM1_Stop(void);
+unsigned short LPTIM1_GetMicroseconds(void);
 
-#endif /* PERIPHERALS_LPTIM_H */
+#endif /* LPTIM_H */

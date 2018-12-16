@@ -7,12 +7,14 @@
 
 #include "lpuart.h"
 
-#include "gpio_reg.h"
+#include "gpio.h"
 #include "lpuart_reg.h"
+#include "mapping.h"
 #include "neom8n.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "tim.h"
 
 /*** LPUART local macros ***/
 
@@ -48,12 +50,13 @@ void LPUART_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 
-	/* Configure TX and RX GPIOs */
-	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= ~(0b1111 << 26); // Reset bits 26-27.
-	GPIOA -> MODER |= (0b1010 << 26); // Configure PA13 and PA14 as alternate function.
-	GPIOA -> AFRH &= 0xF00FFFFF; // Reset bits 20-27.
-	GPIOA -> AFRH |= 0x06600000; // Link PA13 and PA14 to AF6.
+	/* Configure power enable pin */
+	GPIO_Configure(GPIO_GPS_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_GPS_POWER_ENABLE, 0);
+
+	/* Configure TX and RX GPIOs (first as high impedance) */
+	GPIO_Configure(GPIO_LPUART1_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	LPUART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -79,6 +82,45 @@ void LPUART_Init(void) {
 	LPUART1 -> CR1 |= (0b1 << 0);
 }
 
+/* POWER LPUART SLAVE ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPUART_PowerOn(void) {
+
+	/* Switch NEOM8N on */
+	GPIO_Write(GPIO_GPS_POWER_ENABLE, 1);
+	TIM22_WaitMilliseconds(2000);
+
+	/* Enable LPUART alternate function */
+	GPIO_Configure(GPIO_LPUART1_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+}
+
+/* POWER LPUART SLAVE OFF.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPUART_PowerOff(void) {
+
+	/* Disable LPUART alternate function */
+	GPIO_Configure(GPIO_LPUART1_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+
+	/* Switch NEOM8N off */
+	GPIO_Write(GPIO_GPS_POWER_ENABLE, 0);
+
+	/* Disable interrupts */
+	NVIC_DisableInterrupt(IT_LPUART1);
+
+	/* Switch peripheral off */
+	LPUART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0').
+	LPUART1 -> CR1 &= ~(0b1 << 0); // Disable peripheral.
+
+	/* Disable peripheral clock */
+	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
+}
+
 /* ENABLE LPUART RECEPTION.
  * @param:	None.
  * @return:	None.
@@ -95,26 +137,6 @@ void LPUART_StartRx(void) {
 void LPUART_StopRx(void) {
 	// Disable receiver.
 	LPUART1 -> CR1 &= ~(0b1 << 2); // RE='0'.
-}
-
-/* DISABLE LOW POWER UART.
- * @param:	None.
- * @return:	None.
- */
-void LPUART_Off(void) {
-
-	/* Disable interrupts */
-	NVIC_DisableInterrupt(IT_LPUART1);
-
-	/* Switch peripheral off */
-	LPUART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0').
-	LPUART1 -> CR1 &= ~(0b1 << 0); // Disable peripheral.
-
-	/* Disable peripheral clock */
-	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
-
-	/* Put GPIOs in reset state */
-	GPIOA -> MODER &= ~(0b1111 << 26); // Configure PA13 and PA14 as input.
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.

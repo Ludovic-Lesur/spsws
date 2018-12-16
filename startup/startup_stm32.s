@@ -134,8 +134,8 @@ g_pfnVectors:
   .word	RTC_IRQHandler // RTC
   .word	0 // Flash
   .word	0 // RCC
-  .word	EXTI0_1_IRQHandler // EXTI lines [1:0] interrupts
-  .word	EXTI2_3_IRQHandler // EXTI lines [3:2] interrupts
+  .word	0 // EXTI lines [1:0] interrupts
+  .word	0 // EXTI lines [3:2] interrupts
   .word	EXTI4_15_IRQHandler // EXTI lines [15:4] interrupts
   .word	0 // Reserved
   .word	0 // DMA1 channel 1
@@ -185,12 +185,6 @@ g_pfnVectors:
 	
 	.weak	RTC_IRQHandler
 	.thumb_set RTC_IRQHandler,Default_Handler
-
-	.weak	EXTI0_1_IRQHandler
-	.thumb_set EXTI0_1_IRQHandler,Default_Handler
-
-	.weak	EXTI2_3_IRQHandler
-	.thumb_set EXTI2_3_IRQHandler,Default_Handler
 
 	.weak	EXTI4_15_IRQHandler
 	.thumb_set EXTI4_15_IRQHandler,Default_Handler

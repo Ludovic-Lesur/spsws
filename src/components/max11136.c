@@ -7,9 +7,9 @@
 
 #include "max11136.h"
 
+#include "gpio.h"
+#include "mapping.h"
 #include "max11136_reg.h"
-#include "rcc_reg.h"
-#include "gpio_reg.h"
 #include "spi.h"
 
 /*** MAX11136 local macros ***/
@@ -49,9 +49,9 @@ void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	}
 
 	/* Send command */
-	GPIOB -> ODR &= ~(0b1 << 4); // Falling edge on CS pin.
+	GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 	SPI_WriteShort(spi_command);
-	GPIOB -> ODR |= (0b1 << 4); // Set CS pin.
+	GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
 }
 
 /*** MAX11136 functions ***/
@@ -67,17 +67,10 @@ void MAX11136_Init(void) {
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
 	max11136_ctx.max11136_status = 0;
 
-	/* Init SPI peripheral */
-	SPI_Init();
-
-	/* Configure CS GPIO */
-	RCC -> IOPENR |= (0b11 << 1);
-	GPIOB -> MODER &= ~(0b11 << 8); // Reset bits 8-9.
-	GPIOB -> MODER |= (0b01 << 8); // Configure PB4 as output.
-	GPIOB -> ODR |= (0b1 << 4); // CS high (idle state).
-
 	/* Configure EOC GPIO */
-	GPIOB -> MODER &= ~(0b11 << 6); // Configure PB3 as input.
+#ifdef USE_MAX11136_EOC
+	GPIO_Configure(GPIO_MAX11136_EOC, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+#endif
 }
 
 /* PERFORM ADC CONVERSION ON ALL CHANNELS.
@@ -85,6 +78,11 @@ void MAX11136_Init(void) {
  * @return max11136_status:	Conversion result status (see context).
  */
 unsigned char MAX11136_ConvertAllChannels(void) {
+
+	/* Reset results */
+	unsigned char idx = 0;
+	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
+	max11136_ctx.max11136_status = 0;
 
 	/* Configure SPI */
 	SPI_SetClockPolarity(1);
@@ -102,18 +100,23 @@ unsigned char MAX11136_ConvertAllChannels(void) {
 	MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 
 	/* Wait for conversions to complete */
-	while (((GPIOB -> IDR) & (0b1 << 3)) != 0); // Wait for EOC to be pulled low.
+#ifdef USE_MAX11136_EOC
+	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
+#else
+	// TBD : configure CS as input.
+#endif
 
 	/* Read results in FIFO */
-	unsigned char idx = 0;
+	idx = 0;
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
-	// For each channel...
-	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) {
+	// Wait for all channels to be read or timeout (TBD).
+	while (max11136_ctx.max11136_status != 0xFF) {
+	//for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) {
 		// Get data from SPI.
-		GPIOB -> ODR &= ~(0b1 << 4); // Falling edge on CS pin.
+		GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 		SPI_ReadShort(0x0000, &max11136_dout);
-		GPIOB -> ODR |= (0b1 << 4); // Set CS pin.
+		GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;
 		if (channel < MAX11136_NUMBER_OF_CHANNELS) {
@@ -131,7 +134,7 @@ unsigned char MAX11136_ConvertAllChannels(void) {
  * @param channel_voltage_12bits:	Pointer to short that will contain the channel result on 12-bits.
  * @return:							None.
  */
-void MAX11136_GetChannel12bits(unsigned char channel, unsigned short* channel_voltage_12bits) {
+void MAX11136_GetChannelVoltage12bits(unsigned char channel, unsigned short* channel_voltage_12bits) {
 	// Check parameter.
 	if (channel < MAX11136_NUMBER_OF_CHANNELS) {
 		*(channel_voltage_12bits) = max11136_ctx.max11136_result_12bits[channel];

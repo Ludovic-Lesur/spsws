@@ -57,7 +57,7 @@ void TIM21_IRQHandler(void) {
 
 /*** TIM functions ***/
 
-/* CONFIGURE TIM21 TO COUNT OVERFLOW EVERY SECOND.
+/* CONFIGURE TIM21 TO OVERFLOW EVERY SECOND.
  * @param:	None.
  * @return:	None.
  */
@@ -88,7 +88,7 @@ void TIM21_Init(void) {
 	TIM21 -> CR1 |= (0b1 << 0); // Enable TIM21 (CEN='1').
 }
 
-/* CONFIGURE TIM22 AS TIM21 SLAVE TO COUNT SECONDS SINCE START-UP.
+/* CONFIGURE TIM22 TO COUNT SECONDS SINCE START-UP.
  * @param:	None.
  * @return:	None.
  */

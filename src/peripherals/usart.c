@@ -8,10 +8,12 @@
 #include "usart.h"
 
 #include "at.h"
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "tim.h"
 #include "usart_reg.h"
 
 /*** USART local macros ***/
@@ -21,19 +23,23 @@
 // Baud rate.
 #define USART_BAUD_RATE 		9600
 // TX buffer size.
-#define USART_TX_BUFFER_SIZE	128
+#define USART_TX_BUFFER_SIZE	512
 
 /*** USART local structures ***/
 
+#ifdef USE_TXE_INTERRUPT
 typedef struct {
 	unsigned char tx_buf[USART_TX_BUFFER_SIZE]; 	// Transmit buffer.
 	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
 	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
 } USART_Context;
+#endif
 
 /*** USART local global variables ***/
 
+#ifdef USE_TXE_INTERRUPT
 static USART_Context usart_ctx;
+#endif
 
 /*** USART local functions ***/
 
@@ -43,6 +49,7 @@ static USART_Context usart_ctx;
  */
 void USART2_IRQHandler(void) {
 
+#ifdef USE_TXE_INTERRUPT
 	/* TXE interrupt */
 	if (((USART2 -> ISR) & (0b1 << 7)) != 0) {
 		if ((usart_ctx.tx_buf_read_idx) != (usart_ctx.tx_buf_write_idx)) {
@@ -57,6 +64,7 @@ void USART2_IRQHandler(void) {
 			USART2 -> CR1 &= ~(0b1 << 7); // TXEIE = '0'.
 		}
 	}
+#endif
 
 	/* RXNE interrupt */
 	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
@@ -76,6 +84,7 @@ void USART2_IRQHandler(void) {
  * @return:			None.
  */
 void USART_FillTxBuffer(unsigned char tx_byte) {
+#ifdef USE_TXE_INTERRUPT
 	// Fill buffer.
 	usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = tx_byte;
 	// Manage index roll-over.
@@ -83,6 +92,12 @@ void USART_FillTxBuffer(unsigned char tx_byte) {
 	if (usart_ctx.tx_buf_write_idx == USART_TX_BUFFER_SIZE) {
 		usart_ctx.tx_buf_write_idx = 0;
 	}
+#else
+	// Fill transmit register.
+	USART2 -> TDR = tx_byte;
+	// Wait for transmission to complete.
+	while (((USART2 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
+#endif
 }
 
 /* CONVERTS A 4-BIT WORD TO THE ASCII CODE OF THE CORRESPONDING HEXADECIMAL CHARACTER.
@@ -118,21 +133,20 @@ unsigned int USART_Pow10(unsigned char power) {
  */
 void USART_Init(void) {
 
+#ifdef USE_TXE_INTERRUPT
 	/* Init context */
 	unsigned int idx = 0;
 	for (idx=0 ; idx<USART_TX_BUFFER_SIZE ; idx++) usart_ctx.tx_buf[idx] = 0;
 	usart_ctx.tx_buf_write_idx = 0;
 	usart_ctx.tx_buf_read_idx = 0;
+#endif
 
 	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
-	/* Configure TX and RX GPIOs */
-	RCC -> IOPENR |= (0b1 << 0); // Enable GPIOA clock.
-	GPIOA -> MODER &= ~(0b1111 << 18); // Reset bits 18-21.
-	GPIOA -> MODER |= (0b1010 << 18); // Configure PA9 and PA10 as alternate function.
-	GPIOA -> AFRH &= 0xFFFFF00F; // Reset bits 4-11.
-	GPIOA -> AFRH |= 0x00000440; // Link PA9 and PA10 to AF4.
+	/* Configure TX and RX GPIOs (first as high impedance) */
+	GPIO_Configure(GPIO_USART2_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -149,6 +163,35 @@ void USART_Init(void) {
 
 	/* Enable peripheral */
 	USART2 -> CR1 |= (0b1 << 0);
+}
+
+/* SWITCH USART2 SLAVE ON.
+ * @param:	None.
+ * @return:	None.
+ */
+void USART_PowerOn(void) {
+
+	/* Switch MCP2221A on */
+	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 1);
+	TIM22_WaitMilliseconds(100);
+
+	/* Enable LPUART alternate function */
+	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+}
+
+/* SWITCH USART2 SLAVE OFF.
+ * @param:	None.
+ * @return:	None.
+ */
+void USART_PowerOff(void) {
+
+	/* Enable LPUART alternate function */
+	GPIO_Configure(GPIO_USART2_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+
+	/* Switch MCP2221A off */
+	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 0);
 }
 
 /* SWITCH USART2 PERIPHERAL OFF.
@@ -244,7 +287,9 @@ void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
 		break;
 	}
 	// Enable interrupt.
+#ifdef USE_TXE_INTERRUPT
 	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+#endif
 	NVIC_EnableInterrupt(IT_USART2);
 }
 
@@ -260,6 +305,8 @@ void USART_SendString(char* tx_string) {
 		USART_FillTxBuffer((unsigned char) *(tx_string++));
 	}
 	// Enable interrupt.
+#ifdef USE_TXE_INTERRUPT
 	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+#endif
 	NVIC_EnableInterrupt(IT_USART2);
 }

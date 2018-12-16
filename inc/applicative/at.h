@@ -14,10 +14,14 @@
 
 // Input commands without parameter.
 #define AT_IN_COMMAND_TEST						"AT"
+#define AT_IN_COMMAND_ADC						"AT$ADC"
+#define AT_IN_COMMAND_MCU						"AT$MCU"
 
 // Input commands with parameters (headers).
 #define AT_IN_HEADER_GPS						"AT$GPS=" 	// AT$GPS=<timeout_seconds><CR>.
-
+#define AT_IN_HEADER_TIME						"AT$TIME="	// AT$TIME=<timeout_seconds><CR>.
+#define AT_IN_HEADER_CW							"AT$CW="	// AT$CW=<frequency>,<state>,<power><CR>.
+#define AT_IN_HEADER_SF							"AT$SF="	// AT$SF=<uplink_data>,<downlink_request><CR>.
 
 // Output commands without data.
 #define AT_OUT_COMMAND_OK						"OK"
@@ -48,9 +52,6 @@
 
 void AT_Init(void);
 void AT_Task(void);
-void AT_PrintRtcTimestamp(Timestamp* rtc_timestamp);
-void AT_PrintGpsTimestamp(Timestamp* gps_timestamp);
-void AT_PrintGpsPosition(Position* gps_position);
 
 /*** AT utility functions ***/
 
