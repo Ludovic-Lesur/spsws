@@ -48,8 +48,8 @@
  *  @{
  */
 
-#ifndef SIGFOX_MCU_API_H
-#define SIGFOX_MCU_API_H
+#ifndef MCU_API_H
+#define MCU_API_H
 
 #include "aes.h"
 #include "sigfox_api.h"
@@ -337,4 +337,4 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
  *******************************************************************/
 sfx_u8 MCU_API_get_initial_pac(sfx_u8 initial_pac[PAC_LENGTH]);
 
-#endif /* SIGFOX_MCU_API_H */
+#endif /* MCU_API_H */

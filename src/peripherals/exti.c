@@ -49,7 +49,9 @@ void EXTI_Init(void) {
 
 	/* Configure DIO2 and DIO3 as input */
 	GPIO_Configure(GPIO_DIO2, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
+#ifndef USE_SX1232_DIOX
 	GPIO_Configure(GPIO_DIO3, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
+#endif
 
 	/* Attach rising edge external interrupt on PA15 (DIO2) and PA8 (DIO3) pins */
 	EXTI -> IMR |= (0b1 << 15) | (0b1 << 8); // IM8='1' and IM15='1', all other masked.
@@ -84,7 +86,7 @@ void EXTI4_15_IRQHandler(void) {
 			ULTIMETER_UpdateWindDirection(direction_pourcent);
 		}
 		// Start new cycle.
-		TIM2_Restart();
+		TIM2_Start();
 	}
 
 

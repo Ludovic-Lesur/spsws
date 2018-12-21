@@ -47,8 +47,8 @@
  *  @{
  */
 
-#ifndef SIGFOX_RF_API_H
-#define SIGFOX_RF_API_H
+#ifndef RF_API_H
+#define RF_API_H
 
 #include "sigfox_api.h"
 #include "sigfox_types.h"
@@ -231,4 +231,4 @@ sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_
  *******************************************************************/
 sfx_u8 RF_API_get_version(sfx_u8** version, sfx_u8* size);
 
-#endif /* SIGFOX_RF_API_H */
+#endif /* RF_API_H */

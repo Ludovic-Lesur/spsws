@@ -5,8 +5,8 @@
  *      Author: Ludovic
  */
 
-#ifndef PERIPHERALS_SPI_H_
-#define PERIPHERALS_SPI_H_
+#ifndef SPI_H
+#define SPI_H
 
 /*** SPI functions ***/
 

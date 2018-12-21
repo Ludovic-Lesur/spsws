@@ -63,7 +63,7 @@ void ADC_Off(void) {
  * @param mcu_supply_voltage_mv:	Pointer to value that will contain MCU supply voltage in mV.
  * @return:							None.
  */
-void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
+void ADC_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv) {
 
 	/* Select ADC_IN17 input channel */
 	ADC1 -> CHSELR = 0;
@@ -84,7 +84,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
 
 	/* Compute voltage according to MCU factory calibration (see p.301 of RM0377 datasheet) */
 	vcc_mv = (VREFINT_VCC_CALIB_MV * VREFINT_CAL) / (raw_supply_voltage_12bits);
-	(*mcu_vdd_mv) = vcc_mv;
+	(*supply_voltage_mv) = vcc_mv;
 
 	/* Switch internal voltage reference off */
 	ADC1 -> CCR &= ~(0b1 << 22); // VREFEN='0'.
@@ -94,7 +94,7 @@ void ADC_GetMcuVddMv(unsigned int* mcu_vdd_mv) {
  * @param mcu_temp_degrees:	Pointer to value that will contain MCU temperature in °C.
  * @return:					None.
  */
-void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
+void ADC_GetMcuTemperature(int* temperature_degrees) {
 
 	/* Select ADC_IN18 input channel*/
 	ADC1 -> CHSELR = 0;
@@ -116,7 +116,7 @@ void ADC_GetMcuTemperatureDegrees(int* mcu_temperature_degrees) {
 	int raw_temp_calib_mv = (raw_temp_sensor_12bits * vcc_mv) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
 	int temp_calib_degrees = raw_temp_calib_mv * ((int)(TS_CAL2_TEMP-TS_CAL1_TEMP));
 	temp_calib_degrees = (temp_calib_degrees) / ((int)(TS_CAL2 - TS_CAL1));
-	(*mcu_temperature_degrees) = temp_calib_degrees + TS_CAL1_TEMP;
+	(*temperature_degrees) = temp_calib_degrees + TS_CAL1_TEMP;
 
 	/* Switch temperature sensor off */
 	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.

@@ -137,35 +137,68 @@ void TIM22_WaitMilliseconds(unsigned int ms_to_wait) {
 	while (TIM22_GetMilliseconds() < (start_ms + ms_to_wait));
 }
 
-/* CONFIGURE TIM2 TO MEASURE PHASE SHIFT BETWEEN WIND DIRECTION AND SPEED.
- * @param:	None.
- * @return:	None.
+/* CONFIGURE TIM2 FOR ULTIMETER PHASE SHIFT MEASURE OR SIGFOX BPSK MODULATION.
+ * @param mode:		Timer mode (see Timer2_Mode enumeration in tim.h).
+ * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
+ * @return:			None.
  */
-void TIM2_Init(void) {
+void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 
 	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 
 	/* Reset timer before configuration */
-	TIM2 -> CR1 &= ~(0b1 << 0); // Disable TIM2 (CEN='0').
+	TIM2 -> CR1 = 0; // Disable TIM2 (CEN='0').
 	TIM2 -> CNT = 0; // Reset counter.
+	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 
-	/* Configure TIM2 to overflow every (ULTIMETER_MEASUREMENT_PERIOD_SECONDS+1) seconds */
-	unsigned int arr_value = 0xFFFF; // Maximum overflow value.
-	TIM2 -> ARR = arr_value;
-	// PSC = (desired_period * timer_input_clock) / (ARR).
-	unsigned int psc_value = ((ULTIMETER_MEASUREMENT_PERIOD_SECONDS + 1) * (SYSCLK_KHZ*1000)) / (arr_value);
-	if (psc_value > 0xFFFF) {
-		psc_value = 0xFFFF;
+	/* Init common variables */
+	unsigned int arr_value = 0;
+	unsigned int psc_value = 0;
+
+	switch (mode) {
+
+	case TIM2_MODE_ULTIMETER:
+		/* Configure TIM2 to overflow every (ULTIMETER_MEASUREMENT_PERIOD_SECONDS+1) seconds */
+		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).
+		TIM2 -> ARR = arr_value;
+		// PSC = (desired_period * timer_input_clock) / (ARR).
+		psc_value = ((ULTIMETER_MEASUREMENT_PERIOD_SECONDS + 1) * (SYSCLK_KHZ*1000)) / (arr_value);
+		if (psc_value > 0xFFFF) {
+			psc_value = 0xFFFF;
+		}
+		TIM2 -> PSC = psc_value; // Timer is clocked by SYSCLK (see RCC_Init() function).
+		break;
+
+	case TIM2_MODE_SIGFOX:
+		/* Configure TIM2 to overflow every timing[0] microseconds */
+		TIM2 -> PSC = 15; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
+		TIM2 -> ARR = timings[TIM2_TIMINGS_ARRAY_ARR_IDX];
+		// Configure events timestamps.
+		TIM2 -> CCR1 = timings[TIM2_TIMINGS_ARRAY_CCR1_IDX];
+		TIM2 -> CCR2 = timings[TIM2_TIMINGS_ARRAY_CCR2_IDX];
+		TIM2 -> CCR3 = timings[TIM2_TIMINGS_ARRAY_CCR3_IDX];
+		TIM2 -> CCR4 = timings[TIM2_TIMINGS_ARRAY_CCR4_IDX];
+		// Enable channels (OCxm='001').
+		TIM2 -> CCMR1 |= (0b001 << 12) | (0b011 << 4);
+		TIM2 -> CCMR2 |= (0b001 << 12) | (0b011 << 4);
+		// Generate event to update registers.
+		TIM21 -> EGR |= (0b1 << 0); // UG='1'.
+		// Enable update and CCRx interrupts.
+		TIM2 -> DIER |= (0b11111 << 0);
+		NVIC_EnableInterrupt(IT_TIM2);
+		break;
+
+	default:
+		break;
 	}
-	TIM2 -> PSC = psc_value; // Timer is clocked by SYSCLK (see RCC_Init() function).
 }
 
 /* START TIM2.
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Restart(void) {
+void TIM2_Start(void) {
 	// Reset counter value and Enable TIM2.
 	TIM2 -> CNT = 0;
 	TIM2 -> CR1 |= (0b1 << 0); // CEN='1'.

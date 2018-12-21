@@ -41,7 +41,7 @@ void DMA_Init(void) {
 void DMA_Off(void) {
 
 	/* Stop transfer */
-	DMA_LpuartRxStop();
+	DMA_Stop();
 
 	/* Disable peripheral clock */
 	RCC -> AHBENR &= ~(0b1 << 0); // DMAEN='0'.

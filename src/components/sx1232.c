@@ -11,11 +11,12 @@
 #include "mapping.h"
 #include "spi.h"
 #include "sx1232_reg.h"
+#include "tim.h"
 
 /*** SX1232 local macros ***/
 
-// SX1232 frequency step = FXOSC / 2^(19) = 32MHz / 2^(19) = 61Hz.
-#define SX1232_FSTEP_HZ		61
+// SX1232 oscillator frequency.
+#define SX1232_FXOSC_HZ		32000000
 
 /*** SX1232 local structures ***/
 
@@ -77,6 +78,12 @@ void SX1232_Init(void) {
 
 	/* Init context */
 	sx1232_ctx.sx1232_rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
+
+	/* Init SX1232 DIOx */
+#ifdef USE_SX1232_DIOX
+	GPIO_Configure(GPIO_SX1232_DIOX, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+#endif
+	GPIO_Configure(GPIO_SX1232_DIO0, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 }
 
 /* SELECT SX1232 OSCILLATOR CONFIGURATION.
@@ -101,6 +108,9 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 	default:
 		break;
 	}
+
+	/* Trigger RC oscillator calibration */
+	SX1232_WriteRegister(SX1232_REG_OSC, 0x0F);
 }
 
 /* SET SX1232 TRANSCEIVER MODE.
@@ -145,7 +155,7 @@ void SX1232_SetMode(SX1232_Mode mode) {
 	default:
 		break;
 	}
-	SX1232_WriteRegister(SX1232_REG_FRFMSB, op_mode_reg_value);
+	SX1232_WriteRegister(SX1232_REG_OPMODE, op_mode_reg_value);
 }
 
 /* SET SX1232 MODULATION.
@@ -175,7 +185,7 @@ void SX1232_SetModulation(SX1232_Modulation modulation) {
 	default:
 		break;
 	}
-	SX1232_WriteRegister(SX1232_REG_FRFMSB, op_mode_reg_value);
+	SX1232_WriteRegister(SX1232_REG_OPMODE, op_mode_reg_value);
 }
 
 /* SET SX1232 RF FREQUENCY.
@@ -188,10 +198,32 @@ void SX1232_SetRfFrequency(unsigned int rf_frequency_hz) {
 	SPI_SetClockPolarity(0);
 
 	/* Program RF frequency */
-	unsigned int frf_reg_value = rf_frequency_hz / SX1232_FSTEP_HZ;
+	unsigned long long frf_reg_value = (0b1 << 19);
+	frf_reg_value *= rf_frequency_hz;
+	frf_reg_value /= SX1232_FXOSC_HZ;
 	SX1232_WriteRegister(SX1232_REG_FRFMSB, ((frf_reg_value & 0x00FF0000) >> 16));
-	SX1232_WriteRegister(SX1232_REG_FRFMSB, ((frf_reg_value & 0x0000FF00) >> 8));
-	SX1232_WriteRegister(SX1232_REG_FRFMSB, (frf_reg_value & 0x000000FF));
+	SX1232_WriteRegister(SX1232_REG_FRFMID, ((frf_reg_value & 0x0000FF00) >> 8));
+	SX1232_WriteRegister(SX1232_REG_FRFLSB, (frf_reg_value & 0x000000FF));
+}
+
+/* GET EFFECTIVE RF FREQUENCY.
+ * @param:					None.
+ * @return rf_frequency_hz:	Effective programmed RF frequency in Hz.
+ */
+unsigned int SX1232_GetRfFrequency(void) {
+	unsigned char byte_value = 0;
+	unsigned int frf_reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_FRFMSB, &byte_value);
+	frf_reg_value |= (byte_value << 16);
+	SX1232_ReadRegister(SX1232_REG_FRFMID, &byte_value);
+	frf_reg_value |= (byte_value << 8);
+	SX1232_ReadRegister(SX1232_REG_FRFLSB, &byte_value);
+	frf_reg_value |= (byte_value << 0);
+
+	unsigned long long rf_frequency_hz = ((unsigned long long) SX1232_FXOSC_HZ) * ((unsigned long long) frf_reg_value);
+	rf_frequency_hz /= (0b1 << 19);
+
+	return ((unsigned int) rf_frequency_hz);
 }
 
 /* SET SX1232 BIT RATE.
@@ -215,6 +247,36 @@ void SX1232_SetBitRate(SX1232_BitRate bit_rate) {
 	default:
 		break;
 	}
+}
+
+/* SET DATA MODE.
+ * @param rf_output_power_dbm:	RF output power in dBm.
+ * @return:						None.
+ */
+void SX1232_SetDataMode(SX1232_DataMode data_mode) {
+
+	/* Configure SPI */
+	SPI_SetClockPolarity(0);
+
+	/* Read Packet config 2 register */
+	unsigned char packet_config2_reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_PACKETCONFIG2, &packet_config2_reg_value);
+	packet_config2_reg_value &= 0xBF;
+
+	/* Program data mode */
+	switch (data_mode) {
+	case SX1232_DATA_MODE_PACKET:
+		// Data mode = '1'.
+		packet_config2_reg_value |= 0x40;
+		break;
+	case SX1232_DATA_MODE_CONTINUOUS:
+		// Data mode = '0'.
+		// Allready done by previous reset.
+		break;
+	default:
+		break;
+	}
+	SX1232_WriteRegister(SX1232_REG_PACKETCONFIG2, packet_config2_reg_value);
 }
 
 /* SELECT SX1232 RF OUTPUT PIN.
@@ -252,7 +314,7 @@ void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin) {
  * @param rf_output_power_dbm:	RF output power in dBm.
  * @return:						None.
  */
-void SX1232_SetRfOutputPower(signed char rf_output_power_dbm) {
+void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm) {
 
 	/* Configure SPI */
 	SPI_SetClockPolarity(0);
@@ -263,7 +325,7 @@ void SX1232_SetRfOutputPower(signed char rf_output_power_dbm) {
 	pa_config_reg_value &= 0xF0; // Reset bits 0-3.
 
 	/* Program RF output power */
-	signed char effective_output_power_dbm = rf_output_power_dbm;
+	unsigned char effective_output_power_dbm = rf_output_power_dbm;
 	switch (sx1232_ctx.sx1232_rf_output_pin) {
 	case SX1232_RF_OUTPUT_PIN_RFO:
 		// Ensure parameter is reachable.
@@ -293,10 +355,42 @@ void SX1232_SetRfOutputPower(signed char rf_output_power_dbm) {
 	SX1232_WriteRegister(SX1232_REG_PACONFIG, pa_config_reg_value);
 }
 
-void SX1232_StartContinuousTransmission(void) {
-
+/* START CONTINUOUS WAVE OUTPUT.
+ * @param frequency_hz:		CW frequency in Hz.
+ * @param output_power_dBm:	CW output power in dBm.
+ * @return:					None.
+ */
+void SX1232_StartCw(unsigned int frequency_hz, unsigned char output_power_dbm) {
+	// Enable TCXO.
+	SX1232_SetOscillator(SX1232_TCXO);
+	TIM22_WaitMilliseconds(5); // Wait TS_OSC=250µs typical.
+	// Enable low PN PLL.
+	unsigned char reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_PARAMP, &reg_value);
+	SX1232_WriteRegister(SX1232_REG_PARAMP, (reg_value & 0xEF));
+	// Enable fast frequency hopping.
+	SX1232_ReadRegister(SX1232_REG_PLLHOP, &reg_value);
+	SX1232_WriteRegister(SX1232_REG_PLLHOP, (reg_value | 0x80));
+	// Configure radio parameters.
+	SX1232_SetModulation(SX1232_MODULATION_OOK);
+	SX1232_SetRfFrequency(frequency_hz);
+	SX1232_SetRfOutputPower(output_power_dbm);
+	// Use TX continuous mode.
+	SX1232_SetDataMode(SX1232_DATA_MODE_CONTINUOUS);
+	GPIO_Write(GPIO_SX1232_DIOX, 1);
+	// Start radio.
+	SX1232_SetMode(SX1232_MODE_FSTX);
+	TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
+	SX1232_SetMode(SX1232_MODE_TX);
+	TIM22_WaitMilliseconds(5); // Wait TS_TR=120µs typical.
 }
 
-void SX1232_StopContinuousTransmission(void) {
-
+/* STOP CONTINUOUS WAVE OUTPUT.
+ * @param:	None.
+ * @return:	None.
+ */
+void SX1232_StopCw(void) {
+	// Stop data signal and radio.
+	GPIO_Write(GPIO_SX1232_DIOX, 0);
+	SX1232_SetMode(SX1232_MODE_STANDBY);
 }

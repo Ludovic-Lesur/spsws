@@ -128,13 +128,11 @@ void SPI_PowerOff(void) {
  * @return:			None.
  */
 void SPI_WriteByte(unsigned char tx_data) {
-	/* Set data length to 8-bits */
+	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
-
-	/* Send data */
+	// Send data.
 	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
-
-	/* Wait for transmission to complete */
+	// Wait for transmission to complete.
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
 }
 
@@ -143,13 +141,11 @@ void SPI_WriteByte(unsigned char tx_data) {
  * @return:			None.
  */
 void SPI_WriteShort(unsigned short tx_data) {
-	/* Set data length to 16-bits */
+	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
-
-	/* Send data */
+	// Send data.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
-
-	/* Wait for transmission to complete */
+	// Wait for transmission to complete.
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
 }
 
@@ -158,19 +154,16 @@ void SPI_WriteShort(unsigned short tx_data) {
  * @return:			None.
  */
 void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
-	/* Set data length to 8-bits */
+	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
-
-	/* Send dummy data on MOSI to generate clock */
-	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
-
-	/* Wait for incoming data */
-	while (((SPI1 -> SR) & (0b1 << 0)) == 0); // Wait for RXNE='1'.
-
-	/* Read data */
+	// Dummy read to DR to clear RXNE flag.
 	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
-
-	/* Wait for reception to complete */
+	// Send dummy data on MOSI to generate clock.
+	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
+	// Wait for incoming data.
+	while (((SPI1 -> SR) & (0b1 << 0)) == 0); // Wait for RXNE='1'.
+	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
+	// Wait for reception to complete.
 	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for RXNE='0' and BSY='0'.
 }
 
@@ -179,18 +172,15 @@ void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
  * @return:			None.
  */
 void SPI_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
-	/* Set data length to 16-bits */
+	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
-
-	/* Send dummy data on MOSI to generate clock */
+	// Dummy read to DR to clear RXNE flag.
+	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
+	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
-
-	/* Wait for incoming data */
+	// Wait for incoming data.
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0); // Wait for RXNE='1'.
-
-	/* Read data */
 	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
-
-	/* Wait for reception to complete */
+	// Wait for reception to complete.
 	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for RXNE='0' and BSY='0'.
 }

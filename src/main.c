@@ -30,6 +30,7 @@
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_types.h"
+#include "sky13317.h"
 #include "spi.h"
 #include "sx1232.h"
 #include "sx1232_reg.h"
@@ -264,12 +265,33 @@ int main (void) {
 
 	/* Init clocks */
 	RCC_Init();
-	RCC_SwitchToTcxo16MHz();
+	//RCC_SwitchToTcxo16MHz();
+	RCC_SwitchToInternal16MHz();
 	//RTC_Init();
 
 	/* Init peripherals */
 	// Memory.
 	NVM_Init();
+	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+0, 0xB5);
+	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+1, 0x53);
+	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+2, 0x00);
+	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+3, 0x00);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+0, 0xB5);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+1, 0x53);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+2, 0x00);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+3, 0x00);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+4, 0x2B);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+5, 0x61);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+6, 0x25);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+7, 0x69);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+8, 0xCB);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+9, 0x25);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+10, 0x33);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+11, 0xAB);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+12, 0x5B);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+13, 0x4B);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+14, 0x48);
+	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+15, 0x89);
 	// External interrupts.
 	EXTI_Init();
 	// Timers.
@@ -279,7 +301,7 @@ int main (void) {
 	// DMA.
 	DMA_Init();
 	// Interfaces.
-	LPUART_Init();
+	//LPUART_Init();
 	USART_Init();
 	I2C_Init();
 	SPI_Init();
@@ -288,6 +310,7 @@ int main (void) {
 	MAX11136_Init();
 	SX1232_Init();
 	NEOM8N_Init();
+	SKY13317_Init();
 
 	/* Init applicative layers */
 	AT_Init();
@@ -317,10 +340,10 @@ int main (void) {
 	}*/
 
 	/* Main loop */
-	USART_PowerOn();
+	/*USART_PowerOn();
 	while (1) {
 		AT_Task();
-	}
+	}*/
 
 	// RTC first calibration.
 	/*Timestamp main_timestamp;
@@ -333,11 +356,14 @@ int main (void) {
 	}
 	LPUART_PowerOff();*/
 
-	/*sfx_rc_t rc = RC1;
+	sfx_rc_t rc = RC1;
 	SIGFOX_API_open(&rc);
-	sfx_u8 customer_data[4] = {0x55, 0x44, 0x4F, 0x46};
+	sfx_u8 customer_data[1] = {0x00};
 	sfx_u8 customer_response[8] = {0x00};
-	SIGFOX_API_send_frame(customer_data, 4, customer_response, 2, 0);*/
+	while (1) {
+		SIGFOX_API_send_frame(customer_data, 1, customer_response, 2, 0);
+		TIM22_WaitMilliseconds(10000);
+	}
 
 	/*while (1) {
 		// Retrieve GPS position and timestamp.
@@ -372,13 +398,39 @@ int main (void) {
 	}*/
 
 	/*SPI_PowerOn();
-	SX1232_SetOscillator(SX1232_TCXO);
+	// Start CW.
+	SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
+	SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_RFO);
+	SX1232_StartCw(868130000, SX1232_OUTPUT_POWER_RFO_MIN);
+
+	//unsigned int power = 0;
+	unsigned int idx = 0;
+	unsigned int frequency = 868130000;
 	while (1) {
-		TIM22_WaitMilliseconds(1000);
-		GPIOA -> ODR |= (0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-		GPIOA -> ODR &= ~(0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
+		for (power=SX1232_OUTPUT_POWER_RFO_MIN ; power<SX1232_OUTPUT_POWER_RFO_MAX ; power++) {
+			SX1232_SetRfOutputPower(power);
+			TIM22_WaitMilliseconds(1000);
+		}
+		for (power=SX1232_OUTPUT_POWER_RFO_MAX ; power>SX1232_OUTPUT_POWER_RFO_MIN ; power--) {
+			SX1232_SetRfOutputPower(power);
+			TIM22_WaitMilliseconds(1000);
+		}
+		for (idx=0 ; idx<5 ; idx++) {
+			frequency += 10000;
+			SX1232_SetRfFrequency(frequency);
+			//SX1232_SetMode(SX1232_MODE_FSTX);
+			//TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
+			//SX1232_SetMode(SX1232_MODE_TX);
+			TIM22_WaitMilliseconds(1000);
+		}
+		for (idx=0 ; idx<5 ; idx++) {
+			frequency -= 10000;
+			SX1232_SetRfFrequency(frequency);
+			//SX1232_SetMode(SX1232_MODE_FSTX);
+			//TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
+			//SX1232_SetMode(SX1232_MODE_TX);
+			TIM22_WaitMilliseconds(1000);
+		}
 	}*/
 
 	/*ULTIMETER_Init();

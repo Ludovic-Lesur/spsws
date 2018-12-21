@@ -18,7 +18,7 @@
 // To be defined is EOC pin connected to MCU.
 #define USE_MAX11136_EOC
 // To be defined if SX1232_DIOx pin is connected to MCU.
-//#define USE_SX1232_DIOX
+#define USE_SX1232_DIOX
 #endif // HW1_0.
 
 /*** MCU mapping ***/

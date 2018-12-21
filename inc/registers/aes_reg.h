@@ -1,0 +1,32 @@
+/*
+ * aes_reg.h
+ *
+ *  Created on: 19 dec. 2018
+ *      Author: Ludovic
+ */
+
+#ifndef AES_REG_H
+#define AES_REG_H
+
+/*** AES registers ***/
+
+typedef struct {
+	volatile unsigned int CR;    	// AES control register.
+	volatile unsigned int SR;    	// AES status register.
+	volatile unsigned int DINR;    	// AES input data register.
+	volatile unsigned int DOUTR;    // AES output data register.
+	volatile unsigned int KEYR0;    // AES key register 0.
+	volatile unsigned int KEYR1;    // AES key register 1.
+	volatile unsigned int KEYR2;    // AES key register 2.
+	volatile unsigned int KEYR3;    // AES key register 3.
+	volatile unsigned int IVR0;    	// AES initialization vector register 0.
+	volatile unsigned int IVR1;    	// AES initialization vector register 1.
+	volatile unsigned int IVR2;    	// AES initialization vector register 2.
+	volatile unsigned int IVR3;    	// AES initialization vector register 3.
+} AES_BaseAddress;
+
+/*** AES base address ***/
+
+#define AES		((AES_BaseAddress*) ((unsigned int) 0x40026000))
+
+#endif /* AES_REG_H */

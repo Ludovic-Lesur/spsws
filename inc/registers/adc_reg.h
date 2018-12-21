@@ -8,7 +8,7 @@
 #ifndef REGISTERS_ADC_REG_H
 #define REGISTERS_ADC_REG_H
 
-/*** ADC registerss ***/
+/*** ADC registers ***/
 
 typedef struct {
 	volatile unsigned int ISR;    	// ADC interrupt and status register.

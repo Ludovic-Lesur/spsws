@@ -90,6 +90,6 @@ void LPTIM1_ClearArrmFlag(void) {
  * @param:	None.
  * @return:	Number of microseconds ellapsed since LPTIM was started.
  */
-unsigned short LPTIM1_GetMicroseconds(void) {
+unsigned int LPTIM1_GetMicroseconds(void) {
 	return (LPTIM1 -> CNT);
 }

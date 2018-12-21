@@ -73,14 +73,14 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
 	// Init ADC for measuring device voltage and temperature.
 	ADC_Init();
 	// Get actual supply voltage.
-	unsigned int mcu_vdd;
-	ADC_GetMcuVddMv(&mcu_vdd);
-	(*voltage_idle) = (sfx_u16) mcu_vdd;
-	(*voltage_tx) = (sfx_u16) mcu_vdd;
+	unsigned int mcu_supply_voltage_mv;
+	ADC_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
+	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.
-	int mcu_temperature;
-	ADC_GetMcuTemperatureDegrees(&mcu_temperature);
-	(*temperature) = ((sfx_s16) mcu_temperature)*10; // Unit = 1/10 of degrees.
+	int mcu_temperature_degrees;
+	ADC_GetMcuTemperature(&mcu_temperature_degrees);
+	(*temperature) = ((sfx_s16) mcu_temperature_degrees)*10; // Unit = 1/10 of degrees.
 	// Switch ADC off.
 	ADC_Off();
 	return SFX_ERR_NONE;
@@ -143,18 +143,22 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encrypt, sfx_u8 aes_block_len, sfx_u8 key[AES_BLOCK_SIZE], sfx_credentials_use_key_t use_key) {
 
 	/* Local variables */
-	sfx_u8 aes_cbc[AES_BLOCK_SIZE];
-	sfx_u8 local_key[AES_BLOCK_SIZE];
-	unsigned char number_of_blocks = aes_block_len >> 4;// aes_block_len/AES_BLOCK_SIZE = aes_block_len/16 = aes_block_len << 4.
-	unsigned char block_idx;
 	unsigned char byte_idx = 0;
+	unsigned char local_key[AES_BLOCK_SIZE] = {0};
+	unsigned char init_vector[AES_BLOCK_SIZE] = {0};
+	unsigned char data_in[AES_BLOCK_SIZE] = {0};
+	unsigned char data_out[AES_BLOCK_SIZE] = {0};
+	unsigned char number_of_blocks = aes_block_len / AES_BLOCK_SIZE;
+	unsigned char block_idx;
+	unsigned char key_byte = 0;
 
 	/* Get accurate key */
 	switch (use_key) {
 		case CREDENTIALS_PRIVATE_KEY:
 			// Retrieve device key from NVM.
 			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-				NVM_ReadByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+byte_idx, &(local_key[byte_idx]));
+				NVM_ReadByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+byte_idx, &key_byte);
+				local_key[byte_idx] = key_byte;
 			}
 			break;
 		case CREDENTIALS_KEY_IN_ARGUMENT:
@@ -167,18 +171,21 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 			break;
 	}
 
-	/* AES CBC initialisation */
-	for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) aes_cbc[byte_idx] = 0;
+	/* Init AES peripheral */
+	AES_Init();
 
-	/* AES encryption */
+	/* Perform encryption */
 	for (block_idx=0; block_idx<number_of_blocks ; block_idx++) {
-		for (byte_idx=0; byte_idx<AES_BLOCK_SIZE; byte_idx++) {
-			encrypted_data[(block_idx << 4) + byte_idx] = data_to_encrypt[(block_idx << 4) + byte_idx] ^ aes_cbc[byte_idx];
-		}
-		AES_Encode(&encrypted_data[block_idx << 4], local_key);
-		// Update CBC.
-		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) aes_cbc[byte_idx] = encrypted_data[(block_idx << 4) + byte_idx];
+		// Fill data in and initialization vector with previous result.
+		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) data_in[byte_idx] = data_to_encrypt[(block_idx * AES_BLOCK_SIZE) + byte_idx];
+		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) init_vector[byte_idx] = data_out[byte_idx];
+		// Run algorithme.
+		AES_EncodeCbc(data_in, data_out, init_vector, local_key);
 	}
+
+	/* Get last result */
+	for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) encrypted_data[byte_idx] = data_out[byte_idx];
+
 	return SFX_ERR_NONE;
 }
 

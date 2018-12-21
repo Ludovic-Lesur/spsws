@@ -10,11 +10,18 @@
 
 /*** SX1232 macros ***/
 
+// Frequency range.
+#define SX1232_RF_FREQUENCY_HZ_MIN				862000000
+#define SX1232_RF_FREQUENCY_HZ_MAX				1020000000
+
 // Output power ranges.
-#define SX1232_OUTPUT_POWER_RFO_MIN			-1
-#define SX1232_OUTPUT_POWER_RFO_MAX			14
-#define SX1232_OUTPUT_POWER_PABOOST_MIN		2
-#define SX1232_OUTPUT_POWER_PABOOST_MAX		17
+#define SX1232_OUTPUT_POWER_RFO_MIN				0
+#define SX1232_OUTPUT_POWER_RFO_MAX				14
+#define SX1232_OUTPUT_POWER_PABOOST_MIN			2
+#define SX1232_OUTPUT_POWER_PABOOST_MAX			17
+
+// Transmitter frequency hopping time.
+#define SX1232_SPI_ACCESS_DURATION_US			8 // 8 bits @ SCK=1MHz.
 
 /*** SX1232 structures ***/
 
@@ -52,6 +59,12 @@ typedef enum {
 	SX1232_RF_OUTPUT_PIN_PABOOST,
 } SX1232_RfOutputPin;
 
+// Data mode.
+typedef enum {
+	SX1232_DATA_MODE_PACKET,
+	SX1232_DATA_MODE_CONTINUOUS
+} SX1232_DataMode;
+
 /*** SX1232 functions ***/
 
 void SX1232_Init(void);
@@ -60,11 +73,13 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator);
 void SX1232_SetMode(SX1232_Mode mode);
 void SX1232_SetModulation(SX1232_Modulation modulation);
 void SX1232_SetRfFrequency(unsigned int rf_frequency_hz);
+unsigned int SX1232_GetRfFrequency(void);
 void SX1232_SetBitRate(SX1232_BitRate bit_rate);
+void SX1232_SetDataMode(SX1232_DataMode data_mode);
 // TX functions.
 void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin);
-void SX1232_SetRfOutputPower(signed char rf_output_power_dbm);
-void SX1232_StartContinuousTransmission(void);
-void SX1232_StopContinuousTransmission(void);
+void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm);
+void SX1232_StartCw(unsigned int frequency_hz, unsigned char output_power_dbm);
+void SX1232_StopCw(void);
 
 #endif /* SX1232_H */

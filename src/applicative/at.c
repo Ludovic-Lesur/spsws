@@ -11,6 +11,7 @@
 #include "i2c.h"
 #include "lpuart.h"
 #include "max11136.h"
+#include "neom8n.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_api.h"
@@ -20,16 +21,54 @@
 
 /*** AT local macros ***/
 
-#define AT_BUFFER_SIZE			32
+#define AT_BUFFER_SIZE							64
 
-#define AT_NULL_CHAR			'\0'
-#define AT_SEPARATOR_CHAR		','
-#define AT_CR_CHAR				'\r'
-#define AT_LF_CHAR				'\n'
+#define AT_NULL_CHAR							'\0'
+#define AT_SEPARATOR_CHAR						','
+#define AT_CR_CHAR								'\r'
+#define AT_LF_CHAR								'\n'
 
-#define AT_COMMAND_MIN_SIZE		2
-#define AT_HEXA_MAX_DIGITS		8
-#define AT_DECIMAL_MAX_DIGITS	9
+#define AT_COMMAND_MIN_SIZE						2
+#define AT_HEXA_MAX_DIGITS						8
+#define AT_DECIMAL_MAX_DIGITS					9
+
+#define AT_CW_DEFAULT_OUTPUT_POWER_DBM			14
+
+// Input commands without parameter.
+#define AT_IN_COMMAND_TEST						"AT"
+#define AT_IN_COMMAND_ADC						"AT$ADC"
+#define AT_IN_COMMAND_MCU						"AT$MCU"
+
+// Input commands with parameters (headers).
+#define AT_IN_HEADER_GPS						"AT$GPS=" 	// AT$GPS=<timeout_seconds><CR>.
+#define AT_IN_HEADER_TIME						"AT$TIME="	// AT$TIME=<timeout_seconds><CR>.
+#define AT_IN_HEADER_CW							"AT$CW="	// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
+#define AT_IN_HEADER_SF							"AT$SF="	// AT$SF=<uplink_data>,<downlink_request><CR>.
+
+// Output commands without data.
+#define AT_OUT_COMMAND_OK						"OK"
+
+// Output commands with data (headers).
+#define AT_OUT_HEADER_ERROR						"ERROR " 	  	// ERROR <error_code><CR>
+
+// Syntax errors.
+#define AT_NO_ERROR						  		0x00 		// For internal processing ("OK" is returned in this case).
+#define AT_OUT_ERROR_UNKNOWN_COMMAND			0x01 		// Unknown command or header.
+#define AT_OUT_ERROR_NO_PARAM_FOUND				0x02 		// No parameter found after header.
+#define AT_OUT_ERROR_NO_SEP_FOUND				0x03 		// No separator found.
+#define AT_OUT_ERROR_PARAM_BIT_INVALID_CHAR		0x04 		// Parameter is not a bit (0/1).
+#define AT_OUT_ERROR_PARAM_BIT_OVERFLOW	  		0x05 		// Parameter length overflow (> 1 digit).
+#define AT_OUT_ERROR_PARAM_HEXA_ODD_SIZE	  	0x06 		// Odd number of character(s) to code an hexadecimal parameter.
+#define AT_OUT_ERROR_PARAM_HEXA_INVALID_CHAR	0x07 		// Invalid character found in hexadecimal parameter.
+#define AT_OUT_ERROR_PARAM_HEXA_OVERFLOW		0x08 		// Parameter value overflow (> 32 bits).
+#define AT_OUT_ERROR_PARAM_DEC_INVALID_CHAR		0x09 		// Invalid character found in decimal parameter.
+#define AT_OUT_ERROR_PARAM_DEC_OVERFLOW			0x0A 		// Parameter value overflow (> 9 digits).
+
+// Parameters errors
+#define AT_OUT_ERROR_TIMEOUT_MAX				0x80		// Timeout is too large.
+#define AT_OUT_ERROR_RF_FREQUENCY_MIN			0x81		// RF frequency is too low.
+#define AT_OUT_ERROR_RF_FREQUENCY_MAX			0x82		// RF frequency is too high.
+#define AT_OUT_ERROR_RF_OUTPUT_POWER_MAX		0x83		// RF output power is too high.
 
 /*** AT local structures ***/
 
@@ -529,7 +568,7 @@ void AT_DecodeRxBuffer(void) {
 				}
 			}
 			else {
-				// Error in parameter.
+				// Error in timeout parameter.
 				AT_ReplyError(get_param_result);
 			}
 		}
@@ -561,7 +600,66 @@ void AT_DecodeRxBuffer(void) {
 				}
 			}
 			else {
-				// Error in parameter.
+				// Error in timeout parameter.
+				AT_ReplyError(get_param_result);
+			}
+		}
+
+		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
+			unsigned int frequency_hz = 0;
+			// Search frequency parameter.
+			unsigned short get_param_result = AT_GetParameter(AT_Decimal, 0, &frequency_hz);
+			if (get_param_result == AT_NO_ERROR) {
+				unsigned char enable = 0;
+				// First try with 3 parameters.
+				get_param_result = AT_GetParameter(AT_Boolean, 0, &frequency_hz);
+				if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
+					// Power is not given, try to parse enable as last parameter.
+					get_param_result = AT_GetParameter(AT_Boolean, 1, &frequency_hz);
+					if (get_param_result == AT_NO_ERROR) {
+						// CW with default output power.
+						if (enable == 0) {
+							SX1232_StopCw();
+							SPI_PowerOff();
+						}
+						else {
+							SPI_PowerOn();
+							SX1232_StartCw(frequency_hz, AT_CW_DEFAULT_OUTPUT_POWER_DBM);
+						}
+					}
+					else {
+						// Error in enable parameter.
+						AT_ReplyError(get_param_result);
+					}
+				}
+				else if (get_param_result == AT_NO_ERROR) {
+					// There is a third parameter, try to parse power.
+					unsigned int output_power_dbm = 0;
+					get_param_result = AT_GetParameter(AT_Decimal, 1, &output_power_dbm);
+					if (get_param_result == AT_NO_ERROR) {
+						// CW with given output power.
+						if (enable == 0) {
+							SX1232_StopCw();
+							SPI_PowerOff();
+						}
+						else {
+							SPI_PowerOn();
+							SX1232_StartCw(frequency_hz, output_power_dbm);
+						}
+					}
+					else {
+						// Error in power parameter.
+						AT_ReplyError(get_param_result);
+					}
+				}
+				else {
+					// Error in enable parameter.
+					AT_ReplyError(get_param_result);
+				}
+			}
+			else {
+				// Error in frequency parameter.
 				AT_ReplyError(get_param_result);
 			}
 		}

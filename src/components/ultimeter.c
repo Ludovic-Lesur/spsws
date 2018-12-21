@@ -108,7 +108,7 @@ void ULTIMETER_Init(void) {
 	ultimeter_ctx.ultimeter_wind_direction = 0;
 
 	/* Init phase shift timer */
-	TIM2_Init();
+	TIM2_Init(TIM2_MODE_ULTIMETER, 0);
 }
 
 /* INCREMENT CURRENT WIND SPEED COUNT.

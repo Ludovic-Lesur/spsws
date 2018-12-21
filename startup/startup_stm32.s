@@ -144,7 +144,7 @@ g_pfnVectors:
   .word	0 // ADC, COMP1 and COMP2.
   .word	0 // LPTIM1 through EXTI29
   .word	0 // USART4 and USART5
-  .word	0 // TIM2
+  .word	TIM2_IRQHandler // TIM2
   .word	0 // TIM3
   .word	0 // TIM6 and DAC
   .word	0 // TIM7 and DAC
@@ -197,6 +197,9 @@ g_pfnVectors:
 
 	.weak	TIM21_IRQHandler
 	.thumb_set TIM21_IRQHandler,Default_Handler
+
+	.weak	TIM2_IRQHandler
+	.thumb_set TIM2_IRQHandler,Default_Handler
 
 	.weak	SystemInit
 
