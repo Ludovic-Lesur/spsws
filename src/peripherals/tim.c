@@ -44,11 +44,11 @@ void TIM21_IRQHandler(void) {
 		ULTIMETER_GetPeakWindSpeed(&peak_speed);
 		ULTIMETER_GetAverageWindDirection(&mean_direction);
 		USART_SendString("mean_speed=");
-		USART_SendValue(mean_speed, USART_Decimal);
+		USART_SendValue(mean_speed, USART_FORMAT_DECIMAL, 0);
 		USART_SendString("km/h peak_speed=");
-		USART_SendValue(peak_speed, USART_Decimal);
+		USART_SendValue(peak_speed, USART_FORMAT_DECIMAL, 0);
 		USART_SendString("km/h mean_direction=");
-		USART_SendValue(mean_direction, USART_Decimal);
+		USART_SendValue(mean_direction, USART_FORMAT_DECIMAL, 0);
 		USART_SendString("\n");
 		// Reset counter.
 		ultimeter_seconds_count = 0;

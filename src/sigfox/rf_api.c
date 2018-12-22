@@ -246,6 +246,7 @@ sfx_u8 RF_API_stop(void) {
 
 	/* Power transceiver down */
 	SX1232_SetMode(SX1232_MODE_STANDBY);
+	SPI_PowerOff();
 
 	return SFX_ERR_NONE;
 }

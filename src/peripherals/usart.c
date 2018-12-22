@@ -210,9 +210,10 @@ void USART_Off(void) {
 /* SEND A BYTE THROUGH USART.
  * @param byte_to_send:	The byte to send.
  * @param format:		Display format (see ByteDisplayFormat enumeration in usart.h).
+ * @param print_prexix	Print '0b' or '0x' prefix is non zero.
  * @return: 			None.
  */
-void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
+void USART_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix) {
 	// Disable interrupt.
 	NVIC_DisableInterrupt(IT_USART2);
 	// Common variables.
@@ -223,10 +224,12 @@ void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
 	unsigned int previous_decade = 0;
 	// Fill TX buffer according to format.
 	switch (format) {
-	case USART_Binary:
-		// Print "0b" prefix.
-		USART_FillTxBuffer('0');
-		USART_FillTxBuffer('b');
+	case USART_FORMAT_BINARY:
+		if (print_prefix != 0) {
+			// Print "0b" prefix.
+			USART_FillTxBuffer('0');
+			USART_FillTxBuffer('b');
+		}
 		// Maximum 32 bits.
 		for (idx=31 ; idx>=0 ; idx--) {
 			if (tx_value & (0b1 << idx)) {
@@ -243,10 +246,12 @@ void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
 			}
 		}
 		break;
-	case USART_Hexadecimal:
-		// Print "0b" prefix.
-		USART_FillTxBuffer('0');
-		USART_FillTxBuffer('x');
+	case USART_FORMAT_HEXADECIMAL:
+		if (print_prefix != 0) {
+			// Print "0x" prefix.
+			USART_FillTxBuffer('0');
+			USART_FillTxBuffer('x');
+		}
 		// Maximum 4 bytes.
 		for (idx=3 ; idx>=0 ; idx--) {
 			current_value = (tx_value & (0xFF << (8*idx))) >> (8*idx);
@@ -262,7 +267,7 @@ void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
 			}
 		}
 		break;
-	case USART_Decimal:
+	case USART_FORMAT_DECIMAL:
 		// Maximum 10 digits.
 		for (idx=9 ; idx>=0 ; idx--) {
 			current_power = USART_Pow10(idx);
@@ -279,7 +284,7 @@ void USART_SendValue(unsigned int tx_value, UsartDisplayFormat format) {
 			}
 		}
 		break;
-	case USART_ASCII:
+	case USART_FORMAT_ASCII:
 		// Raw byte.
 		if (tx_value <= 0xFF) {
 			USART_FillTxBuffer(tx_value);

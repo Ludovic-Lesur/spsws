@@ -26,20 +26,22 @@ void ADC_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 
-	/* Configure analog GPIOs */
-
 	/* Disable ADC before configure it */
 	ADC1 -> CR = 0; // ADEN='0'.
 
-	/* ADC calibration */
-	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
-	while (((ADC1 -> CR) & (0b1 << 31)) != 0); // Wait until calibration is done.
+	/* Enable ADC voltage regulator */
+	ADC1 -> CR |= (0b1 << 28);
+	TIM22_WaitMilliseconds(5);
 
 	/* ADC configuration */
 	ADC1 -> CFGR2 &= ~(0b11 << 30); // Reset bits 30-31.
 	ADC1 -> CFGR2 |= (0b01 << 30); // Use (PCLK2/2) as ADCCLK = SYSCLK/2 (see RCC_Init() function).
 	ADC1 -> CFGR1 &= (0b1 << 13); // Single conversion mode.
 	ADC1 -> CFGR1 &= ~(0b11 << 0); // Data rsolution = 12 bits (RES='00').
+
+	/* ADC calibration */
+	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
+	while (((ADC1 -> CR) & (0b1 << 31)) != 0); // Wait until calibration is done.
 
 	/* Enable ADC */
 	ADC1 -> CR |= (0b1 << 0); // ADEN='1'.

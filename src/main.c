@@ -33,7 +33,6 @@
 #include "sky13317.h"
 #include "spi.h"
 #include "sx1232.h"
-#include "sx1232_reg.h"
 #include "rtc.h"
 #include "tim.h"
 #include "ultimeter.h"
@@ -265,33 +264,12 @@ int main (void) {
 
 	/* Init clocks */
 	RCC_Init();
-	//RCC_SwitchToTcxo16MHz();
-	RCC_SwitchToInternal16MHz();
+	RCC_SwitchToTcxo16MHz();
 	//RTC_Init();
 
 	/* Init peripherals */
 	// Memory.
 	NVM_Init();
-	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+0, 0xB5);
-	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+1, 0x53);
-	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+2, 0x00);
-	NVM_WriteByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+3, 0x00);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+0, 0xB5);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+1, 0x53);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+2, 0x00);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+3, 0x00);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+4, 0x2B);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+5, 0x61);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+6, 0x25);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+7, 0x69);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+8, 0xCB);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+9, 0x25);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+10, 0x33);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+11, 0xAB);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+12, 0x5B);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+13, 0x4B);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+14, 0x48);
-	NVM_WriteByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+15, 0x89);
 	// External interrupts.
 	EXTI_Init();
 	// Timers.
@@ -322,28 +300,11 @@ int main (void) {
 		TIM22_WaitMilliseconds(50);
 	}
 
-	/*while (1) {
-		USART_SendString("Test UART : ");
-		USART_SendValue(46, USART_Binary);
-		USART_SendString(" ");
-		USART_SendValue(46, USART_Hexadecimal);
-		USART_SendString(" ");
-		USART_SendValue(46, USART_Decimal);
-		USART_SendString(" ");
-		USART_SendValue(46, USART_ASCII);
-		USART_SendString("\n");
-		TIM22_WaitMilliseconds(1000);
-		GPIOA -> ODR |= (0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-		GPIOA -> ODR &= ~(0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-	}*/
-
 	/* Main loop */
-	/*USART_PowerOn();
+	USART_PowerOn();
 	while (1) {
 		AT_Task();
-	}*/
+	}
 
 	// RTC first calibration.
 	/*Timestamp main_timestamp;
@@ -356,33 +317,15 @@ int main (void) {
 	}
 	LPUART_PowerOff();*/
 
-	sfx_rc_t rc = RC1;
-	SIGFOX_API_open(&rc);
-	sfx_u8 customer_data[1] = {0x00};
-	sfx_u8 customer_response[8] = {0x00};
-	while (1) {
-		SIGFOX_API_send_frame(customer_data, 1, customer_response, 2, 0);
-		TIM22_WaitMilliseconds(10000);
-	}
 
-	/*while (1) {
-		// Retrieve GPS position and timestamp.
-		GEOLOC_Process(&spsws_ctx.spsws_timestamp_from_geoloc, &spsws_ctx.spsws_timestamp_retrieved_from_geoloc);
-		// Blink LED.
-		GPIOA -> ODR |= (0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-		GPIOA -> ODR &= ~(0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-	}*/
-
-	/*
-	signed char tmp_sht = 0;
+	/*signed char tmp_sht = 0;
 	unsigned char hum_sht = 0;
 	signed char tmp_dps = 0;
 	unsigned int pressure_dps = 0;
 	unsigned char uv_index_si = 0;
 	I2C_PowerOn();
 	SPI_PowerOn();
+	unsigned int i = 0;
 	while (1) {
 		SHT3X_GetTemperature(&tmp_sht);
 		SHT3X_GetHumidity(&hum_sht);
@@ -395,42 +338,6 @@ int main (void) {
 		for (i=0 ; i<50000 ; i++);
 		GPIOA -> ODR &= ~(0b1 << 2);
 		for (i=0 ; i<50000 ; i++);
-	}*/
-
-	/*SPI_PowerOn();
-	// Start CW.
-	SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
-	SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_RFO);
-	SX1232_StartCw(868130000, SX1232_OUTPUT_POWER_RFO_MIN);
-
-	//unsigned int power = 0;
-	unsigned int idx = 0;
-	unsigned int frequency = 868130000;
-	while (1) {
-		for (power=SX1232_OUTPUT_POWER_RFO_MIN ; power<SX1232_OUTPUT_POWER_RFO_MAX ; power++) {
-			SX1232_SetRfOutputPower(power);
-			TIM22_WaitMilliseconds(1000);
-		}
-		for (power=SX1232_OUTPUT_POWER_RFO_MAX ; power>SX1232_OUTPUT_POWER_RFO_MIN ; power--) {
-			SX1232_SetRfOutputPower(power);
-			TIM22_WaitMilliseconds(1000);
-		}
-		for (idx=0 ; idx<5 ; idx++) {
-			frequency += 10000;
-			SX1232_SetRfFrequency(frequency);
-			//SX1232_SetMode(SX1232_MODE_FSTX);
-			//TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
-			//SX1232_SetMode(SX1232_MODE_TX);
-			TIM22_WaitMilliseconds(1000);
-		}
-		for (idx=0 ; idx<5 ; idx++) {
-			frequency -= 10000;
-			SX1232_SetRfFrequency(frequency);
-			//SX1232_SetMode(SX1232_MODE_FSTX);
-			//TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
-			//SX1232_SetMode(SX1232_MODE_TX);
-			TIM22_WaitMilliseconds(1000);
-		}
 	}*/
 
 	/*ULTIMETER_Init();

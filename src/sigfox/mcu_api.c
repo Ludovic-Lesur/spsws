@@ -80,7 +80,7 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
 	// Get MCU internal temperature.
 	int mcu_temperature_degrees;
 	ADC_GetMcuTemperature(&mcu_temperature_degrees);
-	(*temperature) = ((sfx_s16) mcu_temperature_degrees)*10; // Unit = 1/10 of degrees.
+	(*temperature) = ((sfx_s16) mcu_temperature_degrees) * 10; // Unit = 1/10 of degrees.
 	// Switch ADC off.
 	ADC_Off();
 	return SFX_ERR_NONE;
