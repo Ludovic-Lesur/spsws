@@ -2,11 +2,11 @@
  * lptim_reg.h
  *
  *  Created on: 29 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_LPTIM_REG_H
-#define REGISTERS_LPTIM_REG_H
+#ifndef LPTIM_REG_H
+#define LPTIM_REG_H
 
 /*** LPTIM registers ***/
 
@@ -25,4 +25,4 @@ typedef struct {
 
 #define LPTIM1	((LPTIM_BaseAddress*) ((unsigned int) 0x40007C00))
 
-#endif /* REGISTERS_LPTIM_REG_H */
+#endif /* LPTIM_REG_H */

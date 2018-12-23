@@ -2,7 +2,7 @@
  * sht3x.c
  *
  *  Created on: 27 oct. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "sht3x.h"

@@ -2,7 +2,7 @@
  * max5495.c
  *
  *  Created on: 18 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "max5495.h"

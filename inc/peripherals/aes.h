@@ -2,7 +2,7 @@
  * aes.h
  *
  *  Created on: 19 juin 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef AES_H
@@ -18,4 +18,4 @@ void AES_Init(void);
 void AES_EncodeCbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]);
 void AES_Encode(unsigned char* block, unsigned char* key);
 
-#endif /* PERIPHERALS_AES_H_ */
+#endif /* AES_H_ */

@@ -2,19 +2,20 @@
  * lpuart.h
  *
  *  Created on: 28 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_LPUART_H
-#define PERIPHERALS_LPUART_H
+#ifndef LPUART_H
+#define LPUART_H
 
 /*** LPUART functions ***/
 
-void LPUART_Init(void);
-void LPUART_PowerOn(void);
-void LPUART_PowerOff(void);
-void LPUART_StartRx(void);
-void LPUART_StopRx(void);
-void LPUART_SendByte(unsigned char byte_to_send);
+void LPUART1_Init(void);
+void LPUART1_PowerOn(void);
+void LPUART1_PowerOff(void);
+void LPUART1_EnableTx(void);
+void LPUART1_EnableRx(void);
+void LPUART1_Disable(void);
+void LPUART1_SendByte(unsigned char byte_to_send);
 
-#endif /* PERIPHERALS_LPUART_H */
+#endif /* LPUART_H */

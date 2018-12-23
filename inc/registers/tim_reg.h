@@ -2,11 +2,11 @@
  * tim_reg.h
  *
  *  Created on: 3 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_TIM_REG_H
-#define REGISTERS_TIM_REG_H
+#ifndef TIM_REG_H
+#define TIM_REG_H
 
 /*** TIMx registers ***/
 
@@ -43,4 +43,4 @@ typedef struct {
 //#define TIM6	((TIM_BaseAddress*) ((unsigned int) 0x40001000)) // Not present on STM32L031G6xx.
 //#define TIM7	((TIM_BaseAddress*) ((unsigned int) 0x40001400)) // Not present on STM32L031G6xx.
 
-#endif /* REGISTERS_TIM_REG_H */
+#endif /* TIM_REG_H */

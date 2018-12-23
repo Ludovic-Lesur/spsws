@@ -2,7 +2,7 @@
  * spi.c
  *
  *  Created on: 19 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "spi.h"
@@ -19,7 +19,7 @@
  * @param:	None.
  * @return:	None.
  */
-void SPI_Init(void) {
+void SPI1_Init(void) {
 
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
@@ -54,15 +54,37 @@ void SPI_Init(void) {
 	SPI1 -> CR2 = 0;
 	SPI1 -> CR2 |= (0b1 << 2); // Enable output (SSOE='1').
 
-	/* Enable peripheral */
+	/* Disable peripheral by default */
+	RCC -> APB2ENR &= ~(0b1 << 12); // SPI1EN='0'.
+}
+
+/* ENABLE SPI1 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void SPI1_Enable(void) {
+
+	/* Enable SPI1 peripheral */
+	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
 	SPI1 -> CR1 |= (0b1 << 6);
 }
 
-/* SET SPI SCLK POLARITY.
+/* DISABLE SPI1 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void SPI1_Disable(void) {
+
+	/* Disable SPI1 peripheral */
+	SPI1 -> CR1 &= ~(0b1 << 6);
+	RCC -> APB2ENR &= ~(0b1 << 12); // SPI1EN='0'.
+}
+
+/* SET SPI1 SCLK POLARITY.
  * @param polarity:	Clock polarity (0 = SCLK idle high, otherwise SCLK idle low).
  * @return:			None.
  */
-void SPI_SetClockPolarity(unsigned char polarity) {
+void SPI1_SetClockPolarity(unsigned char polarity) {
 	if (polarity == 0) {
 		SPI1 -> CR1 &= ~(0b11 << 0); // CPOL='0' and CPHA='0'.
 	}
@@ -71,11 +93,11 @@ void SPI_SetClockPolarity(unsigned char polarity) {
 	}
 }
 
-/* SWITCH ALL SPI SLAVES ON.
+/* SWITCH ALL SPI1 SLAVES ON.
  * @param:	None.
  * @return:	None.
  */
-void SPI_PowerOn(void) {
+void SPI1_PowerOn(void) {
 
 	/* Switch SX1232 on */
 	GPIO_Write(GPIO_RF_POWER_ENABLE, 1);
@@ -98,11 +120,11 @@ void SPI_PowerOn(void) {
 	GPIO_Configure(GPIO_SPI1_MISO, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
 }
 
-/* SWITCH ALL SPI SLAVES OFF.
+/* SWITCH ALL SPI1 SLAVES OFF.
  * @param:	None.
  * @return:	None.
  */
-void SPI_PowerOff(void) {
+void SPI1_PowerOff(void) {
 
 	/* Disable SPI alternate function */
 	GPIO_Configure(GPIO_SPI1_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
@@ -123,11 +145,11 @@ void SPI_PowerOff(void) {
 #endif
 }
 
-/* SEND A BYTE THROUGH SPI.
+/* SEND A BYTE THROUGH SPI1.
  * @param tx_data:	Data to send (8-bits).
  * @return:			None.
  */
-void SPI_WriteByte(unsigned char tx_data) {
+void SPI1_WriteByte(unsigned char tx_data) {
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
 	// Send data.
@@ -136,11 +158,11 @@ void SPI_WriteByte(unsigned char tx_data) {
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
 }
 
-/* SEND A SHORT THROUGH SPI.
+/* SEND A SHORT THROUGH SPI1.
  * @param tx_data:	Data to send (16-bits).
  * @return:			None.
  */
-void SPI_WriteShort(unsigned short tx_data) {
+void SPI1_WriteShort(unsigned short tx_data) {
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Send data.
@@ -149,11 +171,11 @@ void SPI_WriteShort(unsigned short tx_data) {
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for TXE='1' and BSY='0'.
 }
 
-/* READ A BYTE FROM SPI.
+/* READ A BYTE FROM SPI1.
  * @param rx_data:	Pointer to byte that will contain the data to read (8-bits).
  * @return:			None.
  */
-void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
+void SPI1_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
 	// Dummy read to DR to clear RXNE flag.
@@ -167,11 +189,11 @@ void SPI_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
 	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)); // Wait for RXNE='0' and BSY='0'.
 }
 
-/* READ A SHORT FROM SPI.
+/* READ A SHORT FROM SPI1.
  * @param rx_data:	Pointer to short that will contain the data to read (16-bits).
  * @return:			None.
  */
-void SPI_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
+void SPI1_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Dummy read to DR to clear RXNE flag.

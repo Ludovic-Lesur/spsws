@@ -2,24 +2,13 @@
  * mapping.h
  *
  *  Created on: 16 dec. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef MAPPING_H
 #define MAPPING_H
 
-/*** Hardware revision selection ***/
-
-#define HW1_0
-
-/*** Hardware configuration ***/
-
-#ifdef HW1_0
-// To be defined is EOC pin connected to MCU.
-#define USE_MAX11136_EOC
-// To be defined if SX1232_DIOx pin is connected to MCU.
-#define USE_SX1232_DIOX
-#endif // HW1_0.
+#include "mode.h"
 
 /*** MCU mapping ***/
 
@@ -49,6 +38,7 @@
 #define GPIO_SPI1_MOSI				(GPIO) {GPIOA, 7, 0}
 
 // DIO3 / SX1232_DIOx.
+#define USE_SX1232_DIOX // To be defined if SX1232_DIOx pin is connected to MCU.
 #ifdef USE_SX1232_DIOX
 #define GPIO_SX1232_DIOX			(GPIO) {GPIOA, 8, 0}
 #else
@@ -82,6 +72,7 @@
 #define GPIO_SX1232_DIO0			(GPIO) {GPIOB, 2, 0}
 
 // DIO1 / MAX11136_EOC.
+#define USE_MAX11136_EOC // To be defined is EOC pin connected to MCU.
 #ifdef USE_MAX11136_EOC
 #define GPIO_MAX11136_EOC			(GPIO) {GPIOB, 3, 0}
 #else

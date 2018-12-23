@@ -2,7 +2,7 @@
  * sx1232.c
  *
  *  Created on: 20 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "sx1232.h"
@@ -43,8 +43,8 @@ void SX1232_WriteRegister(unsigned char addr, unsigned char value) {
 		sx1232_spi_command |= (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
 		/* Write access sequence */
 		GPIO_Write(GPIO_SX1232_CS, 0); // Falling edge on CS pin.
-		SPI_WriteByte(sx1232_spi_command);
-		SPI_WriteByte(value);
+		SPI1_WriteByte(sx1232_spi_command);
+		SPI1_WriteByte(value);
 		GPIO_Write(GPIO_SX1232_CS, 1); // Set CS pin.
 	}
 }
@@ -62,8 +62,8 @@ void SX1232_ReadRegister(unsigned char addr, unsigned char* value) {
 		sx1232_spi_command |= addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
 		/* Write access sequence */
 		GPIO_Write(GPIO_SX1232_CS, 0); // Falling edge on CS pin.
-		SPI_WriteByte(sx1232_spi_command);
-		SPI_ReadByte(0xFF, value);
+		SPI1_WriteByte(sx1232_spi_command);
+		SPI1_ReadByte(0xFF, value);
 		GPIO_Write(GPIO_SX1232_CS, 1); // Set CS pin.
 	}
 }
@@ -93,7 +93,7 @@ void SX1232_Init(void) {
 void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Select oscillator */
 	switch (oscillator) {
@@ -120,7 +120,7 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 void SX1232_SetMode(SX1232_Mode mode) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Read OP mode register */
 	unsigned char op_mode_reg_value = 0;
@@ -165,7 +165,7 @@ void SX1232_SetMode(SX1232_Mode mode) {
 void SX1232_SetModulation(SX1232_Modulation modulation) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Read OP mode register */
 	unsigned char op_mode_reg_value = 0;
@@ -195,7 +195,7 @@ void SX1232_SetModulation(SX1232_Modulation modulation) {
 void SX1232_SetRfFrequency(unsigned int rf_frequency_hz) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Program RF frequency */
 	unsigned long long frf_reg_value = (0b1 << 19);
@@ -233,7 +233,7 @@ unsigned int SX1232_GetRfFrequency(void) {
 void SX1232_SetBitRate(SX1232_BitRate bit_rate) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Set BitRate and BitRateFrac registers */
 	switch (bit_rate) {
@@ -256,7 +256,7 @@ void SX1232_SetBitRate(SX1232_BitRate bit_rate) {
 void SX1232_SetDataMode(SX1232_DataMode data_mode) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Read Packet config 2 register */
 	unsigned char packet_config2_reg_value = 0;
@@ -286,7 +286,7 @@ void SX1232_SetDataMode(SX1232_DataMode data_mode) {
 void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Read PA config register */
 	unsigned char pa_config_reg_value = 0;
@@ -317,7 +317,7 @@ void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin) {
 void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm) {
 
 	/* Configure SPI */
-	SPI_SetClockPolarity(0);
+	SPI1_SetClockPolarity(0);
 
 	/* Read PA config register */
 	unsigned char pa_config_reg_value = 0;

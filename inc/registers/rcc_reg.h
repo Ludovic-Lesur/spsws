@@ -2,11 +2,11 @@
  * rcc_reg.h
  *
  *  Created on: 26 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_RCC_REG_H
-#define REGISTERS_RCC_REG_H
+#ifndef RCC_REG_H
+#define RCC_REG_H
 
 /*** RCC registers ***/
 
@@ -38,4 +38,4 @@ typedef struct {
 
 #define RCC		((RCC_BaseAddress*) ((unsigned int) 0x40021000))
 
-#endif /* REGISTERS_RCC_REG_H */
+#endif /* RCC_REG_H */

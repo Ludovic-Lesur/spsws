@@ -2,7 +2,7 @@
  * si1133.c
  *
  *  Created on: 28 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "si1133.h"

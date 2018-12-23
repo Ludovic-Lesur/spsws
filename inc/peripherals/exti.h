@@ -2,14 +2,14 @@
  * exti.h
  *
  *  Created on: 18 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_EXTI_H_
-#define PERIPHERALS_EXTI_H_
+#ifndef EXTI_H
+#define EXTI_H
 
 /*** EXTI functions ***/
 
 void EXTI_Init(void);
 
-#endif /* PERIPHERALS_EXTI_H_ */
+#endif /* EXTI_H_ */

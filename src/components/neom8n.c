@@ -2,7 +2,7 @@
  * neom8n.c
  *
  *  Created on: 11 aug 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "neom8n.h"
@@ -505,8 +505,9 @@ void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
 		}
 		// Bytes 14-15 = NEOM8N checksum (CK_A and CK_B).
 		NEOM8N_ComputeUbxChecksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
+		LPUART1_EnableTx();
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
-			LPUART_SendByte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
+			LPUART1_SendByte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 		}
 		TIM22_WaitMilliseconds(100);
 	}
@@ -539,14 +540,19 @@ void NEOM8N_Init(void) {
  */
 NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char timeout_seconds) {
 	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
+	// Reset flags.
+	neom8n_ctx.nmea_zda_data_valid = 0;
+	neom8n_ctx.nmea_zda_parsing_success = 0;
 	// Select ZDA message to get complete timestamp.
 	NEOM8N_SelectNmeaMessages(NMEA_ZDA_MASK);
 	// Start DMA.
-	DMA_Stop();
-	DMA_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	DMA1_Enable();
+	DMA1_Stop();
+	DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	neom8n_ctx.nmea_rx_lf_flag = 0;
 	neom8n_ctx.nmea_rx_fill_buf1 = 1;
-	DMA_Start();
-	LPUART_StartRx();
+	DMA1_Start();
+	LPUART1_EnableRx();
 	// Save fix start time.
 	unsigned int fix_start_time = TIM22_GetSeconds();
 	// Loop until data is retrieved or timeout expired.
@@ -575,9 +581,10 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 		}
 	}
-	// Stop DMA.
-	LPUART_StopRx();
-	DMA_Stop();
+	// Stop LPUART and DMA.
+	DMA1_Stop();
+	DMA1_Disable();
+	LPUART1_Disable();
 	// Reset GPS timestamp data in case of failure.
 	if (return_code != NEOM8N_SUCCESS) {
 		(*gps_timestamp).date = 0;
@@ -614,14 +621,19 @@ unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp) {
  */
 NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds) {
 	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
+	// Reset flags.
+	neom8n_ctx.nmea_gga_data_valid = 0;
+	neom8n_ctx.nmea_gga_parsing_success = 0;
 	// Select GGA message to get complete position.
 	NEOM8N_SelectNmeaMessages(NMEA_GGA_MASK);
 	// Start DMA.
-	DMA_Stop();
-	DMA_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	DMA1_Enable();
+	DMA1_Stop();
+	DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	neom8n_ctx.nmea_rx_fill_buf1 = 1;
-	DMA_Start();
-	LPUART_StartRx();
+	neom8n_ctx.nmea_rx_lf_flag = 0;
+	DMA1_Start();
+	LPUART1_EnableRx();
 	// Save fix start time.
 	unsigned int fix_start_time = TIM22_GetSeconds();
 	// Loop until data is retrieved or timeout expired.
@@ -651,8 +663,9 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 		}
 	}
 	// Stop DMA.
-	LPUART_StopRx();
-	DMA_Stop();
+	DMA1_Stop();
+	DMA1_Disable();
+	LPUART1_Disable();
 	// Reset GPS timestamp data in case of failure.
 	if (return_code != NEOM8N_SUCCESS) {
 		(*gps_position).lat_degrees = 0;
@@ -675,20 +688,20 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 void NEOM8N_SwitchDmaBuffer(void) {
 
 	/* Stop and start DMA transfer to switch buffer */
-	DMA_Stop();
+	DMA1_Stop();
 
 	/* Switch buffer */
 	if (neom8n_ctx.nmea_rx_fill_buf1 == 1) {
-		DMA_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
+		DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
 		neom8n_ctx.nmea_rx_fill_buf1 = 0;
 	}
 	else {
-		DMA_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
+		DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
 		neom8n_ctx.nmea_rx_fill_buf1 = 1;
 	}
 
 	/* Restart DMA transfer */
-	DMA_Start();
+	DMA1_Start();
 
 	/* Set LF flag to start decoding current buffer */
 	neom8n_ctx.nmea_rx_lf_flag = 1;

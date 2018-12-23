@@ -2,7 +2,7 @@
  * geoloc.c
  *
  *  Created on: 29 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "geoloc.h"
@@ -91,7 +91,7 @@ void GEOLOC_Init(void) {
 
 	/* Init GPS module */
 	NEOM8N_Init();
-	LPUART_PowerOn();
+	LPUART1_PowerOn();
 }
 
 /* BUILD SIGFOX DATA STARTING FROM GPS POSITION AND STATUS.
@@ -224,7 +224,7 @@ void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved
 		/* Switch GPS module off */
 		case GEOLOC_STATE_OFF:
 			// Stop LPUART, DMA and GPS.
-			LPUART_PowerOff();
+			LPUART1_PowerOff();
 			// Send Sigfox frame to report position.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_SIGFOX;
 			break;

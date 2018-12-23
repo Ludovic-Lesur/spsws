@@ -2,7 +2,7 @@
  * sx1232.h
  *
  *  Created on: 20 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef SX1232_H

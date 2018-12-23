@@ -2,7 +2,7 @@
  * dps310.c
  *
  *  Created on: 27 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "dps310.h"
@@ -12,7 +12,7 @@
 
 /*** DPS310 local macros ***/
 
-#define DPS310_I2C_ADDRESS	0x77
+#define DPS310_I2C1_ADDRESS	0x77
 
 /*** DPS310 local structures ***/
 
@@ -48,7 +48,7 @@ static DPS310_Context dps310_ctx;
  */
 void DPS310_WriteRegister(unsigned char addr, unsigned char value) {
 	unsigned char register_write_command[2] = {addr, value};
-	I2C_Write(DPS310_I2C_ADDRESS, register_write_command, 2);
+	I2C1_Write(DPS310_I2C1_ADDRESS, register_write_command, 2);
 }
 
 /* READ A REGISTER OF DPS310.
@@ -58,8 +58,8 @@ void DPS310_WriteRegister(unsigned char addr, unsigned char value) {
  */
 void DPS310_ReadRegister(unsigned char addr, unsigned char* value) {
 	unsigned char local_addr = addr;
-	I2C_Write(DPS310_I2C_ADDRESS, &local_addr, 1);
-	I2C_Read(DPS310_I2C_ADDRESS, value, 1);
+	I2C1_Write(DPS310_I2C1_ADDRESS, &local_addr, 1);
+	I2C1_Read(DPS310_I2C1_ADDRESS, value, 1);
 }
 
 /* COMPUTE THE TWO'S COMPLEMENT OF A GIVEN VALUE.

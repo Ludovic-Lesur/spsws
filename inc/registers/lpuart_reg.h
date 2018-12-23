@@ -2,11 +2,11 @@
  * lpuart_reg.h
  *
  *  Created on: 28 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_LPUART_REG_H
-#define REGISTERS_LPUART_REG_H
+#ifndef LPUART_REG_H
+#define LPUART_REG_H
 
 /*** LPUART registers ***/
 
@@ -27,4 +27,4 @@ typedef struct {
 
 #define LPUART1	((LPUART_BaseAddress*) ((unsigned int) 0x40004800))
 
-#endif /* REGISTERS_LPUART_REG_H */
+#endif /* LPUART_REG_H */

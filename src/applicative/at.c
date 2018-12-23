@@ -2,11 +2,12 @@
  * at.c
  *
  *  Created on: 9 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "at.h"
 
+#include "adc.h"
 #include "aes.h"
 #include "dps310.h"
 #include "i2c.h"
@@ -20,6 +21,7 @@
 #include "spi.h"
 #include "sx1232.h"
 #include "usart.h"
+#include "wind.h"
 
 /*** AT local macros ***/
 
@@ -48,6 +50,7 @@
 // Input commands with parameters (headers).
 #define AT_IN_HEADER_GPS								"AT$GPS=" 		// AT$GPS=<timeout_seconds><CR>.
 #define AT_IN_HEADER_TIME								"AT$TIME="		// AT$TIME=<timeout_seconds><CR>.
+#define AT_IN_HEADER_WIND								"AT$WIND="		// AT$WIND=<enable><CR>.
 #define AT_IN_HEADER_CW									"AT$CW="		// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
 #define AT_IN_HEADER_ID									"AT$ID="		// AT$ID=<id><CR>.
 #define AT_IN_HEADER_KEY								"AT$KEY="		// AT$KEY=<key><CR>.
@@ -82,8 +85,8 @@
 #define AT_OUT_ERROR_RF_OUTPUT_POWER_OVERFLOW			0x83			// RF output power is too high.
 
 // Components errors
-#define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x86		// Invalid data retrieved by GPS.
-#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87		// GPS timeout.
+#define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x86			// Invalid data retrieved by GPS.
+#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
 
 /*** AT local structures ***/
 
@@ -452,8 +455,8 @@ unsigned short AT_GetByteArray(unsigned char last_param, unsigned char* byte_arr
  * @return:	None.
  */
 void AT_ReplyOk(void) {
-	USART_SendString(AT_OUT_COMMAND_OK);
-	USART_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	USART2_SendString(AT_OUT_COMMAND_OK);
+	USART2_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
 }
 
 /* PRINT AN ERROR THROUGH AT INTERFACE.
@@ -463,16 +466,16 @@ void AT_ReplyOk(void) {
 void AT_ReplyError(AT_ErrorSource error_source, unsigned short error_code) {
 	switch (error_source) {
 	case AT_ERROR_SOURCE_AT:
-		USART_SendString(AT_OUT_HEADER_AT_ERROR);
+		USART2_SendString(AT_OUT_HEADER_AT_ERROR);
 		break;
 	case AT_ERROR_SOURCE_SFX:
-		USART_SendString(AT_OUT_HEADER_SFX_ERROR);
+		USART2_SendString(AT_OUT_HEADER_SFX_ERROR);
 		break;
 	default:
 		break;
 	}
-	USART_SendValue(error_code, USART_FORMAT_HEXADECIMAL, 1);
-	USART_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	USART2_SendValue(error_code, USART_FORMAT_HEXADECIMAL, 1);
+	USART2_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
 }
 
 /* PRINT ADC RESULTS.
@@ -486,37 +489,37 @@ void AT_PrintAdcResults(void) {
 	unsigned int vcc_mv= (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / (result_12bits);
 	// AIN0.
 	MAX11136_GetChannelVoltage12bits(0, &result_12bits);
-	USART_SendString("AIN0=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("AIN0=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
 	// AIN1.
 	MAX11136_GetChannelVoltage12bits(1, &result_12bits);
-	USART_SendString("mV AIN1=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV AIN1=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
 	// AIN2.
 	MAX11136_GetChannelVoltage12bits(2, &result_12bits);
-	USART_SendString("mV AIN2=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV AIN2=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
 	// AIN3.
 	MAX11136_GetChannelVoltage12bits(3, &result_12bits);
-	USART_SendString("mV AIN3=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
-	// AIN4.
+	USART2_SendString("mV AIN3=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	// AIN4 (resistor divider with 6.8M and 1M -> Vin = 7.8 * Vout).
 	MAX11136_GetChannelVoltage12bits(4, &result_12bits);
-	USART_SendString("mV AIN4=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV AIN4=");
+	USART2_SendValue(((result_12bits * vcc_mv * 7800) / (MAX11136_FULL_SCALE * 100)), USART_FORMAT_DECIMAL, 0);
 	// AIN5.
 	MAX11136_GetChannelVoltage12bits(5, &result_12bits);
-	USART_SendString("mV AIN5=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV AIN5=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
 	// AIN6.
 	MAX11136_GetChannelVoltage12bits(6, &result_12bits);
-	USART_SendString("mV AIN6=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV AIN6=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
 	// AIN7.
 	MAX11136_GetChannelVoltage12bits(7, &result_12bits);
-	USART_SendString("mV AIN7=");
-	USART_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("mV\n");
+	USART2_SendString("mV AIN7=");
+	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("mV\n");
 }
 
 /* PRINT A TIMESTAMP ON USART.
@@ -525,38 +528,38 @@ void AT_PrintAdcResults(void) {
  */
 void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 	// Year.
-	USART_SendValue((timestamp_to_print -> year), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("-");
+	USART2_SendValue((timestamp_to_print -> year), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("-");
 	// Month.
 	if ((timestamp_to_print -> month) < 10) {
-		USART_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART_SendValue((timestamp_to_print -> month), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("-");
+	USART2_SendValue((timestamp_to_print -> month), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("-");
 	// Day.
 	if ((timestamp_to_print -> date) < 10) {
-		USART_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART_SendValue((timestamp_to_print -> date), USART_FORMAT_DECIMAL, 0);
-	USART_SendString(" ");
+	USART2_SendValue((timestamp_to_print -> date), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString(" ");
 	// Hours.
 	if ((timestamp_to_print -> hours) < 10) {
-		USART_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART_SendValue((timestamp_to_print -> hours), USART_FORMAT_DECIMAL, 0);
-	USART_SendString(":");
+	USART2_SendValue((timestamp_to_print -> hours), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString(":");
 	// Minutes.
 	if ((timestamp_to_print -> minutes) < 10) {
-		USART_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART_SendValue((timestamp_to_print -> minutes), USART_FORMAT_DECIMAL, 0);
-	USART_SendString(":");
+	USART2_SendValue((timestamp_to_print -> minutes), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString(":");
 	// Seconds.
 	if ((timestamp_to_print -> seconds) < 10) {
-		USART_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART_SendValue((timestamp_to_print -> seconds), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("\n");
+	USART2_SendValue((timestamp_to_print -> seconds), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("\n");
 }
 
 /* PRINT GPS POSITION ON USART.
@@ -566,27 +569,27 @@ void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 void AT_PrintPosition(Position* gps_position) {
 	// Header.
 	// Latitude.
-	USART_SendString("Lat=");
-	USART_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("°");
-	USART_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("'");
-	USART_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("''-");
-	USART_SendString(((gps_position -> lat_north)==1)? "N" : "S");
+	USART2_SendString("Lat=");
+	USART2_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("°");
+	USART2_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("'");
+	USART2_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("''-");
+	USART2_SendString(((gps_position -> lat_north)==1)? "N" : "S");
 	// Longitude.
-	USART_SendString(" Long=");
-	USART_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("°");
-	USART_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("'");
-	USART_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("''-");
-	USART_SendString(((gps_position -> long_east)==1)? "E" : "W");
+	USART2_SendString(" Long=");
+	USART2_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("°");
+	USART2_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("'");
+	USART2_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("''-");
+	USART2_SendString(((gps_position -> long_east)==1)? "E" : "W");
 	// Altitude.
-	USART_SendString(" Alt=");
-	USART_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
-	USART_SendString("m\n");
+	USART2_SendString(" Alt=");
+	USART2_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
+	USART2_SendString("m\n");
 }
 
 /* PARSE THE CURRENT AT COMMAND BUFFER.
@@ -617,16 +620,6 @@ void AT_DecodeRxBuffer(void) {
 			AT_ReplyOk();
 		}
 
-		/* ADC command AT$ADC<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
-			// Trigger ADC convertion.
-			SPI_PowerOn();
-			MAX11136_ConvertAllChannels();
-			SPI_PowerOff();
-			// Print results.
-			AT_PrintAdcResults();
-		}
-
 		/* GPS command AT$GPS=<timeout_seconds><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
 			unsigned int timeout_seconds = 0;
@@ -635,10 +628,9 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start GPS fix.
 				Position gps_position;
-				LPUART_PowerOn();
-				//NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
-				NEOM8N_ReturnCode get_position_result = NEOM8N_TIMEOUT;
-				LPUART_PowerOff();
+				LPUART1_PowerOn();
+				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+				LPUART1_PowerOff();
 				switch (get_position_result) {
 				case NEOM8N_SUCCESS:
 					AT_PrintPosition(&gps_position);
@@ -667,10 +659,9 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start GPS fix.
 				Timestamp gps_timestamp;
-				LPUART_PowerOn();
-				//NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
-				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_TIMEOUT;
-				LPUART_PowerOff();
+				LPUART1_PowerOn();
+				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+				LPUART1_PowerOff();
 				switch (get_timestamp_result) {
 				case NEOM8N_SUCCESS:
 					AT_PrintTimestamp(&gps_timestamp);
@@ -691,74 +682,66 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
-		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
-			unsigned int frequency_hz = 0;
-			// Search frequency parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &frequency_hz);
+		/* WIND measurements command AT$WIND=<enable><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
+			unsigned int enable = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
 			if (get_param_result == AT_NO_ERROR) {
-				unsigned char enable = 0;
-				// First try with 3 parameters.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &frequency_hz);
-				if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
-					// Power is not given, try to parse enable as last parameter.
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &frequency_hz);
-					if (get_param_result == AT_NO_ERROR) {
-						// CW with default output power.
-						if (enable == 0) {
-							SX1232_StopCw();
-							SPI_PowerOff();
-						}
-						else {
-							SPI_PowerOn();
-							SX1232_StartCw(frequency_hz, AT_CW_DEFAULT_OUTPUT_POWER_DBM);
-						}
-					}
-					else {
-						// Error in enable parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-					}
-				}
-				else if (get_param_result == AT_NO_ERROR) {
-					// There is a third parameter, try to parse power.
-					unsigned int output_power_dbm = 0;
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &output_power_dbm);
-					if (get_param_result == AT_NO_ERROR) {
-						// CW with given output power.
-						if (enable == 0) {
-							SX1232_StopCw();
-							SPI_PowerOff();
-						}
-						else {
-							SPI_PowerOn();
-							SX1232_StartCw(frequency_hz, output_power_dbm);
-						}
-					}
-					else {
-						// Error in power parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-					}
+				// Start or stop wind continuous measurements.
+				if (enable == 0) {
+					WIND_StopContinuousMeasure();
 				}
 				else {
-					// Error in enable parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					WIND_StartContinuousMeasure();
 				}
+				AT_ReplyOk();
 			}
 			else {
-				// Error in frequency parameter.
+				// Error in enable parameter.
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
 
+		/* ADC command AT$ADC<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
+			// Trigger external ADC convertions.
+			SPI1_PowerOn();
+			MAX11136_ConvertAllChannels();
+			SPI1_PowerOff();
+			// Print results.
+			AT_PrintAdcResults();
+		}
+
+		/* MCU command AT$MCU<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
+			unsigned int mcu_supply_voltage_mv;
+			int mcu_temperature_degrees;
+			// Trigger internal ADC convertions.
+			ADC1_Enable();
+			ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
+			ADC1_Disable();
+			// Print results.
+			USART2_SendString("Vcc=");
+			USART2_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("mV T=");
+			USART2_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("°C\n");
+		}
+
 		/* Get ID command AT$ID?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ID) == AT_NO_ERROR) {
+			// Enable NVM interface.
+			NVM_Enable();
 			// Retrieve device ID in NVM.
 			unsigned char id_byte = 0;
 			for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
 				NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), &id_byte);
-				USART_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+				USART2_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
 			}
-			USART_SendString("\n");
+			USART2_SendString("\n");
+			// Disable NVM interface.
+			NVM_Disable();
 		}
 
 		/* Set ID command AT$ID=<id><CR> */
@@ -768,11 +751,15 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Check length.
 				if (extracted_length == ID_LENGTH) {
+					// Enable NVM interface.
+					NVM_Enable();
 					// Write device ID in NVM.
 					for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
 						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), param_id[byte_idx]);
 					}
 					AT_ReplyOk();
+					// Disable NVM interface.
+					NVM_Disable();
 				}
 				else {
 					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
@@ -786,14 +773,18 @@ void AT_DecodeRxBuffer(void) {
 
 		/* Get key command AT$KEY?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_KEY) == AT_NO_ERROR) {
+			// Enable NVM interface.
+			NVM_Enable();
 			// Retrieve device key in NVM.
 			unsigned char id_byte = 0;
 			unsigned char byte_idx = 0;
 			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
 				NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), &id_byte);
-				USART_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+				USART2_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
 			}
-			USART_SendString("\n");
+			USART2_SendString("\n");
+			// Disable NVM interface.
+			NVM_Disable();
 		}
 
 		/* Set key command AT$KEY=<id><CR> */
@@ -803,11 +794,15 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Check length.
 				if (extracted_length == AES_BLOCK_SIZE) {
+					// Enable NVM interface.
+					NVM_Enable();
 					// Write device ID in NVM.
 					for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
 						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
 					}
 					AT_ReplyOk();
+					// Disable NVM interface.
+					NVM_Disable();
 				}
 				else {
 					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
@@ -823,7 +818,8 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
 			// Send Sigfox empty frame.
 			SIGFOX_API_open(&rc1);
-			sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+			//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+			sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -845,7 +841,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox frame with specified downlink request.
 					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
+					//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
+					sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -866,7 +863,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox frame with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+					//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+					sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -883,7 +881,7 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-		/* Sigfox send bit command */
+		/* Sigfox send bit command AT$SB=<bit>,<downlink_request><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_SB) == AT_NO_ERROR) {
 			unsigned int data_bit = 0;
 			// First try with 2 parameters.
@@ -895,7 +893,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with specified downlink request.
 					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+					//sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+					sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -916,7 +915,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+					//sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+					sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -933,10 +933,12 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
+		/* Sigfox send OOB command AT$OOB<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
 			// Send Sigfox OOB frame.
 			SIGFOX_API_open(&rc1);
-			sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+			//sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+			sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -944,6 +946,68 @@ void AT_DecodeRxBuffer(void) {
 			else {
 				// Error from Sigfox library.
 				AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+			}
+		}
+		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
+			unsigned int frequency_hz = 0;
+			// Search frequency parameter.
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &frequency_hz);
+			if (get_param_result == AT_NO_ERROR) {
+				unsigned int enable = 0;
+				// First try with 3 parameters.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &enable);
+				if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
+					// Power is not given, try to parse enable as last parameter.
+					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
+					if (get_param_result == AT_NO_ERROR) {
+						// CW with default output power.
+						if (enable == 0) {
+							SX1232_StopCw();
+							SPI1_Disable();
+							SPI1_PowerOff();
+						}
+						else {
+							SPI1_PowerOn();
+							SPI1_Enable();
+							SX1232_StartCw(frequency_hz, AT_CW_DEFAULT_OUTPUT_POWER_DBM);
+						}
+					}
+					else {
+						// Error in enable parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					}
+				}
+				else if (get_param_result == AT_NO_ERROR) {
+					// There is a third parameter, try to parse power.
+					unsigned int output_power_dbm = 0;
+					get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &output_power_dbm);
+					if (get_param_result == AT_NO_ERROR) {
+						// CW with given output power.
+						if (enable == 0) {
+							SX1232_StopCw();
+							SPI1_Disable();
+							SPI1_PowerOff();
+						}
+						else {
+							SPI1_PowerOn();
+							SPI1_Enable();
+							SX1232_StartCw(frequency_hz, output_power_dbm);
+						}
+					}
+					else {
+						// Error in power parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					}
+				}
+				else {
+					// Error in enable parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				}
+			}
+			else {
+				// Error in frequency parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
 

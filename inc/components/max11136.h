@@ -2,7 +2,7 @@
  * max11136.h
  *
  *  Created on: 17 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef MAX11136_H

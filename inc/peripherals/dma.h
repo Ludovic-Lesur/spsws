@@ -2,18 +2,20 @@
  * dma.h
  *
  *  Created on: 8 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_DMA_H
-#define PERIPHERALS_DMA_H
+#ifndef DMA_H
+#define DMA_H
 
 /*** DMA functions ***/
 
-void DMA_Init(void);
-void DMA_Off(void);
-void DMA_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size);
-void DMA_Start(void);
-void DMA_Stop(void);
+void DMA1_Init(void);
+void DMA1_Enable(void);
+void DMA1_Disable(void);
+void DMA1_Start(void);
+void DMA1_Stop(void);
+void DMA1_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size);
 
-#endif /* PERIPHERALS_DMA_H */
+
+#endif /* DMA_H */

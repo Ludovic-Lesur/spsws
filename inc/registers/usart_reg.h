@@ -2,11 +2,11 @@
  * usart_reg.h
  *
  *  Created on: 11 aug 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_USART_REG_H_
-#define REGISTERS_USART_REG_H_
+#ifndef USART_REG_H_
+#define USART_REG_H_
 
 /*** USART registers ***/
 
@@ -28,4 +28,4 @@ typedef struct {
 
 #define USART2	((USART_BaseAddress*) ((unsigned int) 0x40004400))
 
-#endif /* REGISTERS_USART_REG_H_ */
+#endif /* USART_REG_H_ */

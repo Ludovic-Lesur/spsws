@@ -2,7 +2,7 @@
  * at.h
  *
  *  Created on: 9 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef AT_H

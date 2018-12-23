@@ -2,58 +2,18 @@
  * tim.c
  *
  *  Created on: 4 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "tim.h"
 
+#include "mode.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "tim_reg.h"
-#include "ultimeter.h"
 #include "usart.h"
-
-/*** TIM local global variables ***/
-
-volatile unsigned char ultimeter_seconds_count = 0;
-
-/*** TIM local functions ***/
-
-/* TIM21 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void TIM21_IRQHandler(void) {
-
-	/* Clear flag */
-	TIM21 -> SR &= ~(0b1 << 0); // UIF='0'.
-
-	/* Update counter */
-	ultimeter_seconds_count++;
-
-	/* Store wind measurements if period reached */
-	if (ultimeter_seconds_count == ULTIMETER_MEASUREMENT_PERIOD_SECONDS) {
-		// Store data.
-		ULTIMETER_StoreMeasurements();
-		// Print data.
-		unsigned char mean_speed = 0;
-		unsigned char peak_speed = 0;
-		unsigned char mean_direction = 0;
-		ULTIMETER_GetAverageWindSpeed(&mean_speed);
-		ULTIMETER_GetPeakWindSpeed(&peak_speed);
-		ULTIMETER_GetAverageWindDirection(&mean_direction);
-		USART_SendString("mean_speed=");
-		USART_SendValue(mean_speed, USART_FORMAT_DECIMAL, 0);
-		USART_SendString("km/h peak_speed=");
-		USART_SendValue(peak_speed, USART_FORMAT_DECIMAL, 0);
-		USART_SendString("km/h mean_direction=");
-		USART_SendValue(mean_direction, USART_FORMAT_DECIMAL, 0);
-		USART_SendString("\n");
-		// Reset counter.
-		ultimeter_seconds_count = 0;
-	}
-}
+#include "wind.h"
 
 /*** TIM functions ***/
 
@@ -84,8 +44,32 @@ void TIM21_Init(void) {
 	/* Generate event to update registers */
 	TIM21 -> EGR |= (0b1 << 0); // UG='1'.
 
-	/* Start timer */
+	/* Disable peripheral by default */
+	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
+	NVIC_DisableInterrupt(IT_TIM21);
+}
+
+/* ENABLE TIM21 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM21_Enable(void) {
+
+	/* Enable TIM21 peripheral */
+	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
 	TIM21 -> CR1 |= (0b1 << 0); // Enable TIM21 (CEN='1').
+}
+
+/* DISABLE TIM21 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM21_Disable(void) {
+
+	/* Disable TIM21 peripheral */
+	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
+	NVIC_DisableInterrupt(IT_TIM21);
 }
 
 /* CONFIGURE TIM22 TO COUNT SECONDS SINCE START-UP.
@@ -108,8 +92,31 @@ void TIM22_Init(void) {
 	/* Generate event to update registers */
 	TIM22 -> EGR |= (0b1 << 0); // UG='1'.
 
-	/* Start timers */
+	/* Disable peripheral by default */
+	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='1'.
+}
+
+/* ENABLE TIM22 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM22_Enable(void) {
+
+	/* Enable TIM22 peripheral */
+	RCC -> APB2ENR |= (0b1 << 5); // TIM22EN='1'.
 	TIM22 -> CR1 |= (0b1 << 0); // Enable TIM22 (CEN='1').
+}
+
+/* DISABLE TIM22 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM22_Disable(void) {
+
+	/* Disable TIM22 peripheral */
+	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='0'.
+
 }
 
 /* RETURNS THE NUMBER OF SECONDS ELLAPSED SINCE START-UP.
@@ -137,7 +144,7 @@ void TIM22_WaitMilliseconds(unsigned int ms_to_wait) {
 	while (TIM22_GetMilliseconds() < (start_ms + ms_to_wait));
 }
 
-/* CONFIGURE TIM2 FOR ULTIMETER PHASE SHIFT MEASURE OR SIGFOX BPSK MODULATION.
+/* CONFIGURE TIM2 FOR WIND PHASE SHIFT MEASURE OR SIGFOX BPSK MODULATION.
  * @param mode:		Timer mode (see Timer2_Mode enumeration in tim.h).
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
  * @return:			None.
@@ -158,12 +165,12 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 
 	switch (mode) {
 
-	case TIM2_MODE_ULTIMETER:
-		/* Configure TIM2 to overflow every (ULTIMETER_MEASUREMENT_PERIOD_SECONDS+1) seconds */
+	case TIM2_MODE_WIND:
+		/* Configure TIM2 to overflow every (WIND_MEASUREMENT_PERIOD_SECONDS+1) seconds */
 		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).
 		TIM2 -> ARR = arr_value;
 		// PSC = (desired_period * timer_input_clock) / (ARR).
-		psc_value = ((ULTIMETER_MEASUREMENT_PERIOD_SECONDS + 1) * (SYSCLK_KHZ*1000)) / (arr_value);
+		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (SYSCLK_KHZ*1000)) / (arr_value);
 		if (psc_value > 0xFFFF) {
 			psc_value = 0xFFFF;
 		}
@@ -186,30 +193,57 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 		TIM21 -> EGR |= (0b1 << 0); // UG='1'.
 		// Enable update and CCRx interrupts.
 		TIM2 -> DIER |= (0b11111 << 0);
-		NVIC_EnableInterrupt(IT_TIM2);
 		break;
 
 	default:
 		break;
 	}
+
+	/* Disable peripheral by default */
+	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
+	NVIC_DisableInterrupt(IT_TIM2);
 }
 
-/* START TIM2.
+/* ENABLE TIM2 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM2_Enable(void) {
+
+	/* Enable TIM2 peripheral */
+	NVIC_EnableInterrupt(IT_TIM2);
+	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
+}
+
+/* DISABLE TIM2 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM2_Disable(void) {
+
+	/* Disable TIM2 peripheral */
+	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
+	NVIC_DisableInterrupt(IT_TIM2);
+}
+
+/* START TIMER2.
  * @param:	None.
  * @return:	None.
  */
 void TIM2_Start(void) {
-	// Reset counter value and Enable TIM2.
+
+	/* Reset and start counter */
 	TIM2 -> CNT = 0;
 	TIM2 -> CR1 |= (0b1 << 0); // CEN='1'.
 }
 
-/* STOP AND RESET TIM2.
+/* STOP TIMER2.
  * @param:	None.
  * @return:	None.
  */
 void TIM2_Stop(void) {
-	// Disable TIM2.
+
+	/* Stop counter */
 	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 }
 

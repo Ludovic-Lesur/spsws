@@ -2,11 +2,12 @@
  * rf_api.c
  *
  *  Created on: 18 juin 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "rf_api.h"
 
+#include "mode.h"
 #include "nvic.h"
 #include "sigfox_api.h"
 #include "sigfox_types.h"
@@ -209,7 +210,8 @@ void RF_API_SetRxPath(void) {
 sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 
 	/* Switch RF on and init transceiver */
-	SPI_PowerOn();
+	SPI1_Enable();
+	SPI1_PowerOn();
 	SX1232_Init();
 
 	/* Configure transceiver */
@@ -246,7 +248,8 @@ sfx_u8 RF_API_stop(void) {
 
 	/* Power transceiver down */
 	SX1232_SetMode(SX1232_MODE_STANDBY);
-	SPI_PowerOff();
+	SPI1_PowerOff();
+	SPI1_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -317,10 +320,8 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR3_IDX] = dbpsk_timings[2] + frequency_shift_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.ramp_duration_us;
 	TIM2_Init(TIM2_MODE_SIGFOX, dbpsk_timings);
+	TIM2_Enable();
 	rf_api_ctx.tim2_event_mask = 0;
-
-	// DEBUG
-	unsigned char sfx_frame[50] = {0x00};
 
 	/* Start CW */
 	SX1232_StartCw(rf_api_ctx.uplink_frequency_hz, rf_api_ctx.output_power_min);
@@ -339,7 +340,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Byte loop.
 	for (stream_byte_idx=0 ; stream_byte_idx<size ; stream_byte_idx++) {
 		// Bit loop.
-		sfx_frame[stream_byte_idx] = stream[stream_byte_idx];
 		for (stream_bit_idx=0 ; stream_bit_idx<8 ; stream_bit_idx++) {
 			// Clear ARR flag.
 			rf_api_ctx.tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
@@ -383,6 +383,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 
 	/* Stop CW */
 	TIM2_Stop();
+	TIM2_Disable();
 	SX1232_StopCw();
 
 	/* Re-enable all interrupts */
@@ -396,11 +397,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 #ifdef ATM
 	NVIC_EnableInterrupt(IT_USART2);
 #endif
-
-	if (sfx_frame[0] == 0) {
-		NVIC_EnableInterrupt(IT_USART2);
-	}
-
 	return SFX_ERR_NONE;
 }
 

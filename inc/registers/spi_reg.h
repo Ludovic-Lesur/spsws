@@ -2,11 +2,11 @@
  * spi_reg.h
  *
  *  Created on: 19 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_SPI_REG_H_
-#define REGISTERS_SPI_REG_H_
+#ifndef SPI_REG_H_
+#define SPI_REG_H_
 
 /*** SPI registers ***/
 
@@ -27,4 +27,4 @@ typedef struct {
 #define SPI1	((SPI_BaseAddress*) ((unsigned int) 0x40013000))
 //#define SPI2	((SPI_BaseAddress*) ((unsigned int) 0x40003800))
 
-#endif /* REGISTERS_SPI_REG_H_ */
+#endif /* SPI_REG_H_ */

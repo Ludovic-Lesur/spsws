@@ -2,11 +2,11 @@
  * nvm_reg.h
  *
  *  Created on: 19 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_NVM_REG_H_
-#define REGISTERS_NVM_REG_H_
+#ifndef NVM_REG_H_
+#define NVM_REG_H_
 
 /*** NVM interface registers ***/
 
@@ -34,4 +34,4 @@ typedef struct {
 #define EEPROM_START_ADDRESS	(unsigned int) 0x08080000
 #define EEPROM_SIZE				1024 // In bytes.
 
-#endif /* REGISTERS_NVM_REG_H_ */
+#endif /* NVM_REG_H_ */

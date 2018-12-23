@@ -2,7 +2,7 @@
  * pwr.c
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "pwr.h"

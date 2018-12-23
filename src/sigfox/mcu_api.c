@@ -2,7 +2,7 @@
  * mcu_api.c
  *
  *  Created on: 18 juin 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "mcu_api.h"
@@ -71,18 +71,18 @@ sfx_u8 MCU_API_free(sfx_u8* ptr) {
  *******************************************************************/
 sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature) {
 	// Init ADC for measuring device voltage and temperature.
-	ADC_Init();
+	ADC1_Enable();
 	// Get actual supply voltage.
 	unsigned int mcu_supply_voltage_mv;
-	ADC_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+	ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
 	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
 	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.
 	int mcu_temperature_degrees;
-	ADC_GetMcuTemperature(&mcu_temperature_degrees);
+	ADC1_GetMcuTemperature(&mcu_temperature_degrees);
 	(*temperature) = ((sfx_s16) mcu_temperature_degrees) * 10; // Unit = 1/10 of degrees.
 	// Switch ADC off.
-	ADC_Off();
+	ADC1_Disable();
 	return SFX_ERR_NONE;
 }
 
@@ -213,6 +213,8 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// |  PN  |  SEQ  |  FH  |  RL  |
 	// |______|_______|______|______|
 
+	// Enable NVM interface.
+	NVM_Enable();
 	// PN.
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN+1]));
@@ -224,6 +226,8 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
 	// RL.
 	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
+	// Disable NVM interface.
+	NVM_Enable();
 
 	return SFX_ERR_NONE;
 }
@@ -253,6 +257,8 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// |  PN  |  SEQ  |  FH  |  RL  |
 	// |______|_______|______|______|
 
+	// Enable NVM interface.
+	NVM_Enable();
 	// PN.
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN+1]);
@@ -264,6 +270,8 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
 	// RL.
 	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
+	// Disable NVM interface.
+	NVM_Enable();
 
 	return SFX_ERR_NONE;
 }

@@ -2,11 +2,11 @@
  * exti_reg.h
  *
  *  Created on: 18 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_EXTI_REG_H_
-#define REGISTERS_EXTI_REG_H_
+#ifndef EXTI_REG_H_
+#define EXTI_REG_H_
 
 /*** EXTI registers ***/
 
@@ -23,4 +23,4 @@ typedef struct {
 
 #define EXTI	((EXTI_BaseAddress*) ((unsigned int) 0x40010400))
 
-#endif /* REGISTERS_EXTI_REG_H_ */
+#endif /* EXTI_REG_H_ */

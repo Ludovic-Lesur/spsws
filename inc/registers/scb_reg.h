@@ -2,11 +2,11 @@
  * scb_reg.h
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_SCB_REG_H
-#define REGISTERS_SCB_REG_H
+#ifndef SCB_REG_H
+#define SCB_REG_H
 
 /*** SCB registers ***/
 
@@ -25,4 +25,4 @@ typedef struct {
 
 #define SCB		((SCB_BaseAddress*) ((unsigned int) 0xE000ED00))
 
-#endif /* REGISTERS_SCB_REG_H */
+#endif /* SCB_REG_H */

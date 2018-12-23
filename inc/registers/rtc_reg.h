@@ -2,7 +2,7 @@
  * rtc_reg.h
  *
  *  Created on: 25 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef RTC_REG_H

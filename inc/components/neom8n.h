@@ -2,11 +2,11 @@
  * neom8n.h
  *
  *  Created on: 11 aug 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef COMPONENTS_NEOM8N_H_
-#define COMPONENTS_NEOM8N_H_
+#ifndef NEOM8N_H
+#define NEOM8N_H
 
 /*** NEOM8N macros ***/
 
@@ -60,4 +60,4 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 
 void NEOM8N_SwitchDmaBuffer(void);
 
-#endif /* COMPONENTS_NEOM8N_H_ */
+#endif /* NEOM8N_H */

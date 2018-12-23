@@ -2,11 +2,11 @@
  * nvic.h
  *
  *  Created on: 28 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_NVIC_H
-#define PERIPHERALS_NVIC_H
+#ifndef NVIC_H
+#define NVIC_H
 
 /*** NVIC interrupts vector ***/
 
@@ -49,4 +49,4 @@ void NVIC_EnableInterrupt(InterruptVector it_num);
 void NVIC_DisableInterrupt(InterruptVector it_num);
 void NVIC_SetPriority(InterruptVector it_num, unsigned char priority);
 
-#endif /* PERIPHERALS_NVIC_H */
+#endif /* NVIC_H */

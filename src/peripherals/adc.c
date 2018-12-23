@@ -2,7 +2,7 @@
  * adc.c
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "adc.h"
@@ -17,11 +17,11 @@ unsigned int vcc_mv = 3300; // Default value = 3.3V.
 
 /*** ADC functions ***/
 
-/* INIT ADC PERIPHERAL.
+/* INIT ADC1 PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void ADC_Init(void) {
+void ADC1_Init(void) {
 
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
@@ -43,21 +43,30 @@ void ADC_Init(void) {
 	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
 	while (((ADC1 -> CR) & (0b1 << 31)) != 0); // Wait until calibration is done.
 
-	/* Enable ADC */
+	/* Disable peripheral by default */
+	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='0'.
+}
+
+/* ENABLE ADC1 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void ADC1_Enable(void) {
+
+	/* Enable ADC peripheral */
+	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 	ADC1 -> CR |= (0b1 << 0); // ADEN='1'.
 	while (((ADC1 -> ISR) & (0b1 << 0)) == 0); // Wait for ADC to be ready (ADRDY='1').
 }
 
-/* SWITCH ADC OFF.
+/* SWITCH ADC1 OFF.
  * @param:	None.
  * @return:	None.
  */
-void ADC_Off(void) {
+void ADC1_Disable(void) {
 
-	/* Disable ADC before configure it */
+	/* Disable ADC1 peripheral */
 	ADC1 -> CR &= ~(0b1 << 0); // ADEN='0'.
-
-	/* Disable peripheral clock */
 	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
 }
 
@@ -65,7 +74,7 @@ void ADC_Off(void) {
  * @param mcu_supply_voltage_mv:	Pointer to value that will contain MCU supply voltage in mV.
  * @return:							None.
  */
-void ADC_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv) {
+void ADC1_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv) {
 
 	/* Select ADC_IN17 input channel */
 	ADC1 -> CHSELR = 0;
@@ -96,7 +105,7 @@ void ADC_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv) {
  * @param mcu_temp_degrees:	Pointer to value that will contain MCU temperature in °C.
  * @return:					None.
  */
-void ADC_GetMcuTemperature(int* temperature_degrees) {
+void ADC1_GetMcuTemperature(int* temperature_degrees) {
 
 	/* Select ADC_IN18 input channel*/
 	ADC1 -> CHSELR = 0;

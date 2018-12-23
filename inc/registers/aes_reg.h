@@ -2,7 +2,7 @@
  * aes_reg.h
  *
  *  Created on: 19 dec. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef AES_REG_H

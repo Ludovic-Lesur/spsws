@@ -2,11 +2,11 @@
  * nvm.h
  *
  *  Created on: 19 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_NVM_H_
-#define PERIPHERALS_NVM_H_
+#ifndef NVM_H
+#define NVM_H
 
 // Sigfox and station parameters are stored in NVM according to the following mapping (index 0 = NVM_START_ADDRESS):
 // Acronyms:	ID = identifier.
@@ -62,8 +62,9 @@
 
 /*** NVM functions ***/
 
-void NVM_Init(void);
+void NVM_Enable(void);
+void NVM_Disable(void);
 void NVM_ReadByte(unsigned short address_offset, unsigned char* byte_to_read);
 void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store);
 
-#endif
+#endif /* NVM_H */

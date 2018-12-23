@@ -2,7 +2,7 @@
  * dma.c
  *
  *  Created on: 8 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "dma.h"
@@ -15,7 +15,7 @@
  * @param:	None.
  * @return:	None.
  */
-void DMA_Init(void) {
+void DMA1_Init(void) {
 
 	/* Enable peripheral clock */
 	RCC -> AHBENR |= (0b1 << 0); // DMAEN='1'.
@@ -32,45 +32,57 @@ void DMA_Init(void) {
 	DMA1 -> CPAR3 = (unsigned int) &(LPUART1 -> RDR); // Peripheral address = LPUART read data register.
 	DMA1 -> CSELR &= ~(0b1111 << 8); // Reset bits 8-11.
 	DMA1 -> CSELR |= (0b0101 << 8); // DMA channel mapped on LPUART1_RX (C3S='0101').
+
+	/* Disable peripheral by default */
+	RCC -> AHBENR |= (0b1 << 0); // DMAEN='0'.
 }
 
-/* SWITCH DMA OFF.
+/* ENABLE DMA1 PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void DMA_Off(void) {
+void DMA1_Enable(void) {
 
-	/* Stop transfer */
-	DMA_Stop();
+	/* Enable DMA1 channel 3 */
+	RCC -> AHBENR |= (0b1 << 0); // DMAEN='1'.
+}
 
-	/* Disable peripheral clock */
+/* DISABLE DMA1 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void DMA1_Disable(void) {
+
+	/* Disable DMA1 channel 3 */
 	RCC -> AHBENR &= ~(0b1 << 0); // DMAEN='0'.
 }
 
-/* SET DESTINATION BUFFER ADDRESS FOR STORING LPUART RX BYTES.
+/* START DMA1 TRANSFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void DMA1_Start(void) {
+
+	/* Start transfer */
+	DMA1 -> CCR3 |= (0b1 << 0); // EN='1'.
+}
+
+/* stop DMA1 TRANSFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void DMA1_Stop(void) {
+
+	/* Stop transfer */
+	DMA1 -> CCR3 &= ~(0b1 << 0); // EN='0'.
+}
+
+/* SET DMA1 DESTINATION BUFFER ADDRESS FOR STORING LPUART RX BYTES.
  * @param dest_buf_addr:	Address of destination buffer (GPS frame).
  * @param dest_buf_size:	Size of destination buffer (16 bits word).
  * @return:					None.
  */
-void DMA_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
+void DMA1_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
 	DMA1 -> CMAR3 = dest_buf_addr;
 	DMA1 -> CNDTR3 = dest_buf_size;
-}
-
-/* START TRANSFER OF LPUART RX BYTES.
- * @param:	None.
- * @return:	None.
- */
-void DMA_Start(void) {
-	// Enable DMA channel.
-	DMA1 -> CCR3 |= (0b1 << 0); // EN='1'.
-}
-
-/* STOP TRANSFER OF LPUART RX BYTES.
- * @param:	None.
- * @return:	None.
- */
-void DMA_Stop(void) {
-	// Disable DMA channel.
-	DMA1 -> CCR3 &= ~(0b1 << 0); // EN='0'.
 }

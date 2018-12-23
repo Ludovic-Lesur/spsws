@@ -2,20 +2,13 @@
  * nvm.c
  *
  *  Created on: 19 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "nvm.h"
 
 #include "nvm_reg.h"
 #include "rcc_reg.h"
-
-/*** NVM local macros ***/
-
-// If defined, force Sigfox parameters re-flashing at start-up (values defined in NVM_SigfoxParametersReflash() function).
-//#define SIGFOX_PARAMETERS_REFLASH
-// If defined, force station parameters re-flashing at start-up (values defined in NVM_StationParametersReflash() function).
-//#define STATION_PARAMETERS_REFLASH
 
 /*** NVM local functions ***/
 
@@ -45,79 +38,26 @@ void NVM_Lock(void) {
 	NVMI -> PECR |= (0b1 << 0); // PELOCK='1'.
 }
 
-#ifdef SIGFOX_PARAMETERS_REFLASH
-/* ERASE AND REFLASH SIGFOX PARAMETERS IN NVM.
- * @param:	None.
- * @return:	None.
- */
-void NVM_SigfoxParametersReflash(void) {
-	unsigned char byte_idx = 0;
-
-	/* New Sigfox parameters to store */
-	unsigned char new_sigfox_id[SIGFOX_ID_SIZE] = {0x00};
-	unsigned char new_sigfox_key[SIGFOX_KEY_SIZE] = {0x00};
-	unsigned char new_sigfox_initial_pac[SIGFOX_PAC_SIZE] = {0x00};
-
-	/* Erase and reflash all Sigfox parameters */
-	// Device ID.
-	for (byte_idx=0 ; byte_idx<SIGFOX_ID_SIZE ; byte_idx++) {
-		NVM_WriteByte(SIGFOX_ID_ADDRESS_OFFSET+byte_idx, new_sigfox_id[byte_idx]);
-	}
-	// Device key.
-	for (byte_idx=0 ; byte_idx<SIGFOX_KEY_SIZE ; byte_idx++) {
-		NVM_WriteByte(SIGFOX_KEY_ADDRESS_OFFSET+byte_idx, new_sigfox_key[byte_idx]);
-	}
-	// Initial PAC.
-	for (byte_idx=0 ; byte_idx<SIGFOX_PAC_SIZE ; byte_idx++) {
-		NVM_WriteByte(SIGFOX_INITIAL_PAC_ADDRESS_OFFSET+byte_idx, new_sigfox_initial_pac[byte_idx]);
-	}
-	// Reset PN.
-	NVM_WriteShort(SIGFOX_PN_ADDRESS_OFFSET, 0);
-	// Reset Sequence number.
-	NVM_WriteShort(SIGFOX_SEQ_NUM_ADDRESS_OFFSET, 0);
-	// Reset FH.
-	NVM_WriteShort(SIGFOX_FH_ADDRESS_OFFSET, 0);
-	// Reset RL.
-	NVM_WriteByte(SIGFOX_RL_ADDRESS_OFFSET, 0);
-}
-#endif
-
-#ifdef STATION_PARAMETERS_REFLASH
-/* ERASE AND REFLASH STATION PARAMETERS IN NVM.
- * @param:	None.
- * @return:	None.
- */
-void NVM_StationParametersReflash(void) {
-	//unsigned char byte_idx = 0;
-
-	/* New station parameters to store */
-	// TBC.
-
-	/* Erase and reflash all Sigfox parameters */
-	// TBC.
-}
-#endif
-
 /*** NVM functions ***/
 
-/* INIT NVM INTERFACE AND REFLASH PARAMETERS IF REQUIRED.
+/* ENABLE NVM INTERFACE.
  * @param:	None.
  * @return:	None.
  */
-void NVM_Init(void) {
+void NVM_Enable(void) {
 
-	/* Enable peripheral clock */
+	/* Enable NVM peripheral */
 	RCC -> AHBENR |= (0b1 << 8); // MIFEN='1'.
+}
 
-	/* Sigfox parameters management */
-#ifdef SIGFOX_PARAMETERS_REFLASH
-	NVM_SigfoxParametersReflash();
-#endif
+/* DISABLE NVM INTERFACE.
+ * @param:	None.
+ * @return:	None.
+ */
+void NVM_Disable(void) {
 
-	/* Station parameters management */
-#ifdef STATION_PARAMETERS_REFLASH
-	NVM_StationParametersReflash();
-#endif
+	/* Disable NVM peripheral */
+	RCC -> AHBENR &= ~(0b1 << 8); // MIFEN='1'.
 }
 
 /* READ A BYTE STORED IN NVM.

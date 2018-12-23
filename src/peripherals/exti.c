@@ -2,7 +2,7 @@
  * exti.c
  *
  *  Created on: 18 juin 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "exti.h"
@@ -13,24 +13,6 @@
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "syscfg_reg.h"
-#include "tim.h"
-#include "ultimeter.h"
-#include "usart.h"
-
-/*** EXTI local macros ***/
-
-#define EXTI_FILTER_DURATION_MS	10
-
-/*** EXTI local structures ***/
-
-typedef struct {
-	unsigned int exti15_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
-	unsigned int exti8_phase_shift; // TIM2 counter value when edge interrupt detected on wind direction input.
-} EXTI_Context;
-
-/*** EXTI local global variables ***/
-
-volatile EXTI_Context exti_ctx;
 
 /*** EXTI functions ***/
 
@@ -39,10 +21,6 @@ volatile EXTI_Context exti_ctx;
  * @return:	None.
  */
 void EXTI_Init(void) {
-
-	/* Init context */
-	exti_ctx.exti15_period = 0;
-	exti_ctx.exti8_phase_shift = 0;
 
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
@@ -63,38 +41,4 @@ void EXTI_Init(void) {
 
 	/* Disable interrupt by default */
 	NVIC_DisableInterrupt(IT_EXTI4_15);
-}
-
-/* EXTI LINES 4-15 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void EXTI4_15_IRQHandler(void) {
-
-	/* PA15 (DIO2) edge interrupt */
-	if (((EXTI -> PR) & (0b1 << 15)) != 0) {
-		// Clear flag.
-		EXTI -> PR |= (0b1 << 15); // PIF15='1' (writing '1' clears the bit).
-		// Rising edge on speed signal.
-		ULTIMETER_IncrementWindSpeedCount();
-		// Capture period.
-		TIM2_Stop();
-		exti_ctx.exti15_period = TIM2_GetCounter();
-		// Compute direction
-		if ((exti_ctx.exti15_period > 0) && (exti_ctx.exti8_phase_shift <= exti_ctx.exti15_period)) {
-			unsigned char direction_pourcent = (exti_ctx.exti8_phase_shift * 100) / (exti_ctx.exti15_period);
-			ULTIMETER_UpdateWindDirection(direction_pourcent);
-		}
-		// Start new cycle.
-		TIM2_Start();
-	}
-
-
-	/* PA8 (DIO3) edge interrupt */
-	if (((EXTI -> PR) & (0b1 << 8)) != 0) {
-		// Clear flag.
-		EXTI -> PR |= (0b1 << 8); // PIF8='1' (writing '1' clears the bit).
-		// Rising edge on direction signal.
-		exti_ctx.exti8_phase_shift = TIM2_GetCounter();
-	}
 }

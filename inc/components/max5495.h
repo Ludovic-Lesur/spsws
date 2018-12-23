@@ -2,7 +2,7 @@
  * max5495.h
  *
  *  Created on: 18 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef MAX5495_H
@@ -12,4 +12,4 @@
 
 void MAX5495_Init(void);
 
-#endif /* COMPONENTS_MAX5495_H_ */
+#endif /* MAX5495_H */

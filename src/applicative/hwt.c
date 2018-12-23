@@ -2,7 +2,7 @@
  * hwt.c
  *
  *  Created on: 11 aug. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "hwt.h"
@@ -11,6 +11,7 @@
 #include "mapping.h"
 #include "max11136.h"
 #include "max5495.h"
+#include "mode.h"
 #include "neom8n.h"
 #include "nvm.h"
 #include "rcc_reg.h"
@@ -347,7 +348,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Switch GPS module off */
 		case HWT_STATE_OFF:
 			// Stop LPUART, DMA and GPS module.
-			LPUART_PowerOff();
+			LPUART1_PowerOff();
 			// Compute next state.
 			if (((hwt_ctx.hwt_status_byte & HWT_STATUS_BYTE_PREVIOUS_TIMESTAMP_VALID_BIT_INDEX) != 0) && (was_wake_up_reason != 0)) {
 				// Hardware timer was wake-up reason, previous and current timestamp are both valid -> perform calibration.
@@ -398,7 +399,7 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* Unknown state */
 		default:
 			// Unknwon state.
-			LPUART_PowerOff();
+			LPUART1_PowerOff();
 			hwt_ctx.hwt_state = HWT_STATE_END;
 			break;
 		}

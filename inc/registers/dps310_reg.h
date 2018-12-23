@@ -2,7 +2,7 @@
  * dps310_reg.h
  *
  *  Created on: 27 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef DPS310_REG_H

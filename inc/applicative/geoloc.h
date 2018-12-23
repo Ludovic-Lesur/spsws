@@ -2,7 +2,7 @@
  * geoloc.h
  *
  *  Created on: 29 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef GEOLOC_H
@@ -14,4 +14,4 @@
 
 void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved);
 
-#endif /* APPLICATIVE_GEOLOC_H */
+#endif /* GEOLOC_H */

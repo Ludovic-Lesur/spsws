@@ -2,7 +2,7 @@
  * si1133.h
  *
  *  Created on: 28 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef SI1133_H

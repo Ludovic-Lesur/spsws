@@ -2,7 +2,7 @@
  * aes.c
  *
  *  Created on: 19 juin 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "aes.h"
@@ -87,6 +87,7 @@ void AES_EncodeCbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out
 		data_out[(register_idx*4)+3] = (data_out_32bits & 0x000000FF) >> 0;
 	}
 
-	/* Reset peripheral */
+	/* Reset and disable peripheral */
 	AES -> CR &= ~(0b1 << 0); // EN='0'.
+	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='1'.
 }

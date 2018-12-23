@@ -2,11 +2,11 @@
  * rcc.h
  *
  *  Created on: 28 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_RCC_H
-#define PERIPHERALS_RCC_H
+#ifndef RCC_H
+#define RCC_H
 
 /*** RCC macros ***/
 
@@ -21,4 +21,4 @@ void RCC_Init(void);
 void RCC_SwitchToInternal16MHz(void);
 void RCC_SwitchToTcxo16MHz(void);
 
-#endif /* PERIPHERALS_RCC_H */
+#endif /* RCC_H */

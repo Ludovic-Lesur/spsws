@@ -2,11 +2,11 @@
  * i2c_reg.h
  *
  *  Created on: 12 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_I2C_REG_H
-#define REGISTERS_I2C_REG_H
+#ifndef I2C_REG_H
+#define I2C_REG_H
 
 /*** I2C registers ***/
 
@@ -30,4 +30,4 @@ typedef struct {
 //#define I2C2	((I2C_BaseAddress*) ((unsigned int) 0x40005800))
 //#define I2C3	((I2C_BaseAddress*) ((unsigned int) 0x40007800))
 
-#endif /* REGISTERS_I2C_REG_H */
+#endif /* I2C_REG_H */

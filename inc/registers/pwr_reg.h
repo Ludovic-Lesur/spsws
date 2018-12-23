@@ -2,11 +2,11 @@
  * pwr_reg.h
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_PWR_REG_H
-#define REGISTERS_PWR_REG_H
+#ifndef PWR_REG_H
+#define PWR_REG_H
 
 /*** PWR registers ***/
 
@@ -19,4 +19,4 @@ typedef struct {
 
 #define PWR		((PWR_BaseAddress*) ((unsigned int) 0x40007000))
 
-#endif /* REGISTERS_PWR_REG_H */
+#endif /* PWR_REG_H */

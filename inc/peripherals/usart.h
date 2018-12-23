@@ -2,7 +2,7 @@
  * usart.h
  *
  *  Created on: 11 aug 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #ifndef USART_H
@@ -19,11 +19,12 @@ typedef enum {
 
 /*** USART functions ***/
 
-void USART_Init(void);
-void USART_PowerOn(void);
-void USART_PowerOff(void);
-void USART_Off(void);
-void USART_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix);
-void USART_SendString(char* tx_string);
+void USART2_Init(void);
+void USART2_Enable(void);
+void USART2_Disable(void);
+void USART2_PowerOn(void);
+void USART2_PowerOff(void);
+void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix);
+void USART2_SendString(char* tx_string);
 
 #endif /* USART_H */

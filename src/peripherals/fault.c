@@ -2,7 +2,7 @@
  * fault.c
  *
  *  Created on: 7 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 void NMI_Handler(void) {

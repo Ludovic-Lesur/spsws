@@ -2,7 +2,7 @@
  * rtc.c
  *
  *  Created on: 25 nov. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "rtc.h"
@@ -38,9 +38,8 @@ void RTC_IRQHandler(void) {
 
 	/* Alarm A interrupt */
 	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
-		// Clear flags.
+		// Manage flags.
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
-		// Toggle debug LED.
 		rtc_ctx.rtc_irq_happened = 1;
 	}
 
@@ -114,7 +113,7 @@ void RTC_Init(void) {
 	/* Configure Alarm A to wake-up MCU every hour */
 	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
-	RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (debug).
+	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 5); // Bypass shadow register for read accesses (BYPSHAD='1').
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').

@@ -2,11 +2,11 @@
  * dma_reg.h
  *
  *  Created on: 8 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_DMA_REG_H
-#define REGISTERS_DMA_REG_H
+#ifndef DMA_REG_H
+#define DMA_REG_H
 
 /*** DMA registers ***/
 
@@ -55,4 +55,4 @@ typedef struct {
 
 #define DMA1	((DMA_BaseAddress*) ((unsigned int) 0x40020000))
 
-#endif /* REGISTERS_DMA_REG_H */
+#endif /* DMA_REG_H */

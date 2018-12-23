@@ -2,11 +2,11 @@
  * adc_reg.h
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_ADC_REG_H
-#define REGISTERS_ADC_REG_H
+#ifndef ADC_REG_H
+#define ADC_REG_H
 
 /*** ADC registers ***/
 
@@ -51,4 +51,4 @@ typedef struct {
 #define VREFINT_CAL_ADDR		((unsigned short*) ((unsigned int) 0x1FF80078))
 #define VREFINT_CAL				((unsigned int) (*VREFINT_CAL_ADDR)) // Raw ADC output value on 12 bits.
 
-#endif /* REGISTERS_ADC_REG_H */
+#endif /* ADC_REG_H */

@@ -2,18 +2,19 @@
  * adc.h
  *
  *  Created on: 5 may 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef PERIPHERALS_ADC_H
-#define PERIPHERALS_ADC_H
+#ifndef ADC_H
+#define ADC_H
 
 /*** ADC functions ***/
 
-void ADC_Init(void);
-void ADC_Off(void);
-void ADC_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv);
-void ADC_GetMcuTemperature(int* temperature_degrees);
-void ADC_GetHwtVoltageReferenceMv(unsigned int* hwt_voltage_reference);
+void ADC1_Init(void);
+void ADC1_Enable(void);
+void ADC1_Disable(void);
+void ADC1_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv);
+void ADC1_GetMcuTemperature(int* temperature_degrees);
+void ADC1_GetHwtVoltageReferenceMv(unsigned int* hwt_voltage_reference);
 
-#endif /* PERIPHERALS_ADC_H */
+#endif /* ADC_H */

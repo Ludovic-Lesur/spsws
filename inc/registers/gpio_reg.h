@@ -2,11 +2,11 @@
  * gpio_reg.h
  *
  *  Created on: 26 apr. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_GPIO_REG_H
-#define REGISTERS_GPIO_REG_H
+#ifndef GPIO_REG_H
+#define GPIO_REG_H
 
 /*** GPIO registers ***/
 
@@ -33,4 +33,4 @@ typedef struct {
 #define GPIOE	((GPIO_BaseAddress*) ((unsigned int) 0x50001000))
 #define GPIOH	((GPIO_BaseAddress*) ((unsigned int) 0x50001C00))
 
-#endif /* REGISTERS_GPIO_REG_H */
+#endif /* GPIO_REG_H */

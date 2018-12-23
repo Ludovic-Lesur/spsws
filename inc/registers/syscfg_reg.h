@@ -2,11 +2,11 @@
  * syscfg_reg.h
  *
  *  Created on: 18 june 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_SYSCFG_REG_H_
-#define REGISTERS_SYSCFG_REG_H_
+#ifndef SYSCFG_REG_H_
+#define SYSCFG_REG_H_
 
 /*** SYSCFG registers ***/
 
@@ -26,4 +26,4 @@ typedef struct {
 
 #define SYSCFG	((SYSCFG_BaseAddress*) ((unsigned int) 0x40010000))
 
-#endif /* REGISTERS_SYSCFG_REG_H_ */
+#endif /* SYSCFG_REG_H_ */

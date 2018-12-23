@@ -2,11 +2,11 @@
  * mcp4162_reg.h
  *
  *  Created on: 15 aug. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef REGISTERS_MCP4162_REG_H_
-#define REGISTERS_MCP4162_REG_H_
+#ifndef MCP4162_REG_H_
+#define MCP4162_REG_H_
 
 /*** MCP4162 register map ***/
 
@@ -27,4 +27,4 @@
 #define MCP4162_REG_DATA8			0x0E
 #define MCP4162_REG_DATA9			0x0F
 
-#endif /* REGISTERS_MCP4162_REG_H_ */
+#endif /* MCP4162_REG_H_ */

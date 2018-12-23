@@ -220,8 +220,8 @@ void GPIO_Configure(GPIO gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO
  */
 void GPIO_Init(void) {
 
-	/* Enable all GPIOx clocks */
-	RCC -> IOPENR |= 0x0000009F; // IOPxEN='1'.
+	/* Enable GPIOA and GPIOB clocks */
+	RCC -> IOPENR |= (0b11 << 0); // IOPxEN='1'.
 
 	/* Configure standalone GPIOs */
 	GPIO_Configure(GPIO_LED, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
