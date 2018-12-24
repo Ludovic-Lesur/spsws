@@ -10,13 +10,23 @@
 
 /*** MAX11136 macros ***/
 
-#define MAX11136_FULL_SCALE				4095 // 12-bits result.
-#define MAX11136_BANDGAP_VOLTAGE_MV		2048 // Bandgap reference attached to AIN7.
+// Channels mapping.
+#ifdef HW1_0
+#define MAX11136_CHANNEL_AIN0			0
+#define MAX11136_CHANNEL_AIN1			1
+#define MAX11136_CHANNEL_AIN2			2
+#define MAX11136_CHANNEL_AIN3			3
+#define MAX11136_CHANNEL_SOLAR_PANEL	4
+#define MAX11136_CHANNEL_SUPERCAP		5
+#define MAX11136_CHANNEL_LDR			6
+#define MAX11136_CHANNEL_BANDGAP		7
+#endif
 
 /*** MAX11136 functions ***/
 
 void MAX11136_Init(void);
-unsigned char MAX11136_ConvertAllChannels(void);
-void MAX11136_GetChannelVoltage12bits(unsigned char channel, unsigned short* channel_voltage_12bits);
+unsigned char MAX11136_PerformMeasurements(void);
+void MAX11136_GetSupplyVoltage(unsigned int* supply_voltage_mv);
+void MAX11136_GetChannelVoltage(unsigned char channel, unsigned int* channel_voltage_mv);
 
 #endif /* MAX11136_H */

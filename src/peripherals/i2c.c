@@ -93,7 +93,7 @@ void I2C1_PowerOff(void) {
 	GPIO_Configure(GPIO_I2C1_SCL, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Configure(GPIO_I2C1_SDA, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
-	/* Switch SHT3x, DPS310 and SI1133 oFF */
+	/* Switch SHT3x, DPS310 and SI1133 off */
 	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
 }
 
@@ -114,7 +114,6 @@ void I2C1_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned cha
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
 	I2C1 -> CR2 |= (tx_buf_length << 16); // NBYTES = tx_buf_length.
-	//I2C1 -> CR2 |= (0b1 << 25); // Stop condition automatically generated when NBYTES is reached (AUTOEND='1').
 
 	/* Send 7-bits slave address with write request */
 	I2C1 -> CR2 &= ~(0b1 << 10); // Write request (RD_WRN='0').
@@ -163,7 +162,6 @@ void I2C1_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char
 	/* Configure number of bytes to send */
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
 	I2C1 -> CR2 |= (rx_buf_length << 16); // NBYTES = rx_buf_length.
-	//I2C1 -> CR2 |= (0b1 << 25); // Stop condition automatically generated when NBYTES is reached (AUTOEND='1').
 
 	/* Send 7-bits slave address with write request */
 	I2C1 -> CR2 |= (0b1 << 10); // Read request (RD_WRN='1').

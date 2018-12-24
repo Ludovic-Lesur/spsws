@@ -94,7 +94,7 @@ int main (void) {
 	// Analog.
 	ADC1_Init();
 	// Communication interfaces.
-	LPUART1_Init();
+	//LPUART1_Init();
 	USART2_Init();
 	I2C1_Init();
 	SPI1_Init();
@@ -105,6 +105,9 @@ int main (void) {
 	NEOM8N_Init();
 	SKY13317_Init();
 	WIND_Init();
+	SHT3X_Init();
+	DPS310_Init();
+	SI1133_Init();
 
 	/* Init applicative layers */
 	AT_Init();
@@ -116,6 +119,7 @@ int main (void) {
 		TIM22_WaitMilliseconds(50);
 	}
 
+	/* Init AT interface */
 	USART2_PowerOn();
 	USART2_Enable();
 
@@ -134,28 +138,6 @@ int main (void) {
 		}
 	}
 	LPUART_PowerOff();*/
-
-	/*signed char tmp_sht = 0;
-	unsigned char hum_sht = 0;
-	signed char tmp_dps = 0;
-	unsigned int pressure_dps = 0;
-	unsigned char uv_index_si = 0;
-	I2C_PowerOn();
-	SPI_PowerOn();
-	unsigned int i = 0;
-	while (1) {
-		SHT3X_GetTemperature(&tmp_sht);
-		SHT3X_GetHumidity(&hum_sht);
-		MAX11136_ConvertAllChannels();
-		DPS310_GetTemperature(&tmp_dps);
-		DPS310_GetPressure(&pressure_dps);
-		SI1133_GetUvIndex(&uv_index_si);
-		TIM22_WaitMilliseconds(1000);
-		GPIOA -> ODR |= (0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-		GPIOA -> ODR &= ~(0b1 << 2);
-		for (i=0 ; i<50000 ; i++);
-	}*/
 
 	return 0;
 }

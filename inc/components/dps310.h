@@ -10,7 +10,9 @@
 
 /*** DPS310 functions ***/
 
-void DPS310_GetTemperature(signed char* temperature_degrees);
+void DPS310_Init(void);
+void DPS310_PerformMeasurements(void);
 void DPS310_GetPressure(unsigned int* pressure_pa);
+void DPS310_GetTemperature(signed char* temperature_degrees);
 
 #endif /* DPS310_H */

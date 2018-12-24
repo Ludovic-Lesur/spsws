@@ -10,6 +10,8 @@
 
 /*** SI1133 functions ***/
 
+void SI1133_Init(void);
+void SI1133_PerformMeasurements(void);
 void SI1133_GetUvIndex(unsigned char* uv_index);
 
 #endif /* SI1133_H */

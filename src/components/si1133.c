@@ -15,6 +15,16 @@
 #define SI1133_I2C_ADDRESS				0x52
 #define SI1133_BURST_WRITE_MAX_LENGTH	10
 
+/*** SI1133 local structures ***/
+
+typedef struct {
+	unsigned char si1133_uv_index;
+} SI1133_Context;
+
+/*** SI1133 local global variables ***/
+
+SI1133_Context si1133_ctx;
+
 /*** SI1133 local functions ***/
 
 /* WRITE REGISTER(S) OF SI1133.
@@ -37,7 +47,7 @@ void SI1133_WriteRegisters(unsigned char addr, unsigned char* value_buf, unsigne
 	for (byte_idx=1 ; byte_idx<tx_buf_length ; byte_idx++) {
 		register_write_command[byte_idx] = value_buf[byte_idx-1];
 	}
-	I2C_Write(SI1133_I2C_ADDRESS, register_write_command, tx_buf_length);
+	I2C1_Write(SI1133_I2C_ADDRESS, register_write_command, tx_buf_length);
 }
 
 /* READ A REGISTER OF SI1133.
@@ -47,8 +57,8 @@ void SI1133_WriteRegisters(unsigned char addr, unsigned char* value_buf, unsigne
  */
 void SI1133_ReadRegister(unsigned char addr, unsigned char* value) {
 	unsigned char local_addr = addr;
-	I2C_Write(SI1133_I2C_ADDRESS, &local_addr, 1);
-	I2C_Read(SI1133_I2C_ADDRESS, value, 1);
+	I2C1_Write(SI1133_I2C_ADDRESS, &local_addr, 1);
+	I2C1_Read(SI1133_I2C_ADDRESS, value, 1);
 }
 
 /* WAIT FOR SI1133 TO BE READY.
@@ -164,13 +174,26 @@ void SI1133_Configure(void) {
 	SI1133_WriteRegisters(SI1133_REG_IRQ_ENABLE, &irq0_enable, 1);
 }
 
-/* READ UV INDEX FROM SI1133 SENSOR.
- * @param uv_index:	Pointer to byte that will contain UV index (0 to 11).
- * @return:			None.
+/*** SI1133 functions ***/
+
+/* INIT SI1133 SENSOR.
+ * @param:	None.
+ * @return:	None.
  */
-void SI1133_GetUvIndex(unsigned char* uv_index) {
+void SI1133_Init(void) {
+
+	/* Init context */
+	si1133_ctx.si1133_uv_index = 0;
+}
+
+/* PERFORM SI1133 UV INDEX MEASUREMENT.
+ * @param:	None.
+ * @return:	None.
+ */
+void SI1133_PerformMeasurements(void) {
 
 	/* Confiure sensor */
+	I2C1_Enable();
 	SI1133_Configure();
 
 	/* Start conversion */
@@ -189,9 +212,20 @@ void SI1133_GetUvIndex(unsigned char* uv_index) {
 	raw_uv |= (response0 << 8);
 	SI1133_ReadRegister(SI1133_REG_HOSTOUT1, &response0);
 	raw_uv |= response0;
+	I2C1_Disable();
 
 	/* Convert to UV index */
 	// UV index = k * ((m * raw^2) + raw) where k = 0.008284 = 1 / 121 and m = -0.000231 = -1 / 4329.
-	(*uv_index) = ((((-1) * raw_uv * raw_uv) / 4329) + raw_uv) / (121);
+	si1133_ctx.si1133_uv_index = ((((-1) * raw_uv * raw_uv) / 4329) + raw_uv) / (121);
+}
+
+/* READ UV INDEX FROM SI1133 SENSOR.
+ * @param uv_index:	Pointer to byte that will contain UV index (0 to 11).
+ * @return:			None.
+ */
+void SI1133_GetUvIndex(unsigned char* uv_index) {
+
+	/* Get result */
+	(*uv_index) = si1133_ctx.si1133_uv_index;
 }
 

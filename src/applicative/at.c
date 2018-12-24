@@ -42,6 +42,10 @@
 #define AT_IN_COMMAND_TEST								"AT"
 #define AT_IN_COMMAND_ADC								"AT$ADC"
 #define AT_IN_COMMAND_MCU								"AT$MCU"
+#define AT_IN_COMMAND_THS								"AT$THS"
+#define AT_IN_COMMAND_PTS								"AT$PTS"
+#define AT_IN_COMMAND_UVS								"AT$UVS"
+#define AT_IN_COMMAND_LDR								"AT$LDR"
 #define AT_IN_COMMAND_ID								"AT$ID?"
 #define AT_IN_COMMAND_KEY								"AT$KEY?"
 #define AT_IN_COMMAND_SF								"AT$SF"
@@ -483,42 +487,39 @@ void AT_ReplyError(AT_ErrorSource error_source, unsigned short error_code) {
  * @return:	None.
  */
 void AT_PrintAdcResults(void) {
-	unsigned short result_12bits = 0;
-	// Compute effective supply voltage.
-	MAX11136_GetChannelVoltage12bits(7, &result_12bits);
-	unsigned int vcc_mv= (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / (result_12bits);
+	unsigned int result_mv = 0;
 	// AIN0.
-	MAX11136_GetChannelVoltage12bits(0, &result_12bits);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN0, &result_mv);
 	USART2_SendString("AIN0=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN1.
-	MAX11136_GetChannelVoltage12bits(1, &result_12bits);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN1, &result_mv);
 	USART2_SendString("mV AIN1=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN2.
-	MAX11136_GetChannelVoltage12bits(2, &result_12bits);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN2, &result_mv);
 	USART2_SendString("mV AIN2=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN3.
-	MAX11136_GetChannelVoltage12bits(3, &result_12bits);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN3, &result_mv);
 	USART2_SendString("mV AIN3=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN4 (resistor divider with 6.8M and 1M -> Vin = 7.8 * Vout).
-	MAX11136_GetChannelVoltage12bits(4, &result_12bits);
-	USART2_SendString("mV AIN4=");
-	USART2_SendValue(((result_12bits * vcc_mv * 7800) / (MAX11136_FULL_SCALE * 100)), USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_SOLAR_PANEL, &result_mv);
+	USART2_SendString("mV Vsp=");
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN5.
-	MAX11136_GetChannelVoltage12bits(5, &result_12bits);
-	USART2_SendString("mV AIN5=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_SUPERCAP, &result_mv);
+	USART2_SendString("mV Vcap=");
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN6.
-	MAX11136_GetChannelVoltage12bits(6, &result_12bits);
-	USART2_SendString("mV AIN6=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_LDR, &result_mv);
+	USART2_SendString("mV Vldr=");
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	// AIN7.
-	MAX11136_GetChannelVoltage12bits(7, &result_12bits);
-	USART2_SendString("mV AIN7=");
-	USART2_SendValue(((result_12bits * vcc_mv) / (MAX11136_FULL_SCALE)), USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_BANDGAP, &result_mv);
+	USART2_SendString("mV Vbg=");
+	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
 	USART2_SendString("mV\n");
 }
 
@@ -628,9 +629,10 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start GPS fix.
 				Position gps_position;
-				LPUART1_PowerOn();
-				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
-				LPUART1_PowerOff();
+				//LPUART1_PowerOn();
+				//NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+				//LPUART1_PowerOff();
+				NEOM8N_ReturnCode get_position_result = NEOM8N_TIMEOUT;
 				switch (get_position_result) {
 				case NEOM8N_SUCCESS:
 					AT_PrintPosition(&gps_position);
@@ -659,9 +661,10 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start GPS fix.
 				Timestamp gps_timestamp;
-				LPUART1_PowerOn();
-				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
-				LPUART1_PowerOff();
+				//LPUART1_PowerOn();
+				//NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+				//LPUART1_PowerOff();
+				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_TIMEOUT;
 				switch (get_timestamp_result) {
 				case NEOM8N_SUCCESS:
 					AT_PrintTimestamp(&gps_timestamp);
@@ -706,7 +709,7 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
 			// Trigger external ADC convertions.
 			SPI1_PowerOn();
-			MAX11136_ConvertAllChannels();
+			MAX11136_PerformMeasurements();
 			SPI1_PowerOff();
 			// Print results.
 			AT_PrintAdcResults();
@@ -715,18 +718,90 @@ void AT_DecodeRxBuffer(void) {
 		/* MCU command AT$MCU<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
 			unsigned int mcu_supply_voltage_mv;
-			int mcu_temperature_degrees;
-			// Trigger internal ADC convertions.
-			ADC1_Enable();
-			ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+			signed char mcu_temperature_degrees;
+			// Trigger internal ADC conversions.
+			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
-			ADC1_Disable();
+			// Trigger external ADC conversions.
+			SPI1_PowerOn();
+			MAX11136_PerformMeasurements();
+			SPI1_PowerOff();
+			MAX11136_GetSupplyVoltage(&mcu_supply_voltage_mv);
 			// Print results.
 			USART2_SendString("Vcc=");
 			USART2_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
 			USART2_SendString("mV T=");
 			USART2_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 			USART2_SendString("°C\n");
+		}
+
+		/* Temperature and humidity sensor command AT$THS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_THS) == AT_NO_ERROR) {
+			signed char sht3x_temperature_degrees = 0;
+			unsigned char sht3x_humidity_percent = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SHT3X_PerformMeasurements();
+			I2C1_PowerOff();
+			SHT3X_GetTemperature(&sht3x_temperature_degrees);
+			SHT3X_GetHumidity(&sht3x_humidity_percent);
+			// Print results.
+			USART2_SendString("T=");
+			USART2_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("°C H=");
+			USART2_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("%\n");
+		}
+
+		/* Pressure and temperature sensor command AT$PTS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_PTS) == AT_NO_ERROR) {
+			unsigned int dps310_pressure_pa = 0;
+			signed char dps310_temperature_degrees = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			DPS310_PerformMeasurements();
+			I2C1_PowerOff();
+			DPS310_GetPressure(&dps310_pressure_pa);
+			DPS310_GetTemperature(&dps310_temperature_degrees);
+			// Print results.
+			USART2_SendString("P=");
+			USART2_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("Pa T=");
+			USART2_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("°C\n");
+		}
+
+		/* UV index sensor command AT$UVS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_UVS) == AT_NO_ERROR) {
+			unsigned char si1133_uv_index = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SI1133_PerformMeasurements();
+			I2C1_PowerOff();
+			SI1133_GetUvIndex(&si1133_uv_index);
+			// Print result.
+			USART2_SendString("UVI=");
+			USART2_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("\n");
+		}
+
+		/* LDR command AT$LDR<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_LDR) == AT_NO_ERROR) {
+			// Perform measurements.
+			SPI1_PowerOn();
+			MAX11136_PerformMeasurements();
+			SPI1_PowerOff();
+			// Get LDR and supply voltage.
+			unsigned int ldr_mv;
+			unsigned int vcc_mv;
+			MAX11136_GetChannelVoltage(MAX11136_CHANNEL_LDR, &ldr_mv);
+			MAX11136_GetSupplyVoltage(&vcc_mv);
+			// Convert to percent.
+			unsigned char light_percent = (100 * ldr_mv) / (vcc_mv);
+			// Print result.
+			USART2_SendString("Light=");
+			USART2_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
+			USART2_SendString("%\n");
 		}
 
 		/* Get ID command AT$ID?<CR> */

@@ -213,23 +213,41 @@ void DPS310_ComputeRawPressure(void) {
 
 /*** DPS310 functions ***/
 
-/* READ TEMPERATURE FROM DPS310 SENSOR.
- * @param temperature_degrees:	Pointer to byte that will contain temperature result (°C).
- * @return:						None.
+/* INIT DPS310 SENSOR.
+ * @param:	None.
+ * @return:	None.
  */
-void DPS310_GetTemperature(signed char* temperature_degrees) {
+void DPS310_Init(void) {
+
+	/* Init context */
+	// Sampling factors.
+	dps310_ctx.dps310_kT = 0;
+	dps310_ctx.dps310_kP = 0;
+	// Measurements.
+	dps310_ctx.dps310_tmp_raw = 0;
+	dps310_ctx.dps310_prs_raw = 0;
+	// Calibration coefficients.
+	dps310_ctx.dps310_coef_c0 = 0;
+	dps310_ctx.dps310_coef_c1 = 0;
+	dps310_ctx.dps310_coef_c00 = 0;
+	dps310_ctx.dps310_coef_c10 = 0;
+	dps310_ctx.dps310_coef_c01 = 0;
+	dps310_ctx.dps310_coef_c11 = 0;
+	dps310_ctx.dps310_coef_c20 = 0;
+	dps310_ctx.dps310_coef_c21 = 0;
+	dps310_ctx.dps310_coef_c30 = 0;
+}
+
+void DPS310_PerformMeasurements(void) {
 
 	/* Compute raw temperature */
+	I2C1_Enable();
 	DPS310_ComputeRawTemperature();
+	DPS310_ComputeRawPressure();
 
 	/* Read calibration coefficients */
 	DPS310_ReadCalibrationCoefficients();
-
-	/* Compute temperature in °C */
-	signed int c0 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c0, 11);
-	signed int c1 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c1, 11);
-	signed long long tmp_temp = (c0 / 2) + (c1 * dps310_ctx.dps310_tmp_raw) / dps310_ctx.dps310_kT;
-	(*temperature_degrees) = (unsigned char) tmp_temp;
+	I2C1_Disable();
 }
 
 /* READ PRESSURE FROM DPS310 SENSOR.
@@ -237,13 +255,6 @@ void DPS310_GetTemperature(signed char* temperature_degrees) {
  * @return:				None.
  */
 void DPS310_GetPressure(unsigned int* pressure_pa) {
-
-	/* Compute raw pressure and temperature */
-	DPS310_ComputeRawTemperature();
-	DPS310_ComputeRawPressure();
-
-	/* Read calibration coefficients */
-	DPS310_ReadCalibrationCoefficients();
 
 	/* Compute pressure in Pa */
 	signed int c00 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c00, 19);
@@ -263,4 +274,17 @@ void DPS310_GetPressure(unsigned int* pressure_pa) {
 	last_term = (dps310_ctx.dps310_tmp_raw * last_term) / dps310_ctx.dps310_kT;
 	psr_temp += last_term;
 	(*pressure_pa) = (unsigned int) psr_temp;
+}
+
+/* READ TEMPERATURE FROM DPS310 SENSOR.
+ * @param temperature_degrees:	Pointer to byte that will contain temperature result (°C).
+ * @return:						None.
+ */
+void DPS310_GetTemperature(signed char* temperature_degrees) {
+
+	/* Compute temperature in °C */
+	signed int c0 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c0, 11);
+	signed int c1 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c1, 11);
+	signed long long tmp_temp = (c0 / 2) + (c1 * dps310_ctx.dps310_tmp_raw) / dps310_ctx.dps310_kT;
+	(*temperature_degrees) = (unsigned char) tmp_temp;
 }

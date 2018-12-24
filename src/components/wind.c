@@ -57,10 +57,10 @@ volatile WIND_Context wind_ctx;
  */
 void WIND_ConvertDirectionVoltageToPourcent(void) {
 	// Get ADC raw result.
-	unsigned short wind_direction_raw_12bits = 0;
-	MAX11136_GetChannelVoltage12bits(0, &wind_direction_raw_12bits);
+	unsigned int wind_direction_mv = 0;
+	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN0, &wind_direction_mv);
 	// TBD transfer function:
-	// wind_direction_raw_12bits ----> wind_ctx.wind_direction_pourcent.
+	// wind_direction_raw_mv ----> wind_ctx.wind_direction_pourcent.
 }
 #endif
 
@@ -85,7 +85,7 @@ void WIND_StoreMeasurements(void) {
 #ifdef WIND_DIRECTION_ANALOG
 	// Get wind direction from ADC.
 	SPI1_PowerOn();
-	MAX11136_ConvertAllChannels();
+	MAX11136_PerformMeasurements();
 	SPI1_PowerOff();
 	// Convert voltage to %.
 	WIND_ConvertDirectionVoltageToPourcent();
