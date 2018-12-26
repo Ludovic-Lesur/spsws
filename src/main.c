@@ -11,6 +11,7 @@
 #include "scb_reg.h"
 // Peripherals.
 #include "adc.h"
+#include "aes.h"
 #include "dma.h"
 #include "exti.h"
 #include "gpio.h"
@@ -45,11 +46,16 @@
 
 // SPSWS state machine.
 typedef enum {
-	SPSWS_STATE_POR,
+	SPSWS_STATE_RESET_CHECK,
+	SPSWS_STATE_HOUR_CHECK,
+	SPSWS_STATE_NVM_UPDATE,
 	SPSWS_STATE_INIT,
+	SPSWS_STATE_POR,
+	SPSWS_STATE_MEASURE,
 	SPSWS_STATE_MONITORING,
-	SPSWS_STATE_GEOLOC,
 	SPSWS_STATE_WEATHER_DATA,
+	SPSWS_STATE_GEOLOC,
+	SPSWS_STATE_RTC_CALIBRATION,
 	SPSWS_STATE_SLEEP
 } SPSWS_State;
 
@@ -58,6 +64,8 @@ typedef struct {
 	SPSWS_State spsws_state;
 	Timestamp spsws_timestamp_from_geoloc;
 	unsigned char spsws_timestamp_retrieved_from_geoloc;
+	unsigned char spsws_downlink_requested;
+	unsigned char spsws_status;
 } SPSWS_Context;
 
 /*** SPSWS global variables ***/
@@ -98,6 +106,8 @@ int main (void) {
 	USART2_Init();
 	I2C1_Init();
 	SPI1_Init();
+	// Hardware AES.
+	AES_Init();
 
 	/* Init components */
 	MAX11136_Init();

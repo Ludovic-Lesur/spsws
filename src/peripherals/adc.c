@@ -8,6 +8,7 @@
 #include "adc.h"
 
 #include "adc_reg.h"
+#include "max11136.h"
 #include "rcc_reg.h"
 #include "tim.h"
 

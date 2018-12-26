@@ -197,19 +197,19 @@ void HWT_Init(unsigned char was_wake_up_reason, unsigned char timestamp_retrieve
 	hwt_ctx.hwt_current_timestamp.seconds = 0;
 	hwt_ctx.hwt_current_timestamp.mcu_time_seconds = 0;
 	// Previous timestamp.
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.date);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.month);
+	NVM_ReadByte(NVM_PGT_DATE_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.date);
+	NVM_ReadByte(NVM_PGT_MONTH_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.month);
 	unsigned char year_msb;
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, &year_msb);
+	NVM_ReadByte(NVM_PGT_YEAR_ADDRESS_OFFSET, &year_msb);
 	unsigned char year_lsb;
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET+1, &year_lsb);
+	NVM_ReadByte(NVM_PGT_YEAR_ADDRESS_OFFSET+1, &year_lsb);
 	hwt_ctx.hwt_previous_timestamp.year = (year_msb << 8) + year_lsb;
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.hours);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.minutes);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.seconds);
-	NVM_ReadByte(NVM_HWT_PREVIOUS_TIMESTAMP_MCU_TIME_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.mcu_time_seconds);
+	NVM_ReadByte(NVM_PGT_HOURS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.hours);
+	NVM_ReadByte(NVM_PGT_MINUTES_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.minutes);
+	NVM_ReadByte(NVM_PGT_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.seconds);
+	NVM_ReadByte(NVM_PGT_MCU_TIME_ADDRESS_OFFSET, &hwt_ctx.hwt_previous_timestamp.mcu_time_seconds);
 	// Fix duration and timeout.
-	NVM_ReadByte(NVM_GPS_TIMEOUT_SECONDS_ADDRESS_OFFSET, &hwt_ctx.hwt_timeout_seconds);
+	NVM_ReadByte(NVM_GPS_TIMEOUT_ADDRESS_OFFSET, &hwt_ctx.hwt_timeout_seconds);
 	hwt_ctx.hwt_fix_start_time_seconds = 0;
 	hwt_ctx.hwt_fix_duration_seconds = 0;
 	// Calibration data.
@@ -380,14 +380,14 @@ void HWT_Process(unsigned char was_wake_up_reason, unsigned char timestamp_retri
 		/* NVM update */
 		case HWT_STATE_UPDATE_NVM:
 			// Store current timestamp in NVM whatever the result.
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_DAY_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.date);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MONTH_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.month);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET, ((hwt_ctx.hwt_current_timestamp.year & 0x0000FF00) >> 8));
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_YEAR_ADDRESS_OFFSET+1, (hwt_ctx.hwt_current_timestamp.year & 0x000000FF));
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_HOURS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.hours);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MINUTES_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.minutes);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_SECONDS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.seconds);
-			NVM_WriteByte(NVM_HWT_PREVIOUS_TIMESTAMP_MCU_TIME_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.mcu_time_seconds);
+			NVM_WriteByte(NVM_PGT_DATE_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.date);
+			NVM_WriteByte(NVM_PGT_MONTH_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.month);
+			NVM_WriteByte(NVM_PGT_YEAR_ADDRESS_OFFSET, ((hwt_ctx.hwt_current_timestamp.year & 0x0000FF00) >> 8));
+			NVM_WriteByte(NVM_PGT_YEAR_ADDRESS_OFFSET+1, (hwt_ctx.hwt_current_timestamp.year & 0x000000FF));
+			NVM_WriteByte(NVM_PGT_HOURS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.hours);
+			NVM_WriteByte(NVM_PGT_MINUTES_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.minutes);
+			NVM_WriteByte(NVM_PGT_SECONDS_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.seconds);
+			NVM_WriteByte(NVM_PGT_MCU_TIME_ADDRESS_OFFSET, hwt_ctx.hwt_current_timestamp.mcu_time_seconds);
 			// Compute next state.
 			hwt_ctx.hwt_state = HWT_STATE_END;
 			break;

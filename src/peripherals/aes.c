@@ -25,6 +25,29 @@ void AES_Init(void) {
 	AES -> CR = 0; // Disable peripheral.
 	AES -> CR |= (0b01 << 5); // CBC algorithme (CHMOD='01').
 	AES -> CR &= ~(0b11 << 1); // No swapping (DATATYPE='00').
+
+	/* Disable AES peripheral by default */
+	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='0'.
+}
+
+/* ENABLE AES PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void AES_Enable(void) {
+
+	/* Enable AES peripheral */
+	RCC -> AHBENR |= (0b1 << 24); // CRYPTOEN='1'.
+}
+
+/* DISABLE AES PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void AES_Disable(void) {
+
+	/* Disable AES peripheral */
+	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='0'.
 }
 
 /* COMPUTE AES-128 CBC ALGORITHME WITH HARDWARE ACCELERATOR.
@@ -87,7 +110,7 @@ void AES_EncodeCbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out
 		data_out[(register_idx*4)+3] = (data_out_32bits & 0x000000FF) >> 0;
 	}
 
-	/* Reset and disable peripheral */
+	/* Reset peripheral */
+	AES -> CR |= (0b1 << 7); // Clear CCF flag for next AES operation.
 	AES -> CR &= ~(0b1 << 0); // EN='0'.
-	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='1'.
 }

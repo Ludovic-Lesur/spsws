@@ -60,6 +60,7 @@
 #define AT_IN_HEADER_KEY								"AT$KEY="		// AT$KEY=<key><CR>.
 #define AT_IN_HEADER_SF									"AT$SF="		// AT$SF=<uplink_data>,<downlink_request><CR>.
 #define AT_IN_HEADER_SB									"AT$SB="		// AT$SB=<bit><CR>.
+#define AT_IN_HEADER_TM									"AT$TM="		// AT$TM=<test_mode>,<parameter><CR>.
 
 // Output commands without data.
 #define AT_OUT_COMMAND_OK								"OK"
@@ -708,25 +709,25 @@ void AT_DecodeRxBuffer(void) {
 		/* ADC command AT$ADC<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
 			// Trigger external ADC convertions.
-			SPI1_PowerOn();
-			MAX11136_PerformMeasurements();
-			SPI1_PowerOff();
+			//SPI1_PowerOn();
+			//MAX11136_PerformMeasurements();
+			//SPI1_PowerOff();
 			// Print results.
 			AT_PrintAdcResults();
 		}
 
 		/* MCU command AT$MCU<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
-			unsigned int mcu_supply_voltage_mv;
-			signed char mcu_temperature_degrees;
+			unsigned int mcu_supply_voltage_mv = 0;
+			signed char mcu_temperature_degrees = 0;;
 			// Trigger internal ADC conversions.
 			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
 			// Trigger external ADC conversions.
-			SPI1_PowerOn();
-			MAX11136_PerformMeasurements();
-			SPI1_PowerOff();
-			MAX11136_GetSupplyVoltage(&mcu_supply_voltage_mv);
+			//SPI1_PowerOn();
+			//MAX11136_PerformMeasurements();
+			//SPI1_PowerOff();
+			//MAX11136_GetSupplyVoltage(&mcu_supply_voltage_mv);
 			// Print results.
 			USART2_SendString("Vcc=");
 			USART2_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
@@ -740,11 +741,11 @@ void AT_DecodeRxBuffer(void) {
 			signed char sht3x_temperature_degrees = 0;
 			unsigned char sht3x_humidity_percent = 0;
 			// Perform measurements.
-			I2C1_PowerOn();
-			SHT3X_PerformMeasurements();
-			I2C1_PowerOff();
-			SHT3X_GetTemperature(&sht3x_temperature_degrees);
-			SHT3X_GetHumidity(&sht3x_humidity_percent);
+			//I2C1_PowerOn();
+			//SHT3X_PerformMeasurements();
+			//I2C1_PowerOff();
+			//SHT3X_GetTemperature(&sht3x_temperature_degrees);
+			//SHT3X_GetHumidity(&sht3x_humidity_percent);
 			// Print results.
 			USART2_SendString("T=");
 			USART2_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
@@ -758,11 +759,11 @@ void AT_DecodeRxBuffer(void) {
 			unsigned int dps310_pressure_pa = 0;
 			signed char dps310_temperature_degrees = 0;
 			// Perform measurements.
-			I2C1_PowerOn();
-			DPS310_PerformMeasurements();
-			I2C1_PowerOff();
-			DPS310_GetPressure(&dps310_pressure_pa);
-			DPS310_GetTemperature(&dps310_temperature_degrees);
+			//I2C1_PowerOn();
+			//DPS310_PerformMeasurements();
+			//I2C1_PowerOff();
+			//DPS310_GetPressure(&dps310_pressure_pa);
+			//DPS310_GetTemperature(&dps310_temperature_degrees);
 			// Print results.
 			USART2_SendString("P=");
 			USART2_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
@@ -775,10 +776,10 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_UVS) == AT_NO_ERROR) {
 			unsigned char si1133_uv_index = 0;
 			// Perform measurements.
-			I2C1_PowerOn();
-			SI1133_PerformMeasurements();
-			I2C1_PowerOff();
-			SI1133_GetUvIndex(&si1133_uv_index);
+			//I2C1_PowerOn();
+			//SI1133_PerformMeasurements();
+			//I2C1_PowerOff();
+			//SI1133_GetUvIndex(&si1133_uv_index);
 			// Print result.
 			USART2_SendString("UVI=");
 			USART2_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
@@ -893,8 +894,8 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
 			// Send Sigfox empty frame.
 			SIGFOX_API_open(&rc1);
-			//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
-			sfx_error = SFX_ERR_NONE;
+			sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+			//sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -916,8 +917,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox frame with specified downlink request.
 					SIGFOX_API_open(&rc1);
-					//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
-					sfx_error = SFX_ERR_NONE;
+					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
+					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -938,8 +939,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox frame with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
-					//sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
-					sfx_error = SFX_ERR_NONE;
+					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -968,8 +969,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with specified downlink request.
 					SIGFOX_API_open(&rc1);
-					//sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
-					sfx_error = SFX_ERR_NONE;
+					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -990,8 +991,8 @@ void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
-					//sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
-					sfx_error = SFX_ERR_NONE;
+					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -1012,8 +1013,8 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
 			// Send Sigfox OOB frame.
 			SIGFOX_API_open(&rc1);
-			//sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
-			sfx_error = SFX_ERR_NONE;
+			sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+			//sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -1118,7 +1119,7 @@ void AT_Init(void) {
  * @return:	None.
  */
 void AT_Task(void) {
-	// Trigger decode function if line end found.
+	// Trigger decoding function if line end found.
 	if (at_ctx.at_line_end_flag) {
 		AT_DecodeRxBuffer();
 		AT_Init();

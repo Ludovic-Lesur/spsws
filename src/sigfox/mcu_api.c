@@ -13,10 +13,25 @@
 #include "nvm.h"
 #include "sigfox_types.h"
 #include "tim.h"
+#include "usart.h"
+
+/*** MCU API local macros ***/
+
+#define MCU_API_MALLOC_BUFFER_SIZE		200
+
+/*** MCU API local structures ***/
+
+typedef struct {
+	sfx_u8 mcu_api_malloc_buffer[MCU_API_MALLOC_BUFFER_SIZE];
+	sfx_u16 mcu_api_timer_start_time_seconds;
+	sfx_u32 mcu_api_timer_duration_seconds;
+} MCU_API_Context;
 
 /*** MCU API local global variables ***/
 
-sfx_u8 malloc_buffer[200];
+MCU_API_Context mcu_api_ctx;
+
+/*** MCU API functions ***/
 
 /*!******************************************************************
  * \fn sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8 **returned_pointer)
@@ -38,9 +53,15 @@ sfx_u8 malloc_buffer[200];
  * \retval MCU_ERR_API_MALLOC         Malloc error
  *******************************************************************/
 sfx_u8 MCU_API_malloc(sfx_u16 size, sfx_u8** returned_pointer) {
-	// Allocate local buffer in RAM and return its address.
-	(*returned_pointer) = &malloc_buffer[0];
-	return SFX_ERR_NONE;
+	sfx_u8 sfx_err = SFX_ERR_NONE;
+	// Check size.
+	if (size <= MCU_API_MALLOC_BUFFER_SIZE) {
+		(*returned_pointer) = &(mcu_api_ctx.mcu_api_malloc_buffer[0]);
+	}
+	else {
+		sfx_err = MCU_ERR_API_MALLOC;
+	}
+	return sfx_err;
 }
 
 /*!******************************************************************
@@ -100,22 +121,27 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
  *******************************************************************/
 sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 	switch (delay_type) {
+
 	case SFX_DLY_INTER_FRAME_TX:
 		// 0 to 2s in Uplink DC.
 		TIM22_WaitMilliseconds(500);
 		break;
+
 	case SFX_DLY_INTER_FRAME_TRX:
 		// 500 ms in Uplink/Downlink FH & Downlink DC.
 		TIM22_WaitMilliseconds(500);
 		break;
+
 	case SFX_DLY_OOB_ACK:
 		// 1.4s to 4s for Downlink OOB.
 		TIM22_WaitMilliseconds(2000);
 		break;
+
 	case SFX_DLY_CS_SLEEP:
 		// Delay between several trials of Carrier Sense (for the first frame only).
 		TIM22_WaitMilliseconds(1000);
 		break;
+
 	default:
 		break;
 	}
@@ -169,20 +195,18 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 			break;
 	}
 
-	/* Init AES peripheral */
-	AES_Init();
-
 	/* Perform encryption */
+	AES_Enable();
 	for (block_idx=0; block_idx<number_of_blocks ; block_idx++) {
-		// Fill data in and initialization vector with previous result.
+		// Fill input data and initialization vector with previous result.
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) data_in[byte_idx] = data_to_encrypt[(block_idx * AES_BLOCK_SIZE) + byte_idx];
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) init_vector[byte_idx] = data_out[byte_idx];
 		// Run algorithme.
 		AES_EncodeCbc(data_in, data_out, init_vector, local_key);
+		// Fill output data.
+		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) encrypted_data[(block_idx * AES_BLOCK_SIZE) + byte_idx] = data_out[byte_idx];
 	}
-
-	/* Get last result */
-	for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) encrypted_data[byte_idx] = data_out[byte_idx];
+	AES_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -225,7 +249,7 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// RL.
 	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
 	// Disable NVM interface.
-	NVM_Enable();
+	NVM_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -269,7 +293,7 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// RL.
 	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
 	// Disable NVM interface.
-	NVM_Enable();
+	NVM_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -300,6 +324,10 @@ sfx_u8 MCU_API_timer_start_carrier_sense(sfx_u16 time_duration_in_ms) {
  * \retval MCU_ERR_API_TIMER_START:              Start timer error
  *******************************************************************/
 sfx_u8 MCU_API_timer_start(sfx_u32 time_duration_in_s) {
+	// Get current number of seconds.
+	mcu_api_ctx.mcu_api_timer_start_time_seconds = TIM22_GetSeconds();
+	// Save required duration.
+	mcu_api_ctx.mcu_api_timer_duration_seconds = time_duration_in_s;
 	return SFX_ERR_NONE;
 }
 
@@ -344,6 +372,9 @@ sfx_u8 MCU_API_timer_stop_carrier_sense(void) {
  * \retval MCU_ERR_API_TIMER_END:                Wait end of timer error
  *******************************************************************/
 sfx_u8 MCU_API_timer_wait_for_end(void) {
+	// Wait for second counter to reach start time + duration.
+	while (TIM22_GetSeconds() < (mcu_api_ctx.mcu_api_timer_start_time_seconds + mcu_api_ctx.mcu_api_timer_duration_seconds));
+	// TBD : enter sleep mode and program timer to wake-up MCU.
 	return SFX_ERR_NONE;
 }
 
@@ -363,7 +394,15 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
  * \retval MCU_ERR_API_TEST_REPORT:              Report test result error
  *******************************************************************/
 sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
-	// TBC: print result on LPUART.
+	// Print test result on UART.
+	if (status == SFX_TRUE) {
+		USART2_SendString("Test passed. RSSI = ");
+		USART2_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
+	}
+	else {
+		USART2_SendString("Test failed. ");
+	}
+	USART2_SendString("\n");
 	return SFX_ERR_NONE;
 }
 
@@ -417,10 +456,5 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
  * \retval MCU_ERR_API_GET_PAC:                  Error when getting initial PAC
  *******************************************************************/
 sfx_u8 MCU_API_get_initial_pac(sfx_u8 initial_pac[PAC_LENGTH]) {
-	// Get device initial PAC.
-	unsigned char byte_idx = 0;
-	for (byte_idx=0 ; byte_idx<PAC_LENGTH ; byte_idx++) {
-		NVM_ReadByte(NVM_SIGFOX_INITIAL_PAC_ADDRESS_OFFSET+byte_idx, &(initial_pac[byte_idx]));
-	}
 	return SFX_ERR_NONE;
 }
