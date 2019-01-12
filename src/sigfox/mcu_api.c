@@ -396,8 +396,8 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
 sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
 	// Print test result on UART.
 	if (status == SFX_TRUE) {
-		USART2_SendString("Test passed. RSSI = ");
-		USART2_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
+		USART2_SendString("Test passed. RSSI = -");
+		USART2_SendValue(((unsigned short) ((-1) * rssi)), USART_FORMAT_DECIMAL, 0);
 	}
 	else {
 		USART2_SendString("Test failed. ");

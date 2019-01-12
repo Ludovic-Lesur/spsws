@@ -41,6 +41,7 @@
 #include "geoloc.h"
 #include "hwt.h"
 #include "mode.h"
+#include "sigfox_api.h"
 
 /*** SPSWS global structures ***/
 
@@ -91,43 +92,43 @@ int main (void) {
 
 	/* Init peripherals */
 	// External interrupts.
-	EXTI_Init();
+//	EXTI_Init();
 	// Timers.
 	TIM21_Init();
 	TIM21_Enable();
 	TIM22_Init();
 	TIM22_Enable();
 	// DMA.
-	DMA1_Init();
+//	DMA1_Init();
 	// Analog.
-	ADC1_Init();
+//	ADC1_Init();
 	// Communication interfaces.
 	//LPUART1_Init();
 	USART2_Init();
-	I2C1_Init();
+//	I2C1_Init();
 	SPI1_Init();
 	// Hardware AES.
 	AES_Init();
 
 	/* Init components */
-	MAX11136_Init();
 	SX1232_Init();
-	NEOM8N_Init();
 	SKY13317_Init();
-	WIND_Init();
-	SHT3X_Init();
-	DPS310_Init();
-	SI1133_Init();
+	//NEOM8N_Init();
+	//MAX11136_Init();
+	//WIND_Init();
+	//SHT3X_Init();
+	//DPS310_Init();
+	//SI1133_Init();
 
 	/* Init applicative layers */
 	AT_Init();
 
 	/* POR blink */
-	unsigned int k = 0;
+	/*unsigned int k = 0;
 	for (k=0 ; k<20 ; k++) {
 		GPIO_Toggle(GPIO_LED);
 		TIM22_WaitMilliseconds(50);
-	}
+	}*/
 
 	/* Init AT interface */
 	USART2_PowerOn();

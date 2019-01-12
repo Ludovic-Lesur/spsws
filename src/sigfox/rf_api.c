@@ -7,6 +7,8 @@
 
 #include "rf_api.h"
 
+#include "gpio.h"
+#include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
 #include "sigfox_api.h"
@@ -23,12 +25,16 @@
 // If defined, print the Sigfox bit stream on UART.
 //#define RF_API_LOG_FRAME
 
+// Downlink parameters.
+#define RF_API_DOWNLINK_FRAME_LENGTH_BYTES	15
+#define RF_API_DOWNLINK_TIMEOUT_SECONDS		25
+
 /*** RF API local structures ***/
 
 // Sigfox uplink modulation parameters.
 typedef struct {
 	// Uplink message frequency.
-	unsigned int rf_api_uplink_frequency_hz;
+	unsigned int rf_api_rf_frequency_hz;
 	// Modulation parameters.
 	unsigned short rf_api_symbol_duration_us;
 	volatile unsigned char rf_api_tim2_event_mask; // Read as [x x x CCR4 CCR3 CCR2 CCR1 ARR].
@@ -58,8 +64,6 @@ RF_API_Context rf_api_ctx;
 		// Update event status (set current and clear previous).
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
-		// Toggle GPIO (debug).
-		//GPIO_Toggle(GPIO_LED);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
 	}
@@ -69,8 +73,6 @@ RF_API_Context rf_api_ctx;
 		// Update event status (set current and clear previous).
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
-		// Toggle GPIO (debug).
-		//GPIO_Toggle(GPIO_LED);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
 	}
@@ -78,22 +80,23 @@ RF_API_Context rf_api_ctx;
 	/* CCR2 = ramp down end + frequency shift start */
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX)) != 0) {
 		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
+			// Switch radio off.
+			GPIO_Write(GPIO_SX1232_DIOX, 0);
+			// Change frequency.
 			if (rf_api_ctx.rf_api_frequency_shift_direction == 0) {
 				// Decrease frequency.
-				SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
+				SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
 				rf_api_ctx.rf_api_frequency_shift_direction = 1;
 			}
 			else {
 				// Increase frequency.
-				SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
+				SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
 				rf_api_ctx.rf_api_frequency_shift_direction = 0;
 			}
 		}
 		// Update event status (set current and clear previous).
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
-		// Toggle GPIO (debug).
-		//GPIO_Toggle(GPIO_LED);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
 	}
@@ -102,13 +105,13 @@ RF_API_Context rf_api_ctx;
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX)) != 0) {
 		if (rf_api_ctx.rf_api_phase_shift_required != 0){
 			// Come back to uplink frequency.
-			SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz);
+			SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
+			// Switch radio on.
+			GPIO_Write(GPIO_SX1232_DIOX, 1);
 		}
 		// Update event status (set current and clear previous).
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
-		// Toggle GPIO (debug).
-		//GPIO_Toggle(GPIO_LED);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
 	}
@@ -118,8 +121,6 @@ RF_API_Context rf_api_ctx;
 		// Update event status.
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
-		// Toggle GPIO (debug).
-		//GPIO_Toggle(GPIO_LED);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
 	}
@@ -140,7 +141,7 @@ void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
 	case SFX_DBPSK_100BPS:
 		// 100 bps timings.
 		rf_api_ctx.rf_api_symbol_duration_us = 10000;
-		rf_api_ctx.rf_api_ramp_duration_us = 2000;
+		rf_api_ctx.rf_api_ramp_duration_us = 2500;
 		rf_api_ctx.rf_api_frequency_shift_hz = 400;
 		break;
 	case SFX_DBPSK_600BPS:
@@ -154,41 +155,51 @@ void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
 	}
 }
 
-/* SELECT TX RF PATH ACCORDING TO MODULATION TYPE.
- * @param modulation:	Modulation type asked by Sigfox library.
- * @return:				None.
+/* SELECT RF PATH ACCORDING TO RF MODE AND SIGFOX RADIO CONFIGURAION.
+ * @param:	None.
+ * @return:	None.
  */
-void RF_API_SetTxPath(sfx_modulation_type_t modulation) {
-	switch (modulation) {
+void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 
-	case SFX_DBPSK_100BPS:
-		// Assume 100bps corresponds to ETSI configuration (14dBm on PABOOST pin).
-		SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_PABOOST);
-		SKY13317_SetChannel(SKY13317_CHANNEL_RF1);
-		rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
-		rf_api_ctx.rf_api_output_power_max = SX1232_OUTPUT_POWER_PABOOST_MAX;
+	/* Get current radio configuration */
+	sfx_rc_t current_sfx_rc = SPSWS_SIGFOX_RC;
+
+	/* Select TX / RX */
+	switch (rf_mode) {
+
+	case SFX_RF_MODE_TX:
+		/* Select TX path according to RC */
+		switch (current_sfx_rc.open_tx_frequency) {
+			case RC1_OPEN_UPLINK_CENTER_FREQUENCY:
+			case RC5_OPEN_UPLINK_CENTER_FREQUENCY:
+				// 14dBm on PABOOST pin.
+				SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_PABOOST);
+				SKY13317_SetChannel(SKY13317_CHANNEL_RF1);
+				rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
+				rf_api_ctx.rf_api_output_power_max = SX1232_OUTPUT_POWER_PABOOST_MAX;
+				break;
+			case RC2_OPEN_UPLINK_START_OF_TABLE:
+				// 22dBm with PA on RFO pin.
+				SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_RFO);
+				SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
+				rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_RFO_MIN;
+				rf_api_ctx.rf_api_output_power_max = SX1232_OUTPUT_POWER_RFO_MAX;
+				break;
+			default:
+				break;
+			}
 		break;
 
-	case SFX_DBPSK_600BPS:
-		// Assume 600bps corresponds to FCC configuration (22dBm with PA on RFO pin).
-		SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_RFO);
-		SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
-		rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_RFO_MIN;
-		rf_api_ctx.rf_api_output_power_max = SX1232_OUTPUT_POWER_RFO_MAX;
+	case SFX_RF_MODE_RX:
+		// Activate LNA.
+		SKY13317_SetChannel(SKY13317_CHANNEL_RF2);
 		break;
 
 	default:
+		// Disable every channel.
+		SKY13317_SetChannel(SKY13317_CHANNEL_NONE);
 		break;
 	}
-}
-
-/* SELECT TX RF PATH ACCORDING TO MODULATION TYPE.
- * @param modulation:	Modulation type asked by Sigfox library.
- * @return:				None.
- */
-void RF_API_SetRxPath(void) {
-	// Activate LNA.
-	SKY13317_SetChannel(SKY13317_CHANNEL_RF2);
 }
 
 /*** RF API functions ***/
@@ -214,16 +225,37 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	/* Switch RF on and init transceiver */
 	SPI1_Enable();
 	SPI1_PowerOn();
+	unsigned char downlink_sync_word[2] = {0xB2, 0x27};
+
+	/* Enable TCXO */
+	SX1232_SetOscillator(SX1232_OSCILLATOR_TCXO);
+
+	/* Configure switch */
+	RF_API_SetRfPath(rf_mode);
 
 	/* Configure transceiver */
 	switch (rf_mode) {
 
 	case SFX_RF_MODE_TX:
-		// Prepare transceiver for TX operation.
+		// Prepare transceiver for uplink or continuous wave operation.
+		SX1232_EnableLowPnPll();
+		SX1232_EnableFastFrequencyHopping();
+		SX1232_SetModulation(SX1232_MODULATION_OOK, SX1232_MODULATION_SHAPING_OOK_BITRATE);
+		SX1232_SetBitRate(SX1232_BITRATE_4800BPS); // Set bit rate for modulation shaping.
+		SX1232_SetDataMode(SX1232_DATA_MODE_CONTINUOUS);
 		break;
 
 	case SFX_RF_MODE_RX:
-		// Prepare transceiver for RX operation.
+		// Prepare transceiver for downlink operation (GFSK 800Hz 600bps).
+		SX1232_ConfigureRssi(0, SX1232_RSSI_SAMPLING_256);
+		SX1232_SetEnablePreambleDetector(0);
+		SX1232_SetSyncWord(downlink_sync_word, 2);
+		SX1232_SetDataLength(RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+		SX1232_SetDioMapping(0, 0); // Map payload ready interrupt on DIO0.
+		SX1232_SetModulation(SX1232_MODULATION_FSK, SX1232_MODULATION_SHAPING_FSK_BT_1);
+		SX1232_SetFskDeviation(800);
+		SX1232_SetBitRate(SX1232_BITRATE_600BPS);
+		SX1232_SetDataMode(SX1232_DATA_MODE_PACKET);
 		break;
 
 	default:
@@ -281,9 +313,8 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	NVIC_DisableInterrupt(IT_USART2);
 	NVIC_DisableInterrupt(IT_LPUART1);
 
-	/* Set modulation parameters and RF path according to modulation */
+	/* Set modulation parameters */
 	RF_API_SetTxModulationParameters(type);
-	RF_API_SetTxPath(type);
 
 	/* Init common variables */
 	volatile unsigned int start_time = 0;
@@ -302,11 +333,11 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 
 	/* Compute frequency shift duration required to invert signal phase */
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.
-	SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz);
+	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
 	unsigned int effective_uplink_frequency_hz = SX1232_GetRfFrequency();
-	SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
+	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
 	unsigned int effective_high_shifted_frequency_hz = SX1232_GetRfFrequency();
-	SX1232_SetRfFrequency(rf_api_ctx.rf_api_uplink_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
+	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
 	unsigned int effective_low_shifted_frequency_hz = SX1232_GetRfFrequency();
 	// Compute average durations = 1 / (2 * delta_f).
 	unsigned short high_shifted_frequency_duration_us = (1000000) / (2 * (effective_high_shifted_frequency_hz - effective_uplink_frequency_hz));
@@ -329,7 +360,9 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	rf_api_ctx.rf_api_tim2_event_mask = 0;
 
 	/* Start CW */
-	SX1232_StartCw(rf_api_ctx.rf_api_uplink_frequency_hz, rf_api_ctx.rf_api_output_power_min);
+	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
+	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_min);
+	SX1232_StartCw();
 	TIM2_Start();
 
 	/* First ramp-up */
@@ -432,11 +465,9 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
  *******************************************************************/
 sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type) {
 
-	/* Select RF TX path according to modulation */
-	RF_API_SetTxPath(type);
-
 	/* Start CW */
-	SX1232_StartCw(rf_api_ctx.rf_api_uplink_frequency_hz, rf_api_ctx.rf_api_output_power_max);
+	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max);
+	SX1232_StartCw();
 
 	return SFX_ERR_NONE;
 }
@@ -468,8 +499,9 @@ sfx_u8 RF_API_stop_continuous_transmission (void) {
  *******************************************************************/
 sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
 
-	/* Save frequency */
-	rf_api_ctx.rf_api_uplink_frequency_hz = frequency;
+	/* Program and save frequency */
+	SX1232_SetRfFrequency(frequency);
+	rf_api_ctx.rf_api_rf_frequency_hz = frequency;
 
 	return SFX_ERR_NONE;
 }
@@ -500,7 +532,38 @@ sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
 sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * state) {
-	return SFX_ERR_NONE;
+
+	/* Start radio */
+	SX1232_SetMode(SX1232_MODE_FSRX);
+	TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
+	SX1232_SetMode(SX1232_MODE_RX);
+	TIM22_WaitMilliseconds(5); // Wait TS_TR=120µs typical.
+
+	/* Wait for external interrupt (payload ready on DIO0) */
+	unsigned char rssi_retrieved = 0;
+	unsigned int rx_window_start_time_seconds = TIM22_GetSeconds();
+	(*state) = DL_PASSED;
+	sfx_u8 sfx_err = SFX_ERR_NONE;
+	while (GPIO_Read(GPIO_SX1232_DIO0) == 0) {
+		// Get RSSI when preamble is found.
+		if (((SX1232_GetIrqFlags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
+			(*rssi) = (sfx_s16) SX1232_GetRssi();
+			rssi_retrieved = 1;
+		}
+		// Exit if 25 seconds ellapsed.
+		if (TIM22_GetSeconds() > (rx_window_start_time_seconds + RF_API_DOWNLINK_TIMEOUT_SECONDS)) {
+			(*state) = DL_TIMEOUT;
+			sfx_err = RF_ERR_API_WAIT_FRAME;
+			break;
+		}
+	}
+
+	/* Read FIFO if data was retrieved */
+	if ((*state) == DL_PASSED) {
+		SX1232_ReadFifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+	}
+
+	return sfx_err;
 }
 
 /*!******************************************************************

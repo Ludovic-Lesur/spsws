@@ -8,6 +8,8 @@
 #ifndef MODE_H
 #define MODE_H
 
+#include "sigfox_api.h"
+
 /*** Wheather station mode ***/
 
 // AT command mode.
@@ -21,6 +23,10 @@
 
 // Intermittent mode with hardware timer as time reference.
 //#define IM_HWT
+
+/*** Sigfox RC configuration ***/
+
+#define SPSWS_SIGFOX_RC		RC1
 
 /*** Error management ***/
 

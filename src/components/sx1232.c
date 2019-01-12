@@ -16,7 +16,8 @@
 /*** SX1232 local macros ***/
 
 // SX1232 oscillator frequency.
-#define SX1232_FXOSC_HZ		32000000
+#define SX1232_FXOSC_HZ							32000000
+#define SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES	8
 
 /*** SX1232 local structures ***/
 
@@ -97,17 +98,20 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 
 	/* Select oscillator */
 	switch (oscillator) {
-	case SX1232_QUARTZ:
+	case SX1232_OSCILLATOR_QUARTZ:
 		// Enable quartz input.
 		SX1232_WriteRegister(SX1232_REG_TCXO, 0x09);
 		break;
-	case SX1232_TCXO:
+	case SX1232_OSCILLATOR_TCXO:
 		// Enable TCXO input.
 		SX1232_WriteRegister(SX1232_REG_TCXO, 0x19);
 		break;
 	default:
 		break;
 	}
+
+	/* Wait TS_OSC = 250µs typical */
+	TIM22_WaitMilliseconds(5);
 
 	/* Trigger RC oscillator calibration */
 	SX1232_WriteRegister(SX1232_REG_OSC, 0x0F);
@@ -158,11 +162,12 @@ void SX1232_SetMode(SX1232_Mode mode) {
 	SX1232_WriteRegister(SX1232_REG_OPMODE, op_mode_reg_value);
 }
 
-/* SET SX1232 MODULATION.
- * @param modulation: 	Modulation scheme (see SX1232_Modulation enumeration in sx1232.h).
- * @return:				None.
+/* CONFIGURE SX1232 MODULATION.
+ * @param modulation: 			Modulation scheme (see SX1232_Modulation enumeration in sx1232.h).
+ * @param modulation_shaping: 	Modulation shaping (see SX1232_ModulationShaping enumeration in sx1232.h).
+ * @return:						None.
  */
-void SX1232_SetModulation(SX1232_Modulation modulation) {
+void SX1232_SetModulation(SX1232_Modulation modulation, SX1232_ModulationShaping modulation_shaping) {
 
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
@@ -170,7 +175,7 @@ void SX1232_SetModulation(SX1232_Modulation modulation) {
 	/* Read OP mode register */
 	unsigned char op_mode_reg_value = 0;
 	SX1232_ReadRegister(SX1232_REG_OPMODE, &op_mode_reg_value);
-	op_mode_reg_value &= 0x9F; // Reset bits 5-6.
+	op_mode_reg_value &= 0x87; // Reset bits 3-6.
 
 	/* Program modulation */
 	switch (modulation) {
@@ -185,6 +190,31 @@ void SX1232_SetModulation(SX1232_Modulation modulation) {
 	default:
 		break;
 	}
+
+	/* Program modulation shaping */
+	switch (modulation_shaping) {
+	case SX1232_MODULATION_SHAPING_NONE:
+		// Modulation shaping = '00'.
+		// Allready done by previous reset.
+		break;
+	case SX1232_MODULATION_SHAPING_FSK_BT_1:
+	case SX1232_MODULATION_SHAPING_OOK_BITRATE:
+		// Modulation shaping = '01'.
+		op_mode_reg_value |= 0x08;
+		break;
+	case SX1232_MODULATION_SHAPING_FSK_BT_05:
+	case SX1232_MODULATION_SHAPING_OOK_TWO_BITRATE:
+		// Modulation shaping = '10'.
+		op_mode_reg_value |= 0x10;
+		break;
+	case SX1232_MODULATION_SHAPING_FSK_BT_03:
+		// Modulation shaping = '11'.
+		op_mode_reg_value |= 0x18;
+		break;
+	default:
+		break;
+	}
+
 	SX1232_WriteRegister(SX1232_REG_OPMODE, op_mode_reg_value);
 }
 
@@ -226,6 +256,27 @@ unsigned int SX1232_GetRfFrequency(void) {
 	return ((unsigned int) rf_frequency_hz);
 }
 
+/* SET FSK DEVIATION.
+ * @param fsk_deviation_hz:	FSK deviation in Hz.
+ * @return:					None.
+ */
+void SX1232_SetFskDeviation(unsigned short fsk_deviation_hz) {
+
+	// Check value is on 14-bits.
+	if (fsk_deviation_hz < (0b1 << 14)) {
+
+		/* Configure SPI */
+		SPI1_SetClockPolarity(0);
+
+		/* Program FSK deviation */
+		unsigned long long fdev_reg_value = (0b1 << 19);
+		fdev_reg_value *= fsk_deviation_hz;
+		fdev_reg_value /= SX1232_FXOSC_HZ;
+		SX1232_WriteRegister(SX1232_REG_FDEVMSB, ((fdev_reg_value & 0x00003F00) >> 8));
+		SX1232_WriteRegister(SX1232_REG_FDEVLSB, ((fdev_reg_value & 0x000000FF) >> 0));
+	}
+}
+
 /* SET SX1232 BIT RATE.
  * @param bit_rate: Bit rate to program (see SX1232_BitRate enumeration in sx1232.h).
  * @return:			None.
@@ -243,6 +294,20 @@ void SX1232_SetBitRate(SX1232_BitRate bit_rate) {
 		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0xD0);
 		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x55);
 		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x05);
+		break;
+	case SX1232_BITRATE_1200BPS:
+		// 1.2 kbits/s.
+		// With FXOSX=32MHz, BR=26666, BRF=10: bit rate = FXOSC / (BR + BRF/16) = 1200,001 bps.
+		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0x68);
+		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x2A);
+		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x0A);
+		break;
+	case SX1232_BITRATE_4800BPS:
+		// 4.8 kbits/s.
+		// With FXOSX=32MHz, BR=6667, BRF=0: bit rate = FXOSC / (BR + BRF/16) = 4799,31 bps.
+		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0x1A);
+		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x0B);
+		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x00);
 		break;
 	default:
 		break;
@@ -277,6 +342,87 @@ void SX1232_SetDataMode(SX1232_DataMode data_mode) {
 		break;
 	}
 	SX1232_WriteRegister(SX1232_REG_PACKETCONFIG2, packet_config2_reg_value);
+}
+
+/* CONFIGURE SX1232 DIO MAPPING.
+ * @param dio:			GPIO to configure (0 to 5).
+ * @param dio_mapping:	GPIO function (2-bits value).
+ */
+void SX1232_SetDioMapping(unsigned char dio, unsigned char dio_mapping) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Check parameters */
+	if ((dio < 6) && (dio_mapping < 4)) {
+
+		/* Configure proper register */
+		unsigned char dio_mapping_reg_value = 0;
+		switch (dio) {
+		// DIO0.
+		case 0:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0x3F;
+			dio_mapping_reg_value |= (dio_mapping << 6);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
+			break;
+		// DIO1.
+		case 1:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0xCF;
+			dio_mapping_reg_value |= (dio_mapping << 4);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
+			break;
+		// DIO2.
+		case 2:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0xF3;
+			dio_mapping_reg_value |= (dio_mapping << 2);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
+			break;
+		// DIO3.
+		case 3:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0xFC;
+			dio_mapping_reg_value |= (dio_mapping << 0);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
+			break;
+		// DIO0.
+		case 4:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING2, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0x3F;
+			dio_mapping_reg_value |= (dio_mapping << 6);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING2, dio_mapping_reg_value);
+			break;
+		// DIO0.
+		case 5:
+			SX1232_ReadRegister(SX1232_REG_DIOMAPPING2, &dio_mapping_reg_value);
+			dio_mapping_reg_value &= 0xCF;
+			dio_mapping_reg_value |= (dio_mapping << 4);
+			SX1232_WriteRegister(SX1232_REG_DIOMAPPING2, dio_mapping_reg_value);
+			break;
+		}
+	}
+}
+
+/* READ SX1232 IRQ FLAGS REGISTERS.
+ * @param:	None.
+ * @return 	irq_flags_value:	16-bits value read as [REG_IRQFLASG1 REG_IRQFLASG2].
+ */
+unsigned short SX1232_GetIrqFlags(void) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Read registers */
+	unsigned char reg_value = 0;
+	unsigned short irq_flags_value = 0;
+	SX1232_ReadRegister(SX1232_REG_IRQFLAGS1, &reg_value);
+	irq_flags_value |= (reg_value << 8);
+	SX1232_ReadRegister(SX1232_REG_IRQFLAGS2, &reg_value);
+	irq_flags_value |= (reg_value << 0);
+
+	return irq_flags_value;
 }
 
 /* SELECT SX1232 RF OUTPUT PIN.
@@ -355,28 +501,42 @@ void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm) {
 	SX1232_WriteRegister(SX1232_REG_PACONFIG, pa_config_reg_value);
 }
 
-/* START CONTINUOUS WAVE OUTPUT.
- * @param frequency_hz:		CW frequency in Hz.
- * @param output_power_dBm:	CW output power in dBm.
- * @return:					None.
+/* ENABLE LOW PHASE NOISE PLL.
+ * @param:	None.
+ * @return:	None.
  */
-void SX1232_StartCw(unsigned int frequency_hz, unsigned char output_power_dbm) {
-	// Enable TCXO.
-	SX1232_SetOscillator(SX1232_TCXO);
-	TIM22_WaitMilliseconds(5); // Wait TS_OSC=250µs typical.
-	// Enable low PN PLL.
+void SX1232_EnableLowPnPll(void) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Program register */
 	unsigned char reg_value = 0;
 	SX1232_ReadRegister(SX1232_REG_PARAMP, &reg_value);
 	SX1232_WriteRegister(SX1232_REG_PARAMP, (reg_value & 0xEF));
-	// Enable fast frequency hopping.
+}
+
+/* ENABLE FAST FREQUENCY HOPPING.
+ * @param:	None.
+ * @return:	None.
+ */
+void SX1232_EnableFastFrequencyHopping(void) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Program register */
+	unsigned char reg_value = 0;
 	SX1232_ReadRegister(SX1232_REG_PLLHOP, &reg_value);
 	SX1232_WriteRegister(SX1232_REG_PLLHOP, (reg_value | 0x80));
-	// Configure radio parameters.
-	SX1232_SetModulation(SX1232_MODULATION_OOK);
-	SX1232_SetRfFrequency(frequency_hz);
-	SX1232_SetRfOutputPower(output_power_dbm);
-	// Use TX continuous mode.
-	SX1232_SetDataMode(SX1232_DATA_MODE_CONTINUOUS);
+}
+
+/* START CONTINUOUS WAVE OUTPUT.
+ * @param:	None.
+ * @return:	None.
+ */
+void SX1232_StartCw(void) {
+	// Start data signal.
 	GPIO_Write(GPIO_SX1232_DIOX, 1);
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
@@ -393,4 +553,124 @@ void SX1232_StopCw(void) {
 	// Stop data signal and radio.
 	GPIO_Write(GPIO_SX1232_DIOX, 0);
 	SX1232_SetMode(SX1232_MODE_STANDBY);
+}
+
+/* ENABLE PREAMBLE DETECTOR.
+ * @param preamble_polarity:	Use 0xAA (0) or 0x55 (1) as preamble byte.
+ * @return:						None.
+ */
+void SX1232_SetEnablePreambleDetector(unsigned char preamble_polarity) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Set polarity */
+	unsigned char reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_SYNCCONFIG, &reg_value);
+	if (preamble_polarity == 0) {
+		SX1232_WriteRegister(SX1232_REG_SYNCCONFIG, (reg_value & 0xDF));
+	}
+	else {
+		SX1232_WriteRegister(SX1232_REG_SYNCCONFIG, (reg_value | 0x20));
+	}
+
+	/* Enable preamble detector */
+	SX1232_ReadRegister(SX1232_REG_PREAMBLEDETECT, &reg_value);
+	SX1232_WriteRegister(SX1232_REG_PREAMBLEDETECT, (reg_value | 0x80));
+}
+
+/* CONFIGURE RX SYNCHRONIZATION WORD.
+ * @param sync_word:				Synchronization word.
+ * @param sync_word_length_bytes:	Synchronization word length in bytes.
+ * @return:							None.
+ */
+void SX1232_SetSyncWord(unsigned char* sync_word, unsigned char sync_word_length_bytes) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Check parameters */
+	if ((sync_word_length_bytes > 0) && (sync_word_length_bytes <= SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES)) {
+
+		/* Set syncronization word length */
+		unsigned char reg_value = 0;
+		SX1232_ReadRegister(SX1232_REG_SYNCCONFIG, &reg_value);
+		reg_value &= 0xF8; // Reset bits 0-2.
+		reg_value |= ((sync_word_length_bytes - 1) & 0x07);
+		reg_value &= 0x3F; // Disable receiver auto_restart.
+		reg_value |= 0x10; // Enable syncronization word detector.
+		SX1232_WriteRegister(SX1232_REG_SYNCCONFIG, reg_value);
+
+		/* Fill synchronization word */
+		unsigned char byte_idx = 0;
+		for (byte_idx=0 ; byte_idx<sync_word_length_bytes ; byte_idx++) {
+			// Warning: this loop is working because registers addresses are adjacent.
+			SX1232_WriteRegister((SX1232_REG_SYNCVALUE1 + byte_idx), sync_word[byte_idx]);
+		}
+	}
+}
+
+/* SET RX PAYLOAD LENGTH.
+ * @param data_length_bytes:	Data length to receive in bytes.
+ * @return:						None.
+ */
+void SX1232_SetDataLength(unsigned char data_length_bytes) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Use fixed length, no CRC computation, do not clear FIFO when CRC fails */
+	SX1232_WriteRegister(SX1232_REG_PACKETCONFIG1, 0x08);
+
+	/* Set data length */
+	SX1232_WriteRegister(SX1232_REG_PAYLOADLENGTH, data_length_bytes);
+}
+
+/* CONFIGURE SX1232 RSSI MEASUREMENT.
+ * @param rssi_offset: 		RSSI offset in dBm.
+ * @param rssi_sampling:	Number of samples used to average RSSI value (see SX1232_RssiSampling enumeration in sx1232.h).
+ * @return:					None.
+ */
+void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_sampling) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	// TBD.
+}
+
+/* READ SX1232 RSSI.
+ * @param:	None.
+ * @return:	RSSI in dBm.
+ */
+signed char SX1232_GetRssi(void) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Read RSSI register */
+	signed char rssi = 0;
+	unsigned char rssi_reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_RSSIVALUE, &rssi_reg_value);
+	rssi = (-1) * (rssi_reg_value / 2);
+
+	return rssi;
+}
+
+/* READ SX1232 FIFO.
+ * @param rx_data:			Byte array that will contain FIFO data.
+ * @param rx_data_length:	Number of bytes to read in FIFO.
+ */
+void SX1232_ReadFifo(unsigned char* rx_data, unsigned char rx_data_length) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Access FIFO byte per byte */
+	unsigned char byte_idx = 0;
+	unsigned char rx_data_byte = 0;
+	for (byte_idx=0 ; byte_idx<rx_data_length ; byte_idx++) {
+		SX1232_ReadRegister(SX1232_REG_FIFO, &rx_data_byte);
+		rx_data[byte_idx] = rx_data_byte;
+	}
 }

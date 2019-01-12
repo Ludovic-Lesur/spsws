@@ -48,7 +48,8 @@
 									<listOptionValue builtIn="false" value="${ProjDirPath}/lib"/>
 								</option>
 								<option id="gnu.c.link.option.libs.2076648677" name="Libraries (-l)" superClass="gnu.c.link.option.libs" useByScannerDiscovery="false" valueType="libs">
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="SFX_LIB_V2.3.0"/>
+									<listOptionValue builtIn="false" value="SFX_LIB_V2.3.0"/>
+									<listOptionValue builtIn="false" value="SFX_ADDON_VERIFIED_V1.0.1_FDL"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1673363373" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
