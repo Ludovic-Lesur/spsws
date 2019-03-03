@@ -92,13 +92,15 @@ sfx_u8 MCU_API_free(sfx_u8* ptr) {
  * \retval MCU_ERR_API_VOLT_TEMP:                Get voltage/temperature error
  *******************************************************************/
 sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature) {
+	// Perform measurements.
+	ADC1_PerformMeasurements();
 	// Get MCU supply voltage.
-	unsigned int mcu_supply_voltage_mv;
-	MAX11136_GetSupplyVoltage(&mcu_supply_voltage_mv);
+	unsigned int mcu_supply_voltage_mv = 0;
+	ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
 	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
 	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.
-	signed char mcu_temperature_degrees;
+	signed char mcu_temperature_degrees = 0;
 	ADC1_GetMcuTemperature(&mcu_temperature_degrees);
 	(*temperature) = ((sfx_s16) mcu_temperature_degrees) * 10; // Unit = 1/10 of degrees.
 
@@ -396,13 +398,13 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
 sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
 	// Print test result on UART.
 	if (status == SFX_TRUE) {
-		USART2_SendString("Test passed. RSSI = -");
-		USART2_SendValue(((unsigned short) ((-1) * rssi)), USART_FORMAT_DECIMAL, 0);
+		USARTx_SendString("Test passed. RSSI = -");
+		USARTx_SendValue(((unsigned int) ((-1) * rssi)), USART_FORMAT_DECIMAL, 0);
 	}
 	else {
-		USART2_SendString("Test failed. ");
+		USARTx_SendString("Test failed. ");
 	}
-	USART2_SendString("\n");
+	USARTx_SendString("\n");
 	return SFX_ERR_NONE;
 }
 

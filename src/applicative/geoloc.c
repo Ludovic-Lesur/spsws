@@ -243,7 +243,9 @@ void GEOLOC_Process(Timestamp* gps_timestamp, unsigned char* timestamp_retrieved
 
 		/* Unknown state */
 		default:
-			//NEOM8N_Off();
+			// Stop LPUART, DMA and GPS.
+			LPUART1_PowerOff();
+			// End state machine.
 			geoloc_ctx.geoloc_state = GEOLOC_STATE_END;
 			break;
 		}

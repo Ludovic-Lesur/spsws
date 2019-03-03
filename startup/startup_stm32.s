@@ -134,9 +134,9 @@ g_pfnVectors:
   .word	RTC_IRQHandler // RTC
   .word	0 // Flash
   .word	0 // RCC
-  .word	0 // EXTI lines [1:0] interrupts
-  .word	0 // EXTI lines [3:2] interrupts
-  .word	EXTI4_15_IRQHandler // EXTI lines [15:4] interrupts
+  .word	EXTI_0_1_IRQHandler // EXTI lines [1:0] interrupts
+  .word	EXTI_2_3_IRQHandler // EXTI lines [3:2] interrupts
+  .word	EXTI_4_15_IRQHandler // EXTI lines [15:4] interrupts
   .word	0 // Reserved
   .word	0 // DMA1 channel 1
   .word	0 // DMA1 channels 2-3
@@ -156,7 +156,7 @@ g_pfnVectors:
   .word	0 // I2C2
   .word 0 // SPI1
   .word	0 // SPI2
-  .word	0 // USART1
+  .word	USART1_IRQHandler // USART1
   .word	USART2_IRQHandler // USART2
   .word	LPUART1_IRQHandler // AES, RNG and LPUART1.
 
@@ -186,12 +186,21 @@ g_pfnVectors:
 	.weak	RTC_IRQHandler
 	.thumb_set RTC_IRQHandler,Default_Handler
 
-	.weak	EXTI4_15_IRQHandler
-	.thumb_set EXTI4_15_IRQHandler,Default_Handler
+	.weak	EXTI_0_1_IRQHandler
+	.thumb_set EXTI_0_1_IRQHandler,Default_Handler
+
+	.weak	EXTI_2_3_IRQHandler
+	.thumb_set EXTI_2_3_IRQHandler,Default_Handler
+
+	.weak	EXTI_4_15_IRQHandler
+	.thumb_set EXTI_4_15_IRQHandler,Default_Handler
 	
 	.weak	LPUART1_IRQHandler
 	.thumb_set LPUART1_IRQHandler,Default_Handler
 	
+	.weak	USART1_IRQHandler
+	.thumb_set USART1_IRQHandler,Default_Handler
+
 	.weak	USART2_IRQHandler
 	.thumb_set USART2_IRQHandler,Default_Handler
 

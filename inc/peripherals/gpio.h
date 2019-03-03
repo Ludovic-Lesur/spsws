@@ -14,8 +14,9 @@
 
 // GPIO structure.
 typedef struct {
-	GPIO_BaseAddress* port; // 'GPIOA' to 'GPIOK'.
-	unsigned char num; // '0' to '15'.
+	GPIO_BaseAddress* port_address; // GPIOA to GPIOC.
+	unsigned port_index; // 0 for GPIOA, 1 for GPIOB, etc.
+	unsigned char num; // 0 to 15.
 	unsigned char af_num; // Alternate function number if used.
 } GPIO;
 

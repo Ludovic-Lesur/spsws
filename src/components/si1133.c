@@ -23,7 +23,7 @@ typedef struct {
 
 /*** SI1133 local global variables ***/
 
-SI1133_Context si1133_ctx;
+static SI1133_Context si1133_ctx;
 
 /*** SI1133 local functions ***/
 

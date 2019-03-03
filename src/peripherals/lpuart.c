@@ -31,7 +31,7 @@ typedef struct {
 
 /*** LPUART local global variables ***/
 
-static LPUART_Context lpuart_ctx;
+static volatile LPUART_Context lpuart_ctx;
 
 /*** LPUART local functions ***/
 

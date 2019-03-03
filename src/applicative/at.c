@@ -13,15 +13,19 @@
 #include "dps310.h"
 #include "i2c.h"
 #include "lpuart.h"
+#include "mapping.h"
 #include "max11136.h"
 #include "mode.h"
 #include "neom8n.h"
 #include "nvm.h"
+#include "rf_api.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_api.h"
+#include "sky13317.h"
 #include "spi.h"
 #include "sx1232.h"
+#include "tim.h"
 #include "usart.h"
 #include "wind.h"
 
@@ -55,11 +59,12 @@
 #define AT_IN_HEADER_GPS								"AT$GPS=" 		// AT$GPS=<timeout_seconds><CR>.
 #define AT_IN_HEADER_TIME								"AT$TIME="		// AT$TIME=<timeout_seconds><CR>.
 #define AT_IN_HEADER_WIND								"AT$WIND="		// AT$WIND=<enable><CR>.
-#define AT_IN_HEADER_CW									"AT$CW="		// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
 #define AT_IN_HEADER_ID									"AT$ID="		// AT$ID=<id><CR>.
 #define AT_IN_HEADER_KEY								"AT$KEY="		// AT$KEY=<key><CR>.
 #define AT_IN_HEADER_SF									"AT$SF="		// AT$SF=<uplink_data>,<downlink_request><CR>.
 #define AT_IN_HEADER_SB									"AT$SB="		// AT$SB=<bit><CR>.
+#define AT_IN_HEADER_CW									"AT$CW="		// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
+#define AT_IN_HEADER_RSSI								"AT$RSSI="		// AT$RSSI=<frequency_hz><CR>.
 #define AT_IN_HEADER_TM									"AT$TM="		// AT$TM=<rc>,<test_mode><CR>.
 
 // Output commands without data.
@@ -95,6 +100,9 @@
 #define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x86			// Invalid data retrieved by GPS.
 #define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
 
+// Duration of RSSI command.
+#define RSSI_REPORT_DURATION_SECONDS					60
+
 /*** AT local structures ***/
 
 typedef enum {
@@ -110,9 +118,9 @@ typedef enum at_param_type {
 
 typedef struct {
 	// AT command buffer.
-	unsigned char at_rx_buf[AT_BUFFER_SIZE];
-	unsigned int at_rx_buf_idx;
-	unsigned char at_line_end_flag; // Set to '1' as soon as a <CR> or <LF> is received.
+	volatile unsigned char at_rx_buf[AT_BUFFER_SIZE];
+	volatile unsigned int at_rx_buf_idx;
+	volatile unsigned char at_line_end_flag; // Set to '1' as soon as a <CR> or <LF> is received.
 	// Parsing variables.
 	unsigned int start_idx;
 	unsigned int end_idx;
@@ -121,7 +129,7 @@ typedef struct {
 
 /*** AT local global variables ***/
 
-volatile AT_Context at_ctx;
+static AT_Context at_ctx;
 
 /*** AT local functions ***/
 
@@ -462,8 +470,8 @@ unsigned short AT_GetByteArray(unsigned char last_param, unsigned char* byte_arr
  * @return:	None.
  */
 void AT_ReplyOk(void) {
-	USART2_SendString(AT_OUT_COMMAND_OK);
-	USART2_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	USARTx_SendString(AT_OUT_COMMAND_OK);
+	USARTx_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
 }
 
 /* PRINT AN ERROR THROUGH AT INTERFACE.
@@ -473,16 +481,16 @@ void AT_ReplyOk(void) {
 void AT_ReplyError(AT_ErrorSource error_source, unsigned short error_code) {
 	switch (error_source) {
 	case AT_ERROR_SOURCE_AT:
-		USART2_SendString(AT_OUT_HEADER_AT_ERROR);
+		USARTx_SendString(AT_OUT_HEADER_AT_ERROR);
 		break;
 	case AT_ERROR_SOURCE_SFX:
-		USART2_SendString(AT_OUT_HEADER_SFX_ERROR);
+		USARTx_SendString(AT_OUT_HEADER_SFX_ERROR);
 		break;
 	default:
 		break;
 	}
-	USART2_SendValue(error_code, USART_FORMAT_HEXADECIMAL, 1);
-	USART2_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	USARTx_SendValue(error_code, USART_FORMAT_HEXADECIMAL, 1);
+	USARTx_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
 }
 
 /* PRINT ADC RESULTS.
@@ -490,40 +498,40 @@ void AT_ReplyError(AT_ErrorSource error_source, unsigned short error_code) {
  * @return:	None.
  */
 void AT_PrintAdcResults(void) {
-	unsigned int result_mv = 0;
+	unsigned int result_12bits = 0;
 	// AIN0.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN0, &result_mv);
-	USART2_SendString("AIN0=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN0, &result_12bits);
+	USARTx_SendString("AIN0=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN1.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN1, &result_mv);
-	USART2_SendString("mV AIN1=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN1, &result_12bits);
+	USARTx_SendString("AIN1=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN2.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN2, &result_mv);
-	USART2_SendString("mV AIN2=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN2, &result_12bits);
+	USARTx_SendString("mV AIN2=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN3.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_AIN3, &result_mv);
-	USART2_SendString("mV AIN3=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN3, &result_12bits);
+	USARTx_SendString("mV AIN3=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN4 (resistor divider with 6.8M and 1M -> Vin = 7.8 * Vout).
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_SOLAR_PANEL, &result_mv);
-	USART2_SendString("mV Vsp=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN4, &result_12bits);
+	USARTx_SendString("mV AIN4=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN5.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_SUPERCAP, &result_mv);
-	USART2_SendString("mV Vcap=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN5, &result_12bits);
+	USARTx_SendString("mV AIN5=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN6.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_LDR, &result_mv);
-	USART2_SendString("mV Vldr=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN6, &result_12bits);
+	USARTx_SendString("mV AIN6=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN7.
-	MAX11136_GetChannelVoltage(MAX11136_CHANNEL_BANDGAP, &result_mv);
-	USART2_SendString("mV Vbg=");
-	USART2_SendValue(result_mv, USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("mV\n");
+	MAX11136_GetChannel(MAX11136_CHANNEL_AIN7, &result_12bits);
+	USARTx_SendString("mV AIN7=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("mV\n");
 }
 
 /* PRINT A TIMESTAMP ON USART.
@@ -532,38 +540,38 @@ void AT_PrintAdcResults(void) {
  */
 void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 	// Year.
-	USART2_SendValue((timestamp_to_print -> year), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("-");
+	USARTx_SendValue((timestamp_to_print -> year), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("-");
 	// Month.
 	if ((timestamp_to_print -> month) < 10) {
-		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART2_SendValue((timestamp_to_print -> month), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("-");
+	USARTx_SendValue((timestamp_to_print -> month), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("-");
 	// Day.
 	if ((timestamp_to_print -> date) < 10) {
-		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART2_SendValue((timestamp_to_print -> date), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString(" ");
+	USARTx_SendValue((timestamp_to_print -> date), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" ");
 	// Hours.
 	if ((timestamp_to_print -> hours) < 10) {
-		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART2_SendValue((timestamp_to_print -> hours), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString(":");
+	USARTx_SendValue((timestamp_to_print -> hours), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(":");
 	// Minutes.
 	if ((timestamp_to_print -> minutes) < 10) {
-		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART2_SendValue((timestamp_to_print -> minutes), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString(":");
+	USARTx_SendValue((timestamp_to_print -> minutes), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(":");
 	// Seconds.
 	if ((timestamp_to_print -> seconds) < 10) {
-		USART2_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
 	}
-	USART2_SendValue((timestamp_to_print -> seconds), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("\n");
+	USARTx_SendValue((timestamp_to_print -> seconds), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("\n");
 }
 
 /* PRINT GPS POSITION ON USART.
@@ -573,27 +581,27 @@ void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 void AT_PrintPosition(Position* gps_position) {
 	// Header.
 	// Latitude.
-	USART2_SendString("Lat=");
-	USART2_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("°");
-	USART2_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("'");
-	USART2_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("''-");
-	USART2_SendString(((gps_position -> lat_north)==1)? "N" : "S");
+	USARTx_SendString("Lat=");
+	USARTx_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("°");
+	USARTx_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("'");
+	USARTx_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("''-");
+	USARTx_SendString(((gps_position -> lat_north)==1)? "N" : "S");
 	// Longitude.
-	USART2_SendString(" Long=");
-	USART2_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("°");
-	USART2_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("'");
-	USART2_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("''-");
-	USART2_SendString(((gps_position -> long_east)==1)? "E" : "W");
+	USARTx_SendString(" Long=");
+	USARTx_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("°");
+	USARTx_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("'");
+	USARTx_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("''-");
+	USARTx_SendString(((gps_position -> long_east)==1)? "E" : "W");
 	// Altitude.
-	USART2_SendString(" Alt=");
-	USART2_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
-	USART2_SendString("m\n");
+	USARTx_SendString(" Alt=");
+	USARTx_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("m\n");
 }
 
 /* PRINT SIGFOX DOWNLINK DATA ON USART.
@@ -601,13 +609,13 @@ void AT_PrintPosition(Position* gps_position) {
  * @return:						None.
  */
 void AT_PrintDownlinkData(sfx_u8* sfx_downlink_data) {
-	USART2_SendString("+RX=");
+	USARTx_SendString("+RX=");
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<8 ; byte_idx++) {
-		USART2_SendValue(sfx_downlink_data[byte_idx], USART_FORMAT_HEXADECIMAL, 0);
-		USART2_SendString(" ");
+		USARTx_SendValue(sfx_downlink_data[byte_idx], USART_FORMAT_HEXADECIMAL, 0);
+		USARTx_SendString(" ");
 	}
-	USART2_SendString("\n");
+	USARTx_SendString("\n");
 }
 
 /* PARSE THE CURRENT AT COMMAND BUFFER.
@@ -638,201 +646,198 @@ void AT_DecodeRxBuffer(void) {
 			AT_ReplyOk();
 		}
 
-//		/* GPS command AT$GPS=<timeout_seconds><CR> */
-//		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
-//			unsigned int timeout_seconds = 0;
-//			// Search timeout parameter.
-//			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-//			if (get_param_result == AT_NO_ERROR) {
-//				// Start GPS fix.
-//				Position gps_position;
-//				LPUART1_PowerOn();
-//				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
-//				LPUART1_PowerOff();
-//				switch (get_position_result) {
-//				case NEOM8N_SUCCESS:
-//					//AT_PrintPosition(&gps_position);
-//					break;
-//				case NEOM8N_INVALID_DATA:
-//					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
-//					break;
-//				case NEOM8N_TIMEOUT:
-//					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
-//					break;
-//				default:
-//					break;
-//				}
-//			}
-//			else {
-//				// Error in timeout parameter.
-//				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-//			}
-//		}
-//
-//		/* TIME command AT$TIME=<timeout_seconds><CR> */
-//		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
-//			unsigned int timeout_seconds = 0;
-//			// Search timeout parameter.
-//			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-//			if (get_param_result == AT_NO_ERROR) {
-//				// Start GPS fix.
-//				Timestamp gps_timestamp;
-//				LPUART1_PowerOn();
-//				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
-//				LPUART1_PowerOff();
-//				switch (get_timestamp_result) {
-//				case NEOM8N_SUCCESS:
-//					//AT_PrintTimestamp(&gps_timestamp);
-//					break;
-//				case NEOM8N_INVALID_DATA:
-//					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
-//					break;
-//				case NEOM8N_TIMEOUT:
-//					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
-//					break;
-//				default:
-//					break;
-//				}
-//			}
-//			else {
-//				// Error in timeout parameter.
-//				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-//			}
-//		}
-//
-//		/* WIND measurements command AT$WIND=<enable><CR> */
-//		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
-//			unsigned int enable = 0;
-//			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-//			if (get_param_result == AT_NO_ERROR) {
-//				// Start or stop wind continuous measurements.
-//				if (enable == 0) {
-//					WIND_StopContinuousMeasure();
-//				}
-//				else {
-//					WIND_StartContinuousMeasure();
-//				}
-//				AT_ReplyOk();
-//			}
-//			else {
-//				// Error in enable parameter.
-//				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-//			}
-//		}
-//
-//		/* ADC command AT$ADC<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
-//			// Trigger external ADC convertions.
-//			SPI1_PowerOn();
-//			MAX11136_PerformMeasurements();
-//			SPI1_PowerOff();
-//			// Print results.
-//			//AT_PrintAdcResults();
-//		}
-//
-//		/* MCU command AT$MCU<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
-//			unsigned int mcu_supply_voltage_mv = 0;
-//			signed char mcu_temperature_degrees = 0;;
-//			// Trigger internal ADC conversions.
-//			ADC1_PerformMeasurements();
-//			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
-//			// Trigger external ADC conversions.
-//			SPI1_PowerOn();
-//			MAX11136_PerformMeasurements();
-//			SPI1_PowerOff();
-//			MAX11136_GetSupplyVoltage(&mcu_supply_voltage_mv);
-//			// Print results.
-//			USART2_SendString("Vcc=");
-//			USART2_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("mV T=");
-//			USART2_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("°C\n");
-//		}
-//
-//		/* Temperature and humidity sensor command AT$THS<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_THS) == AT_NO_ERROR) {
-//			signed char sht3x_temperature_degrees = 0;
-//			unsigned char sht3x_humidity_percent = 0;
-//			// Perform measurements.
-//			I2C1_PowerOn();
-//			SHT3X_PerformMeasurements();
-//			I2C1_PowerOff();
-//			SHT3X_GetTemperature(&sht3x_temperature_degrees);
-//			SHT3X_GetHumidity(&sht3x_humidity_percent);
-//			// Print results.
-//			USART2_SendString("T=");
-//			USART2_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("°C H=");
-//			USART2_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("%\n");
-//		}
-//
-//		/* Pressure and temperature sensor command AT$PTS<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_PTS) == AT_NO_ERROR) {
-//			unsigned int dps310_pressure_pa = 0;
-//			signed char dps310_temperature_degrees = 0;
-//			// Perform measurements.
-//			I2C1_PowerOn();
-//			DPS310_PerformMeasurements();
-//			I2C1_PowerOff();
-//			DPS310_GetPressure(&dps310_pressure_pa);
-//			DPS310_GetTemperature(&dps310_temperature_degrees);
-//			// Print results.
-//			USART2_SendString("P=");
-//			USART2_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("Pa T=");
-//			USART2_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("°C\n");
-//		}
-//
-//		/* UV index sensor command AT$UVS<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_UVS) == AT_NO_ERROR) {
-//			unsigned char si1133_uv_index = 0;
-//			// Perform measurements.
-//			I2C1_PowerOn();
-//			SI1133_PerformMeasurements();
-//			I2C1_PowerOff();
-//			SI1133_GetUvIndex(&si1133_uv_index);
-//			// Print result.
-//			USART2_SendString("UVI=");
-//			USART2_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("\n");
-//		}
-//
-//		/* LDR command AT$LDR<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_LDR) == AT_NO_ERROR) {
-//			// Perform measurements.
-//			SPI1_PowerOn();
-//			MAX11136_PerformMeasurements();
-//			SPI1_PowerOff();
-//			// Get LDR and supply voltage.
-//			unsigned int ldr_mv = 0;
-//			unsigned int vcc_mv = 0;
-//			MAX11136_GetChannelVoltage(MAX11136_CHANNEL_LDR, &ldr_mv);
-//			MAX11136_GetSupplyVoltage(&vcc_mv);
-//			// Convert to percent.
-//			unsigned char light_percent = (100 * ldr_mv) / (vcc_mv);
-//			// Print result.
-//			USART2_SendString("Light=");
-//			USART2_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
-//			USART2_SendString("%\n");
-//		}
-//
-//		/* Get ID command AT$ID?<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_ID) == AT_NO_ERROR) {
-//			// Enable NVM interface.
-//			NVM_Enable();
-//			// Retrieve device ID in NVM.
-//			unsigned char id_byte = 0;
-//			for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
-//				NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), &id_byte);
-//				USART2_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
-//			}
-//			USART2_SendString("\n");
-//			// Disable NVM interface.
-//			NVM_Disable();
-//		}
+		/* GPS command AT$GPS=<timeout_seconds><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
+			unsigned int timeout_seconds = 0;
+			// Search timeout parameter.
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start GPS fix.
+				Position gps_position;
+				LPUART1_PowerOn();
+				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+				LPUART1_PowerOff();
+				switch (get_position_result) {
+				case NEOM8N_SUCCESS:
+					AT_PrintPosition(&gps_position);
+					break;
+				case NEOM8N_INVALID_DATA:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
+					break;
+				case NEOM8N_TIMEOUT:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				// Error in timeout parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
+		/* TIME command AT$TIME=<timeout_seconds><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
+			unsigned int timeout_seconds = 0;
+			// Search timeout parameter.
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start GPS fix.
+				Timestamp gps_timestamp;
+				LPUART1_PowerOn();
+				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+				LPUART1_PowerOff();
+				switch (get_timestamp_result) {
+				case NEOM8N_SUCCESS:
+					//AT_PrintTimestamp(&gps_timestamp);
+					break;
+				case NEOM8N_INVALID_DATA:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
+					break;
+				case NEOM8N_TIMEOUT:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				// Error in timeout parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
+		/* WIND measurements command AT$WIND=<enable><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
+			unsigned int enable = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start or stop wind continuous measurements.
+				if (enable == 0) {
+					WIND_StopContinuousMeasure();
+				}
+				else {
+					WIND_StartContinuousMeasure();
+				}
+				AT_ReplyOk();
+			}
+			else {
+				// Error in enable parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
+		/* ADC command AT$ADC<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
+			// Trigger external ADC convertions.
+			SPI1_PowerOn();
+			MAX11136_PerformMeasurements();
+			SPI1_PowerOff();
+			// Print results.
+			AT_PrintAdcResults();
+		}
+
+		/* MCU command AT$MCU<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
+			unsigned int mcu_supply_voltage_mv = 0;
+			signed char mcu_temperature_degrees = 0;;
+			// Trigger internal ADC conversions.
+			ADC1_PerformMeasurements();
+			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
+			ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+			// Print results.
+			USARTx_SendString("Vcc=");
+			USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("mV T=");
+			USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("°C\n");
+		}
+
+		/* Temperature and humidity sensor command AT$THS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_THS) == AT_NO_ERROR) {
+			signed char sht3x_temperature_degrees = 0;
+			unsigned char sht3x_humidity_percent = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SHT3X_PerformMeasurements();
+			I2C1_PowerOff();
+			SHT3X_GetTemperature(&sht3x_temperature_degrees);
+			SHT3X_GetHumidity(&sht3x_humidity_percent);
+			// Print results.
+			USARTx_SendString("T=");
+			USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("°C H=");
+			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("%\n");
+		}
+
+		/* Pressure and temperature sensor command AT$PTS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_PTS) == AT_NO_ERROR) {
+			unsigned int dps310_pressure_pa = 0;
+			signed char dps310_temperature_degrees = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			DPS310_PerformMeasurements();
+			I2C1_PowerOff();
+			DPS310_GetPressure(&dps310_pressure_pa);
+			DPS310_GetTemperature(&dps310_temperature_degrees);
+			// Print results.
+			USARTx_SendString("P=");
+			USARTx_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("Pa T=");
+			USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("°C\n");
+		}
+
+		/* UV index sensor command AT$UVS<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_UVS) == AT_NO_ERROR) {
+			unsigned char si1133_uv_index = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SI1133_PerformMeasurements();
+			I2C1_PowerOff();
+			SI1133_GetUvIndex(&si1133_uv_index);
+			// Print result.
+			USARTx_SendString("UVI=");
+			USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("\n");
+		}
+
+		/* LDR command AT$LDR<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_LDR) == AT_NO_ERROR) {
+			// Perform measurements.
+			SPI1_PowerOn();
+			MAX11136_PerformMeasurements();
+			SPI1_PowerOff();
+			ADC1_PerformMeasurements();
+			// Get LDR and supply voltage.
+			unsigned int ldr_output_mv = 0;
+			unsigned int ldr_supply_voltage_mv = 0;
+			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
+			ADC1_GetMcuSupplyVoltage(&ldr_supply_voltage_mv);
+			// Convert to percent.
+			unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
+			// Print result.
+			USARTx_SendString("Light=");
+			USARTx_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("%\n");
+		}
+
+		/* Get ID command AT$ID?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ID) == AT_NO_ERROR) {
+			// Enable NVM interface.
+			NVM_Enable();
+			// Retrieve device ID in NVM.
+			unsigned char id_byte = 0;
+			for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
+				NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), &id_byte);
+				USARTx_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+			}
+			USARTx_SendString("\n");
+			// Disable NVM interface.
+			NVM_Disable();
+		}
 
 		/* Set ID command AT$ID=<id><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_ID) == AT_NO_ERROR) {
@@ -861,55 +866,54 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-//		/* Get key command AT$KEY?<CR> */
-//		else if (AT_CompareCommand(AT_IN_COMMAND_KEY) == AT_NO_ERROR) {
-//			// Enable NVM interface.
-//			NVM_Enable();
-//			// Retrieve device key in NVM.
-//			unsigned char id_byte = 0;
-//			unsigned char byte_idx = 0;
-//			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-//				//NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), &id_byte);
-//				USART2_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
-//			}
-//			USART2_SendString("\n");
-//			// Disable NVM interface.
-//			NVM_Disable();
-//		}
-//
-//		/* Set key command AT$KEY=<id><CR> */
-//		else if (AT_CompareHeader(AT_IN_HEADER_KEY) == AT_NO_ERROR) {
-//			unsigned char param_key[ID_LENGTH] = {0};
-//			get_param_result = AT_GetByteArray(1, param_key, AES_BLOCK_SIZE, &extracted_length);
-//			if (get_param_result == AT_NO_ERROR) {
-//				// Check length.
-//				if (extracted_length == AES_BLOCK_SIZE) {
-//					// Enable NVM interface.
-//					NVM_Enable();
-//					// Write device ID in NVM.
-//					for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-//						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
-//					}
-//					AT_ReplyOk();
-//					// Disable NVM interface.
-//					NVM_Disable();
-//				}
-//				else {
-//					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
-//				}
-//			}
-//			else {
-//				// Error in ID parameter.
-//				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-//			}
-//		}
+		/* Get key command AT$KEY?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_KEY) == AT_NO_ERROR) {
+			// Enable NVM interface.
+			NVM_Enable();
+			// Retrieve device key in NVM.
+			unsigned char id_byte = 0;
+			unsigned char byte_idx = 0;
+			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
+				NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), &id_byte);
+				USARTx_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+			}
+			USARTx_SendString("\n");
+			// Disable NVM interface.
+			NVM_Disable();
+		}
+
+		/* Set key command AT$KEY=<id><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_KEY) == AT_NO_ERROR) {
+			unsigned char param_key[ID_LENGTH] = {0};
+			get_param_result = AT_GetByteArray(1, param_key, AES_BLOCK_SIZE, &extracted_length);
+			if (get_param_result == AT_NO_ERROR) {
+				// Check length.
+				if (extracted_length == AES_BLOCK_SIZE) {
+					// Enable NVM interface.
+					NVM_Enable();
+					// Write device ID in NVM.
+					for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
+						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
+					}
+					AT_ReplyOk();
+					// Disable NVM interface.
+					NVM_Disable();
+				}
+				else {
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
+				}
+			}
+			else {
+				// Error in ID parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
 
 		/* Sigfox send empty frame command AT$SF<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
 			// Send Sigfox empty frame.
 			SIGFOX_API_open(&rc1);
 			sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
-			//sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -956,7 +960,6 @@ void AT_DecodeRxBuffer(void) {
 					// Send Sigfox frame with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
 					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
-					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -986,7 +989,6 @@ void AT_DecodeRxBuffer(void) {
 					// Send Sigfox bit with specified downlink request.
 					SIGFOX_API_open(&rc1);
 					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
-					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						if (downlink_request == 1) {
@@ -1011,7 +1013,6 @@ void AT_DecodeRxBuffer(void) {
 					// Send Sigfox bit with no downlink request (by default).
 					SIGFOX_API_open(&rc1);
 					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
-					//sfx_error = SFX_ERR_NONE;
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -1033,7 +1034,6 @@ void AT_DecodeRxBuffer(void) {
 			// Send Sigfox OOB frame.
 			SIGFOX_API_open(&rc1);
 			sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
-			//sfx_error = SFX_ERR_NONE;
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -1098,6 +1098,38 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
+		/* RSSI report command AT$RSSI=<frequency_hz><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_RSSI) == AT_NO_ERROR) {
+			// Parse frequency parameter.
+			unsigned int frequency_hz = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &frequency_hz);
+			if (get_param_result == AT_NO_ERROR) {
+				RF_API_init(SFX_RF_MODE_RX);
+				RF_API_change_frequency(frequency_hz);
+				// Start continuous listening.
+				SX1232_SetMode(SX1232_MODE_FSRX);
+				TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
+				SX1232_SetMode(SX1232_MODE_RX);
+				TIM22_WaitMilliseconds(5); // Wait TS_TR=120µs typical.
+				unsigned int rssi_print_start_time = TIM22_GetSeconds();
+				unsigned char rssi = 0;
+				while (TIM22_GetSeconds() < (rssi_print_start_time + RSSI_REPORT_DURATION_SECONDS)) {
+					rssi = SX1232_GetRssi();
+					USARTx_SendString("RSSI = -");
+					USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
+					USARTx_SendString("\n");
+					TIM22_WaitMilliseconds(500);
+				}
+				// Stop radio.
+				RF_API_stop();
+				AT_ReplyOk();
+			}
+			else {
+				// Error in frequency parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
 		/* Sigfox test mode command AT$TM=<rc>,<test_mode><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_TM) == AT_NO_ERROR) {
 			unsigned int rc = 0;
@@ -1112,7 +1144,7 @@ void AT_DecodeRxBuffer(void) {
 					if (get_param_result == AT_NO_ERROR) {
 						// Check parameters.
 						if (test_mode < SFX_TEST_MODE_LIST_MAX_SIZE) {
-							// Call test mode function.
+							// Call test mode function wth public key.
 							sfx_error = ADDON_SIGFOX_VERIFIED_API_test_mode(rc, test_mode);
 							if (sfx_error == SFX_ERR_NONE) {
 								AT_ReplyOk();

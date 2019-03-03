@@ -13,7 +13,7 @@
 
 /*** GPIO local macros ***/
 
-#define GPIO_PER_PORT 	16 // Each port (A to K) has 16 GPIO.
+#define GPIO_PER_PORT 	16 // Each port_address (A to K) has 16 GPIO.
 #define AF_PER_GPIO 	16 // Each GPIO has 16 alternate functions.
 #define AFRH_OFFSET 	8 // Limit between AFRL and AFRH registers.
 
@@ -30,23 +30,23 @@ void GPIO_SetMode(GPIO gpio, GPIO_Mode mode) {
 		switch(mode) {
 		case Input:
 			// MODERy = '00'.
-			gpio.port -> MODER &= ~(0b1 << (2*gpio.num));
-			gpio.port -> MODER &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> MODER &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> MODER &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case Output:
 			// MODERy = '01'.
-			gpio.port -> MODER |= (0b1 << (2*gpio.num));
-			gpio.port -> MODER &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> MODER |= (0b1 << (2*gpio.num));
+			gpio.port_address -> MODER &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case Analog:
 			// MODERy = '11'.
-			gpio.port -> MODER |= (0b1 << (2*gpio.num));
-			gpio.port -> MODER |= (0b1 << (2*gpio.num+1));
+			gpio.port_address -> MODER |= (0b1 << (2*gpio.num));
+			gpio.port_address -> MODER |= (0b1 << (2*gpio.num+1));
 			break;
 		case AlternateFunction:
 			// MODERy = '10'.
-			gpio.port -> MODER &= ~(0b1 << (2*gpio.num));
-			gpio.port -> MODER |= (0b1 << (2*gpio.num+1));
+			gpio.port_address -> MODER &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> MODER |= (0b1 << (2*gpio.num+1));
 			break;
 		default:
 			break;
@@ -59,8 +59,8 @@ void GPIO_SetMode(GPIO gpio, GPIO_Mode mode) {
  * @return gpioMode: 	Current mode of the  GPIO ('Input', 'Output', 'AlternateFunction' or 'Analog').
  */
 GPIO_Mode GPIO_GetMode(GPIO gpio) {
-	unsigned char bit0 = ((gpio.port -> MODER) & (0b1 << (2*gpio.num))) >> (2*gpio.num);
-	unsigned char bit1 = ((gpio.port -> MODER) & (0b1 << (2*gpio.num+1))) >> (2*gpio.num+1);
+	unsigned char bit0 = ((gpio.port_address -> MODER) & (0b1 << (2*gpio.num))) >> (2*gpio.num);
+	unsigned char bit1 = ((gpio.port_address -> MODER) & (0b1 << (2*gpio.num+1))) >> (2*gpio.num+1);
 	GPIO_Mode gpioMode = (bit1 << 1) + bit0;
 	return gpioMode;
 }
@@ -76,11 +76,11 @@ void GPIO_SetOutputType(GPIO gpio, GPIO_OutputType output_type) {
 		switch(output_type) {
 		case PushPull:
 			// OTy = '0'.
-			gpio.port -> OTYPER &= ~(0b1 << gpio.num);
+			gpio.port_address -> OTYPER &= ~(0b1 << gpio.num);
 			break;
 		case OpenDrain:
 			// OTy = '1'.
-			gpio.port -> OTYPER |= (0b1 << gpio.num);
+			gpio.port_address -> OTYPER |= (0b1 << gpio.num);
 			break;
 		default:
 			break;
@@ -99,23 +99,23 @@ void GPIO_SetOutputSpeed(GPIO gpio, GPIO_OutputSpeed output_speed) {
 		switch(output_speed) {
 		case LowSpeed:
 			// OSPEEDRy = '00'.
-			gpio.port -> OSPEEDR &= ~(0b1 << (2*gpio.num));
-			gpio.port -> OSPEEDR &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> OSPEEDR &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> OSPEEDR &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case MediumSpeed:
 			// OSPEEDRy = '01'.
-			gpio.port -> OSPEEDR |= (0b1 << (2*gpio.num));
-			gpio.port -> OSPEEDR &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> OSPEEDR |= (0b1 << (2*gpio.num));
+			gpio.port_address -> OSPEEDR &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case HighSpeed:
 			// OSPEEDRy = '10'.
-			gpio.port -> OSPEEDR &= ~(0b1 << (2*gpio.num));
-			gpio.port -> OSPEEDR |= (0b1 << (2*gpio.num+1));
+			gpio.port_address -> OSPEEDR &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> OSPEEDR |= (0b1 << (2*gpio.num+1));
 			break;
 		case VeryHighSpeed:
 			// OSPEEDRy = '11'.
-			gpio.port -> OSPEEDR |= (0b1 << (2*gpio.num));
-			gpio.port -> OSPEEDR |= (0b1 << (2*gpio.num+1));
+			gpio.port_address -> OSPEEDR |= (0b1 << (2*gpio.num));
+			gpio.port_address -> OSPEEDR |= (0b1 << (2*gpio.num+1));
 			break;
 		default:
 			break;
@@ -134,18 +134,18 @@ void GPIO_SetPullUpPullDown(GPIO gpio, GPIO_PullResistor pull_resistor) {
 		switch(pull_resistor) {
 		case NoPullUpNoPullDown:
 			// PUPDRy = '00'.
-			gpio.port -> PUPDR &= ~(0b1 << (2*gpio.num));
-			gpio.port -> PUPDR &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> PUPDR &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> PUPDR &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case PullUp:
 			// PUPDRy = '01'.
-			gpio.port -> PUPDR |= (0b1 << (2*gpio.num));
-			gpio.port -> PUPDR &= ~(0b1 << (2*gpio.num+1));
+			gpio.port_address -> PUPDR |= (0b1 << (2*gpio.num));
+			gpio.port_address -> PUPDR &= ~(0b1 << (2*gpio.num+1));
 			break;
 		case PullDown:
 			// PUPDRy = '10'.
-			gpio.port -> PUPDR &= ~(0b1 << (2*gpio.num));
-			gpio.port -> PUPDR |= (0b1 << (2*gpio.num+1));
+			gpio.port_address -> PUPDR &= ~(0b1 << (2*gpio.num));
+			gpio.port_address -> PUPDR |= (0b1 << (2*gpio.num+1));
 			break;
 		default:
 			break;
@@ -168,11 +168,11 @@ void GPIO_SetAlternateFunction(GPIO gpio, unsigned int af_num) {
 			for (i=0 ; i<4 ; i++) {
 				if (af_num & (0b1 << i)) {
 					// Bit = '1'.
-					gpio.port -> AFRL |= (0b1 << (4*gpio.num+i));
+					gpio.port_address -> AFRL |= (0b1 << (4*gpio.num+i));
 				}
 				else {
 					// Bit = '0'.
-					gpio.port -> AFRL &= ~(0b1 << (4*gpio.num+i));
+					gpio.port_address -> AFRL &= ~(0b1 << (4*gpio.num+i));
 				}
 			}
 		}
@@ -182,11 +182,11 @@ void GPIO_SetAlternateFunction(GPIO gpio, unsigned int af_num) {
 				for (i=0 ; i<4 ; i++) {
 					if (af_num & (0b1 << i)) {
 						// Bit = '1'.
-						gpio.port -> AFRH |= (0b1 << (4*(gpio.num-AFRH_OFFSET)+i));
+						gpio.port_address -> AFRH |= (0b1 << (4*(gpio.num-AFRH_OFFSET)+i));
 					}
 					else {
 						// Bit = '0'.
-						gpio.port -> AFRH &= ~(0b1 << (4*(gpio.num-AFRH_OFFSET)+i));
+						gpio.port_address -> AFRH &= ~(0b1 << (4*(gpio.num-AFRH_OFFSET)+i));
 					}
 				}
 			}
@@ -238,10 +238,10 @@ void GPIO_Write(GPIO gpio, unsigned char state) {
 	// Ensure GPIO exists.
 	if ((gpio.num >= 0) && (gpio.num < GPIO_PER_PORT)) {
 		if (state) {
-			gpio.port -> ODR |= (0b1 << gpio.num);
+			gpio.port_address -> ODR |= (0b1 << gpio.num);
 		}
 		else {
-			gpio.port -> ODR &= ~(0b1 << gpio.num);
+			gpio.port_address -> ODR &= ~(0b1 << gpio.num);
 		}
 	}
 }
@@ -256,13 +256,13 @@ unsigned char GPIO_Read(GPIO gpio) {
 		switch (GPIO_GetMode(gpio)) {
 		case Input:
 			// GPIO configured as input -> read IDR register.
-			if (((gpio.port -> IDR) & (0b1 << gpio.num)) != 0) {
+			if (((gpio.port_address -> IDR) & (0b1 << gpio.num)) != 0) {
 				state = 1;
 			}
 			break;
 		case Output:
 			// GPIO configured as output -> read ODR register.
-			if (((gpio.port -> ODR) & (0b1 << gpio.num)) != 0) {
+			if (((gpio.port_address -> ODR) & (0b1 << gpio.num)) != 0) {
 				state = 1;
 			}
 			break;

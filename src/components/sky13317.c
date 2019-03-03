@@ -18,11 +18,19 @@
  */
 void SKY13317_Init(void) {
 
-	/* Configure RF channels A/B */
+	/* Configure GPIOs */
+#ifdef HW1_0
 	GPIO_Configure(GPIO_RF_CHANNEL_A, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Write(GPIO_RF_CHANNEL_A, 0);
 	GPIO_Configure(GPIO_RF_CHANNEL_B, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Write(GPIO_RF_CHANNEL_B, 0);
+#endif
+#ifdef HW2_0
+	GPIO_Configure(GPIO_RF_TX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_RF_TX_ENABLE, 0);
+	GPIO_Configure(GPIO_RF_RX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_RF_RX_ENABLE, 0);
+#endif
 }
 
 /* SELECT RF SWITCH CHANNEL.
@@ -32,8 +40,14 @@ void SKY13317_Init(void) {
 void SKY13317_SetChannel(SKY13317_Channel channel) {
 
 	/* Reset channels */
+#ifdef HW1_0
 	GPIO_Write(GPIO_RF_CHANNEL_A, 0);
 	GPIO_Write(GPIO_RF_CHANNEL_B, 0);
+#endif
+#ifdef HW2_0
+	GPIO_Write(GPIO_RF_TX_ENABLE, 0);
+	GPIO_Write(GPIO_RF_RX_ENABLE, 0);
+#endif
 
 	/* Select channel */
 	switch (channel) {
@@ -43,19 +57,31 @@ void SKY13317_SetChannel(SKY13317_Channel channel) {
 		break;
 
 	case SKY13317_CHANNEL_RF1:
-		// PA3='1' and PA4='0'.
+#ifdef HW1_0
 		GPIO_Write(GPIO_RF_CHANNEL_A, 1);
+#endif
+#ifdef HW2_0
+		// Not connected.
+#endif
 		break;
 
 	case SKY13317_CHANNEL_RF2:
-		// PA3='1' and PA4='1'.
+#ifdef HW1_0
 		GPIO_Write(GPIO_RF_CHANNEL_A, 1);
 		GPIO_Write(GPIO_RF_CHANNEL_B, 1);
+#endif
+#ifdef HW2_0
+		GPIO_Write(GPIO_RF_TX_ENABLE, 1);
+#endif
 		break;
 
 	case SKY13317_CHANNEL_RF3:
-		// PA3='0' and PA4='1'.
+#ifdef HW1_0
 		GPIO_Write(GPIO_RF_CHANNEL_B, 1);
+#endif
+#ifdef HW2_0
+		GPIO_Write(GPIO_RF_RX_ENABLE, 1);
+#endif
 		break;
 
 	default:

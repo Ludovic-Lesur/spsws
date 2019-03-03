@@ -19,15 +19,23 @@
 #define SX1232_FXOSC_HZ							32000000
 #define SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES	8
 
+// SX1232 minimum and maximum bit rate.
+#define SX1232_BIT_RATE_BPS_MIN					(SX1232_FXOSC_HZ / ((1 << 16) - 1))
+#define SX1232_BIT_RATE_BPS_MAX					300000
+
+// SX1232 maximum preamble length.
+#define SX1232_PREAMBLE_LENGTH_BYTES_MAX		3
+
 /*** SX1232 local structures ***/
 
 typedef struct {
 	SX1232_RfOutputPin sx1232_rf_output_pin;
+	signed char sx1232_rssi_offset;
 } SX1232_Context;
 
 /*** SX1232 local global variables ***/
 
-SX1232_Context sx1232_ctx;
+static SX1232_Context sx1232_ctx;
 
 /*** SX1232 local functions ***/
 
@@ -79,6 +87,7 @@ void SX1232_Init(void) {
 
 	/* Init context */
 	sx1232_ctx.sx1232_rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
+	sx1232_ctx.sx1232_rssi_offset = 0;
 
 	/* Init SX1232 DIOx */
 #ifdef USE_SX1232_DIOX
@@ -278,40 +287,29 @@ void SX1232_SetFskDeviation(unsigned short fsk_deviation_hz) {
 }
 
 /* SET SX1232 BIT RATE.
- * @param bit_rate: Bit rate to program (see SX1232_BitRate enumeration in sx1232.h).
+ * @param bit_rate: Bit rate to program in bit per seconds (bps).
  * @return:			None.
  */
-void SX1232_SetBitRate(SX1232_BitRate bit_rate) {
+void SX1232_SetBitRate(unsigned int bit_rate_bps) {
 
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
 
-	/* Set BitRate and BitRateFrac registers */
-	switch (bit_rate) {
-	case SX1232_BITRATE_600BPS:
-		// 600 bits/s.
-		// With FXOSX=32MHz, BR=53333, BRF=5: bit rate = FXOSC / (BR + BRF/16) = 600.0002 bps.
-		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0xD0);
-		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x55);
-		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x05);
-		break;
-	case SX1232_BITRATE_1200BPS:
-		// 1.2 kbits/s.
-		// With FXOSX=32MHz, BR=26666, BRF=10: bit rate = FXOSC / (BR + BRF/16) = 1200,001 bps.
-		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0x68);
-		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x2A);
-		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x0A);
-		break;
-	case SX1232_BITRATE_4800BPS:
-		// 4.8 kbits/s.
-		// With FXOSX=32MHz, BR=6667, BRF=0: bit rate = FXOSC / (BR + BRF/16) = 4799,31 bps.
-		SX1232_WriteRegister(SX1232_REG_BITRATEMSB, 0x1A);
-		SX1232_WriteRegister(SX1232_REG_BITRATELSB, 0x0B);
-		SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x00);
-		break;
-	default:
-		break;
+	/* Check parameter */
+	unsigned int local_bit_rate_bps = bit_rate_bps;
+	if (local_bit_rate_bps < SX1232_BIT_RATE_BPS_MIN) {
+		local_bit_rate_bps = SX1232_BIT_RATE_BPS_MIN;
 	}
+	if (local_bit_rate_bps > SX1232_BIT_RATE_BPS_MAX) {
+		local_bit_rate_bps = SX1232_BIT_RATE_BPS_MAX;
+	}
+
+	/* Set BitRate register */
+	SX1232_WriteRegister(SX1232_REG_BITRATEFRAC, 0x00);
+	// Compute register value: BR = FXOSC / bit_rate.
+	unsigned int bit_rate_reg_value = SX1232_FXOSC_HZ / local_bit_rate_bps;
+	SX1232_WriteRegister(SX1232_REG_BITRATEMSB, ((bit_rate_reg_value & 0x0000FF00) >> 8));
+	SX1232_WriteRegister(SX1232_REG_BITRATELSB, ((bit_rate_reg_value & 0x000000FF) >> 0));
 }
 
 /* SET DATA MODE.
@@ -537,7 +535,12 @@ void SX1232_EnableFastFrequencyHopping(void) {
  */
 void SX1232_StartCw(void) {
 	// Start data signal.
+#ifdef HW1_0
 	GPIO_Write(GPIO_SX1232_DIOX, 1);
+#endif
+#ifdef HW2_0
+	GPIO_Write(GPIO_SX1232_DIO2, 1);
+#endif
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
 	TIM22_WaitMilliseconds(5); // Wait TS_FS=60µs typical.
@@ -551,21 +554,95 @@ void SX1232_StartCw(void) {
  */
 void SX1232_StopCw(void) {
 	// Stop data signal and radio.
+#ifdef HW1_0
 	GPIO_Write(GPIO_SX1232_DIOX, 0);
+#endif
+#ifdef HW2_0
+	GPIO_Write(GPIO_SX1232_DIO2, 0);
+#endif
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 }
 
-/* ENABLE PREAMBLE DETECTOR.
- * @param preamble_polarity:	Use 0xAA (0) or 0x55 (1) as preamble byte.
- * @return:						None.
+/* SET SX1232 RX BANDWIDTH.
+ * @param rxbw_mantissa:	RXBW mantissa (see p.30 of SX1232 datasheet).
+ * @param rxbw_exponenta:	RXBW exponent (see p.30 of SX1232 datasheet).
+ * @return:					None.
  */
-void SX1232_SetEnablePreambleDetector(unsigned char preamble_polarity) {
+void SX1232_SetRxBandwidth(SX1232_RxBwMantissa rxbw_mantissa, unsigned char rxbw_exponent) {
 
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
 
-	/* Set polarity */
+	/* Read register */
+	unsigned char rxbw_reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_RXBW, &rxbw_reg_value);
+
+	/* Program mantissa */
+	rxbw_reg_value &= 0xE0; // Reset bits 0-4.
+	rxbw_reg_value |= (rxbw_mantissa & 0x00000003) << 3;
+
+	/* Program exponent */
+	unsigned char local_rxbw_exponent = rxbw_exponent;
+	if (local_rxbw_exponent > SX1232_RXBW_EXPONENT_MAX) {
+		local_rxbw_exponent = SX1232_RXBW_EXPONENT_MAX;
+	}
+	rxbw_reg_value |= local_rxbw_exponent;
+
+	/* Program register */
+	SX1232_WriteRegister(SX1232_REG_RXBW, rxbw_reg_value);
+}
+
+/* CONTROL SX1232 LNA BOOST.
+ * @param lna_boost_enable:	Enable (1) or disable (0) LNA boost.
+ * @return:					None.
+ */
+void SX1232_EnableLnaBoost(unsigned char lna_boost_enable) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Program register */
+	unsigned char lna_reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_LNA, &lna_reg_value);
+	if (lna_boost_enable != 0) {
+		// LnaBoost = '11'.
+		lna_reg_value |= 0x03;
+	}
+	else {
+		// LnaBoost = '00'.
+		lna_reg_value &= 0xFC;
+	}
+	SX1232_WriteRegister(SX1232_REG_LNA, lna_reg_value);
+}
+
+/* ENABLE PREAMBLE DETECTOR.
+ * @param preamble_length_bytes:	Preamble length in bytes (0 disables preamble detector).
+ * @param preamble_polarity:		Use 0xAA (0) or 0x55 (1) as preamble byte.
+ * @return:							None.
+ */
+void SX1232_SetPreambleDetector(unsigned char preamble_length_bytes, unsigned char preamble_polarity) {
+
+	/* Configure SPI */
+	SPI1_SetClockPolarity(0);
+
+	/* Set length and enable */
 	unsigned char reg_value = 0;
+	SX1232_ReadRegister(SX1232_REG_PREAMBLEDETECT, &reg_value);
+	if (preamble_length_bytes == 0) {
+		reg_value &= 0x7F; // Disable preamble detector.
+	}
+	else {
+		unsigned char local_preamble_length_bytes = preamble_length_bytes;
+		if (local_preamble_length_bytes > SX1232_PREAMBLE_LENGTH_BYTES_MAX) {
+			local_preamble_length_bytes = SX1232_PREAMBLE_LENGTH_BYTES_MAX;
+		}
+		reg_value &= 0x9F; // Reset bits 5-6.
+		reg_value |= (preamble_length_bytes - 1);
+		reg_value |= 0x80; // Enable preamble detector.
+	}
+	SX1232_WriteRegister(SX1232_REG_PREAMBLEDETECT, reg_value);
+
+	/* Set polarity */
 	SX1232_ReadRegister(SX1232_REG_SYNCCONFIG, &reg_value);
 	if (preamble_polarity == 0) {
 		SX1232_WriteRegister(SX1232_REG_SYNCCONFIG, (reg_value & 0xDF));
@@ -573,10 +650,6 @@ void SX1232_SetEnablePreambleDetector(unsigned char preamble_polarity) {
 	else {
 		SX1232_WriteRegister(SX1232_REG_SYNCCONFIG, (reg_value | 0x20));
 	}
-
-	/* Enable preamble detector */
-	SX1232_ReadRegister(SX1232_REG_PREAMBLEDETECT, &reg_value);
-	SX1232_WriteRegister(SX1232_REG_PREAMBLEDETECT, (reg_value | 0x80));
 }
 
 /* CONFIGURE RX SYNCHRONIZATION WORD.
@@ -636,23 +709,28 @@ void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_samp
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
 
-	// TBD.
+	/* Configure offset */
+	sx1232_ctx.sx1232_rssi_offset = rssi_offset;
+
+	/* Configure sampling */
+	unsigned char rssi_config_reg_value = 0; // Do not use internal RSSI offset.
+	rssi_config_reg_value |= (rssi_sampling & 0x00000007);
 }
 
 /* READ SX1232 RSSI.
  * @param:	None.
- * @return:	RSSI in dBm.
+ * @return:	Absolute RSSI value in dBm.
  */
-signed char SX1232_GetRssi(void) {
+unsigned char SX1232_GetRssi(void) {
 
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
 
-	/* Read RSSI register */
+	/* Read RSSI register and add offset */
 	signed char rssi = 0;
 	unsigned char rssi_reg_value = 0;
 	SX1232_ReadRegister(SX1232_REG_RSSIVALUE, &rssi_reg_value);
-	rssi = (-1) * (rssi_reg_value / 2);
+	rssi = (rssi_reg_value / 2) + sx1232_ctx.sx1232_rssi_offset;
 
 	return rssi;
 }

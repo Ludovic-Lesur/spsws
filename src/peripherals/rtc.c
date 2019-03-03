@@ -21,12 +21,12 @@ typedef struct {
 	// Calibration flag.
 	unsigned char rtc_daily_calibration_done;
 	Timestamp rtc_current_timestamp;
-	unsigned char rtc_irq_happened;
+	volatile unsigned char rtc_irq_happened;
 } RTC_Context;
 
 /*** RTC local global variables ***/
 
-volatile RTC_Context rtc_ctx;
+static RTC_Context rtc_ctx;
 
 /*** RTC local functions ***/
 
@@ -113,7 +113,7 @@ void RTC_Init(void) {
 	/* Configure Alarm A to wake-up MCU every hour */
 	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
-	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
+	RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 5); // Bypass shadow register for read accesses (BYPSHAD='1').
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
@@ -123,6 +123,7 @@ void RTC_Init(void) {
 	RTC_ExitInitializationMode();
 
 	/* Enable RTC alarm interrupt (line 17) */
+	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
 	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
 	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
 

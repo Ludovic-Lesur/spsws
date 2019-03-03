@@ -28,8 +28,8 @@ void RCC_Init(void) {
 	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.
 
 	/* Configure TCXO power enable pin (PB8) as output */
-	GPIO_Configure(GPIO_TCXO_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_TCXO_POWER_ENABLE, 0);
+	GPIO_Configure(GPIO_TCXO16_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
 }
 
 /* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16 MHz internal RC).
@@ -49,8 +49,8 @@ void RCC_SwitchToInternal16MHz(void) {
 	RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
 	RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
 
-	/* Disable TCXO power supply */
-	GPIO_Write(GPIO_TCXO_POWER_ENABLE, 0);
+	/* Disable 16MHz TCXO power supply */
+	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
 }
 
 /* CONFIGURE AND USE HSE AS SYSTEM CLOCK (16 MHz TCXO).
@@ -59,8 +59,8 @@ void RCC_SwitchToInternal16MHz(void) {
  */
 void RCC_SwitchToTcxo16MHz(void) {
 
-	/* Enable TCXO power supply (PB8) */
-	GPIO_Write(GPIO_TCXO_POWER_ENABLE, 1);
+	/* Enable 16MHz TCXO power supply (PB8) */
+	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 1);
 
 	/* Init HSE */
 	RCC -> CR |= (0b1 << 18); // Bypass oscillator (HSEBYP='1').

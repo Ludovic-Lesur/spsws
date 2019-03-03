@@ -12,17 +12,10 @@
 
 /*** Wheather station mode ***/
 
-// AT command mode.
-#define ATM
-
-// Intermittent mode with RTC as time reference.
-//#define IM_RTC
-
-// Continuous mode with RTC as time reference.
-//#define CM_RTC
-
-// Intermittent mode with hardware timer as time reference.
-//#define IM_HWT
+#define ATM 		// AT command mode.
+//#define IM_RTC 	// Intermittent mode with RTC as time reference.
+//#define CM_RTC 	// Continuous mode with RTC as time reference.
+//#define IM_HWT 	// Intermittent mode with hardware timer as time reference.
 
 /*** Sigfox RC configuration ***/
 
@@ -36,7 +29,7 @@
 	 (defined IM_RTC && defined CM_RTC) || \
 	 (defined IM_RTC && defined IM_HWT) || \
 	 (defined CM_RTC && defined IM_HWT))
-#error "Only one mode must be selected."
+#error "Only 1 weather station mode must be selected."
 #endif
 
 #endif /* MODE_H */

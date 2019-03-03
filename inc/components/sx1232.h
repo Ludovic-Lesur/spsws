@@ -16,12 +16,15 @@
 
 // Output power ranges.
 #define SX1232_OUTPUT_POWER_RFO_MIN				0
-#define SX1232_OUTPUT_POWER_RFO_MAX				14
+#define SX1232_OUTPUT_POWER_RFO_MAX				17
 #define SX1232_OUTPUT_POWER_PABOOST_MIN			2
-#define SX1232_OUTPUT_POWER_PABOOST_MAX			14
+#define SX1232_OUTPUT_POWER_PABOOST_MAX			20
 
-// Transmitter frequency hopping time.
-#define SX1232_SPI_ACCESS_DURATION_US			8 // 8 bits @ SCK=1MHz.
+// SX1232 RXBW exponent maximum value.
+#define SX1232_RXBW_EXPONENT_MAX				7
+
+// RSSI offset due to internal and external LNA (calibration).
+#define SX1232_RSSI_OFFSET_DB					24
 
 /*** SX1232 structures ***/
 
@@ -57,14 +60,6 @@ typedef enum {
 	SX1232_MODULATION_SHAPING_OOK_TWO_BITRATE,
 } SX1232_ModulationShaping;
 
-// Bit rate.
-typedef enum {
-	// Note: 100bps can't be programmed.
-	SX1232_BITRATE_600BPS,
-	SX1232_BITRATE_1200BPS,
-	SX1232_BITRATE_4800BPS
-} SX1232_BitRate;
-
 // RF output pin.
 typedef enum {
 	SX1232_RF_OUTPUT_PIN_RFO,
@@ -76,6 +71,13 @@ typedef enum {
 	SX1232_DATA_MODE_PACKET,
 	SX1232_DATA_MODE_CONTINUOUS
 } SX1232_DataMode;
+
+// RX bandwidth mantissa.
+typedef enum {
+	SX1232_RXBW_MANTISSA_16,
+	SX1232_RXBW_MANTISSA_20,
+	SX1232_RXBW_MANTISSA_24
+} SX1232_RxBwMantissa;
 
 // RSSI sampling.
 typedef enum {
@@ -101,7 +103,7 @@ void SX1232_SetRfFrequency(unsigned int rf_frequency_hz);
 void SX1232_EnableFastFrequencyHopping(void);
 unsigned int SX1232_GetRfFrequency(void);
 void SX1232_SetFskDeviation(unsigned short fsk_deviation_hz);
-void SX1232_SetBitRate(SX1232_BitRate bit_rate);
+void SX1232_SetBitRate(unsigned int bit_rate_bps);
 void SX1232_SetDataMode(SX1232_DataMode data_mode);
 void SX1232_SetDioMapping(unsigned char diox, unsigned char diox_mapping);
 unsigned short SX1232_GetIrqFlags(void);
@@ -114,11 +116,13 @@ void SX1232_StartCw(void);
 void SX1232_StopCw(void);
 
 // RX functions.
-void SX1232_SetEnablePreambleDetector(unsigned char preamble_polarity);
+void SX1232_SetRxBandwidth(SX1232_RxBwMantissa rxbw_mantissa, unsigned char rxbw_exponent);
+void SX1232_EnableLnaBoost(unsigned char lna_boost_enable);
+void SX1232_SetPreambleDetector(unsigned char preamble_length_bytes, unsigned char preamble_polarity);
 void SX1232_SetSyncWord(unsigned char* sync_word, unsigned char sync_word_length_bytes);
 void SX1232_SetDataLength(unsigned char data_length_bytes);
 void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_sampling);
-signed char SX1232_GetRssi(void);
+unsigned char SX1232_GetRssi(void);
 void SX1232_ReadFifo(unsigned char* rx_data, unsigned char rx_data_length);
 
 #endif /* SX1232_H */

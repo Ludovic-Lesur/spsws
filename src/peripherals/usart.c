@@ -38,7 +38,7 @@ typedef struct {
 /*** USART local global variables ***/
 
 #ifdef USE_TXE_INTERRUPT
-static USART_Context usart_ctx;
+static volatile USART_Context usart_ctx;
 #endif
 
 /*** USART local functions ***/
@@ -79,11 +79,11 @@ void USART2_IRQHandler(void) {
 	}
 }
 
-/* FILL USART2 TX BUFFER WITH A NEW BYTE.
+/* FILL USART TX BUFFER WITH A NEW BYTE.
  * @param tx_byte:	Byte to append.
  * @return:			None.
  */
-void USART2_FillTxBuffer(unsigned char tx_byte) {
+void USARTx_FillTxBuffer(unsigned char tx_byte) {
 #ifdef USE_TXE_INTERRUPT
 	// Fill buffer.
 	usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = tx_byte;
@@ -94,9 +94,16 @@ void USART2_FillTxBuffer(unsigned char tx_byte) {
 	}
 #else
 	// Fill transmit register.
+#ifdef HW1_0
 	USART2 -> TDR = tx_byte;
 	// Wait for transmission to complete.
 	while (((USART2 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
+#endif
+#ifdef HW2_0
+	USART1 -> TDR = tx_byte;
+	// Wait for transmission to complete.
+	while (((USART1 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
+#endif
 #endif
 }
 
@@ -104,7 +111,7 @@ void USART2_FillTxBuffer(unsigned char tx_byte) {
  * @param n:	The word to converts.
  * @return:		The results of conversion.
  */
-char USART_HexaToAscii(unsigned char hexa_value) {
+char USARTx_HexaToAscii(unsigned char hexa_value) {
 	char hexa_ascii = 0;
 	if (hexa_value <= 15) {
 		hexa_ascii = (hexa_value <= 9 ? (char) (hexa_value + '0') : (char) (hexa_value + ('A' - 10)));
@@ -116,7 +123,7 @@ char USART_HexaToAscii(unsigned char hexa_value) {
  * @param power:	The desired power.
  * @return result:	Result of computation.
  */
-unsigned int USART_Pow10(unsigned char power) {
+unsigned int USARTx_Pow10(unsigned char power) {
 	unsigned int result = 0;
 	unsigned int pow10_buf[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 	if (power <= 9) {
@@ -127,6 +134,7 @@ unsigned int USART_Pow10(unsigned char power) {
 
 /*** USART functions ***/
 
+#ifdef HW1_0
 /* CONFIGURE USART2 PERIPHERAL.
  * @param:	None.
  * @return:	None.
@@ -144,111 +152,112 @@ void USART2_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
-	/* Configure TX and RX GPIOs (first as high impedance) */
-	GPIO_Configure(GPIO_USART2_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	/* Configure TX and RX GPIOs */
+	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	USART2 -> CR2 = 0; // 1 stop bit (STOP='00').
 	USART2 -> CR3 = 0;
 	USART2 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART2 -> BRR = ((SYSCLK_KHZ*1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART2 -> BRR = ((SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	USART2 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Enable transmitter and receiver */
 	USART2 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
 	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
 
-	/* Disable peripheral by default */
-	RCC -> APB1ENR &= ~(0b1 << 17); // USART2EN='0'.
-}
-
-/* ENABLE USART2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void USART2_Enable(void) {
-
-	/* Enable USART2 peripheral */
-	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
-	USART2 -> CR1 |= (0b1 << 0);
-	NVIC_EnableInterrupt(IT_USART2);
-}
-
-/* DISABLE USART2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void USART2_Disable(void) {
-
-	/* Disable USART2 peripheral */
-	NVIC_DisableInterrupt(IT_USART2);
-	USART2 -> CR1 &= ~(0b1 << 0);
-	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
-}
-
-/* SWITCH USART2 SLAVE ON.
- * @param:	None.
- * @return:	None.
- */
-void USART2_PowerOn(void) {
-
 	/* Switch MCP2221A on */
 	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 1);
 	TIM22_WaitMilliseconds(100);
 
-	/* Enable LPUART alternate function */
-	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	/* Enable peripheral */
+	USART2 -> CR1 |= (0b1 << 0);
+	NVIC_EnableInterrupt(IT_USART2);
 }
+#endif
 
-/* SWITCH USART2 SLAVE OFF.
+#ifdef HW2_0
+/* CONFIGURE USART1 PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void USART2_PowerOff(void) {
+void USART1_Init(void) {
 
-	/* Disable LPUART alternate function */
-	GPIO_Configure(GPIO_USART2_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+#ifdef USE_TXE_INTERRUPT
+	/* Init context */
+	unsigned int idx = 0;
+	for (idx=0 ; idx<USART_TX_BUFFER_SIZE ; idx++) usart_ctx.tx_buf[idx] = 0;
+	usart_ctx.tx_buf_write_idx = 0;
+	usart_ctx.tx_buf_read_idx = 0;
+#endif
 
-	/* Switch MCP2221A off */
-	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 0);
+	/* Enable peripheral clock */
+	RCC -> APB2ENR |= (0b1 << 14); // USART1EN='1'.
+
+	/* Configure TX and RX GPIOs */
+	GPIO_Configure(GPIO_USART1_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART1_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+
+	/* Configure peripheral */
+	USART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
+	USART1 -> CR2 = 0; // 1 stop bit (STOP='00').
+	USART1 -> CR3 = 0;
+	USART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
+	USART1 -> BRR = ((SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
+
+	/* Enable transmitter and receiver */
+	USART1 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
+	USART1 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
+
+	/* Disable peripheral by default */
+	USART1 -> CR1 |= (0b1 << 0);
+	NVIC_EnableInterrupt(IT_USART1);
 }
+#endif
 
-/* SEND A BYTE THROUGH USART2.
+/* SEND A BYTE THROUGH USART.
  * @param byte_to_send:	The byte to send.
  * @param format:		Display format (see ByteDisplayFormat enumeration in usart.h).
  * @param print_prexix	Print '0b' or '0x' prefix is non zero.
  * @return: 			None.
  */
-void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix) {
-	// Disable interrupt.
+void USARTx_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix) {
+
+	/* Disable interrupt */
+#ifdef HW1_0
 	NVIC_DisableInterrupt(IT_USART2);
-	// Common variables.
+#endif
+#ifdef HW2_0
+	NVIC_DisableInterrupt(IT_USART1);
+#endif
+
+	/* Local variables */
 	unsigned char first_non_zero_found = 0;
 	unsigned int idx;
 	unsigned char current_value = 0;
 	unsigned int current_power = 0;
 	unsigned int previous_decade = 0;
-	// Fill TX buffer according to format.
+
+	/* Fill TX buffer according to format */
 	switch (format) {
 	case USART_FORMAT_BINARY:
 		if (print_prefix != 0) {
 			// Print "0b" prefix.
-			USART2_FillTxBuffer('0');
-			USART2_FillTxBuffer('b');
+			USARTx_FillTxBuffer('0');
+			USARTx_FillTxBuffer('b');
 		}
 		// Maximum 32 bits.
 		for (idx=31 ; idx>=0 ; idx--) {
 			if (tx_value & (0b1 << idx)) {
-				USART2_FillTxBuffer('1'); // = '1'.
+				USARTx_FillTxBuffer('1'); // = '1'.
 				first_non_zero_found = 1;
 			}
 			else {
 				if ((first_non_zero_found != 0) || (idx == 0)) {
-					USART2_FillTxBuffer('0'); // = '0'.
+					USARTx_FillTxBuffer('0'); // = '0'.
 				}
 			}
 			if (idx == 0) {
@@ -259,8 +268,8 @@ void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char 
 	case USART_FORMAT_HEXADECIMAL:
 		if (print_prefix != 0) {
 			// Print "0x" prefix.
-			USART2_FillTxBuffer('0');
-			USART2_FillTxBuffer('x');
+			USARTx_FillTxBuffer('0');
+			USARTx_FillTxBuffer('x');
 		}
 		// Maximum 4 bytes.
 		for (idx=3 ; idx>=0 ; idx--) {
@@ -269,8 +278,8 @@ void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char 
 				first_non_zero_found = 1;
 			}
 			if ((first_non_zero_found != 0) || (idx == 0)) {
-				USART2_FillTxBuffer(USART_HexaToAscii((current_value & 0xF0) >> 4));
-				USART2_FillTxBuffer(USART_HexaToAscii(current_value & 0x0F));
+				USARTx_FillTxBuffer(USARTx_HexaToAscii((current_value & 0xF0) >> 4));
+				USARTx_FillTxBuffer(USARTx_HexaToAscii(current_value & 0x0F));
 			}
 			if (idx == 0) {
 				break;
@@ -280,14 +289,14 @@ void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char 
 	case USART_FORMAT_DECIMAL:
 		// Maximum 10 digits.
 		for (idx=9 ; idx>=0 ; idx--) {
-			current_power = USART_Pow10(idx);
+			current_power = USARTx_Pow10(idx);
 			current_value = (tx_value - previous_decade) / current_power;
 			previous_decade += current_value * current_power;
 			if (current_value != 0) {
 				first_non_zero_found = 1;
 			}
 			if ((first_non_zero_found != 0) || (idx == 0)) {
-				USART2_FillTxBuffer(current_value + '0');
+				USARTx_FillTxBuffer(current_value + '0');
 			}
 			if (idx == 0) {
 				break;
@@ -297,31 +306,56 @@ void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char 
 	case USART_FORMAT_ASCII:
 		// Raw byte.
 		if (tx_value <= 0xFF) {
-			USART2_FillTxBuffer(tx_value);
+			USARTx_FillTxBuffer(tx_value);
 		}
 		break;
 	}
-	// Enable interrupt.
+
+	/* Enable interrupt */
+#ifdef HW1_0
 #ifdef USE_TXE_INTERRUPT
 	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
 #endif
 	NVIC_EnableInterrupt(IT_USART2);
+#endif
+#ifdef HW2_0
+#ifdef USE_TXE_INTERRUPT
+	USART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+#endif
+	NVIC_EnableInterrupt(IT_USART1);
+#endif
 }
 
 /* SEND A BYTE ARRAY THROUGH USART2.
  * @param tx_string:	Byte array to send.
  * @return:				None.
  */
-void USART2_SendString(char* tx_string) {
-	// Disable interrupt.
+void USARTx_SendString(char* tx_string) {
+
+	/* Disable interrupt */
+#ifdef HW1_0
 	NVIC_DisableInterrupt(IT_USART2);
-	// Fill TX buffer with new bytes.
-	while (*tx_string) {
-		USART2_FillTxBuffer((unsigned char) *(tx_string++));
-	}
-	// Enable interrupt.
-#ifdef USE_TXE_INTERRUPT
-	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
 #endif
-	NVIC_EnableInterrupt(IT_USART2);
+#ifdef HW2_0
+	NVIC_DisableInterrupt(IT_USART1);
+#endif
+
+	/* Fill TX buffer with new bytes */
+	while (*tx_string) {
+		USARTx_FillTxBuffer((unsigned char) *(tx_string++));
+	}
+
+	/* Enable interrupt */
+	#ifdef HW1_0
+	#ifdef USE_TXE_INTERRUPT
+		USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	#endif
+		NVIC_EnableInterrupt(IT_USART2);
+	#endif
+	#ifdef HW2_0
+	#ifdef USE_TXE_INTERRUPT
+		USART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	#endif
+		NVIC_EnableInterrupt(IT_USART1);
+	#endif
 }

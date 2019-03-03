@@ -14,23 +14,19 @@
 
 /*** MAX11136 local macros ***/
 
-#define MAX11136_FULL_SCALE				4095 // 12-bits result.
 #define MAX11136_NUMBER_OF_CHANNELS		8
-#define MAX11136_BANDGAP_VOLTAGE_MV		2048 // Bandgap reference attached to AIN7.
 #define MAX11136_CONVERSION_LOOPS		3
 
 /*** MAX11136 local structures ***/
 
 typedef struct {
 	unsigned short max11136_result_12bits[MAX11136_NUMBER_OF_CHANNELS];
-	unsigned int max11136_result_mv[MAX11136_NUMBER_OF_CHANNELS];
-	unsigned int max11136_supply_voltage_mv; // Retrieved thanks to bandgap.
 	unsigned char max11136_status; // Bit 'i' indicates if a result was successfully retrieved for channel 'i'.
 } MAX11136_Context;
 
 /*** MAX11136 local global variables ***/
 
-MAX11136_Context max11136_ctx;
+static MAX11136_Context max11136_ctx;
 
 /*** MAX11136 local functions ***/
 
@@ -84,7 +80,7 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 #ifdef USE_MAX11136_EOC
 	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
 #else
-	// TBD : configure CS as input.
+	// TBD: configure CS as input.
 #endif
 
 	/* Read results in FIFO */
@@ -108,27 +104,6 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 	}
 }
 
-/* COMPUTE EFFECTIVE SUPPLY VOLTAGE THANKS TO BANDGAP REFERENCE.
- * @param:	None.
- * @return:	None.
- */
-void MAX11136_ComputeSupplyVoltage(void) {
-	// Reverse formula assuming bandgap voltage is 2048mV.
-	max11136_ctx.max11136_supply_voltage_mv = (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / (max11136_ctx.max11136_result_12bits[MAX11136_CHANNEL_BANDGAP]);
-}
-
-/* CONVERT ALL CHANNELS 12-BITS RESULTS INTO MV.
- * @param:	None.
- * @return:	None.
- */
-void MAX11136_ConvertAllChannelsToMv(void) {
-	// For each channel: result_mv = (result_12bits * vcc) / (full_scale).
-	unsigned char channel_idx = 0;
-	for (channel_idx=0 ; channel_idx<MAX11136_NUMBER_OF_CHANNELS ; channel_idx++) {
-		max11136_ctx.max11136_result_mv[channel_idx] = ((max11136_ctx.max11136_result_12bits[channel_idx] * max11136_ctx.max11136_supply_voltage_mv) / (MAX11136_FULL_SCALE));
-	}
-}
-
 /*** MAX11136 functions ***/
 
 /* INIT MAX11136 ADC/
@@ -140,8 +115,6 @@ void MAX11136_Init(void) {
 	/* Init context */
 	unsigned char idx = 0;
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
-	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_mv[idx] = 0;
-	max11136_ctx.max11136_supply_voltage_mv = 3300; // Default value is 3.3V.
 	max11136_ctx.max11136_status = 0;
 
 	/* Configure EOC GPIO */
@@ -170,30 +143,18 @@ unsigned char MAX11136_PerformMeasurements(void) {
 	}
 	SPI1_Disable();
 
-	/* Compute supply voltage and convert results to mV */
-	MAX11136_ComputeSupplyVoltage();
-	MAX11136_ConvertAllChannelsToMv();
-
 	/* Return status */
 	return max11136_ctx.max11136_status;
 }
 
-/* GET EFFECTIVE SUPPLY VOLTAGE.
- * @param supply_voltage_mv:	Pointer to int that will contain effective supply voltage result in mV.
- * @return:						None.
- */
-void MAX11136_GetSupplyVoltage(unsigned int* supply_voltage_mv) {
-	(*supply_voltage_mv) = max11136_ctx.max11136_supply_voltage_mv;
-}
-
 /* GET CHANNEL RESULT.
- * @param channel:				ADC channel to get.
- * @param channel_voltage_mv:	Pointer to int that will contain the channel result in mV.
- * @return:						None.
+ * @param channel:					ADC channel to get.
+ * @param channel_voltage_12bits:	Pointer to int that will contain the channel result on 12 bits.
+ * @return:							None.
  */
-void MAX11136_GetChannelVoltage(unsigned char channel, unsigned int* channel_voltage_mv) {
+void MAX11136_GetChannel(unsigned char channel, unsigned int* channel_result_12bits) {
 	// Check parameter.
 	if (channel < MAX11136_NUMBER_OF_CHANNELS) {
-		*(channel_voltage_mv) = max11136_ctx.max11136_result_mv[channel];
+		(*channel_result_12bits) = max11136_ctx.max11136_result_12bits[channel];
 	}
 }

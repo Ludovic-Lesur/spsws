@@ -19,12 +19,13 @@ typedef enum {
 
 /*** USART functions ***/
 
+#ifdef HW1_0
 void USART2_Init(void);
-void USART2_Enable(void);
-void USART2_Disable(void);
-void USART2_PowerOn(void);
-void USART2_PowerOff(void);
-void USART2_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix);
-void USART2_SendString(char* tx_string);
+#endif
+#ifdef HW2_0
+void USART1_Init(void);
+#endif
+void USARTx_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix);
+void USARTx_SendString(char* tx_string);
 
 #endif /* USART_H */
