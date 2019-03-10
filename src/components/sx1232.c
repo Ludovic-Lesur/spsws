@@ -102,8 +102,10 @@ void SX1232_Init(void) {
  */
 void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Select oscillator */
 	switch (oscillator) {
@@ -132,8 +134,10 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
  */
 void SX1232_SetMode(SX1232_Mode mode) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read OP mode register */
 	unsigned char op_mode_reg_value = 0;
@@ -178,8 +182,10 @@ void SX1232_SetMode(SX1232_Mode mode) {
  */
 void SX1232_SetModulation(SX1232_Modulation modulation, SX1232_ModulationShaping modulation_shaping) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read OP mode register */
 	unsigned char op_mode_reg_value = 0;
@@ -233,8 +239,10 @@ void SX1232_SetModulation(SX1232_Modulation modulation, SX1232_ModulationShaping
  */
 void SX1232_SetRfFrequency(unsigned int rf_frequency_hz) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Program RF frequency */
 	unsigned long long frf_reg_value = (0b1 << 19);
@@ -274,8 +282,10 @@ void SX1232_SetFskDeviation(unsigned short fsk_deviation_hz) {
 	// Check value is on 14-bits.
 	if (fsk_deviation_hz < (0b1 << 14)) {
 
+#ifdef HW1_0
 		/* Configure SPI */
 		SPI1_SetClockPolarity(0);
+#endif
 
 		/* Program FSK deviation */
 		unsigned long long fdev_reg_value = (0b1 << 19);
@@ -292,8 +302,10 @@ void SX1232_SetFskDeviation(unsigned short fsk_deviation_hz) {
  */
 void SX1232_SetBitRate(unsigned int bit_rate_bps) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Check parameter */
 	unsigned int local_bit_rate_bps = bit_rate_bps;
@@ -318,8 +330,10 @@ void SX1232_SetBitRate(unsigned int bit_rate_bps) {
  */
 void SX1232_SetDataMode(SX1232_DataMode data_mode) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read Packet config 2 register */
 	unsigned char packet_config2_reg_value = 0;
@@ -348,8 +362,10 @@ void SX1232_SetDataMode(SX1232_DataMode data_mode) {
  */
 void SX1232_SetDioMapping(unsigned char dio, unsigned char dio_mapping) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Check parameters */
 	if ((dio < 6) && (dio_mapping < 4)) {
@@ -409,8 +425,10 @@ void SX1232_SetDioMapping(unsigned char dio, unsigned char dio_mapping) {
  */
 unsigned short SX1232_GetIrqFlags(void) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read registers */
 	unsigned char reg_value = 0;
@@ -429,8 +447,10 @@ unsigned short SX1232_GetIrqFlags(void) {
  */
 void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read PA config register */
 	unsigned char pa_config_reg_value = 0;
@@ -460,8 +480,10 @@ void SX1232_SelectRfOutputPin(SX1232_RfOutputPin rf_output_pin) {
  */
 void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read PA config register */
 	unsigned char pa_config_reg_value = 0;
@@ -505,8 +527,10 @@ void SX1232_SetRfOutputPower(unsigned char rf_output_power_dbm) {
  */
 void SX1232_EnableLowPnPll(void) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Program register */
 	unsigned char reg_value = 0;
@@ -520,8 +544,10 @@ void SX1232_EnableLowPnPll(void) {
  */
 void SX1232_EnableFastFrequencyHopping(void) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Program register */
 	unsigned char reg_value = 0;
@@ -570,8 +596,10 @@ void SX1232_StopCw(void) {
  */
 void SX1232_SetRxBandwidth(SX1232_RxBwMantissa rxbw_mantissa, unsigned char rxbw_exponent) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read register */
 	unsigned char rxbw_reg_value = 0;
@@ -598,8 +626,10 @@ void SX1232_SetRxBandwidth(SX1232_RxBwMantissa rxbw_mantissa, unsigned char rxbw
  */
 void SX1232_EnableLnaBoost(unsigned char lna_boost_enable) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Program register */
 	unsigned char lna_reg_value = 0;
@@ -622,8 +652,10 @@ void SX1232_EnableLnaBoost(unsigned char lna_boost_enable) {
  */
 void SX1232_SetPreambleDetector(unsigned char preamble_length_bytes, unsigned char preamble_polarity) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Set length and enable */
 	unsigned char reg_value = 0;
@@ -659,8 +691,10 @@ void SX1232_SetPreambleDetector(unsigned char preamble_length_bytes, unsigned ch
  */
 void SX1232_SetSyncWord(unsigned char* sync_word, unsigned char sync_word_length_bytes) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Check parameters */
 	if ((sync_word_length_bytes > 0) && (sync_word_length_bytes <= SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES)) {
@@ -689,8 +723,10 @@ void SX1232_SetSyncWord(unsigned char* sync_word, unsigned char sync_word_length
  */
 void SX1232_SetDataLength(unsigned char data_length_bytes) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Use fixed length, no CRC computation, do not clear FIFO when CRC fails */
 	SX1232_WriteRegister(SX1232_REG_PACKETCONFIG1, 0x08);
@@ -706,8 +742,10 @@ void SX1232_SetDataLength(unsigned char data_length_bytes) {
  */
 void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_sampling) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Configure offset */
 	sx1232_ctx.sx1232_rssi_offset = rssi_offset;
@@ -723,8 +761,10 @@ void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_samp
  */
 unsigned char SX1232_GetRssi(void) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Read RSSI register and add offset */
 	signed char rssi = 0;
@@ -741,8 +781,10 @@ unsigned char SX1232_GetRssi(void) {
  */
 void SX1232_ReadFifo(unsigned char* rx_data, unsigned char rx_data_length) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(0);
+#endif
 
 	/* Access FIFO byte per byte */
 	unsigned char byte_idx = 0;

@@ -25,6 +25,6 @@ typedef struct {
 /*** SPI base addresses ***/
 
 #define SPI1	((SPI_BaseAddress*) ((unsigned int) 0x40013000))
-//#define SPI2	((SPI_BaseAddress*) ((unsigned int) 0x40003800))
+#define SPI2	((SPI_BaseAddress*) ((unsigned int) 0x40003800))
 
 #endif /* SPI_REG_H_ */

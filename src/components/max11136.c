@@ -51,7 +51,12 @@ void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 
 	/* Send command */
 	GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
+#ifdef HW1_0
 	SPI1_WriteShort(spi_command);
+#endif
+#ifdef HW2_0
+	SPI2_WriteShort(spi_command);
+#endif
 	GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
 }
 
@@ -61,8 +66,10 @@ void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
  */
 void MAX11136_ConvertAllChannels12Bits(void) {
 
+#ifdef HW1_0
 	/* Configure SPI */
 	SPI1_SetClockPolarity(1);
+#endif
 
 	/* Configure ADC */
 	// External single ended: REFSEL='0' (allready done at POR).
@@ -91,7 +98,12 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 	for (channel_idx=0 ; channel_idx<MAX11136_NUMBER_OF_CHANNELS ; channel_idx++) {
 		// Get data from SPI.
 		GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
+#ifdef HW1_0
 		SPI1_ReadShort(0x0000, &max11136_dout);
+#endif
+#ifdef HW2_0
+		SPI2_ReadShort(0x0000, &max11136_dout);
+#endif
 		GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;
