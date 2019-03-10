@@ -8,6 +8,7 @@
 #include "sx1232.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "spi.h"
 #include "sx1232_reg.h"
@@ -122,7 +123,7 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 	}
 
 	/* Wait TS_OSC = 250탎 typical */
-	TIM22_WaitMilliseconds(5);
+	LPTIM1_DelayMilliseconds(5);
 
 	/* Trigger RC oscillator calibration */
 	SX1232_WriteRegister(SX1232_REG_OSC, 0x0F);
@@ -569,9 +570,9 @@ void SX1232_StartCw(void) {
 #endif
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
-	TIM22_WaitMilliseconds(5); // Wait TS_FS=60탎 typical.
+	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
 	SX1232_SetMode(SX1232_MODE_TX);
-	TIM22_WaitMilliseconds(5); // Wait TS_TR=120탎 typical.
+	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
 }
 
 /* STOP CONTINUOUS WAVE OUTPUT.

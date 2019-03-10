@@ -5,10 +5,6 @@
  *      Author: Ludo
  */
 
-// Registers.
-#include "pwr_reg.h"
-#include "rcc_reg.h"
-#include "scb_reg.h"
 // Peripherals.
 #include "adc.h"
 #include "aes.h"
@@ -16,6 +12,7 @@
 #include "exti.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "lptim.h"
 #include "lpuart.h"
 #include "mapping.h"
 #include "nvm.h"
@@ -39,9 +36,31 @@
 // Applicative.
 #include "at.h"
 #include "geoloc.h"
+#ifdef IM_HWT
 #include "hwt.h"
+#endif
 #include "mode.h"
 #include "sigfox_api.h"
+
+/*** SPSWS structures ***/
+
+typedef enum {
+	SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX,
+	SPSWS_STATUS_BYTE_TIME_REFERENCE_BIT_IDX,
+	SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX,
+	SPSWS_STATUS_BYTE_RTC_CLOCK_SOURCE_BIT_IDX,
+	SPSWS_STATUS_BYTE_RTC_FIRST_CALIBRATION_BIT_IDX,
+	SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX,
+	SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX,
+} SPSWS_StatusByteBitIndex;
+
+typedef struct {
+	unsigned char spsws_status_byte;
+} SPSWS_Context;
+
+/*** SPSWS global variables ***/
+
+static SPSWS_Context spsws_ctx;
 
 /*** SPSWS main function ***/
 
@@ -64,15 +83,28 @@ int main (void) {
  */
 int main (void) {
 
+	/* Init context */
+	spsws_ctx.spsws_status_byte = 0;
+
 	/* Init GPIO (required for clock tree configuration) */
 	GPIO_Init();
 
 	/* Init clocks */
 	RCC_Init();
-	RCC_SwitchToTcxo16MHz();
-	RTC_Init();
+	// High speed oscillator.
+	spsws_ctx.spsws_status_byte |= (RCC_SwitchToTcxo16MHz() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
+	if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX)) == 0) {
+		while (RCC_SwitchToInternal16MHz() == 0);
+	}
+	// Low speed oscillator.
+	spsws_ctx.spsws_status_byte |= (RCC_SwitchToQuartz32kHz() << SPSWS_STATUS_BYTE_RTC_CLOCK_SOURCE_BIT_IDX);
+	if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_RTC_CLOCK_SOURCE_BIT_IDX)) == 0) {
+		while (RCC_SwitchToInternal32kHz() == 0);
+	}
 
 	/* Init peripherals */
+	// Real time clock.
+	RTC_Init(spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_RTC_CLOCK_SOURCE_BIT_IDX));
 	// External interrupts.
 	EXTI_Init();
 	// Timers.
@@ -80,6 +112,7 @@ int main (void) {
 	TIM21_Enable();
 	TIM22_Init();
 	TIM22_Enable();
+	LPTIM1_Init();
 	// DMA.
 	DMA1_Init();
 	// Analog.
@@ -94,6 +127,9 @@ int main (void) {
 #endif
 	I2C1_Init();
 	SPI1_Init();
+#ifdef HW2_0
+	SPI2_Init();
+#endif
 	// Hardware AES.
 	AES_Init();
 

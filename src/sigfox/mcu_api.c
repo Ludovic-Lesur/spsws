@@ -9,6 +9,7 @@
 
 #include "adc.h"
 #include "aes.h"
+#include "lptim.h"
 #include "max11136.h"
 #include "nvm.h"
 #include "sigfox_types.h"
@@ -126,22 +127,22 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 
 	case SFX_DLY_INTER_FRAME_TX:
 		// 0 to 2s in Uplink DC.
-		TIM22_WaitMilliseconds(500);
+		LPTIM1_DelayMilliseconds(500);
 		break;
 
 	case SFX_DLY_INTER_FRAME_TRX:
 		// 500 ms in Uplink/Downlink FH & Downlink DC.
-		TIM22_WaitMilliseconds(500);
+		LPTIM1_DelayMilliseconds(500);
 		break;
 
 	case SFX_DLY_OOB_ACK:
 		// 1.4s to 4s for Downlink OOB.
-		TIM22_WaitMilliseconds(2000);
+		LPTIM1_DelayMilliseconds(2000);
 		break;
 
 	case SFX_DLY_CS_SLEEP:
 		// Delay between several trials of Carrier Sense (for the first frame only).
-		TIM22_WaitMilliseconds(1000);
+		LPTIM1_DelayMilliseconds(1000);
 		break;
 
 	default:

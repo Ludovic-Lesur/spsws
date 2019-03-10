@@ -8,6 +8,7 @@
 #include "spi.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "rcc_reg.h"
 #include "spi_reg.h"
@@ -110,7 +111,7 @@ void SPI1_PowerOn(void) {
 	/* Switch SX1232 on */
 	GPIO_Write(GPIO_RF_POWER_ENABLE, 1);
 	GPIO_Write(GPIO_SX1232_CS, 1); // CS high (idle state).
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 
 #ifdef HW1_0
 	/* Switch MAX11136 on */
@@ -292,7 +293,7 @@ void SPI2_PowerOn(void) {
 	/* Switch analog circuitry on */
 	GPIO_Write(GPIO_ADC_POWER_ENABLE, 1);
 	GPIO_Write(GPIO_MAX11136_CS, 1); // CS high (idle state).
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 
 	/* Enable SPI alternate function */
 	GPIO_Configure(GPIO_SPI2_SCK, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);

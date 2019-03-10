@@ -8,6 +8,7 @@
 #include "rf_api.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
@@ -551,9 +552,9 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 
 	/* Start radio */
 	SX1232_SetMode(SX1232_MODE_FSRX);
-	TIM22_WaitMilliseconds(5); // Wait TS_FS=60탎 typical.
+	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
 	SX1232_SetMode(SX1232_MODE_RX);
-	TIM22_WaitMilliseconds(5); // Wait TS_TR=120탎 typical.
+	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
 
 	/* Wait for external interrupt (payload ready on DIO0) */
 	unsigned char rssi_retrieved = 0;

@@ -17,5 +17,4 @@ void DMA1_Start(void);
 void DMA1_Stop(void);
 void DMA1_SetDestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size);
 
-
 #endif /* DMA_H */

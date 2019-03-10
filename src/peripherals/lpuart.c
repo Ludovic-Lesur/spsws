@@ -8,6 +8,7 @@
 #include "lpuart.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "lpuart_reg.h"
 #include "mapping.h"
 #include "neom8n.h"
@@ -101,7 +102,7 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR2 = 0; // 1 stop bit (STOP='00').
 	LPUART1 -> CR3 = 0;
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
-	LPUART1 -> BRR = ((SYSCLK_KHZ*1000)/(LPUART_BAUD_RATE))*256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> BRR = ((RCC_SYSCLK_KHZ * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 
 	/* Configure DMA and CM interrupt */
 	LPUART1 -> CR2 &= (0xFF << 24); // Reset bits 24-31.
@@ -152,7 +153,7 @@ void LPUART1_PowerOn(void) {
 
 	/* Switch NEOM8N on */
 	GPIO_Write(GPIO_GPS_POWER_ENABLE, 1);
-	TIM22_WaitMilliseconds(2000);
+	LPTIM1_DelayMilliseconds(2000);
 
 	/* Enable LPUART alternate function */
 	GPIO_Configure(GPIO_LPUART1_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);

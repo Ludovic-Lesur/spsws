@@ -8,6 +8,7 @@
 #include "adc.h"
 
 #include "adc_reg.h"
+#include "lptim.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
@@ -40,7 +41,7 @@ void ADC1_ComputeMcuSupplyVoltage(void) {
 
 	/* Wake-up internal voltage reference */
 	ADC1 -> CCR |= (0b1 << 22); // VREFEN='1'.
-	TIM22_WaitMilliseconds(10); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
+	LPTIM1_DelayMilliseconds(10); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
 
 	/* Read raw supply voltage */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
@@ -69,7 +70,7 @@ void ADC1_ComputeMcuTemperature(void) {
 
 	/* Wake-up temperature sensor */
 	ADC1 -> CCR |= (0b1 << 23); // TSEN='1'.
-	TIM22_WaitMilliseconds(1); // Wait al least 10µs (see p.89 of STM32L031x4/6 datasheet).
+	LPTIM1_DelayMilliseconds(1); // Wait al least 10µs (see p.89 of STM32L031x4/6 datasheet).
 
 	/* Read raw temperature */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
@@ -106,7 +107,7 @@ void ADC1_Init(void) {
 
 	/* Enable ADC voltage regulator */
 	ADC1 -> CR |= (0b1 << 28);
-	TIM22_WaitMilliseconds(5);
+	LPTIM1_DelayMilliseconds(5);
 
 	/* ADC configuration */
 	ADC1 -> CFGR2 &= ~(0b11 << 30); // Reset bits 30-31.

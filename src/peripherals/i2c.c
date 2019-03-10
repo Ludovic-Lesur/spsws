@@ -8,6 +8,7 @@
 #include "i2c.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "i2c_reg.h"
 #include "rcc.h"
@@ -76,7 +77,7 @@ void I2C1_PowerOn(void) {
 
 	/* Switch SHT3x, DPS310 and SI1133 on */
 	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 1);
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 
 	/* Enable I2C alternate function */
 	GPIO_Configure(GPIO_I2C1_SCL, AlternateFunction, OpenDrain, HighSpeed, NoPullUpNoPullDown);

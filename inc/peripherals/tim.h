@@ -34,8 +34,6 @@ void TIM22_Init(void);
 void TIM22_Enable(void);
 void TIM22_Disable(void);
 unsigned int TIM22_GetSeconds(void);
-unsigned int TIM22_GetMilliseconds(void);
-void TIM22_WaitMilliseconds(unsigned int ms_to_wait);
 
 void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
 void TIM2_Enable(void);

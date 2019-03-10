@@ -10,4 +10,7 @@
 
 /*** LPTIM functions ***/
 
+void LPTIM1_Init(void);
+void LPTIM1_DelayMilliseconds(unsigned int delay_ms);
+
 #endif /* LPTIM_H */

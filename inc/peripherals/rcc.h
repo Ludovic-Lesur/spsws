@@ -11,14 +11,14 @@
 /*** RCC macros ***/
 
 // System clock frequency in kHz.
-#define SYSCLK_KHZ	16000
-// To be defined if external oscillator is used.
-//#define USE_HSE
+#define RCC_SYSCLK_KHZ		16000
 
 /*** RCC functions ***/
 
 void RCC_Init(void);
-void RCC_SwitchToInternal16MHz(void);
-void RCC_SwitchToTcxo16MHz(void);
+unsigned char RCC_SwitchToInternal16MHz(void);
+unsigned char RCC_SwitchToTcxo16MHz(void);
+unsigned char RCC_SwitchToInternal32kHz(void);
+unsigned char RCC_SwitchToQuartz32kHz(void);
 
 #endif /* RCC_H */

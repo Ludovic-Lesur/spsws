@@ -8,6 +8,7 @@
 #include "sht3x.h"
 
 #include "i2c.h"
+#include "lptim.h"
 #include "tim.h"
 
 /*** SHT3x local macros ***/
@@ -52,7 +53,7 @@ void SHT3X_PerformMeasurements(void) {
 
 	/* Read result */
 	// Wait for conversion to complete (at least 15ms).
-	TIM22_WaitMilliseconds(20);
+	LPTIM1_DelayMilliseconds(20);
 	unsigned char measure_buf[6];
 	I2C1_Read(SHT3X_I2C_ADDRESS, measure_buf, 6);
 	I2C1_Disable();

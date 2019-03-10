@@ -13,6 +13,7 @@
 #include "dps310.h"
 #include "i2c.h"
 #include "lpuart.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "max11136.h"
 #include "mode.h"
@@ -731,9 +732,20 @@ void AT_DecodeRxBuffer(void) {
 		/* ADC command AT$ADC<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
 			// Trigger external ADC convertions.
+#ifdef HW1_0
 			SPI1_PowerOn();
+#endif
+#ifdef HW2_0
+			SPI2_PowerOn();
+#endif
+			// Run external ADC conversions.
 			MAX11136_PerformMeasurements();
+#ifdef HW1_0
 			SPI1_PowerOff();
+#endif
+#ifdef HW2_0
+			SPI2_PowerOff();
+#endif
 			// Print results.
 			AT_PrintAdcResults();
 		}
@@ -807,9 +819,20 @@ void AT_DecodeRxBuffer(void) {
 		/* LDR command AT$LDR<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_LDR) == AT_NO_ERROR) {
 			// Perform measurements.
+#ifdef HW1_0
 			SPI1_PowerOn();
+#endif
+#ifdef HW2_0
+			SPI2_PowerOn();
+#endif
+			// Run external ADC conversions.
 			MAX11136_PerformMeasurements();
+#ifdef HW1_0
 			SPI1_PowerOff();
+#endif
+#ifdef HW2_0
+			SPI2_PowerOff();
+#endif
 			ADC1_PerformMeasurements();
 			// Get LDR and supply voltage.
 			unsigned int ldr_output_mv = 0;
@@ -1108,9 +1131,9 @@ void AT_DecodeRxBuffer(void) {
 				RF_API_change_frequency(frequency_hz);
 				// Start continuous listening.
 				SX1232_SetMode(SX1232_MODE_FSRX);
-				TIM22_WaitMilliseconds(5); // Wait TS_FS=60탎 typical.
+				LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
 				SX1232_SetMode(SX1232_MODE_RX);
-				TIM22_WaitMilliseconds(5); // Wait TS_TR=120탎 typical.
+				LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
 				unsigned int rssi_print_start_time = TIM22_GetSeconds();
 				unsigned char rssi = 0;
 				while (TIM22_GetSeconds() < (rssi_print_start_time + RSSI_REPORT_DURATION_SECONDS)) {
@@ -1118,7 +1141,7 @@ void AT_DecodeRxBuffer(void) {
 					USARTx_SendString("RSSI = -");
 					USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
 					USARTx_SendString("\n");
-					TIM22_WaitMilliseconds(500);
+					LPTIM1_DelayMilliseconds(500);
 				}
 				// Stop radio.
 				RF_API_stop();

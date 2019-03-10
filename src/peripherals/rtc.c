@@ -70,10 +70,10 @@ void RTC_ExitInitializationMode(void) {
 /*** RTC functions ***/
 
 /* INIT HARDWARE RTC PERIPHERAL.
- * @param:	None.
- * @return:	None.
+ * @param rtc_use_lse:	RTC will be clocked on LSI if 0, on LSE otherwise.
+ * @return:				None.
  */
-void RTC_Init(void) {
+void RTC_Init(unsigned char rtc_use_lse) {
 
 	/* Init context */
 	rtc_ctx.rtc_daily_calibration_done = 0;
@@ -85,15 +85,16 @@ void RTC_Init(void) {
 	rtc_ctx.rtc_current_timestamp.seconds = 0;
 	rtc_ctx.rtc_irq_happened = 0;
 
-	/* Enable LSE (32.768kHz crystal) */
-	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
-	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock RCC register write protection.
-	RCC -> CSR |= (0b1 << 8); // LSEON='1'.
-	while (((RCC -> CSR) & (0b1 << 9)) == 0); // Wait for LSE to be stable (LSERDY='1').
-
 	/* Select RTC clock source */
 	RCC -> CSR &= ~(0b11 << 16); // Reset bits 16-17.
-	RCC -> CSR |= (0b01 << 16); // Select LSE (RTCSEL='01').
+	if (rtc_use_lse == 0) {
+		// Use LSI.
+		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
+	}
+	else {
+		// Use LSE;
+		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
+	}
 
 	/* Enable RTC */
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.

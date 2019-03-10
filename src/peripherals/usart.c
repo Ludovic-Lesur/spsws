@@ -205,7 +205,7 @@ void USART1_Init(void) {
 	USART1 -> CR2 = 0; // 1 stop bit (STOP='00').
 	USART1 -> CR3 = 0;
 	USART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART1 -> BRR = ((SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART1 -> BRR = ((RCC_SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	USART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Enable transmitter and receiver */

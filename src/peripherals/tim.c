@@ -47,7 +47,7 @@ void TIM21_Init(void) {
 	TIM21 -> CNT = 0; // Reset counter.
 
 	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
-	TIM21 -> PSC = SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
+	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
 	TIM21 -> ARR = 1000; // 999 ?
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').
@@ -143,23 +143,6 @@ unsigned int TIM22_GetSeconds(void) {
 	return (TIM22 -> CNT);
 }
 
-/* RETURNS THE NUMBER OF MILLISECONDS ELLAPSED SINCE START-UP.
- * @param:	None.
- * @return:	Number of milliseconds ellapsed since start-up.
- */
-unsigned int TIM22_GetMilliseconds(void) {
-	return ((TIM22 -> CNT)*1000 + (TIM21 -> CNT));
-}
-
-/* DELAY FUNCTION.
- * @param msToWait:	Number of milliseconds to wait.
- * @return:			None.
- */
-void TIM22_WaitMilliseconds(unsigned int ms_to_wait) {
-	unsigned int start_ms = TIM22_GetMilliseconds();
-	while (TIM22_GetMilliseconds() < (start_ms + ms_to_wait));
-}
-
 /* CONFIGURE TIM2 FOR WIND PHASE SHIFT MEASURE OR SIGFOX BPSK MODULATION.
  * @param mode:		Timer mode (see Timer2_Mode enumeration in tim.h).
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
@@ -189,7 +172,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).
 		TIM2 -> ARR = arr_value;
 		// PSC = (desired_period * timer_input_clock) / (ARR).
-		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (SYSCLK_KHZ*1000)) / (arr_value);
+		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_SYSCLK_KHZ*1000)) / (arr_value);
 		if (psc_value > 0xFFFF) {
 			psc_value = 0xFFFF;
 		}
@@ -199,7 +182,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 
 	case TIM2_MODE_SIGFOX:
 		/* Configure TIM2 to overflow every timing[0] microseconds */
-		TIM2 -> PSC = 15; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
+		TIM2 -> PSC = (RCC_SYSCLK_KHZ / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
 		TIM2 -> ARR = timings[TIM2_TIMINGS_ARRAY_ARR_IDX];
 		// Configure events timestamps.
 		TIM2 -> CCR1 = timings[TIM2_TIMINGS_ARRAY_CCR1_IDX];

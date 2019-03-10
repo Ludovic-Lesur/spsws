@@ -147,13 +147,23 @@ unsigned char MAX11136_PerformMeasurements(void) {
 	max11136_ctx.max11136_status = 0;
 
 	/* Perform conversion until all channels are successfully retrieved or maximum number of loops is reached */
+#ifdef HW1_0
 	SPI1_Enable();
+#endif
+#ifdef HW2_0
+	SPI2_Enable();
+#endif
 	idx = 0;
 	while ((max11136_ctx.max11136_status != 0xFF) && (idx < MAX11136_CONVERSION_LOOPS)) {
 		MAX11136_ConvertAllChannels12Bits();
 		idx++;
 	}
+#ifdef HW1_0
 	SPI1_Disable();
+#endif
+#ifdef HW2_0
+	SPI2_Disable();
+#endif
 
 	/* Return status */
 	return max11136_ctx.max11136_status;
