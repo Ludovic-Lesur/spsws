@@ -657,6 +657,7 @@ void AT_DecodeRxBuffer(void) {
 			AT_ReplyOk();
 		}
 
+#ifdef AT_COMMANDS_GPS
 		/* TIME command AT$TIME=<timeout_seconds><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
 			unsigned int timeout_seconds = 0;
@@ -718,7 +719,8 @@ void AT_DecodeRxBuffer(void) {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
-
+#endif
+#ifdef AT_COMMANDS_SENSORS
 		/* ADC command AT$ADC?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
 			// Trigger external ADC convertions.
@@ -894,7 +896,8 @@ void AT_DecodeRxBuffer(void) {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
-
+#endif
+#ifdef AT_COMMANDS_NVM
 		/* NVM reset command AT$NVMR<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_NVMR) == AT_NO_ERROR) {
 			// Reset all NVM field to default value.
@@ -1012,7 +1015,8 @@ void AT_DecodeRxBuffer(void) {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
-
+#endif
+#ifdef AT_COMMANDS_SIGFOX
 		/* Sigfox send OOB command AT$SO<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
 			// Send Sigfox OOB frame.
@@ -1160,7 +1164,8 @@ void AT_DecodeRxBuffer(void) {
 				}
 			}
 		}
-
+#endif
+#ifdef AT_COMMANDS_TEST_MODES
 		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
 			unsigned int frequency_hz = 0;
@@ -1291,6 +1296,7 @@ void AT_DecodeRxBuffer(void) {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
+#endif
 
 		/* Unknown command */
 		else {

@@ -8,6 +8,7 @@
 #include "neom8n.h"
 
 #include "dma.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "lpuart.h"
 #include "tim.h"
@@ -581,6 +582,8 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 		}
+		// Reload watchdog.
+		IWDG_Reload();
 	}
 	// Stop LPUART and DMA.
 	DMA1_Stop();
@@ -662,6 +665,8 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 		}
+		// Reload watchdog.
+		IWDG_Reload();
 	}
 	// Stop DMA.
 	DMA1_Stop();

@@ -181,7 +181,7 @@
 /* ----------------------------------------------------------------------------- */
 
  
-#define SFX_ERR_INT_DOWNLINK_CONFIGURATION                                  (sfx_u8)(0xE0)  /*!< Error occurs when trying to configure downlink : check the manuf error code */
+#define SFX_ERR_INT_DOWNLINK_CONFIGURATION                       (sfx_u8)(0xE0)  /*!< Error occurs when trying to configure downlink : check the manuf error code */
 
 
 /** @}*/
@@ -292,8 +292,9 @@
 #define RC5_CONFIG     {0x00000003,0x00001388,0x00000000}  /*!< Config word default value: 3 retries before 1st frame , 0x1288=5000ms max time between each frame>*/
 
 
-#define ID_LENGTH      (sfx_u8)(4)            /* Size of device identifier */
-#define PAC_LENGTH     (sfx_u8)(8)            /* Size of device initial PAC */
+#define ID_LENGTH      					(sfx_u8)(4)		/* Size of device identifier */
+#define PAC_LENGTH     					(sfx_u8)(8)  	/* Size of device initial PAC */
+#define SFX_DOWNLINK_DATA_SIZE_BYTES	(sfx_u8)(8)		/* Size of downlink data in bytes */
 
 /********************************
  * \enum sfx_spectrum_access_t

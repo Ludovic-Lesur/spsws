@@ -13,6 +13,7 @@
 /*** RTC functions ***/
 
 void RTC_Init(unsigned char rtc_use_lse);
+void RTC_EnableInterrupt(void);
 void RTC_Calibrate(Timestamp* gps_timestamp);
 unsigned char RTC_GetCalibrationStatus(void);
 void RTC_GetTimestamp(Timestamp* rtc_timestamp);

@@ -18,7 +18,7 @@
 void RCC_Init(void);
 unsigned char RCC_SwitchToInternal16MHz(void);
 unsigned char RCC_SwitchToTcxo16MHz(void);
-unsigned char RCC_SwitchToInternal32kHz(void);
-unsigned char RCC_SwitchToQuartz32kHz(void);
+unsigned char RCC_EnableInternal32kHz(void);
+unsigned char RCC_EnableCrystal32kHz(void);
 
 #endif /* RCC_H */

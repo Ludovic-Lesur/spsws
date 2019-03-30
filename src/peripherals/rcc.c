@@ -141,14 +141,14 @@ unsigned char RCC_SwitchToTcxo16MHz(void) {
  * @param:					None.
  * @return lsi_available:	'1' if LSI was successfully started, 0 otherwise.
  */
-unsigned char RCC_SwitchToInternal32kHz(void) {
+unsigned char RCC_EnableInternal32kHz(void) {
 
 	/* Enable LSI */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock RCC register write protection.
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
 
-	/* Wait for LSE to be stable */
+	/* Wait for LSI to be stable */
 	unsigned char lsi_available = 0;
 	unsigned int count = 0;
 	while ((((RCC -> CSR) & (0b1 << 1)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
@@ -157,11 +157,7 @@ unsigned char RCC_SwitchToInternal32kHz(void) {
 
 	/* Check timeout */
 	if (count < RCC_TIMEOUT_COUNT) {
-
-		/* Disable LSe */
-		RCC -> CSR &= ~(0b1 << 9); // LSeON='0'.
-
-		/* Update flag */
+		// Update flag.
 		lsi_available = 1;
 	}
 
@@ -172,7 +168,7 @@ unsigned char RCC_SwitchToInternal32kHz(void) {
  * @param:					None.
  * @return lsi_available:	'1' if LSE was successfully started, 0 otherwise.
  */
-unsigned char RCC_SwitchToQuartz32kHz(void) {
+unsigned char RCC_EnableCrystal32kHz(void) {
 
 	/* Enable LSE (32.768kHz crystal) */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
@@ -188,11 +184,7 @@ unsigned char RCC_SwitchToQuartz32kHz(void) {
 
 	/* Check timeout */
 	if (count < RCC_TIMEOUT_COUNT) {
-
-		/* Disable LSI */
-		RCC -> CSR &= ~(0b1 << 0); // LSION='0'.
-
-		/* Update flag */
+		// Update flag.
 		lse_available = 1;
 	}
 

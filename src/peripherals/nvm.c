@@ -99,28 +99,6 @@ void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store) {
  * @return:	None.
  */
 void NVM_ResetDefault(void) {
-	// Sigfox device ID.
-	NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + 0), 0xFE);
-	NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + 1), 0xDC);
-	NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + 2), 0xBA);
-	NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + 3), 0x98);
-	// Sigfox device private key.
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 0), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 1), 0x11);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 2), 0x22);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 3), 0x33);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 4), 0x44);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 5), 0x55);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 6), 0x66);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 7), 0x77);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 8), 0x88);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 9), 0x99);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 10), 0xAA);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 11), 0xBB);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 12), 0xCC);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 13), 0xDD);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 14), 0xEE);
-	NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + 15), 0xFF);
 	// Sigfox PN.
 	NVM_WriteByte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 0), 0x00);
 	NVM_WriteByte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 1), 0x00);

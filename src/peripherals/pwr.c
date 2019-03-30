@@ -40,8 +40,10 @@ void PWR_EnterStandbyMode(void) {
 	/* Enable power interface clock */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 
+#ifdef IM_HWT
 	/* Configure WKUP pin */
 	PWR -> CSR |= (0b1 << 8); // Use WKUP1 pin (PA0) rising edge to exit standby mode (EWUP1='1').
+#endif
 
 	/* Clear WUF flag */
 	PWR -> CR |= (0b1 << 2); // CWUF='1'.

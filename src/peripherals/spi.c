@@ -34,9 +34,9 @@ void SPI1_Init(void) {
 #endif
 
 	/* Configure SCK, MISO and MOSI (first as high impedance) */
-	GPIO_Configure(GPIO_SPI1_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI1_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI1_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_SCK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MOSI, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MISO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure CS pins (first as output low) */
 	GPIO_Configure(GPIO_SX1232_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
@@ -138,9 +138,9 @@ void SPI1_PowerOn(void) {
 void SPI1_PowerOff(void) {
 
 	/* Disable SPI alternate function */
-	GPIO_Configure(GPIO_SPI1_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI1_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI1_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_SCK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MOSI, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI1_MISO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Switch SX1232 off */
 	GPIO_Write(GPIO_RF_POWER_ENABLE, 0);
@@ -241,9 +241,9 @@ void SPI2_Init(void) {
 	GPIO_Write(GPIO_ADC_POWER_ENABLE, 0);
 
 	/* Configure SCK, MISO and MOSI (first as high impedance) */
-	GPIO_Configure(GPIO_SPI2_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI2_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI2_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_SCK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_MOSI, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_MISO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure CS pins (first as output low) */
 	GPIO_Configure(GPIO_MAX11136_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
@@ -308,9 +308,9 @@ void SPI2_PowerOn(void) {
 void SPI2_PowerOff(void) {
 
 	/* Disable SPI alternate function */
-	GPIO_Configure(GPIO_SPI2_SCK, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI2_MOSI, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_SPI2_MISO, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_SCK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_MOSI, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_SPI2_MISO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Switch analog circuitry off */
 	GPIO_Write(GPIO_ADC_POWER_ENABLE, 0);

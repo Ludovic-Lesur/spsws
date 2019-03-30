@@ -31,8 +31,8 @@ void I2C1_Init(void) {
 	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 0);
 
 	/* Configure SCL and SDA (first as high impedance) */
-	GPIO_Configure(GPIO_I2C1_SCL, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_I2C1_SDA, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_I2C1_SCL, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_I2C1_SDA, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').

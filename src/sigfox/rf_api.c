@@ -8,6 +8,7 @@
 #include "rf_api.h"
 
 #include "gpio.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "mapping.h"
 #include "mode.h"
@@ -565,6 +566,8 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 			sfx_err = RF_ERR_API_WAIT_FRAME;
 			break;
 		}
+		// Reload watchdog.
+		IWDG_Reload();
 	}
 
 	/* Read FIFO if data was retrieved */

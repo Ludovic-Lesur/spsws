@@ -122,11 +122,22 @@ void RTC_Init(unsigned char rtc_use_lse) {
 
 	/* Exit initialization mode */
 	RTC_ExitInitializationMode();
+}
+
+/* ENABLE RTC INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_EnableInterrupt(void) {
 
 	/* Enable RTC alarm interrupt (line 17) */
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
 	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
+	EXTI -> EMR |= (0b1 << 17); // IM17='1'.
 	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
+
+	/* Clear flag of RTC EXTI line (17) */
+	EXTI -> PR |= (0b1 << 17);
 
 	/* Enable RTC interrupt */
 	NVIC_EnableInterrupt(IT_RTC);

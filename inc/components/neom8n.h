@@ -24,8 +24,10 @@ typedef struct {
 	unsigned char hours;
 	unsigned char minutes;
 	unsigned char seconds;
+#ifdef IM_HWT
 	// Absolute time (since MCU start-up) in seconds when GPS timestamp is retrieved (used to know MCU start-up timestamp).
 	unsigned char mcu_time_seconds;
+#endif
 } Timestamp;
 
 typedef struct {

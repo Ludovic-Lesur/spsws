@@ -94,8 +94,8 @@ void LPUART1_Init(void) {
 	GPIO_Write(GPIO_GPS_POWER_ENABLE, 0);
 
 	/* Configure TX and RX GPIOs (first as high impedance) */
-	GPIO_Configure(GPIO_LPUART1_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LPUART1_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	LPUART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -167,8 +167,8 @@ void LPUART1_PowerOn(void) {
 void LPUART1_PowerOff(void) {
 
 	/* Disable LPUART alternate function */
-	GPIO_Configure(GPIO_LPUART1_TX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LPUART1_RX, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_LPUART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Switch NEOM8N off */
 	GPIO_Write(GPIO_GPS_POWER_ENABLE, 0);

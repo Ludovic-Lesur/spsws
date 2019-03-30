@@ -9,6 +9,7 @@
 
 #include "at.h"
 #include "gpio.h"
+#include "lptim.h"
 #include "mode.h"
 #include "mapping.h"
 #include "nvic.h"
