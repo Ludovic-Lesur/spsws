@@ -79,8 +79,7 @@ void GEOLOC_Init(void) {
 	geoloc_ctx.gps_position.long_east = 0;
 	geoloc_ctx.gps_position.altitude = 0;
 	// Fix duration and timeout.
-	NVM_ReadByte(NVM_GPS_TIMEOUT_ADDRESS_OFFSET, &geoloc_ctx.geoloc_timeout_seconds);
-	geoloc_ctx.geoloc_timeout_seconds = 60; // Bypass for debug.
+	NVM_ReadByte(NVM_CONFIG_GPS_TIMEOUT_ADDRESS_OFFSET, &geoloc_ctx.geoloc_timeout_seconds);
 	geoloc_ctx.geoloc_fix_start_time_seconds = 0;
 	geoloc_ctx.geoloc_fix_duration_seconds = 0;
 	// Sigfox.

@@ -8,10 +8,14 @@
 #ifndef DPS310_H
 #define DPS310_H
 
+/*** DPS310 macros ***/
+
+#define DPS310_EXTERNAL_I2C1_ADDRESS	0x77
+
 /*** DPS310 functions ***/
 
 void DPS310_Init(void);
-void DPS310_PerformMeasurements(void);
+void DPS310_PerformMeasurements(unsigned char dps310_i2c_address);
 void DPS310_GetPressure(unsigned int* pressure_pa);
 void DPS310_GetTemperature(signed char* temperature_degrees);
 

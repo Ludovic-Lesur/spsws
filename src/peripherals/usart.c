@@ -9,12 +9,15 @@
 
 #include "at.h"
 #include "gpio.h"
+#include "mode.h"
 #include "mapping.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "tim.h"
 #include "usart_reg.h"
+
+#ifdef ATM
 
 /*** USART local macros ***/
 
@@ -43,6 +46,7 @@ static volatile USART_Context usart_ctx;
 
 /*** USART local functions ***/
 
+#ifdef HW1_0
 /* USART2 INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -78,6 +82,45 @@ void USART2_IRQHandler(void) {
 		USART2 -> ICR |= (0b1 << 3);
 	}
 }
+#endif
+
+#ifdef HW2_0
+/* USART2 INTERRUPT HANDLER.
+ * @param:	None.
+ * @return:	None.
+ */
+void USART1_IRQHandler(void) {
+
+#ifdef USE_TXE_INTERRUPT
+	/* TXE interrupt */
+	if (((USART1 -> ISR) & (0b1 << 7)) != 0) {
+		if ((usart_ctx.tx_buf_read_idx) != (usart_ctx.tx_buf_write_idx)) {
+			USART1 -> TDR = (usart_ctx.tx_buf)[usart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
+			usart_ctx.tx_buf_read_idx++; // Increment TX read index.
+			if (usart_ctx.tx_buf_read_idx == USART_TX_BUFFER_SIZE) {
+				usart_ctx.tx_buf_read_idx = 0; // Manage roll-over.
+			}
+		}
+		else {
+			// No more bytes, disable TXE interrupt.
+			USART1 -> CR1 &= ~(0b1 << 7); // TXEIE = '0'.
+		}
+	}
+#endif
+
+	/* RXNE interrupt */
+	if (((USART1 -> ISR) & (0b1 << 5)) != 0) {
+		// Transmit incoming byte to AT command manager.
+		AT_FillRxBuffer(USART1 -> RDR);
+	}
+
+	/* Overrun error interrupt */
+	if (((USART1 -> ISR) & (0b1 << 3)) != 0) {
+		// Clear ORE flag.
+		USART1 -> ICR |= (0b1 << 3);
+	}
+}
+#endif
 
 /* FILL USART TX BUFFER WITH A NEW BYTE.
  * @param tx_byte:	Byte to append.
@@ -161,7 +204,7 @@ void USART2_Init(void) {
 	USART2 -> CR2 = 0; // 1 stop bit (STOP='00').
 	USART2 -> CR3 = 0;
 	USART2 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART2 -> BRR = ((SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART2 -> BRR = ((RCC_SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	USART2 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Enable transmitter and receiver */
@@ -170,7 +213,7 @@ void USART2_Init(void) {
 
 	/* Switch MCP2221A on */
 	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 1);
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 
 	/* Enable peripheral */
 	USART2 -> CR1 |= (0b1 << 0);
@@ -359,3 +402,5 @@ void USARTx_SendString(char* tx_string) {
 		NVIC_EnableInterrupt(IT_USART1);
 	#endif
 }
+
+#endif

@@ -176,38 +176,30 @@ void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
  */
 void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 
-	/* Get current radio configuration */
-	sfx_rc_t current_sfx_rc = SPSWS_SIGFOX_RC;
-
 	/* Select TX / RX */
 	switch (rf_mode) {
 
 	case SFX_RF_MODE_TX:
-		// Select TX path according to RC.
-		switch (current_sfx_rc.open_tx_frequency) {
-			case RC1_OPEN_UPLINK_CENTER_FREQUENCY:
-			case RC5_OPEN_UPLINK_CENTER_FREQUENCY:
-				// 14dBm on PABOOST pin.
-				SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_PABOOST);
-				SKY13317_SetChannel(SKY13317_CHANNEL_RF1);
-				rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
-				rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
-				break;
-			case RC2_OPEN_UPLINK_START_OF_TABLE:
-				// 22dBm with PA on RFO pin.
-				SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_RFO);
-				SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
-				rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_RFO_MIN;
-				rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_FCC;
-				break;
-			default:
-				break;
-			}
+		// Select TX path.
+		SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_PABOOST);
+#ifdef HW1_0
+		SKY13317_SetChannel(SKY13317_CHANNEL_RF1);
+#endif
+#ifdef HW2_0
+		SKY13317_SetChannel(SKY13317_CHANNEL_RF2);
+#endif
+		rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
+		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
 		break;
 
 	case SFX_RF_MODE_RX:
-		// Activate LNA.
+		// Activate LNA path.
+#ifdef HW1_0
 		SKY13317_SetChannel(SKY13317_CHANNEL_RF2);
+#endif
+#ifdef HW2_0
+		SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
+#endif
 		break;
 
 	default:

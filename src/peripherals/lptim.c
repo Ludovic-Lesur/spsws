@@ -29,10 +29,13 @@ void LPTIM1_Init(void) {
 
 	/* Configure peripheral */
 	LPTIM1 -> CFGR = 0; // Reset all bits, PRESC='000' (1).
+	LPTIM1 -> IER = 0; // None interrupt.
+	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1'), needed to write ARR.
 	LPTIM1 -> ARR = RCC_SYSCLK_KHZ; // Overflow period = 1ms.
-	LPTIM1 -> IER |= (0b1 << 1); // Enable autoreload match interrupt (ARRMIE='1').
+	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0); // Wait for ARROK='1'.
 
 	/* Disable peripheral by default */
+	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 }
 
@@ -53,6 +56,7 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0); // Wait for counter to reach autoreload value (ARRM='1').
 		LPTIM1 -> ICR |= (0b1 << 1); // Clear ARRM flag (ARRMCF='1').
+		LPTIM1 -> CNT = 0;
 	}
 
 	/* Disable timer */

@@ -244,8 +244,8 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN+1]));
 	// Sequence number.
-	NVM_ReadByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_SEQ_NUM]));
-	NVM_ReadByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_SEQ_NUM+1]));
+	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_SEQ_NUM]));
+	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_SEQ_NUM+1]));
 	// FH.
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_FH]));
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
@@ -288,8 +288,8 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN+1]);
 	// Sequence number.
-	NVM_WriteByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_SEQ_NUM]);
-	NVM_WriteByte(NVM_SIGFOX_SEQ_NUM_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_SEQ_NUM+1]);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_SEQ_NUM]);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_SEQ_NUM+1]);
 	// FH.
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_FH]);
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
@@ -397,6 +397,7 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
  * \retval MCU_ERR_API_TEST_REPORT:              Report test result error
  *******************************************************************/
 sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
+#ifdef ATM
 	// Print test result on UART.
 	if (status == SFX_TRUE) {
 		USARTx_SendString("Test passed. RSSI = -");
@@ -406,6 +407,7 @@ sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
 		USARTx_SendString("Test failed. ");
 	}
 	USARTx_SendString("\n");
+#endif
 	return SFX_ERR_NONE;
 }
 

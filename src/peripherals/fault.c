@@ -5,12 +5,22 @@
  *      Author: Ludo
  */
 
+#include "scb_reg.h"
+
+/* NON MASKABLE INTERRUPT HANDLER.
+ * @param:	None.
+ * @return:	None.
+ */
 void NMI_Handler(void) {
 	// Trigger software reset.
-	while (1);
+	SCB -> AIRCR |= (0b1 << 2);
 }
 
+/* HARD FAULT INTERRUPT HANDLER.
+ * @param:	None.
+ * @return:	None.
+ */
 void HardFault_Handler(void) {
 	// Trigger software reset.
-	while (1);
+	SCB -> AIRCR |= (0b1 << 2);
 }

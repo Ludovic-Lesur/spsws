@@ -70,6 +70,12 @@ int main (void) {
 }
 #endif
 
+#ifdef IM_HWT
+int main (void) {
+	return 0;
+}
+#endif
+
 #ifdef CM_RTC
 int main (void) {
 	return 0;
@@ -135,6 +141,7 @@ int main (void) {
 
 	/* Init components */
 	SX1232_Init();
+	SX1232_Tcxo(1);
 	SKY13317_Init();
 	NEOM8N_Init();
 	MAX11136_Init();

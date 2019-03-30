@@ -91,11 +91,40 @@ void SX1232_Init(void) {
 	sx1232_ctx.sx1232_rssi_offset = 0;
 
 	/* Init SX1232 DIOx */
+#ifdef HW1_0
 #ifdef USE_SX1232_DIOX
 	GPIO_Configure(GPIO_SX1232_DIOX, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 #endif
+#endif
+#ifdef HW2_0
+	GPIO_Configure(GPIO_SX1232_DIO2, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+#endif
 	GPIO_Configure(GPIO_SX1232_DIO0, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+
+#ifdef HW2_0
+	/* Init 32MHz TCXO power control */
+	GPIO_Configure(GPIO_TCXO32_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+#endif
 }
+
+#ifdef HW2_0
+/* SWITCH SX1232 EXTERNAL TCXO ON OR OFF.
+ * @param tcxo_enable:	Power down 32MHz TCXO if 0, power on otherwise.
+ * @return:				None.
+ */
+void SX1232_Tcxo(unsigned char tcxo_enable) {
+
+	/* Update power control */
+	if (tcxo_enable == 0) {
+		GPIO_Write(GPIO_TCXO32_POWER_ENABLE, 0);
+	}
+	else {
+		GPIO_Write(GPIO_TCXO32_POWER_ENABLE, 1);
+		// Wait for TCXO to warm-up.
+		LPTIM1_DelayMilliseconds(100);
+	}
+}
+#endif
 
 /* SELECT SX1232 OSCILLATOR CONFIGURATION.
  * @param oscillator:	Type of external oscillator used (see SX1232_Oscillator enumeration in sx1232.h).

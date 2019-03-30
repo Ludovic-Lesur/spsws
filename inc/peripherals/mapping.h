@@ -108,9 +108,9 @@
 #endif
 
 // SPI1.
-#define GPIO_SPI1_SCK				(GPIO) {GPIOA, 5, 0}
-#define GPIO_SPI1_MISO				(GPIO) {GPIOA, 6, 0}
-#define GPIO_SPI1_MOSI				(GPIO) {GPIOA, 7, 0}
+#define GPIO_SPI1_SCK				(GPIO) {GPIOA, 0, 5, 0}
+#define GPIO_SPI1_MISO				(GPIO) {GPIOA, 0, 6, 0}
+#define GPIO_SPI1_MOSI				(GPIO) {GPIOA, 0, 7, 0}
 
 // DIO3 / SX1232_DIOx.
 #ifdef HW1_0
@@ -244,6 +244,11 @@
 #define GPIO_TCXO16_POWER_ENABLE	(GPIO) {GPIOC, 2, 13, 0}
 #endif
 
+// 32MHz TCXO power enable.
+#ifdef HW2_0
+#define GPIO_TCXO32_POWER_ENABLE	(GPIO) {GPIOA, 0, 3, 0}
+#endif
+
 // 32.768kHz quartz / Main power disable.
 #ifdef HW1_0
 #ifdef IM_HWT
@@ -254,7 +259,7 @@
 // 32.768kHz quartz / HWT_Reset.
 #ifdef HW1_0
 #ifdef IM_HWT
-#define GPIO_HWT_RESET				(GPIO) {GPIOC, 15, 0}
+#define GPIO_HWT_RESET				(GPIO) {GPIOC, 2, 15, 0}
 #endif
 #endif
 

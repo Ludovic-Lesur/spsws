@@ -10,10 +10,6 @@
 #include "dps310_reg.h"
 #include "i2c.h"
 
-/*** DPS310 local macros ***/
-
-#define DPS310_I2C1_ADDRESS	0x77
-
 /*** DPS310 local structures ***/
 
 typedef struct {
@@ -46,9 +42,9 @@ static DPS310_Context dps310_ctx;
  * @param value:	Value to write in the selected register.
  * @return:			None.
  */
-void DPS310_WriteRegister(unsigned char addr, unsigned char value) {
-	unsigned char register_write_command[2] = {addr, value};
-	I2C1_Write(DPS310_I2C1_ADDRESS, register_write_command, 2);
+void DPS310_WriteRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char value) {
+	unsigned char register_write_command[2] = {register_address, value};
+	I2C1_Write(dps310_i2c_address, register_write_command, 2);
 }
 
 /* READ A REGISTER OF DPS310.
@@ -56,10 +52,10 @@ void DPS310_WriteRegister(unsigned char addr, unsigned char value) {
  * @param value:	Pointer to byte that will contain the current value of the selected register.
  * @return:			None.
  */
-void DPS310_ReadRegister(unsigned char addr, unsigned char* value) {
-	unsigned char local_addr = addr;
-	I2C1_Write(DPS310_I2C1_ADDRESS, &local_addr, 1);
-	I2C1_Read(DPS310_I2C1_ADDRESS, value, 1);
+void DPS310_ReadRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char* value) {
+	unsigned char local_addr = register_address;
+	I2C1_Write(dps310_i2c_address, &local_addr, 1);
+	I2C1_Read(dps310_i2c_address, value, 1);
 }
 
 /* COMPUTE THE TWO'S COMPLEMENT OF A GIVEN VALUE.
@@ -93,7 +89,7 @@ signed int DPS310_ComputeTwoComplement(unsigned int value, unsigned char sign_bi
  * @param:	None.
  * @return:	None.
  */
-void DPS310_ReadCalibrationCoefficients(void) {
+void DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_address) {
 
 	/* Reset all coefficients */
 	dps310_ctx.dps310_coef_c0 = 0;
@@ -109,43 +105,43 @@ void DPS310_ReadCalibrationCoefficients(void) {
 
 	/* Read all coefficients */
 	unsigned char read_byte = 0;
-	DPS310_ReadRegister(DPS310_REG_COEF_C0B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0B, &read_byte);
 	dps310_ctx.dps310_coef_c0 |= (read_byte << 4);
-	DPS310_ReadRegister(DPS310_REG_COEF_C0A_C1B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0A_C1B, &read_byte);
 	dps310_ctx.dps310_coef_c0 |= (read_byte & 0xF0) >> 4;
 	dps310_ctx.dps310_coef_c1 |= (read_byte & 0x0F) << 8;
-	DPS310_ReadRegister(DPS310_REG_COEF_C1A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C1A, &read_byte);
 	dps310_ctx.dps310_coef_c1 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C00C, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C00C, &read_byte);
 	dps310_ctx.dps310_coef_c00 |= (read_byte << 12);
-	DPS310_ReadRegister(DPS310_REG_COEF_C00B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C00B, &read_byte);
 	dps310_ctx.dps310_coef_c00 |= (read_byte << 4);
-	DPS310_ReadRegister(DPS310_REG_COEF_C00A_C10C, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C00A_C10C, &read_byte);
 	dps310_ctx.dps310_coef_c00 |= (read_byte & 0xF0) >> 4;
 	dps310_ctx.dps310_coef_c10 |= (read_byte & 0x0F) << 16;
-	DPS310_ReadRegister(DPS310_REG_COEF_C10B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C10B, &read_byte);
 	dps310_ctx.dps310_coef_c10 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C10A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C10A, &read_byte);
 	dps310_ctx.dps310_coef_c10 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C01B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address,DPS310_REG_COEF_C01B, &read_byte);
 	dps310_ctx.dps310_coef_c01 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C01A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C01A, &read_byte);
 	dps310_ctx.dps310_coef_c01 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C11B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C11B, &read_byte);
 	dps310_ctx.dps310_coef_c11 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C11A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C11A, &read_byte);
 	dps310_ctx.dps310_coef_c11 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C20B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C20B, &read_byte);
 	dps310_ctx.dps310_coef_c20 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C20A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C20A, &read_byte);
 	dps310_ctx.dps310_coef_c20 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C21B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C21B, &read_byte);
 	dps310_ctx.dps310_coef_c21 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C21A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C21A, &read_byte);
 	dps310_ctx.dps310_coef_c21 |= read_byte;
-	DPS310_ReadRegister(DPS310_REG_COEF_C30B, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C30B, &read_byte);
 	dps310_ctx.dps310_coef_c30 |= (read_byte << 8);
-	DPS310_ReadRegister(DPS310_REG_COEF_C30A, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C30A, &read_byte);
 	dps310_ctx.dps310_coef_c30 |= read_byte;
 }
 
@@ -153,29 +149,29 @@ void DPS310_ReadCalibrationCoefficients(void) {
  * @param:	None.
  * @return:	None.
  */
-void DPS310_ComputeRawTemperature(void) {
+void DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
 
 	/* Trigger temperature measurement */
-	DPS310_WriteRegister(DPS310_REG_TMP_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
+	DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_TMP_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
 	dps310_ctx.dps310_kT = 3670016;
-	DPS310_WriteRegister(DPS310_REG_MEAS_CFG, 0x02);
+	DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 
 	/* Wait for temperature to be ready */
 	unsigned char read_byte = 0;
 	while ((read_byte & (0b1 << 5)) == 0) { // Wait for TMP_RDY='1'.
-		DPS310_ReadRegister(DPS310_REG_MEAS_CFG, &read_byte);
+		DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 	}
 
 	/* Read temperature */
 	unsigned int tmp_raw = 0;
 	// B2.
-	DPS310_ReadRegister(DPS310_REG_TMP_B2, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_TMP_B2, &read_byte);
 	tmp_raw |= (read_byte << 16);
 	// B1.
-	DPS310_ReadRegister(DPS310_REG_TMP_B1, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_TMP_B1, &read_byte);
 	tmp_raw |= (read_byte << 8);
 	// B0.
-	DPS310_ReadRegister(DPS310_REG_TMP_B0, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_TMP_B0, &read_byte);
 	tmp_raw |= read_byte;
 	dps310_ctx.dps310_tmp_raw = DPS310_ComputeTwoComplement(tmp_raw, 23);
 }
@@ -184,29 +180,29 @@ void DPS310_ComputeRawTemperature(void) {
  * @param:	None.
  * @return:	None.
  */
-void DPS310_ComputeRawPressure(void) {
+void DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
 
 	/* Trigger pressure measurement */
-	DPS310_WriteRegister(DPS310_REG_PRS_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
+	DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
 	dps310_ctx.dps310_kP = 3670016;
-	DPS310_WriteRegister(DPS310_REG_MEAS_CFG, 0x01);
+	DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x01);
 
 	/* Wait for pressure to be ready */
 	unsigned char read_byte = 0;
 	while ((read_byte & (0b1 << 4)) == 0) { // Wait for PRS_RDY='1'.
-		DPS310_ReadRegister(DPS310_REG_MEAS_CFG, &read_byte);
+		DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 	}
 
 	/* Read pressure */
 	unsigned int prs_raw = 0;
 	// B2.
-	DPS310_ReadRegister(DPS310_REG_PRS_B2, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_PRS_B2, &read_byte);
 	prs_raw |= (read_byte << 16);
 	// B1.
-	DPS310_ReadRegister(DPS310_REG_PRS_B1, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_PRS_B1, &read_byte);
 	prs_raw |= (read_byte << 8);
 	// B0.
-	DPS310_ReadRegister(DPS310_REG_PRS_B0, &read_byte);
+	DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_PRS_B0, &read_byte);
 	prs_raw |= read_byte;
 	dps310_ctx.dps310_prs_raw = DPS310_ComputeTwoComplement(prs_raw, 23);
 }
@@ -238,15 +234,15 @@ void DPS310_Init(void) {
 	dps310_ctx.dps310_coef_c30 = 0;
 }
 
-void DPS310_PerformMeasurements(void) {
+void DPS310_PerformMeasurements(unsigned char dps310_i2c_address) {
 
 	/* Compute raw temperature */
 	I2C1_Enable();
-	DPS310_ComputeRawTemperature();
-	DPS310_ComputeRawPressure();
+	DPS310_ComputeRawTemperature(dps310_i2c_address);
+	DPS310_ComputeRawPressure(dps310_i2c_address);
 
 	/* Read calibration coefficients */
-	DPS310_ReadCalibrationCoefficients();
+	DPS310_ReadCalibrationCoefficients(dps310_i2c_address);
 	I2C1_Disable();
 }
 

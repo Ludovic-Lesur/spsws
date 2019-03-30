@@ -117,7 +117,7 @@ void SPI1_PowerOn(void) {
 	/* Switch MAX11136 on */
 	GPIO_Write(GPIO_SENSORS_POWER_ENABLE, 1);
 	GPIO_Write(GPIO_MAX11136_CS, 1); // CS high (idle state).
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 
 #ifdef IM_HWT
 	/* MAX5495 */
@@ -153,7 +153,7 @@ void SPI1_PowerOff(void) {
 
 #ifdef IM_HWT
 	/* MAX5495 */
-	GPIO_Write(GPIO_MAX5495_CS, 0; // CS low (to avoid powering slaves via SPI bus).
+	GPIO_Write(GPIO_MAX5495_CS, 0); // CS low (to avoid powering slaves via SPI bus).
 #endif
 #endif
 }

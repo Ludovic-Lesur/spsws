@@ -224,7 +224,9 @@ void GPIO_Init(void) {
 	RCC -> IOPENR |= (0b11 << 0); // IOPxEN='1'.
 
 	/* Configure standalone GPIOs */
+#ifndef IM_HWT
 	GPIO_Configure(GPIO_LED, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+#endif
 
 	/* Others GPIOs are configured in their corresponding peripheral or applicative driver */
 }

@@ -19,6 +19,7 @@
 #include "mode.h"
 #include "neom8n.h"
 #include "nvm.h"
+#include "nvm_reg.h"
 #include "rf_api.h"
 #include "sht3x.h"
 #include "si1133.h"
@@ -29,6 +30,8 @@
 #include "tim.h"
 #include "usart.h"
 #include "wind.h"
+
+#ifdef ATM
 
 /*** AT local macros ***/
 
@@ -45,21 +48,27 @@
 
 // Input commands without parameter.
 #define AT_IN_COMMAND_TEST								"AT"
-#define AT_IN_COMMAND_ADC								"AT$ADC"
-#define AT_IN_COMMAND_MCU								"AT$MCU"
-#define AT_IN_COMMAND_THS								"AT$THS"
-#define AT_IN_COMMAND_PTS								"AT$PTS"
-#define AT_IN_COMMAND_UVS								"AT$UVS"
-#define AT_IN_COMMAND_LDR								"AT$LDR"
+#define AT_IN_COMMAND_ADC								"AT$ADC?"
+#define AT_IN_COMMAND_MCU								"AT$MCU?"
+#ifdef HW2_0
+#define AT_IN_COMMAND_ITHS								"AT$ITHS?"
+#endif
+#define AT_IN_COMMAND_ETHS								"AT$ETHS?"
+#define AT_IN_COMMAND_EPTS								"AT$EPTS?"
+#define AT_IN_COMMAND_ELDR								"AT$ELDR?"
+#define AT_IN_COMMAND_EUVS								"AT$EUVS?"
 #define AT_IN_COMMAND_ID								"AT$ID?"
 #define AT_IN_COMMAND_KEY								"AT$KEY?"
+#define AT_IN_COMMAND_NVMR								"AT$NVMR"
 #define AT_IN_COMMAND_SF								"AT$SF"
-#define AT_IN_COMMAND_OOB								"AT$OOB"
+#define AT_IN_COMMAND_OOB								"AT$SO"
 
 // Input commands with parameters (headers).
-#define AT_IN_HEADER_GPS								"AT$GPS=" 		// AT$GPS=<timeout_seconds><CR>.
 #define AT_IN_HEADER_TIME								"AT$TIME="		// AT$TIME=<timeout_seconds><CR>.
+#define AT_IN_HEADER_GPS								"AT$GPS=" 		// AT$GPS=<timeout_seconds><CR>.
 #define AT_IN_HEADER_WIND								"AT$WIND="		// AT$WIND=<enable><CR>.
+#define AT_IN_HEADER_RAIN								"AT$RAIN="		// AT$RAIN=<enable><CR>.
+#define AT_IN_HEADER_NVM								"AT$NVM="		// AT$NVM=<address_offset><CR>
 #define AT_IN_HEADER_ID									"AT$ID="		// AT$ID=<id><CR>.
 #define AT_IN_HEADER_KEY								"AT$KEY="		// AT$KEY=<key><CR>.
 #define AT_IN_HEADER_SF									"AT$SF="		// AT$SF=<uplink_data>,<downlink_request><CR>.
@@ -91,18 +100,19 @@
 
 // Parameters errors
 #define AT_OUT_ERROR_TIMEOUT_OVERFLOW					0x80			// Timeout is too large.
-#define AT_OUT_ERROR_RF_FREQUENCY_UNDERFLOW				0x81			// RF frequency is too low.
-#define AT_OUT_ERROR_RF_FREQUENCY_OVERFLOW				0x82			// RF frequency is too high.
-#define AT_OUT_ERROR_RF_OUTPUT_POWER_OVERFLOW			0x83			// RF output power is too high.
-#define AT_OUT_ERROR_UNKNOWN_RC							0x84			// Unknown RC.
-#define AT_OUT_ERROR_UNKNOWN_TEST_MODE					0x85			// Unknown test mode.
+#define AT_OUT_ERROR_NVM_ADDRESS_OVERFLOW				0x81			// Address offset exceeds NVM size.
+#define AT_OUT_ERROR_RF_FREQUENCY_UNDERFLOW				0x82			// RF frequency is too low.
+#define AT_OUT_ERROR_RF_FREQUENCY_OVERFLOW				0x83			// RF frequency is too high.
+#define AT_OUT_ERROR_RF_OUTPUT_POWER_OVERFLOW			0x84			// RF output power is too high.
+#define AT_OUT_ERROR_UNKNOWN_RC							0x85			// Unknown RC.
+#define AT_OUT_ERROR_UNKNOWN_TEST_MODE					0x86			// Unknown test mode.
 
 // Components errors
-#define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x86			// Invalid data retrieved by GPS.
-#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
+#define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x87			// Invalid data retrieved by GPS.
+#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x88			// GPS timeout.
 
 // Duration of RSSI command.
-#define RSSI_REPORT_DURATION_SECONDS					60
+#define AT_RSSI_REPORT_DURATION_SECONDS					60
 
 /*** AT local structures ***/
 
@@ -506,7 +516,7 @@ void AT_PrintAdcResults(void) {
 	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN1.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN1, &result_12bits);
-	USARTx_SendString("AIN1=");
+	USARTx_SendString("mV AIN1=");
 	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
 	// AIN2.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN2, &result_12bits);
@@ -589,7 +599,7 @@ void AT_PrintPosition(Position* gps_position) {
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> lat_north)==1)? "N" : "S");
+	USARTx_SendString(((gps_position -> lat_north) == 1) ? "N" : "S");
 	// Longitude.
 	USARTx_SendString(" Long=");
 	USARTx_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
@@ -598,7 +608,7 @@ void AT_PrintPosition(Position* gps_position) {
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> long_east)==1)? "E" : "W");
+	USARTx_SendString(((gps_position -> long_east) == 1) ? "E" : "W");
 	// Altitude.
 	USARTx_SendString(" Alt=");
 	USARTx_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
@@ -647,6 +657,37 @@ void AT_DecodeRxBuffer(void) {
 			AT_ReplyOk();
 		}
 
+		/* TIME command AT$TIME=<timeout_seconds><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
+			unsigned int timeout_seconds = 0;
+			// Search timeout parameter.
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start GPS fix.
+				Timestamp gps_timestamp;
+				LPUART1_PowerOn();
+				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+				LPUART1_PowerOff();
+				switch (get_timestamp_result) {
+				case NEOM8N_SUCCESS:
+					AT_PrintTimestamp(&gps_timestamp);
+					break;
+				case NEOM8N_INVALID_DATA:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
+					break;
+				case NEOM8N_TIMEOUT:
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				// Error in timeout parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
 		/* GPS command AT$GPS=<timeout_seconds><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
 			unsigned int timeout_seconds = 0;
@@ -678,58 +719,7 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-		/* TIME command AT$TIME=<timeout_seconds><CR> */
-		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
-			unsigned int timeout_seconds = 0;
-			// Search timeout parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-			if (get_param_result == AT_NO_ERROR) {
-				// Start GPS fix.
-				Timestamp gps_timestamp;
-				LPUART1_PowerOn();
-				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
-				LPUART1_PowerOff();
-				switch (get_timestamp_result) {
-				case NEOM8N_SUCCESS:
-					//AT_PrintTimestamp(&gps_timestamp);
-					break;
-				case NEOM8N_INVALID_DATA:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
-					break;
-				case NEOM8N_TIMEOUT:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
-					break;
-				default:
-					break;
-				}
-			}
-			else {
-				// Error in timeout parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-			}
-		}
-
-		/* WIND measurements command AT$WIND=<enable><CR> */
-		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
-			unsigned int enable = 0;
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-			if (get_param_result == AT_NO_ERROR) {
-				// Start or stop wind continuous measurements.
-				if (enable == 0) {
-					WIND_StopContinuousMeasure();
-				}
-				else {
-					WIND_StartContinuousMeasure();
-				}
-				AT_ReplyOk();
-			}
-			else {
-				// Error in enable parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-			}
-		}
-
-		/* ADC command AT$ADC<CR> */
+		/* ADC command AT$ADC?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
 			// Trigger external ADC convertions.
 #ifdef HW1_0
@@ -750,7 +740,7 @@ void AT_DecodeRxBuffer(void) {
 			AT_PrintAdcResults();
 		}
 
-		/* MCU command AT$MCU<CR> */
+		/* MCU command AT$MCU?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
 			unsigned int mcu_supply_voltage_mv = 0;
 			signed char mcu_temperature_degrees = 0;;
@@ -765,14 +755,32 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("°C\n");
 		}
-
-		/* Temperature and humidity sensor command AT$THS<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_THS) == AT_NO_ERROR) {
+#ifdef HW2_0
+		/* Internal temperature and humidity sensor command AT$ITHS?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ITHS) == AT_NO_ERROR) {
 			signed char sht3x_temperature_degrees = 0;
 			unsigned char sht3x_humidity_percent = 0;
 			// Perform measurements.
 			I2C1_PowerOn();
-			SHT3X_PerformMeasurements();
+			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
+			I2C1_PowerOff();
+			SHT3X_GetTemperature(&sht3x_temperature_degrees);
+			SHT3X_GetHumidity(&sht3x_humidity_percent);
+			// Print results.
+			USARTx_SendString("T=");
+			USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("°C H=");
+			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("%\n");
+		}
+#endif
+		/* External temperature and humidity sensor command AT$ETHS?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ETHS) == AT_NO_ERROR) {
+			signed char sht3x_temperature_degrees = 0;
+			unsigned char sht3x_humidity_percent = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 			I2C1_PowerOff();
 			SHT3X_GetTemperature(&sht3x_temperature_degrees);
 			SHT3X_GetHumidity(&sht3x_humidity_percent);
@@ -784,13 +792,13 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendString("%\n");
 		}
 
-		/* Pressure and temperature sensor command AT$PTS<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_PTS) == AT_NO_ERROR) {
+		/* External pressure and temperature sensor command AT$PTS?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_EPTS) == AT_NO_ERROR) {
 			unsigned int dps310_pressure_pa = 0;
 			signed char dps310_temperature_degrees = 0;
 			// Perform measurements.
 			I2C1_PowerOn();
-			DPS310_PerformMeasurements();
+			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C1_ADDRESS);
 			I2C1_PowerOff();
 			DPS310_GetPressure(&dps310_pressure_pa);
 			DPS310_GetTemperature(&dps310_temperature_degrees);
@@ -802,22 +810,8 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendString("°C\n");
 		}
 
-		/* UV index sensor command AT$UVS<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_UVS) == AT_NO_ERROR) {
-			unsigned char si1133_uv_index = 0;
-			// Perform measurements.
-			I2C1_PowerOn();
-			SI1133_PerformMeasurements();
-			I2C1_PowerOff();
-			SI1133_GetUvIndex(&si1133_uv_index);
-			// Print result.
-			USARTx_SendString("UVI=");
-			USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("\n");
-		}
-
-		/* LDR command AT$LDR<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_LDR) == AT_NO_ERROR) {
+		/* External LDR command AT$LDR?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_ELDR) == AT_NO_ERROR) {
 			// Perform measurements.
 #ifdef HW1_0
 			SPI1_PowerOn();
@@ -845,6 +839,93 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendString("Light=");
 			USARTx_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("%\n");
+		}
+
+		/* Externam UV index sensor command AT$UVS?<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_EUVS) == AT_NO_ERROR) {
+			unsigned char si1133_uv_index = 0;
+			// Perform measurements.
+			I2C1_PowerOn();
+			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
+			I2C1_PowerOff();
+			SI1133_GetUvIndex(&si1133_uv_index);
+			// Print result.
+			USARTx_SendString("UVI=");
+			USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
+			USARTx_SendString("\n");
+		}
+
+		/* Wind measurements command AT$WIND=<enable><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
+			unsigned int enable = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start or stop wind continuous measurements.
+				if (enable == 0) {
+					WIND_StopContinuousMeasure();
+				}
+				else {
+					WIND_StartContinuousMeasure();
+				}
+				AT_ReplyOk();
+			}
+			else {
+				// Error in enable parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
+		/* Rain measurements command AT$RAIN=<enable><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_RAIN) == AT_NO_ERROR) {
+			unsigned int enable = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
+			if (get_param_result == AT_NO_ERROR) {
+				// Start or stop rain continuous measurements.
+				if (enable == 0) {
+					//RAIN_StopContinuousMeasure();
+				}
+				else {
+					//RAIN_StartContinuousMeasure();
+				}
+				AT_ReplyOk();
+			}
+			else {
+				// Error in enable parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+
+		/* NVM reset command AT$NVMR<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_NVMR) == AT_NO_ERROR) {
+			// Reset all NVM field to default value.
+			NVM_ResetDefault();
+			AT_ReplyOk();
+		}
+
+		/* NVM read command AT$NVM=<address_offset><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_NVM) == AT_NO_ERROR) {
+			unsigned int address_offset = 0;
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &address_offset);
+			if (get_param_result == AT_NO_ERROR) {
+				// Check if address is reachable.
+				if (address_offset < EEPROM_SIZE) {
+					// Read byte at requested address.
+					unsigned char nvm_byte = 0;
+					NVM_Enable();
+					NVM_ReadByte(address_offset, &nvm_byte);
+					NVM_Disable();
+					// Print byte.
+					USARTx_SendValue(nvm_byte, USART_FORMAT_HEXADECIMAL, 1);
+					USARTx_SendString("\n");
+				}
+				else {
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NVM_ADDRESS_OVERFLOW);
+				}
+			}
+			else {
+				// Error in address parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
 		}
 
 		/* Get ID command AT$ID?<CR> */
@@ -916,7 +997,7 @@ void AT_DecodeRxBuffer(void) {
 					NVM_Enable();
 					// Write device ID in NVM.
 					for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
+						NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
 					}
 					AT_ReplyOk();
 					// Disable NVM interface.
@@ -932,11 +1013,13 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-		/* Sigfox send empty frame command AT$SF<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
-			// Send Sigfox empty frame.
-			SIGFOX_API_open(&rc1);
-			sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+		/* Sigfox send OOB command AT$SO<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
+			// Send Sigfox OOB frame.
+			sfx_error = SIGFOX_API_open(&rc1);
+			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+			}
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -944,58 +1027,6 @@ void AT_DecodeRxBuffer(void) {
 			else {
 				// Error from Sigfox library.
 				AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-			}
-		}
-
-		/* Sigfox send frame command AT$SF=<data>,<downlink_request><CR> */
-		else if (AT_CompareHeader(AT_IN_HEADER_SF) == AT_NO_ERROR) {
-			// First try with 2 parameters.
-			get_param_result = AT_GetByteArray(0, sfx_uplink_data, 12, &extracted_length);
-			if (get_param_result == AT_NO_ERROR) {
-				// Try parsing downlink request parameter.
-				unsigned int downlink_request = 0;
-				get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
-				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox frame with specified downlink request.
-					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						if (downlink_request == 1) {
-							AT_PrintDownlinkData(sfx_downlink_data);
-						}
-						AT_ReplyOk();
-					}
-					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-					}
-				}
-				else {
-					// Error in downlink request parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-				}
-			}
-			else {
-				// Try with 1 parameter.
-				get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
-				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox frame with no downlink request (by default).
-					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						AT_ReplyOk();
-					}
-					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-					}
-				}
-				else {
-					// Error in data parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-				}
 			}
 		}
 
@@ -1010,8 +1041,10 @@ void AT_DecodeRxBuffer(void) {
 				get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with specified downlink request.
-					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+					sfx_error = SIGFOX_API_open(&rc1);
+					if (sfx_error == SFX_ERR_NONE) {
+						sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+					}
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						if (downlink_request == 1) {
@@ -1034,8 +1067,10 @@ void AT_DecodeRxBuffer(void) {
 				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &data_bit);
 				if (get_param_result == AT_NO_ERROR) {
 					// Send Sigfox bit with no downlink request (by default).
-					SIGFOX_API_open(&rc1);
-					sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+					sfx_error = SIGFOX_API_open(&rc1);
+					if (sfx_error == SFX_ERR_NONE) {
+						sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+					}
 					SIGFOX_API_close();
 					if (sfx_error == SFX_ERR_NONE) {
 						AT_ReplyOk();
@@ -1052,11 +1087,13 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 
-		/* Sigfox send OOB command AT$OOB<CR> */
-		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
-			// Send Sigfox OOB frame.
-			SIGFOX_API_open(&rc1);
-			sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+		/* Sigfox send empty frame command AT$SF<CR> */
+		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
+			// Send Sigfox empty frame.
+			sfx_error = SIGFOX_API_open(&rc1);
+			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+			}
 			SIGFOX_API_close();
 			if (sfx_error == SFX_ERR_NONE) {
 				AT_ReplyOk();
@@ -1064,6 +1101,63 @@ void AT_DecodeRxBuffer(void) {
 			else {
 				// Error from Sigfox library.
 				AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+			}
+		}
+
+		/* Sigfox send frame command AT$SF=<data>,<downlink_request><CR> */
+		else if (AT_CompareHeader(AT_IN_HEADER_SF) == AT_NO_ERROR) {
+			// First try with 2 parameters.
+			get_param_result = AT_GetByteArray(0, sfx_uplink_data, 12, &extracted_length);
+			if (get_param_result == AT_NO_ERROR) {
+				// Try parsing downlink request parameter.
+				unsigned int downlink_request = 0;
+				get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
+				if (get_param_result == AT_NO_ERROR) {
+					// Send Sigfox frame with specified downlink request.
+					sfx_error = SIGFOX_API_open(&rc1);
+					if (sfx_error == SFX_ERR_NONE) {
+						sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
+					}
+
+					SIGFOX_API_close();
+					if (sfx_error == SFX_ERR_NONE) {
+						if (downlink_request == 1) {
+							AT_PrintDownlinkData(sfx_downlink_data);
+						}
+						AT_ReplyOk();
+					}
+					else {
+						// Error from Sigfox library.
+						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+					}
+				}
+				else {
+					// Error in downlink request parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				}
+			}
+			else {
+				// Try with 1 parameter.
+				get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
+				if (get_param_result == AT_NO_ERROR) {
+					// Send Sigfox frame with no downlink request (by default).
+					sfx_error = SIGFOX_API_open(&rc1);
+					if (sfx_error == SFX_ERR_NONE) {
+						sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+					}
+					SIGFOX_API_close();
+					if (sfx_error == SFX_ERR_NONE) {
+						AT_ReplyOk();
+					}
+					else {
+						// Error from Sigfox library.
+						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+					}
+				}
+				else {
+					// Error in data parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				}
 			}
 		}
 
@@ -1136,7 +1230,7 @@ void AT_DecodeRxBuffer(void) {
 				LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120µs typical.
 				unsigned int rssi_print_start_time = TIM22_GetSeconds();
 				unsigned char rssi = 0;
-				while (TIM22_GetSeconds() < (rssi_print_start_time + RSSI_REPORT_DURATION_SECONDS)) {
+				while (TIM22_GetSeconds() < (rssi_print_start_time + AT_RSSI_REPORT_DURATION_SECONDS)) {
 					rssi = SX1232_GetRssi();
 					USARTx_SendString("RSSI = -");
 					USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
@@ -1270,3 +1364,5 @@ void AT_FillRxBuffer(unsigned char rx_byte) {
 		}
 	}
 }
+
+#endif
