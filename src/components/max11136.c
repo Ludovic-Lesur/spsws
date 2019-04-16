@@ -72,10 +72,11 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 #endif
 
 	/* Configure ADC */
-	// External single ended: REFSEL='0' (allready done at POR).
+	// External single ended: REFSEL='0' and PDIFF_COM='1'.
+	MAX11136_WriteRegister(MAX11136_REG_UNIPOLAR, 0x0004);
 	// Single-ended: unipolar_register=0 and bipolar_register=0 (allready done at POR).
-	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
-	MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0200);
+	// Enable averaging: AVGON='1' and NAVG='11' (32 conversions).
+	MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0380);
 	// Scan mode = standard internal: SCAN='0011'.
 	// Perform conversion from AIN0 to AIN7: CHSEL='0111'.
 	// Reset the FIFO: RESET='01'.
@@ -84,10 +85,13 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 	MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 
 	/* Wait for conversions to complete */
+#ifdef HW1_0
 #ifdef USE_MAX11136_EOC
 	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
-#else
-	// TBD: configure CS as input.
+#endif
+#endif
+#ifdef HW2_0
+	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
 #endif
 
 	/* Read results in FIFO */
@@ -130,8 +134,13 @@ void MAX11136_Init(void) {
 	max11136_ctx.max11136_status = 0;
 
 	/* Configure EOC GPIO */
+#ifdef HW1_0
 #ifdef USE_MAX11136_EOC
-	GPIO_Configure(GPIO_MAX11136_EOC, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
+#endif
+#endif
+#ifdef HW2_0
+	GPIO_Configure(GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
 #endif
 }
 

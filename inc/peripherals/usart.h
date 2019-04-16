@@ -10,7 +10,7 @@
 
 #include "mode.h"
 
-#ifdef ATM
+#if (defined ATM || defined DEBUG)
 
 /*** USART structures ***/
 

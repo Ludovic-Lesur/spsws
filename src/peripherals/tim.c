@@ -45,6 +45,7 @@ void TIM21_Init(void) {
 	/* Reset timer before configuration */
 	TIM21 -> CR1 &= ~(0b1 << 0); // Disable TIM21 (CEN='0').
 	TIM21 -> CNT = 0; // Reset counter.
+	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
 
 	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
 	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
@@ -60,8 +61,7 @@ void TIM21_Init(void) {
 	/* Generate event to update registers */
 	TIM21 -> EGR |= (0b1 << 0); // UG='1'.
 
-	/* Disable peripheral by default */
-	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
+	/* Disable interrupt by default */
 	NVIC_DisableInterrupt(IT_TIM21);
 }
 
@@ -69,10 +69,10 @@ void TIM21_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Enable(void) {
+void TIM21_Start(void) {
 
 	/* Enable TIM21 peripheral */
-	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
+	TIM21 -> SR &= ~(0b1 << 0); // Clear flag (UIF='0').
 	TIM21 -> CR1 |= (0b1 << 0); // Enable TIM21 (CEN='1').
 }
 
@@ -80,11 +80,10 @@ void TIM21_Enable(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Disable(void) {
+void TIM21_Stop(void) {
 
 	/* Disable TIM21 peripheral */
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
-	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
 	NVIC_DisableInterrupt(IT_TIM21);
 }
 
@@ -100,6 +99,7 @@ void TIM22_Init(void) {
 	/* Reset timer before configuration */
 	TIM22 -> CR1 &= ~(0b1 << 0); // Disable TIM22 (CEN='0').
 	TIM22 -> CNT = 0; // Reset counter.
+	TIM22 -> SR &= 0xFFFFF9B8; // Clear all flags.
 
 	/* Configure TIM22 as slave to count seconds */
 	TIM22 -> SMCR &= ~(0b111 << 4); // TS = '000' to select ITR0 = TIM1 as trigger input.
@@ -107,19 +107,15 @@ void TIM22_Init(void) {
 
 	/* Generate event to update registers */
 	TIM22 -> EGR |= (0b1 << 0); // UG='1'.
-
-	/* Disable peripheral by default */
-	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='1'.
 }
 
 /* ENABLE TIM22 PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void TIM22_Enable(void) {
+void TIM22_Start(void) {
 
 	/* Enable TIM22 peripheral */
-	RCC -> APB2ENR |= (0b1 << 5); // TIM22EN='1'.
 	TIM22 -> CR1 |= (0b1 << 0); // Enable TIM22 (CEN='1').
 }
 
@@ -127,12 +123,10 @@ void TIM22_Enable(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM22_Disable(void) {
+void TIM22_Stop(void) {
 
 	/* Disable TIM22 peripheral */
 	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
-	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='0'.
-
 }
 
 /* RETURNS THE NUMBER OF SECONDS ELLAPSED SINCE START-UP.
@@ -202,7 +196,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 		break;
 	}
 
-	/* Disable peripheral by default */
+	/* Disable interrupt by default */
 	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
 	NVIC_DisableInterrupt(IT_TIM2);
 }

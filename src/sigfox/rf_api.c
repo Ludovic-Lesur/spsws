@@ -233,7 +233,6 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	/* Switch RF on and init transceiver */
 	SPI1_Enable();
 	SPI1_PowerOn();
-	unsigned char downlink_sync_word[2] = {0xB2, 0x27};
 
 	/* Enable TCXO */
 	SX1232_SetOscillator(SX1232_OSCILLATOR_TCXO);
@@ -242,6 +241,7 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	RF_API_SetRfPath(rf_mode);
 
 	/* Configure transceiver */
+	unsigned char downlink_sync_word[2] = {0xB2, 0x27};
 	switch (rf_mode) {
 
 	// Uplink.
@@ -319,12 +319,16 @@ sfx_u8 RF_API_stop(void) {
 sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 
 	/* Disable all interrupts */
-	NVIC_DisableInterrupt(IT_RTC);
 	NVIC_DisableInterrupt(IT_EXTI_0_1);
 	NVIC_DisableInterrupt(IT_EXTI_2_3);
 	NVIC_DisableInterrupt(IT_EXTI_4_15);
 	NVIC_DisableInterrupt(IT_TIM21);
+#ifdef HW1_0
 	NVIC_DisableInterrupt(IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_DisableInterrupt(IT_USART1);
+#endif
 	NVIC_DisableInterrupt(IT_LPUART1);
 
 	/* Set modulation parameters */
@@ -443,21 +447,23 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	SX1232_StopCw();
 
 	/* Re-enable all interrupts */
-#if (defined IM_RTC || defined CM_RTC)
-	NVIC_EnableInterrupt(IT_RTC);
-#endif
 #ifdef ATM
+#ifdef HW1_0
 	NVIC_EnableInterrupt(IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_EnableInterrupt(IT_USART1);
+#endif
 #ifdef RF_API_LOG_FRAME
 	// Print frame on UART.
-	USART2_SendString("sfx_frame = [");
+	USARTx_SendString("sfx_frame = [");
 	for (stream_byte_idx=0 ; stream_byte_idx<size ; stream_byte_idx++) {
-		USART2_SendValue(sfx_frame[stream_byte_idx], USART_FORMAT_HEXADECIMAL, 1);
+		USARTx_SendValue(sfx_frame[stream_byte_idx], USART_FORMAT_HEXADECIMAL, 1);
 		if (stream_byte_idx < (size - 1)) {
-			USART2_SendString(" ");
+			USARTx_SendString(" ");
 		}
 	}
-	USART2_SendString("]\n");
+	USARTx_SendString("]\n");
 #endif
 #endif
 	return SFX_ERR_NONE;

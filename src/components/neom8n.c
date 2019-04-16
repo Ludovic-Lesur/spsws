@@ -558,7 +558,7 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 	// Save fix start time.
 	unsigned int fix_start_time = TIM22_GetSeconds();
 	// Loop until data is retrieved or timeout expired.
-	while ((TIM22_GetSeconds() < fix_start_time+timeout_seconds) && (neom8n_ctx.nmea_zda_data_valid == 0)) {
+	while ((TIM22_GetSeconds() < (fix_start_time + timeout_seconds)) && (neom8n_ctx.nmea_zda_data_valid == 0)) {
 		// Check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
 			// Decode incoming NMEA message.
@@ -581,9 +581,9 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 			}
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
+			// Reload watchdog.
+			IWDG_Reload();
 		}
-		// Reload watchdog.
-		IWDG_Reload();
 	}
 	// Stop LPUART and DMA.
 	DMA1_Stop();
@@ -641,7 +641,7 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 	// Save fix start time.
 	unsigned int fix_start_time = TIM22_GetSeconds();
 	// Loop until data is retrieved or timeout expired.
-	while ((TIM22_GetSeconds() < fix_start_time+timeout_seconds) && (neom8n_ctx.nmea_gga_data_valid == 0)) {
+	while ((TIM22_GetSeconds() < (fix_start_time + timeout_seconds)) && (neom8n_ctx.nmea_gga_data_valid == 0)) {
 		// Check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
 			// Decode incoming NMEA message.
@@ -664,9 +664,9 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 			}
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
+			// Reload watchdog.
+			IWDG_Reload();
 		}
-		// Reload watchdog.
-		IWDG_Reload();
 	}
 	// Stop DMA.
 	DMA1_Stop();

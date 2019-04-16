@@ -20,10 +20,10 @@ void IWDG_Init(void) {
 	/* Configure peripheral */
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.
-	// Prescaler=256 -> watchdog clock = 32kHz / 256 = 125Hz (8ms period).
+	// Prescaler=256 -> watchdog clock = 38kHz / 256 = 148Hz (6.74ms period).
 	IWDG -> PR = (0b111 << 0); // PR='111'.
 	// Set reload value.
-	IWDG -> RLR = 4095; // 4095 * 8ms = 32s.
+	IWDG -> RLR = 1484; // 1484 * 6.74ms = 10s.
 	// Wait for register to be updated.
 	while (IWDG -> SR != 0); // Wait for WVU='0', RVU='0' and PVU='0'.
 }

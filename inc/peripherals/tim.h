@@ -27,12 +27,12 @@ typedef enum {
 /*** TIM functions ***/
 
 void TIM21_Init(void);
-void TIM21_Enable(void);
-void TIM21_Disable(void);
+void TIM21_Start(void);
+void TIM21_Stop(void);
 
 void TIM22_Init(void);
-void TIM22_Enable(void);
-void TIM22_Disable(void);
+void TIM22_Start(void);
+void TIM22_Stop(void);
 unsigned int TIM22_GetSeconds(void);
 
 void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);

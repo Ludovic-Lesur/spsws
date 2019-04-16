@@ -18,7 +18,7 @@
 #include "tim.h"
 #include "usart_reg.h"
 
-#ifdef ATM
+#if (defined ATM || defined DEBUG)
 
 /*** USART local macros ***/
 

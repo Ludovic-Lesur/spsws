@@ -16,9 +16,9 @@
  */
 void MONITORING_BuildSigfoxData(MONITORING_Data* monitoring_data, unsigned char* monitoring_sigfox_data) {
 	// MCU temperature (°C).
-	monitoring_sigfox_data[0] = monitoring_data -> monitoring_data_mcu_temperarure_degrees;
+	monitoring_sigfox_data[0] = monitoring_data -> monitoring_data_mcu_temperature_degrees;
 	// PCB temperature (°C).
-	monitoring_sigfox_data[1] = monitoring_data -> monitoring_data_pcb_temperarure_degrees;
+	monitoring_sigfox_data[1] = monitoring_data -> monitoring_data_pcb_temperature_degrees;
 	// PCB humidity (%).
 	monitoring_sigfox_data[2] = monitoring_data -> monitoring_data_pcb_humidity_percent;
 	// Solar cell voltage (mV).

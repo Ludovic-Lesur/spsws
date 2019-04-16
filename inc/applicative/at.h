@@ -11,7 +11,7 @@
 #include "mode.h"
 #include "neom8n.h"
 
-#ifdef ATM
+#if (defined ATM || defined DEBUG)
 
 /*** AT macros ***/
 
@@ -20,6 +20,7 @@
 #define AT_COMMANDS_SENSORS
 #define AT_COMMANDS_NVM
 #define AT_COMMANDS_SIGFOX
+#define AT_COMMANDS_CW_RSSI
 #define AT_COMMANDS_TEST_MODES
 
 /*** AT user functions ***/

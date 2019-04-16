@@ -13,7 +13,7 @@
  */
 void NMI_Handler(void) {
 	// Trigger software reset.
-	SCB -> AIRCR |= (0b1 << 2);
+	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
 }
 
 /* HARD FAULT INTERRUPT HANDLER.
@@ -22,5 +22,5 @@ void NMI_Handler(void) {
  */
 void HardFault_Handler(void) {
 	// Trigger software reset.
-	SCB -> AIRCR |= (0b1 << 2);
+	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
 }

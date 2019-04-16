@@ -220,8 +220,8 @@ void GPIO_Configure(GPIO gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO
  */
 void GPIO_Init(void) {
 
-	/* Enable GPIOA and GPIOB clocks */
-	RCC -> IOPENR |= (0b11 << 0); // IOPxEN='1'.
+	/* Enable GPIOA, GPIOB and GPIOC clocks */
+	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
 
 	/* Configure standalone GPIOs */
 #ifndef IM_HWT

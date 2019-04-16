@@ -9,43 +9,14 @@
 
 #include "at.h"
 #include "exti_reg.h"
+#include "lptim.h"
 #include "nvic.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
 #include "usart_reg.h"
 
-/*** RTC local structures ***/
-
-typedef struct {
-	// Calibration flag.
-	unsigned char rtc_daily_calibration_done;
-	Timestamp rtc_current_timestamp;
-	volatile unsigned char rtc_irq_happened;
-} RTC_Context;
-
-/*** RTC local global variables ***/
-
-static RTC_Context rtc_ctx;
-
 /*** RTC local functions ***/
-
-/* RTC INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void RTC_IRQHandler(void) {
-
-	/* Alarm A interrupt */
-	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
-		// Manage flags.
-		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
-		rtc_ctx.rtc_irq_happened = 1;
-	}
-
-	/* Clear flag of RTC EXTI line (17) */
-	EXTI -> PR |= (0b1 << 17);
-}
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
  * @param:	None.
@@ -71,50 +42,39 @@ void RTC_ExitInitializationMode(void) {
 
 /* INIT HARDWARE RTC PERIPHERAL.
  * @param rtc_use_lse:	RTC will be clocked on LSI if 0, on LSE otherwise.
+ * @PARAM lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
  * @return:				None.
  */
-void RTC_Init(unsigned char rtc_use_lse) {
+void RTC_Init(unsigned char rtc_use_lse, unsigned int lsi_freq_hz) {
 
-	/* Init context */
-	rtc_ctx.rtc_daily_calibration_done = 0;
-	rtc_ctx.rtc_current_timestamp.year = 0;
-	rtc_ctx.rtc_current_timestamp.month = 0;
-	rtc_ctx.rtc_current_timestamp.date = 0;
-	rtc_ctx.rtc_current_timestamp.hours = 0;
-	rtc_ctx.rtc_current_timestamp.minutes = 0;
-	rtc_ctx.rtc_current_timestamp.seconds = 0;
-	rtc_ctx.rtc_irq_happened = 0;
-
-	/* Select RTC clock source */
-	RCC -> CSR &= ~(0b11 << 16); // Reset bits 16-17.
-	if (rtc_use_lse == 0) {
+	/* Manage RTC clock source */
+	if (rtc_use_lse != 0) {
+		// Use LSE.
+		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
+	}
+	else {
 		// Use LSI.
 		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
 	}
-	else {
-		// Use LSE;
-		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
-	}
 
-	/* Enable RTC */
+	/* Enable RTC and register access */
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
-
-	/* Unlock RTC registers */
 	RTC_EnterInitializationMode();
 
 	/* Configure prescaler */
-	// Prescaler settings to get 1Hz: PREDIV_A=127 and PREDIV_S=255 (128*256 = 32768).
-	RTC -> PRER = 0; // Reset all bits.
-	RTC -> PRER |= (127 << 16) | (255 << 0);
-
-	/* Reset calendar to Saturday January 1st 2000 00:00:01 */
-	RTC -> TR = 0x00000001; // Add 1 second to prevent from alarm interrupt at start-up.
-	RTC -> DR = 0x0000C101;
+	if (rtc_use_lse != 0) {
+		// LSE frequency is 32.768kHz typical.
+		RTC -> PRER = (127 << 16) | (255 << 0); // PREDIV_A=127 and PREDIV_S=255 (128*256 = 32768).
+	}
+	else {
+		// LSI frequency is 38kHz typical.
+		RTC -> PRER = (127 << 16) | (((lsi_freq_hz / 128) - 1) << 0); // PREDIV_A=127 and PREDIV_S=((lsi_freq_hz/128)-1).
+	}
 
 	/* Configure Alarm A to wake-up MCU every hour */
 	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
-	RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
+	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 5); // Bypass shadow register for read accesses (BYPSHAD='1').
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
@@ -122,25 +82,22 @@ void RTC_Init(unsigned char rtc_use_lse) {
 
 	/* Exit initialization mode */
 	RTC_ExitInitializationMode();
-}
-
-/* ENABLE RTC INTERRUPT.
- * @param:	None.
- * @return:	None.
- */
-void RTC_EnableInterrupt(void) {
 
 	/* Enable RTC alarm interrupt (line 17) */
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
 	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
-	EXTI -> EMR |= (0b1 << 17); // IM17='1'.
 	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
+	EXTI -> PR |= (0b1 << 17); // Clear flag.
+}
 
-	/* Clear flag of RTC EXTI line (17) */
+/* CLEAR ALARM INTERRUPT FLAGS.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_ClearAlarmFlags(void) {
+	// Clear ALARM and EXTI flags.
+	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 	EXTI -> PR |= (0b1 << 17);
-
-	/* Enable RTC interrupt */
-	NVIC_EnableInterrupt(IT_RTC);
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
@@ -186,17 +143,6 @@ void RTC_Calibrate(Timestamp* gps_timestamp) {
 
 	/* Exit initialization mode and restart RTC */
 	RTC_ExitInitializationMode();
-
-	/* Update calibration flag */
-	rtc_ctx.rtc_daily_calibration_done = 1;
-}
-
-/* GET CURRENT RTC CALIBRATION STATUS.
- * @param:	None.
- * @return:	RTC calibration status (0 = not done).
- */
-unsigned char RTC_GetCalibrationStatus(void) {
-	return rtc_ctx.rtc_daily_calibration_done;
 }
 
 /* GET CURRENT RTC TIME.
@@ -216,12 +162,4 @@ void RTC_GetTimestamp(Timestamp* rtc_timestamp) {
 	rtc_timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20)*10 + ((tr_value & (0b1111 << 16)) >> 16);
 	rtc_timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12)*10 + ((tr_value & (0b1111 << 8)) >> 8);
 	rtc_timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4)*10 + (tr_value & 0b1111);
-}
-
-unsigned char RTC_GetIrqStatus(void) {
-	return rtc_ctx.rtc_irq_happened;
-}
-
-void RTC_ClearIrqStatus(void) {
-	rtc_ctx.rtc_irq_happened = 0;
 }

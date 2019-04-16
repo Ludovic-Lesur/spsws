@@ -14,7 +14,18 @@
 
 /*** RCC local macros ***/
 
-#define RCC_TIMEOUT_COUNT	100000	// Value used to manage timeouts (since we cannot rely on timers when switching clocks).
+#define RCC_TIMEOUT_SECONDS		5
+
+/*** RCC local functions ***/
+
+/* PERFORM A 1s. MANUAL DELAY ON THE 2.1MHz MSI CLOCK (RESET CLOCK).
+ * @param:	None.
+ * @return:	None.
+ */
+void RCC_DelaySecondMsi(void) {
+	unsigned int j = 0;
+	for (j=0 ; j<133000 ; j++);
+}
 
 /*** RCC functions ***/
 
@@ -32,6 +43,10 @@ void RCC_Init(void) {
 	/* Peripherals clock source */
 	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.
 
+	/* Unlock registers */
+	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
+	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock back-up registers write protection.
+
 	/* Configure TCXO power enable pin as output */
 	GPIO_Configure(GPIO_TCXO16_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
@@ -48,26 +63,28 @@ unsigned char RCC_SwitchToInternal16MHz(void) {
 
 	/* Wait for HSI to be stable */
 	unsigned char sysclk_on_hsi = 0;
-	unsigned int count = 0;
-	while ((((RCC -> CR) & (0b1 << 2)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		count++; // Wait for HSIRDYF='1' or timeout.
+	unsigned int second_count = 0;
+	while ((((RCC -> CR) & (0b1 << 2)) == 0) && (second_count < RCC_TIMEOUT_SECONDS)) {
+		RCC_DelaySecondMsi();
+		second_count++; // Wait for HSIRDYF='1' or timeout.
 	}
 
 	/* Check timeout */
-	if (count < RCC_TIMEOUT_COUNT) {
+	if (second_count < RCC_TIMEOUT_SECONDS) {
 
 		/* Switch SYSCLK */
 		RCC -> CFGR &= ~(0b11 << 0); // Reset bits 0-1.
 		RCC -> CFGR |= (0b01 << 0); // Use HSI as system clock (SW='01').
 
 		/* Wait for clock switch */
-		count = 0;
-		while ((((RCC -> CFGR) & (0b11 << 2)) != (0b01 << 2)) && (count < RCC_TIMEOUT_COUNT)) {
-			count++; // Wait for SWS='01' or timeout.
+		second_count = 0;
+		while ((((RCC -> CFGR) & (0b11 << 2)) != (0b01 << 2)) && (second_count < RCC_TIMEOUT_SECONDS)) {
+			RCC_DelaySecondMsi();
+			second_count++; // Wait for SWS='01' or timeout.
 		}
 
 		/* Check timeout */
-		if (count < RCC_TIMEOUT_COUNT) {
+		if (second_count < RCC_TIMEOUT_SECONDS) {
 
 			/* Disable MSI and HSE */
 			RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
@@ -99,26 +116,28 @@ unsigned char RCC_SwitchToTcxo16MHz(void) {
 
 	/* Wait for HSE to be stable */
 	unsigned char sysclk_on_hse = 0;
-	unsigned int count = 0;
-	while ((((RCC -> CR) & (0b1 << 17)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		count++; // Wait for HSERDY='1' or timeout.
+	unsigned int second_count = 0;
+	while ((((RCC -> CR) & (0b1 << 17)) == 0) && (second_count < RCC_TIMEOUT_SECONDS)) {
+		RCC_DelaySecondMsi();
+		second_count++; // Wait for HSERDY='1' or timeout.
 	}
 
 	/* Check timeout */
-	if (count < RCC_TIMEOUT_COUNT) {
+	if (second_count < RCC_TIMEOUT_SECONDS) {
 
 		/* Switch SYSCLK */
 		RCC -> CFGR &= ~(0b11 << 0); // Reset bits 0-1.
 		RCC -> CFGR |= (0b10 << 0); // Use HSE as system clock (SW='10').
 
 		/* Wait for clock switch */
-		count = 0;
-		while ((((RCC -> CFGR) & (0b11 << 2)) != (0b10 << 2)) && (count < RCC_TIMEOUT_COUNT)) {
-			count++; // Wait for SWS='10' or timeout.
+		second_count = 0;
+		while ((((RCC -> CFGR) & (0b11 << 2)) != (0b10 << 2)) && (second_count < RCC_TIMEOUT_SECONDS)) {
+			RCC_DelaySecondMsi();
+			second_count++; // Wait for SWS='10' or timeout.
 		}
 
 		/* Check timeout */
-		if (count < RCC_TIMEOUT_COUNT) {
+		if (second_count < RCC_TIMEOUT_SECONDS) {
 
 			/* Disable MSI and HSI */
 			RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
@@ -144,19 +163,18 @@ unsigned char RCC_SwitchToTcxo16MHz(void) {
 unsigned char RCC_EnableInternal32kHz(void) {
 
 	/* Enable LSI */
-	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
-	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock RCC register write protection.
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
 
 	/* Wait for LSI to be stable */
 	unsigned char lsi_available = 0;
-	unsigned int count = 0;
-	while ((((RCC -> CSR) & (0b1 << 1)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		count++; // Wait for LSIRDY='1'.
+	unsigned int second_count = 0;
+	while ((((RCC -> CSR) & (0b1 << 1)) == 0) && (second_count < RCC_TIMEOUT_SECONDS)) {
+		RCC_DelaySecondMsi();
+		second_count++; // Wait for LSIRDY='1'.
 	}
 
 	/* Check timeout */
-	if (count < RCC_TIMEOUT_COUNT) {
+	if (second_count < RCC_TIMEOUT_SECONDS) {
 		// Update flag.
 		lsi_available = 1;
 	}
@@ -170,20 +188,22 @@ unsigned char RCC_EnableInternal32kHz(void) {
  */
 unsigned char RCC_EnableCrystal32kHz(void) {
 
+	/* Configure drive level */
+	RCC -> CSR |= (0b11 << 11);
+
 	/* Enable LSE (32.768kHz crystal) */
-	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
-	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock RCC register write protection.
 	RCC -> CSR |= (0b1 << 8); // LSEON='1'.
 
 	/* Wait for LSE to be stable */
 	unsigned char lse_available = 0;
-	unsigned int count = 0;
-	while ((((RCC -> CSR) & (0b1 << 9)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		count++; // Wait for LSERDY='1'.
+	unsigned int second_count = 0;
+	while ((((RCC -> CSR) & (0b1 << 9)) == 0) && (second_count < RCC_TIMEOUT_SECONDS)) {
+		RCC_DelaySecondMsi();
+		second_count++; // Wait for LSERDY='1'.
 	}
 
 	/* Check timeout */
-	if (count < RCC_TIMEOUT_COUNT) {
+	if (second_count < RCC_TIMEOUT_SECONDS) {
 		// Update flag.
 		lse_available = 1;
 	}

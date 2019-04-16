@@ -15,8 +15,8 @@
 /*** MONITORING structures ***/
 
 typedef struct {
-	unsigned char monitoring_data_mcu_temperarure_degrees;
-	unsigned char monitoring_data_pcb_temperarure_degrees;
+	signed char monitoring_data_mcu_temperature_degrees;
+	signed char monitoring_data_pcb_temperature_degrees;
 	unsigned char monitoring_data_pcb_humidity_percent;
 	unsigned int monitoring_data_solar_cell_voltage_mv;
 	unsigned int monitoring_data_supercap_voltage_mv;

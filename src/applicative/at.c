@@ -31,7 +31,7 @@
 #include "usart.h"
 #include "wind.h"
 
-#ifdef ATM
+#if (defined ATM || defined DEBUG)
 
 /*** AT local macros ***/
 
@@ -513,36 +513,36 @@ void AT_PrintAdcResults(void) {
 	// AIN0.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN0, &result_12bits);
 	USARTx_SendString("AIN0=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN1.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN1, &result_12bits);
-	USARTx_SendString("mV AIN1=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN1=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN2.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN2, &result_12bits);
-	USARTx_SendString("mV AIN2=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN2=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN3.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN3, &result_12bits);
-	USARTx_SendString("mV AIN3=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN3=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN4 (resistor divider with 6.8M and 1M -> Vin = 7.8 * Vout).
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN4, &result_12bits);
-	USARTx_SendString("mV AIN4=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN4=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN5.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN5, &result_12bits);
-	USARTx_SendString("mV AIN5=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN5=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN6.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN6, &result_12bits);
-	USARTx_SendString("mV AIN6=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString(" AIN6=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
 	// AIN7.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN7, &result_12bits);
-	USARTx_SendString("mV AIN7=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("mV\n");
+	USARTx_SendString(" AIN7=");
+	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	USARTx_SendString("\n");
 }
 
 /* PRINT A TIMESTAMP ON USART.
@@ -1165,7 +1165,7 @@ void AT_DecodeRxBuffer(void) {
 			}
 		}
 #endif
-#ifdef AT_COMMANDS_TEST_MODES
+#ifdef AT_COMMANDS_CW_RSSI
 		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
 			unsigned int frequency_hz = 0;
@@ -1251,7 +1251,8 @@ void AT_DecodeRxBuffer(void) {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 			}
 		}
-
+#endif
+#ifdef AT_COMMANDS_TEST_MODES
 		/* Sigfox test mode command AT$TM=<rc>,<test_mode><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_TM) == AT_NO_ERROR) {
 			unsigned int rc = 0;
