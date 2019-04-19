@@ -8,9 +8,13 @@
 #include "rcc.h"
 
 #include "gpio.h"
+#include "lptim.h"
+#include "lptim_reg.h"
 #include "mapping.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
+#include "tim.h"
+#include "tim_reg.h"
 
 /*** RCC local macros ***/
 
@@ -43,7 +47,7 @@ void RCC_Init(void) {
 	/* Peripherals clock source */
 	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.
 
-	/* Unlock registers */
+	/* Unlock back-up registers */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock back-up registers write protection.
 
@@ -56,7 +60,7 @@ void RCC_Init(void) {
  * @param:					None.
  * @return sysclk_on_hsi:	'1' if SYSCLK source was successfully switched to HSI, 0 otherwise.
  */
-unsigned char RCC_SwitchToInternal16MHz(void) {
+unsigned char RCC_SwitchToHsi(void) {
 
 	/* Init HSI */
 	RCC -> CR |= (0b1 << 0); // Enable HSI (HSI16ON='1').
@@ -105,7 +109,7 @@ unsigned char RCC_SwitchToInternal16MHz(void) {
  * @param:					None.
  * @return sysclk_on_hse:	'1' if SYSCLK source was successfully switched to HSE (TCXO), 0 otherwise.
  */
-unsigned char RCC_SwitchToTcxo16MHz(void) {
+unsigned char RCC_SwitchToHse(void) {
 
 	/* Enable 16MHz TCXO */
 	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 1);
@@ -160,7 +164,7 @@ unsigned char RCC_SwitchToTcxo16MHz(void) {
  * @param:					None.
  * @return lsi_available:	'1' if LSI was successfully started, 0 otherwise.
  */
-unsigned char RCC_EnableInternal32kHz(void) {
+unsigned char RCC_EnableLsi(void) {
 
 	/* Enable LSI */
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
@@ -182,11 +186,42 @@ unsigned char RCC_EnableInternal32kHz(void) {
 	return lsi_available;
 }
 
+/* COMPUTE EFFECTIVE LSI OSCILLATOR FREQUENCY.
+ * @param:				None.
+ * @return lsi_freq_hz:	LSI oscillator frequency in Hz.
+ */
+unsigned int RCC_GetLsiFrequency(void) {
+
+	/* Local variables */
+	unsigned int lsi_freq_hz = 0;
+
+	/* Init and start timers */
+	LPTIM1_Init(1);
+	TIM21_Init();
+	LPTIM1_Start();
+	TIM21_Start();
+
+	/* Wait 1 second */
+	while (((TIM21 -> SR) & (0b1 << 0)) == 0); // Wait for first overflow.
+	TIM21 -> SR &= ~(0b1 << 0); // Clear flag (UIF='0').
+
+	/* Get LSI frequency and stop timers */
+	lsi_freq_hz = (LPTIM1 -> CNT);
+	LPTIM1_Stop();
+	TIM21_Stop();
+
+	/* Check value */
+	if (lsi_freq_hz == 0) {
+		lsi_freq_hz = 38000;
+	}
+	return lsi_freq_hz;
+}
+
 /* CONFIGURE AND USE LSE AS LOW SPEED OSCILLATOR (32kHz EXTERNAL QUARTZ).
  * @param:					None.
  * @return lsi_available:	'1' if LSE was successfully started, 0 otherwise.
  */
-unsigned char RCC_EnableCrystal32kHz(void) {
+unsigned char RCC_EnableLse(void) {
 
 	/* Configure drive level */
 	RCC -> CSR |= (0b11 << 11);

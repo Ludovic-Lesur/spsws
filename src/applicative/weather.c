@@ -37,10 +37,6 @@ void WEATHER_BuildSigfoxData(WEATHER_Data* weather_data, unsigned char* weather_
 	weather_sigfox_data[8] = weather_data -> weather_data_average_wind_direction_kmh;
 	// Rain.
 	weather_sigfox_data[9] = weather_data -> weather_data_peak_wind_speed_kmh;
-	// Status byte.
-	weather_sigfox_data[10] = weather_data -> weather_data_status_byte;
-#else
-	weather_sigfox_data[6] = weather_data -> weather_data_status_byte;
 #endif
 }
 

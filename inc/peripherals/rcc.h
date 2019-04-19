@@ -16,9 +16,10 @@
 /*** RCC functions ***/
 
 void RCC_Init(void);
-unsigned char RCC_SwitchToInternal16MHz(void);
-unsigned char RCC_SwitchToTcxo16MHz(void);
-unsigned char RCC_EnableInternal32kHz(void);
-unsigned char RCC_EnableCrystal32kHz(void);
+unsigned char RCC_SwitchToHsi(void);
+unsigned char RCC_SwitchToHse(void);
+unsigned char RCC_EnableLsi(void);
+unsigned int RCC_GetLsiFrequency(void);
+unsigned char RCC_EnableLse(void);
 
 #endif /* RCC_H */

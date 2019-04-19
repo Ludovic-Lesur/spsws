@@ -9,25 +9,39 @@
 
 #include "at.h"
 #include "exti_reg.h"
-#include "lptim.h"
 #include "nvic.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
+#include "tim.h"
 #include "usart_reg.h"
+
+/*** RTC local macros ***/
+
+#define RTC_INIT_TIMEOUT_SECONDS	5
 
 /*** RTC local functions ***/
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
- * @param:	None.
- * @return:	None.
+ * @param:						None.
+ * @return rtc_initf_success:	1 if RTC entered initialization mode, 0 otherwise.
  */
-void RTC_EnterInitializationMode(void) {
+unsigned char RTC_EnterInitializationMode(void) {
+	// Local variables.
+	unsigned char rtc_initf_success = 1;
 	// Enter key.
 	RTC -> WPR = 0xCA;
 	RTC -> WPR = 0x53;
 	RTC -> ISR |= (0b1 << 7); // INIT='1'.
-	while (((RTC -> ISR) & (0b1 << 6)) == 0); // Wait for INITF='1'.
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((RTC -> ISR) & (0b1 << 6)) == 0) {
+		// Wait for INITF='1' or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + RTC_INIT_TIMEOUT_SECONDS)) {
+			rtc_initf_success = 0;
+			break;
+		}
+	}
+	return rtc_initf_success;
 }
 
 /* EXIT INITIALIZATION MODE TO PROTECT RTC REGISTERS.
@@ -40,15 +54,28 @@ void RTC_ExitInitializationMode(void) {
 
 /*** RTC functions ***/
 
+/* RESET RTC PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_Reset(void) {
+
+	/* Reset RTC peripheral */
+	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
+	unsigned char j = 0;
+	for (j=0 ; j<100 ; j++);
+	RCC -> CSR &= ~(0b1 << 19); // RTCRST='0'.
+}
+
 /* INIT HARDWARE RTC PERIPHERAL.
  * @param rtc_use_lse:	RTC will be clocked on LSI if 0, on LSE otherwise.
  * @PARAM lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
  * @return:				None.
  */
-void RTC_Init(unsigned char rtc_use_lse, unsigned int lsi_freq_hz) {
+void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 
 	/* Manage RTC clock source */
-	if (rtc_use_lse != 0) {
+	if ((*rtc_use_lse) != 0) {
 		// Use LSE.
 		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
 	}
@@ -59,15 +86,24 @@ void RTC_Init(unsigned char rtc_use_lse, unsigned int lsi_freq_hz) {
 
 	/* Enable RTC and register access */
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
-	RTC_EnterInitializationMode();
+
+	/* Switch to LSI if RTC failed to enter initialization mode */
+	if (RTC_EnterInitializationMode() == 0) {
+		RTC_Reset();
+		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
+		RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
+		RTC_EnterInitializationMode();
+		// Update flag.
+		(*rtc_use_lse) = 0;
+	}
 
 	/* Configure prescaler */
-	if (rtc_use_lse != 0) {
+	if ((*rtc_use_lse) != 0) {
 		// LSE frequency is 32.768kHz typical.
 		RTC -> PRER = (127 << 16) | (255 << 0); // PREDIV_A=127 and PREDIV_S=255 (128*256 = 32768).
 	}
 	else {
-		// LSI frequency is 38kHz typical.
+		// Compute prescaler according to measured LSI frequency.
 		RTC -> PRER = (127 << 16) | (((lsi_freq_hz / 128) - 1) << 0); // PREDIV_A=127 and PREDIV_S=((lsi_freq_hz/128)-1).
 	}
 
@@ -156,10 +192,10 @@ void RTC_GetTimestamp(Timestamp* rtc_timestamp) {
 	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
 
 	/* Parse registers into timestamp structure */
-	rtc_timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20)*10 + ((dr_value & (0b1111 << 16)) >> 16);
-	rtc_timestamp -> month = ((dr_value & (0b1 << 12)) >> 12)*10 + ((dr_value & (0b1111 << 8)) >> 8);
-	rtc_timestamp -> date = ((dr_value & (0b11 << 4)) >> 4)*10 + (dr_value & 0b1111);
-	rtc_timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20)*10 + ((tr_value & (0b1111 << 16)) >> 16);
-	rtc_timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12)*10 + ((tr_value & (0b1111 << 8)) >> 8);
-	rtc_timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4)*10 + (tr_value & 0b1111);
+	rtc_timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
+	rtc_timestamp -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
+	rtc_timestamp -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);
+	rtc_timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
+	rtc_timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
+	rtc_timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
 }

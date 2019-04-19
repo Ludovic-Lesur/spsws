@@ -10,7 +10,7 @@
 
 /*** MONITORING macros ***/
 
-#define MONITORING_SIGFOX_DATA_LENGTH	10
+#define MONITORING_SIGFOX_DATA_LENGTH	9
 
 /*** MONITORING structures ***/
 

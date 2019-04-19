@@ -25,11 +25,10 @@ void MONITORING_BuildSigfoxData(MONITORING_Data* monitoring_data, unsigned char*
 	monitoring_sigfox_data[3] = ((monitoring_data -> monitoring_data_solar_cell_voltage_mv) & 0xFF00) >> 8;
 	monitoring_sigfox_data[4] = ((monitoring_data -> monitoring_data_solar_cell_voltage_mv) & 0x00FF) >> 0;
 	// Supercap voltage (mV).
-	monitoring_sigfox_data[5] = ((monitoring_data -> monitoring_data_supercap_voltage_mv) & 0xFF00) >> 8;
-	monitoring_sigfox_data[6] = ((monitoring_data -> monitoring_data_supercap_voltage_mv) & 0x00FF) >> 0;
+	monitoring_sigfox_data[5] = ((monitoring_data -> monitoring_data_supercap_voltage_mv) & 0x0FF0) >> 4;
+	monitoring_sigfox_data[6] = (((monitoring_data -> monitoring_data_supercap_voltage_mv) & 0x000F) << 4) + (((monitoring_data -> monitoring_data_mcu_voltage_mv) & 0x0F00) >> 8);
 	// MCU voltage (mV).
-	monitoring_sigfox_data[7] = ((monitoring_data -> monitoring_data_mcu_voltage_mv) & 0xFF00) >> 8;
-	monitoring_sigfox_data[8] = ((monitoring_data -> monitoring_data_mcu_voltage_mv) & 0x00FF) >> 0;
+	monitoring_sigfox_data[7] = ((monitoring_data -> monitoring_data_mcu_voltage_mv) & 0x00FF);
 	// Status byte.
-	monitoring_sigfox_data[9] = monitoring_data -> monitoring_data_status_byte;
+	monitoring_sigfox_data[8] = monitoring_data -> monitoring_data_status_byte;
 }

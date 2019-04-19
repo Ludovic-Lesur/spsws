@@ -14,9 +14,9 @@
 
 // Length of weather data Sigfox frame in bytes.
 #ifdef CM_RTC
-#define WEATHER_SIGFOX_DATA_LENGTH		11
+#define WEATHER_SIGFOX_DATA_LENGTH		10
 #else
-#define WEATHER_SIGFOX_DATA_LENGTH		7
+#define WEATHER_SIGFOX_DATA_LENGTH		6
 #endif
 
 /*** WEATHER structures ***/
@@ -33,7 +33,6 @@ typedef struct {
 	unsigned char weather_data_average_wind_direction_degrees;
 	unsigned char weather_data_rain_mm;
 #endif
-	unsigned char weather_data_status_byte;
 } WEATHER_Data;
 
 /*** WEATHER functions ***/

@@ -55,10 +55,11 @@
 
 /*** SPSWS macros ***/
 
-// GPS timeout when calibrating RTC.
-#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	180
+#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	120
+#define SPSWS_LOCAL_UTC_OFFSET					2
 #define SPSWS_NUMBER_OF_HOURS_PER_DAY			24
 #define SPSWS_AFTERNOON_HOUR_THRESHOLD			12
+#define SPSWS_GEOLOC_TIMEOUT_SECONDS			120
 
 /*** SPSWS structures ***/
 
@@ -73,39 +74,41 @@ typedef enum {
 	SPSWS_STATE_WEATHER_DATA,
 	SPSWS_STATE_GEOLOC,
 	SPSWS_STATE_RTC_CALIBRATION,
-	SPSWS_STATE_NVM_POR_UPDATE,
 	SPSWS_STATE_SLEEP
 } SPSWS_State;
 
 typedef enum {
 	SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX,
-	SPSWS_STATUS_BYTE_TIME_REFERENCE_BIT_IDX,
 	SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX,
 	SPSWS_STATUS_BYTE_LSI_STATUS_BIT_IDX,
 	SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX,
-	SPSWS_STATUS_BYTE_RTC_FIRST_CALIBRATION_BIT_IDX,
-	SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX,
+	SPSWS_STATUS_BYTE_FIRST_RTC_CALIBRATION_BIT_IDX,
+	SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX,
 	SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX,
-} SPSWS_StatusByteBitIndex;
+	SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX
+} SPSWS_StatusBitsIndex;
 
 typedef struct {
+	// Global.
+	SPSWS_State spsws_state;
+	// Time management.
 	unsigned char spsws_por_flag;
 	unsigned char spsws_hour_changed_flag;
 	unsigned char spsws_day_changed_flag;
 	unsigned char spsws_is_afternoon_flag;
 	unsigned int spsws_lsi_frequency_hz;
-	SPSWS_State spsws_state;
-	unsigned char spsws_status_byte;
+	// Wake-up management.
 	Timestamp spsws_current_timestamp;
 	Timestamp spsws_previous_wake_up_timestamp;
-	unsigned char spsws_hours_count;
-	unsigned char spsws_weather_data_period_hours;
-	unsigned char spsws_day_count;
-	unsigned char spsws_geoloc_period_days;
-	DLK_Parameters spsws_dlk_parameters;
-	unsigned char spsws_timestamp_retrieved_from_geoloc;
+	// Monitoring.
 	MONITORING_Data spsws_monitoring_data;
+	unsigned char spsws_status_byte;
+	// Weather data.
 	WEATHER_Data spsws_weather_data;
+	// Geoloc.
+	Position spsws_geoloc_position;
+	unsigned char spsws_geoloc_fix_duration_seconds;
+	// Sigfox.
 	unsigned char spsws_sfx_uplink_data[SFX_UPLINK_DATA_MAX_SIZE_BYTES];
 	unsigned char spsws_sfx_downlink_data[SFX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_Context;
@@ -151,7 +154,7 @@ void SPSWS_UpdateTimestampFlags(void) {
 	if ((spsws_ctx.spsws_current_timestamp.year != spsws_ctx.spsws_previous_wake_up_timestamp.year) ||
 		(spsws_ctx.spsws_current_timestamp.month != spsws_ctx.spsws_previous_wake_up_timestamp.month) ||
 		(spsws_ctx.spsws_current_timestamp.date != spsws_ctx.spsws_previous_wake_up_timestamp.date)) {
-		// Day and thus hour has changed.
+		// Day (and thus hour) has changed.
 		spsws_ctx.spsws_day_changed_flag = 1;
 		spsws_ctx.spsws_hour_changed_flag = 1;
 	}
@@ -159,8 +162,8 @@ void SPSWS_UpdateTimestampFlags(void) {
 		// Hour as changed.
 		spsws_ctx.spsws_hour_changed_flag = 1;
 	}
-	// Check if we are in afternoon (to trigger geolocation and downlink).
-	signed char local_hour = (spsws_ctx.spsws_current_timestamp.hours + spsws_ctx.spsws_dlk_parameters.dlk_local_utc_offset) % SPSWS_NUMBER_OF_HOURS_PER_DAY;
+	// Check if we are in afternoon (to enable device geolocation).
+	signed char local_hour = (spsws_ctx.spsws_current_timestamp.hours + SPSWS_LOCAL_UTC_OFFSET) % SPSWS_NUMBER_OF_HOURS_PER_DAY;
 	if (local_hour < 0) {
 		local_hour += SPSWS_NUMBER_OF_HOURS_PER_DAY;
 	}
@@ -182,33 +185,6 @@ void SPSWS_UpdatePwut(void) {
 	NVM_WriteByte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.month);
 	NVM_WriteByte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.date);
 	NVM_WriteByte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.hours);
-}
-
-/* COMPUTE EFFECTIVE LSI OSCILLATOR FREQUENCY.
- * @param:	None.
- * @return:	None.
- */
-void SPSWS_ComputeLsiFrequency(void) {
-
-	/* Init and start timers */
-	LPTIM1_Init(1);
-	TIM21_Init();
-	LPTIM1_Start();
-	TIM21_Start();
-
-	/* Wait 1 second */
-	while (((TIM21 -> SR) & (0b1 << 0)) == 0); // Wait for first overflow.
-	TIM21 -> SR &= ~(0b1 << 0); // Clear flag (UIF='0').
-
-	/* Get LSI frequency and stop timers */
-	spsws_ctx.spsws_lsi_frequency_hz = (LPTIM1 -> CNT);
-	LPTIM1_Stop();
-	TIM21_Stop();
-
-	/* Check value */
-	if (spsws_ctx.spsws_lsi_frequency_hz == 0) {
-		spsws_ctx.spsws_lsi_frequency_hz = 38000;
-	}
 }
 
 /*** SPSWS main function ***/
@@ -234,14 +210,14 @@ int main (void) {
 	spsws_ctx.spsws_day_changed_flag = 0;
 	spsws_ctx.spsws_is_afternoon_flag = 0;
 	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
+	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
-	spsws_ctx.spsws_timestamp_retrieved_from_geoloc = 0;
-	// IM_RTC = '00'.
-	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX);
-	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_TIME_REFERENCE_BIT_IDX);
+	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // IM = 0b0.
 
 	/* Local variables */
-	NEOM8N_ReturnCode neom8n_return_code;
+	unsigned char rtc_use_lse = 0;
+	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
+	unsigned int geoloc_fix_start_time_seconds = 0;
 	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) SPSWS_SIGFOX_RC;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	unsigned int max11136_result_12bits = 0;
@@ -261,12 +237,12 @@ int main (void) {
 			}
 			else {
 				if (((RCC -> CSR) & (0b111 << 26)) != 0) {
-					// POR, NRST or SW reset: directly go to INIT state.
+					// SW, NRST or POR reset: directly go to INIT state.
 					spsws_ctx.spsws_por_flag = 1;
 					spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 				}
 				else {
-					// RTC wake-up: standard flow.
+					// Other resetor RTC wake-up: standard flow.
 					spsws_ctx.spsws_state = SPSWS_STATE_HOUR_CHECK;
 				}
 			}
@@ -274,8 +250,6 @@ int main (void) {
 
 		/* HOUR CHECK */
 		case SPSWS_STATE_HOUR_CHECK:
-			// Retrieve current configuration (done here to read local UTC offset).
-			DLK_Read(&spsws_ctx.spsws_dlk_parameters);
 			// Update flags.
 			SPSWS_UpdateTimestampFlags();
 			// Check flag.
@@ -287,39 +261,18 @@ int main (void) {
 				// Valid wake-up.
 				spsws_ctx.spsws_state = SPSWS_STATE_NVM_WAKE_UP_UPDATE;
 			}
-			spsws_ctx.spsws_state = SPSWS_STATE_NVM_WAKE_UP_UPDATE; // !!! DEBUG !!!
 			break;
 
 		/* NVM WAKE UP UPDATE */
 		case SPSWS_STATE_NVM_WAKE_UP_UPDATE:
 			// Update previous wake-up timestamp.
 			SPSWS_UpdatePwut();
-			// Update hours count for weather data period management.
-			NVM_ReadByte(NVM_HOURS_COUNT_ADDRESS_OFFSET, &spsws_ctx.spsws_hours_count);
-			spsws_ctx.spsws_hours_count++;
-			if (spsws_ctx.spsws_hours_count >= spsws_ctx.spsws_dlk_parameters.dlk_weather_data_period_hours) {
-				// Period reached, reset counter.
-				NVM_WriteByte(NVM_HOURS_COUNT_ADDRESS_OFFSET, 0);
-			}
-			else {
-				// Update value.
-				NVM_WriteByte(NVM_HOURS_COUNT_ADDRESS_OFFSET, spsws_ctx.spsws_hours_count);
-			}
 			// Check if day changed.
 			if (spsws_ctx.spsws_day_changed_flag != 0) {
-				// Update day count for geolocation period management.
-				NVM_ReadByte(NVM_DAY_COUNT_ADDRESS_OFFSET, &spsws_ctx.spsws_day_count);
-				spsws_ctx.spsws_day_count++;
-				if (spsws_ctx.spsws_day_count >= spsws_ctx.spsws_dlk_parameters.dlk_geoloc_period_days) {
-					// Period reached, reset counter.
-					NVM_WriteByte(NVM_DAY_COUNT_ADDRESS_OFFSET, 0);
-				}
-				else {
-					NVM_WriteByte(NVM_DAY_COUNT_ADDRESS_OFFSET, spsws_ctx.spsws_day_count);
-				}
-				// Reset daily RTC calibration and downlink flags.
-				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX);
+				// Reset daily flags.
+				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX);
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX);
+				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
 			}
 			// Go to INIT state.
 			spsws_ctx.spsws_state = SPSWS_STATE_INIT;
@@ -331,33 +284,41 @@ int main (void) {
 			RCC_Init();
 			// Low speed oscillators (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
+				// Reset RTC before starting oscillators.
+				RTC_Reset();
 				// LSI.
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSI_STATUS_BIT_IDX);
-				spsws_ctx.spsws_status_byte |= (RCC_EnableInternal32kHz() << SPSWS_STATUS_BYTE_LSI_STATUS_BIT_IDX);
+				spsws_ctx.spsws_status_byte |= (RCC_EnableLsi() << SPSWS_STATUS_BYTE_LSI_STATUS_BIT_IDX);
 				// LSE.
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
-				spsws_ctx.spsws_status_byte |= (RCC_EnableCrystal32kHz() << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
-			}
-			// High speed oscillator.
-			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
-			spsws_ctx.spsws_status_byte |= (RCC_SwitchToTcxo16MHz() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
-			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX)) == 0) {
-				while (RCC_SwitchToInternal16MHz() == 0);
-			}
-			// RTC (only at POR).
-			if (spsws_ctx.spsws_por_flag != 0) {
-				SPSWS_ComputeLsiFrequency();
-				RTC_Init((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX)), spsws_ctx.spsws_lsi_frequency_hz);
+				spsws_ctx.spsws_status_byte |= (RCC_EnableLse() << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 			}
 			// Watchdog.
 			//IWDG_Init();
 			//IWDG_Reload();
-			// Timers.
+			// High speed oscillator.
+			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
+			spsws_ctx.spsws_status_byte |= (RCC_SwitchToHse() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
+			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX)) == 0) {
+				while (RCC_SwitchToHsi() == 0);
+			}
+			// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
+			spsws_ctx.spsws_lsi_frequency_hz = RCC_GetLsiFrequency();
+			// Timers (must be called before RTC inititialization to have timeout available).
 			TIM21_Init();
 			TIM22_Init();
 			TIM21_Start();
 			TIM22_Start();
 			LPTIM1_Init(0);
+			// RTC (only at POR).
+			if (spsws_ctx.spsws_por_flag != 0) {
+				rtc_use_lse = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
+				RTC_Init(&rtc_use_lse, spsws_ctx.spsws_lsi_frequency_hz);
+				// Update LSE status if RTC failed to start on it.
+				if (rtc_use_lse == 0) {
+					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
+				}
+			}
 			// DMA.
 			DMA1_Init();
 			// Analog.
@@ -382,8 +343,6 @@ int main (void) {
 			SHT3X_Init();
 			DPS310_Init();
 			SI1133_Init();
-			// Reload watchdog.
-			IWDG_Reload();
 			// Compute next state.
 			if (spsws_ctx.spsws_por_flag == 0) {
 				spsws_ctx.spsws_state = SPSWS_STATE_MEASURE;
@@ -425,8 +384,6 @@ int main (void) {
 			SHT3X_GetHumidity(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent);
 			// Read status byte.
 			spsws_ctx.spsws_monitoring_data.monitoring_data_status_byte = spsws_ctx.spsws_status_byte;
-			// Reload watchdog.
-			IWDG_Reload();
 			// Go to MONITORING state.
 			spsws_ctx.spsws_state = SPSWS_STATE_MONITORING;
 			break;
@@ -440,16 +397,21 @@ int main (void) {
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, MONITORING_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
-			// Reload watchdog.
-			IWDG_Reload();
+			SIGFOX_API_close();
 			// Compute next state.
-			if (((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX)) == 0) && (spsws_ctx.spsws_is_afternoon_flag != 0)) {
+			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX)) == 0) {
 				// Perform RTC calibration.
 				spsws_ctx.spsws_state = SPSWS_STATE_RTC_CALIBRATION;
 			}
 			else {
-				// Enter standby mode.
-				spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+				if (((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX)) == 0) && (spsws_ctx.spsws_is_afternoon_flag != 0)) {
+					// Perform device geolocation.
+					spsws_ctx.spsws_state = SPSWS_STATE_GEOLOC;
+				}
+				else {
+					// Enter standby mode.
+					spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+				}
 			}
 			break;
 
@@ -461,63 +423,63 @@ int main (void) {
 				sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
 			}
 			SIGFOX_API_close();
-			// Reset RTC calibration flags.
-			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX);
-			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX);
-			// Reload watchdog.
-			IWDG_Reload();
+			// Reset all daily flags.
+			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_FIRST_RTC_CALIBRATION_BIT_IDX);
+			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX);
+			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX);
+			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
 			// Perform first RTC calibration.
 			spsws_ctx.spsws_state = SPSWS_STATE_RTC_CALIBRATION;
 			break;
 
-		/* RTC CALIBRATION */
-		case SPSWS_STATE_RTC_CALIBRATION:
-			// Use GPS module if timestamp was not retrieved yet by the geolocation.
-			if (spsws_ctx.spsws_timestamp_retrieved_from_geoloc == 0) {
-				LPUART1_PowerOn();
-				neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
-				LPUART1_PowerOff();
-			}
-			// Calibrate RTC if a valid timestamp is available.
-			if ((spsws_ctx.spsws_timestamp_retrieved_from_geoloc != 0) || (neom8n_return_code == NEOM8N_SUCCESS)) {
-				// Update RTC registers.
-				RTC_Calibrate(&spsws_ctx.spsws_current_timestamp);
-				// Update RTC calibration flags.
-				spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_RTC_FIRST_CALIBRATION_BIT_IDX);
-				spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_RTC_DAILY_CALIBRATION_BIT_IDX);
-			}
-			// Reload watchdog.
-			IWDG_Reload();
-			// Compute next state.
-			if (spsws_ctx.spsws_por_flag == 0) {
-				// Enter standby mode.
-				spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+		/* GEOLOC */
+		case SPSWS_STATE_GEOLOC:
+			// Get position from GPS.
+			LPUART1_PowerOn();
+			geoloc_fix_start_time_seconds = TIM22_GetSeconds();
+			neom8n_return_code = NEOM8N_GetPosition(&spsws_ctx.spsws_geoloc_position, SPSWS_GEOLOC_TIMEOUT_SECONDS);
+			LPUART1_PowerOff();
+			// Update flag whatever the result.
+			spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
+			// Parse result.
+			if (neom8n_return_code == NEOM8N_SUCCESS) {
+				// Get fix duration and update flag.
+				spsws_ctx.spsws_geoloc_fix_duration_seconds = TIM22_GetSeconds() - geoloc_fix_start_time_seconds;
 			}
 			else {
-				// NVM POR update.
-				spsws_ctx.spsws_state = SPSWS_STATE_NVM_POR_UPDATE;
+				// Set fix duration to timeout.
+				spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
 			}
+			// Build Sigfox frame.
+			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_sfx_uplink_data);
+			// Send uplink monitoring frame.
+			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, GEOLOC_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+			}
+			SIGFOX_API_close();
+			// Enter standby mode.
+			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 
-		/* NVM POR UPDATE */
-		case SPSWS_STATE_NVM_POR_UPDATE:
-			// Check RTC calibration;
-			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_RTC_FIRST_CALIBRATION_BIT_IDX)) != 0) {
-				// Check if day has changed.
-				SPSWS_UpdateTimestampFlags();
-				if (spsws_ctx.spsws_day_changed_flag != 0) {
-					// Reset daily downlink flag.
-					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX);
+		/* RTC CALIBRATION */
+		case SPSWS_STATE_RTC_CALIBRATION:
+			// Get current timestamp from GPS.
+			LPUART1_PowerOn();
+			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
+			LPUART1_PowerOff();
+			// Calibrate RTC if a valid timestamp is available.
+			if (neom8n_return_code == NEOM8N_SUCCESS) {
+				// Update RTC registers.
+				RTC_Calibrate(&spsws_ctx.spsws_current_timestamp);
+				// Update PWUT when first calibration.
+				if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_FIRST_RTC_CALIBRATION_BIT_IDX)) == 0) {
+					SPSWS_UpdatePwut();
 				}
+				// Update calibration flags.
+				spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_FIRST_RTC_CALIBRATION_BIT_IDX);
+				spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX);
 			}
-			else {
-				// Reset daily downlink flag.
-				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX);
-			}
-			// Update previous wake-up timestamp.
-			SPSWS_UpdatePwut();
-			// Reload watchdog.
-			IWDG_Reload();
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
@@ -527,8 +489,6 @@ int main (void) {
 			// Write status byte in NVM.
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
-			// Reload watchdog.
-			IWDG_Reload();
 			// Clear reset flags.
 			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
 			// Clear RTC flags.
