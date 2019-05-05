@@ -11,6 +11,7 @@
 #include "mapping.h"
 #include "nvic.h"
 #include "rcc_reg.h"
+#include "rain.h"
 #include "syscfg_reg.h"
 #include "wind.h"
 
@@ -46,9 +47,7 @@ void EXTI4_15_IRQHandler(void) {
 		// Call WIND callback.
 		WIND_SpeedEdgeCallback();
 	}
-#endif
 
-#if (defined CM_RTC || defined ATM)
 #ifdef WIND_VANE_ULTIMETER
 	/* Direction edge interrupt */
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.num))) != 0) {
@@ -58,6 +57,14 @@ void EXTI4_15_IRQHandler(void) {
 		WIND_DirectionEdgeCallback();
 	}
 #endif
+
+	/* Rain edge interrupt */
+	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.num))) != 0) {
+		// Clear flag.
+		EXTI -> PR |= (0b1 << (GPIO_RAIN.num)); // PIFx='1' (writing '1' clears the bit).
+		// Call WIND callback.
+		RAIN_EdgeCallback();
+	}
 #endif
 }
 

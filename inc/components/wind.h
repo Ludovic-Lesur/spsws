@@ -34,7 +34,7 @@ void WIND_GetSpeed(unsigned int* average_wind_speed_mh, unsigned int* peak_wind_
 void WIND_GetDirection(unsigned int* average_wind_direction_degrees);
 void WIND_ResetData(void);
 
-/*** Wind utility functions ***/
+/*** WIND utility functions ***/
 
 void WIND_MeasurementPeriodCallback(void);
 void WIND_SpeedEdgeCallback(void);

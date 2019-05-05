@@ -56,7 +56,7 @@ static volatile WIND_Context wind_ctx;
 
 /*** WIND functions ***/
 
-/* INIT WIND WIND VANE.
+/* INIT WIND VANE.
  * @param:	None.
  * @return:	None.
  */
@@ -102,8 +102,6 @@ void WIND_StartContinuousMeasure(void) {
 
 	/* Enable required interrupts */
 	NVIC_EnableInterrupt(IT_TIM21);
-	NVIC_EnableInterrupt(IT_EXTI_0_1);
-	NVIC_EnableInterrupt(IT_EXTI_2_3);
 	NVIC_EnableInterrupt(IT_EXTI_4_15);
 }
 
@@ -114,8 +112,6 @@ void WIND_StartContinuousMeasure(void) {
 void WIND_StopContinuousMeasure(void) {
 
 	/* Disable required interrupts */
-	NVIC_DisableInterrupt(IT_EXTI_0_1);
-	NVIC_DisableInterrupt(IT_EXTI_2_3);
 	NVIC_DisableInterrupt(IT_EXTI_4_15);
 	NVIC_DisableInterrupt(IT_TIM21);
 

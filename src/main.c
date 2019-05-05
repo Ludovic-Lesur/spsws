@@ -49,6 +49,7 @@
 #endif
 #include "mode.h"
 #include "monitoring.h"
+#include "rain.h"
 #include "sigfox_api.h"
 #include "weather.h"
 
@@ -362,6 +363,7 @@ int main (void) {
 			SI1133_Init();
 #ifdef CM_RTC
 			WIND_Init();
+			RAIN_Init();
 #endif
 			// Compute next state.
 			if (spsws_ctx.spsws_por_flag == 0) {
@@ -422,7 +424,7 @@ int main (void) {
 			WIND_GetSpeed(&spsws_ctx.spsws_weather_data.weather_data_average_wind_speed_mh, &spsws_ctx.spsws_weather_data.weather_data_peak_wind_speed_mh);
 			WIND_GetDirection(&spsws_ctx.spsws_weather_data.weather_data_average_wind_direction_degrees);
 			// Retrieve rain measurements.
-			//RAIN_GetPluviometry(&spsws_ctx.spsws_weather_data.weather_data_rain_mm);
+			RAIN_GetPluviometry(&spsws_ctx.spsws_weather_data.weather_data_rain_mm);
 #endif
 			// Read status byte.
 			spsws_ctx.spsws_monitoring_data.monitoring_data_status_byte = spsws_ctx.spsws_status_byte;
@@ -576,7 +578,9 @@ int main (void) {
 #ifdef CM_RTC
 			// Re-start continuous measurements.
 			WIND_ResetData();
+			RAIN_ResetData();
 			WIND_StartContinuousMeasure();
+			RAIN_StartContinuousMeasure();
 #endif
 			// Clear RTC flags.
 			RTC_ClearAlarmFlags();
@@ -600,6 +604,7 @@ int main (void) {
 			if (RTC_GetAlarmFlag() != 0) {
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();
+				RAIN_StopContinuousMeasure();
 				// Wake-up.
 				spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 			}
