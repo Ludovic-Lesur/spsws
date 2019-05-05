@@ -18,7 +18,7 @@
 #include "tim.h"
 #include "usart_reg.h"
 
-#if (defined ATM || defined DEBUG)
+#ifdef ATM
 
 /*** USART local macros ***/
 
@@ -197,8 +197,8 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -241,8 +241,8 @@ void USART1_Init(void) {
 	RCC -> APB2ENR |= (0b1 << 14); // USART1EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(GPIO_USART1_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART1_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART1_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART1_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').

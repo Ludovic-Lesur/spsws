@@ -7,7 +7,7 @@
 
 #include "nvm.h"
 
-#include "nvm_reg.h"
+#include "flash_reg.h"
 #include "rcc_reg.h"
 
 /*** NVM local functions ***/
@@ -18,12 +18,12 @@
  */
 void NVM_Unlock(void) {
 	// Check no write/erase operation is running.
-	while (((NVMI -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Check the NVM is not allready unlocked.
-	if (((NVMI -> PECR) & (0b1 << 0)) != 0) {
+	if (((FLASH -> PECR) & (0b1 << 0)) != 0) {
 		// Perform unlock sequence.
-		NVMI -> PEKEYR = 0x89ABCDEF;
-		NVMI -> PEKEYR = 0x02030405;
+		FLASH -> PEKEYR = 0x89ABCDEF;
+		FLASH -> PEKEYR = 0x02030405;
 	}
 }
 
@@ -33,9 +33,9 @@ void NVM_Unlock(void) {
  */
 void NVM_Lock(void) {
 	// Check no write/erase operation is running.
-	while (((NVMI -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Lock PECR register.
-	NVMI -> PECR |= (0b1 << 0); // PELOCK='1'.
+	FLASH -> PECR |= (0b1 << 0); // PELOCK='1'.
 }
 
 /*** NVM functions ***/
@@ -89,7 +89,7 @@ void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store) {
 		(*((unsigned char*) (EEPROM_START_ADDRESS+address_offset))) = byte_to_store; // Write byte to requested address.
 	}
 	// Wait end of operation.
-	while (((NVMI -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Lock NVM.
 	NVM_Lock();
 }

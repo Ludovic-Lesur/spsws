@@ -20,16 +20,16 @@ void SKY13317_Init(void) {
 
 	/* Configure GPIOs */
 #ifdef HW1_0
-	GPIO_Configure(GPIO_RF_CHANNEL_A, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_RF_CHANNEL_A, 0);
-	GPIO_Configure(GPIO_RF_CHANNEL_B, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_RF_CHANNEL_B, 0);
+	GPIO_Configure(&GPIO_RF_CHANNEL_A, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(&GPIO_RF_CHANNEL_A, 0);
+	GPIO_Configure(&GPIO_RF_CHANNEL_B, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
-	GPIO_Configure(GPIO_RF_TX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_RF_TX_ENABLE, 0);
-	GPIO_Configure(GPIO_RF_RX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_RF_RX_ENABLE, 0);
+	GPIO_Configure(&GPIO_RF_TX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(&GPIO_RF_TX_ENABLE, 0);
+	GPIO_Configure(&GPIO_RF_RX_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(&GPIO_RF_RX_ENABLE, 0);
 #endif
 }
 
@@ -41,12 +41,12 @@ void SKY13317_SetChannel(SKY13317_Channel channel) {
 
 	/* Reset channels */
 #ifdef HW1_0
-	GPIO_Write(GPIO_RF_CHANNEL_A, 0);
-	GPIO_Write(GPIO_RF_CHANNEL_B, 0);
+	GPIO_Write(&GPIO_RF_CHANNEL_A, 0);
+	GPIO_Write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
-	GPIO_Write(GPIO_RF_TX_ENABLE, 0);
-	GPIO_Write(GPIO_RF_RX_ENABLE, 0);
+	GPIO_Write(&GPIO_RF_TX_ENABLE, 0);
+	GPIO_Write(&GPIO_RF_RX_ENABLE, 0);
 #endif
 
 	/* Select channel */
@@ -58,7 +58,7 @@ void SKY13317_SetChannel(SKY13317_Channel channel) {
 
 	case SKY13317_CHANNEL_RF1:
 #ifdef HW1_0
-		GPIO_Write(GPIO_RF_CHANNEL_A, 1);
+		GPIO_Write(&GPIO_RF_CHANNEL_A, 1);
 #endif
 #ifdef HW2_0
 		// Not connected.
@@ -67,20 +67,20 @@ void SKY13317_SetChannel(SKY13317_Channel channel) {
 
 	case SKY13317_CHANNEL_RF2:
 #ifdef HW1_0
-		GPIO_Write(GPIO_RF_CHANNEL_A, 1);
-		GPIO_Write(GPIO_RF_CHANNEL_B, 1);
+		GPIO_Write(&GPIO_RF_CHANNEL_A, 1);
+		GPIO_Write(&GPIO_RF_CHANNEL_B, 1);
 #endif
 #ifdef HW2_0
-		GPIO_Write(GPIO_RF_TX_ENABLE, 1);
+		GPIO_Write(&GPIO_RF_TX_ENABLE, 1);
 #endif
 		break;
 
 	case SKY13317_CHANNEL_RF3:
 #ifdef HW1_0
-		GPIO_Write(GPIO_RF_CHANNEL_B, 1);
+		GPIO_Write(&GPIO_RF_CHANNEL_B, 1);
 #endif
 #ifdef HW2_0
-		GPIO_Write(GPIO_RF_RX_ENABLE, 1);
+		GPIO_Write(&GPIO_RF_RX_ENABLE, 1);
 #endif
 		break;
 

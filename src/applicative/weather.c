@@ -7,6 +7,7 @@
 
 #include "weather.h"
 
+#include "dps310.h"
 #include "mode.h"
 
 /*** WEATHER functions ***/
@@ -26,8 +27,15 @@ void WEATHER_BuildSigfoxData(WEATHER_Data* weather_data, unsigned char* weather_
 	// UV index.
 	weather_sigfox_data[3] = weather_data -> weather_data_uv_index;
 	// Absolute presssure (1/10 hPa).
-	weather_sigfox_data[4] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0xFF00) >> 8;
-	weather_sigfox_data[5] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0x00FF) >> 0;
+	if ((weather_data -> weather_data_pressure_pa) == DPS310_PRESSURE_ERROR_VALUE) {
+		weather_sigfox_data[4] = 0xFF;
+		weather_sigfox_data[5] = 0xFF;
+	}
+	else {
+		weather_sigfox_data[4] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0xFF00) >> 8;
+		weather_sigfox_data[5] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0x00FF) >> 0;
+	}
+
 #ifdef CM_RTC
 	// Average wind speed.
 	weather_sigfox_data[6] = weather_data -> weather_data_average_wind_speed_kmh;

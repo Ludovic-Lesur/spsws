@@ -11,7 +11,7 @@
 #include "mode.h"
 #include "neom8n.h"
 
-#if (defined ATM || defined DEBUG)
+#ifdef ATM
 
 /*** AT macros ***/
 

@@ -26,7 +26,7 @@
 /*** MAX11136 functions ***/
 
 void MAX11136_Init(void);
-unsigned char MAX11136_PerformMeasurements(void);
+void MAX11136_PerformMeasurements(void);
 void MAX11136_GetChannel(unsigned char channel, unsigned int* channel_result_12bits);
 
 #endif /* MAX11136_H */

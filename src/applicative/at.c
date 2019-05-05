@@ -11,6 +11,7 @@
 #include "addon_sigfox_verified_api.h"
 #include "aes.h"
 #include "dps310.h"
+#include "flash_reg.h"
 #include "i2c.h"
 #include "lpuart.h"
 #include "lptim.h"
@@ -19,7 +20,6 @@
 #include "mode.h"
 #include "neom8n.h"
 #include "nvm.h"
-#include "nvm_reg.h"
 #include "rf_api.h"
 #include "sht3x.h"
 #include "si1133.h"
@@ -31,7 +31,7 @@
 #include "usart.h"
 #include "wind.h"
 
-#if (defined ATM || defined DEBUG)
+#ifdef ATM
 
 /*** AT local macros ***/
 
@@ -800,7 +800,7 @@ void AT_DecodeRxBuffer(void) {
 			signed char dps310_temperature_degrees = 0;
 			// Perform measurements.
 			I2C1_PowerOn();
-			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C1_ADDRESS);
+			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			I2C1_PowerOff();
 			DPS310_GetPressure(&dps310_pressure_pa);
 			DPS310_GetTemperature(&dps310_temperature_degrees);

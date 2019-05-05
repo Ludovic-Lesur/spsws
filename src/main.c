@@ -6,11 +6,9 @@
  */
 
 // Registers
-#include "lptim_reg.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
 #include "scb_reg.h"
-#include "tim_reg.h"
 // Peripherals.
 #include "adc.h"
 #include "aes.h"
@@ -23,6 +21,7 @@
 #include "lptim.h"
 #include "lpuart.h"
 #include "mapping.h"
+#include "nvic.h"
 #include "nvm.h"
 #include "pwr.h"
 #include "rcc.h"
@@ -69,11 +68,15 @@ typedef enum {
 	SPSWS_STATE_HOUR_CHECK,
 	SPSWS_STATE_INIT,
 	SPSWS_STATE_POR,
-	SPSWS_STATE_MEASURE,
+	SPSWS_STATE_STATIC_MEASURE,
+#ifdef CM_RTC
+	SPSWS_STATE_CONTINUOUS_MEASURE,
+#endif
 	SPSWS_STATE_MONITORING,
 	SPSWS_STATE_WEATHER_DATA,
 	SPSWS_STATE_GEOLOC,
 	SPSWS_STATE_RTC_CALIBRATION,
+	SPSWS_STATE_OFF,
 	SPSWS_STATE_SLEEP
 } SPSWS_State;
 
@@ -84,8 +87,8 @@ typedef enum {
 	SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX,
 	SPSWS_STATUS_BYTE_FIRST_RTC_CALIBRATION_BIT_IDX,
 	SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX,
+	SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX,
 	SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX,
-	SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX
 } SPSWS_StatusBitsIndex;
 
 typedef struct {
@@ -119,7 +122,8 @@ static SPSWS_Context spsws_ctx;
 
 /*** SPSWS local functions ***/
 
-/* MAKE THE DEBUG BLINK.
+#ifdef DEBUG
+/* MAKE THE LED BLINK.
  * @param number_of_blinks:	Number of blinks.
  * @return:					None.
  */
@@ -127,12 +131,13 @@ void SPSWS_BlinkLed(unsigned char number_of_blinks) {
 	unsigned char j = 0;
 	unsigned int k = 0;
 	for (j=0 ; j<number_of_blinks ; j++) {
-		GPIO_Write(GPIO_LED, 1);
+		GPIO_Write(&GPIO_LED, 1);
 		for (k=0 ; k<10000 ; k++);
-		GPIO_Write(GPIO_LED, 0);
+		GPIO_Write(&GPIO_LED, 0);
 		for (k=0 ; k<10000 ; k++);
 	}
 }
+#endif
 
 /* CHECK IF HOUR OR DATE AS CHANGED SINCE PREVIOUS WAKE-UP AND UPDATE AFTERNOON FLAG.
  * @param:	None.
@@ -197,12 +202,15 @@ void SPSWS_UpdatePwut(void) {
 int main (void) {
 
 	/* Init memory */
+	NVIC_Init();
 	FLASH_Init();
 	NVM_Enable();
 
-	// Init GPIOs (required for clock tree configuration).
+	/* Init GPIOs (required for clock tree configuration) */
 	GPIO_Init();
-	GPIO_Write(GPIO_LED, 1);
+#ifdef DEBUG
+	GPIO_Write(&GPIO_LED, 1);
+#endif
 
 	/* Init context */
 	spsws_ctx.spsws_por_flag = 0;
@@ -216,11 +224,12 @@ int main (void) {
 
 	/* Local variables */
 	unsigned char rtc_use_lse = 0;
+	unsigned int max11136_result_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	unsigned int geoloc_fix_start_time_seconds = 0;
+	unsigned char geoloc_timeout = 0;
 	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) SPSWS_SIGFOX_RC;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
-	unsigned int max11136_result_12bits = 0;
 
 	/* Main loop */
 	while (1) {
@@ -233,7 +242,7 @@ int main (void) {
 			// Check reset reason.
 			if (((RCC -> CSR) & (0b1 << 29)) != 0) {
 				// IWDG reset: directly enter standby mode.
-				spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+				spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			}
 			else {
 				if (((RCC -> CSR) & (0b111 << 26)) != 0) {
@@ -246,6 +255,8 @@ int main (void) {
 					spsws_ctx.spsws_state = SPSWS_STATE_HOUR_CHECK;
 				}
 			}
+			// Clear reset flags.
+			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
 			break;
 
 		/* HOUR CHECK */
@@ -255,7 +266,7 @@ int main (void) {
 			// Check flag.
 			if (spsws_ctx.spsws_hour_changed_flag == 0) {
 				// False detection due to RTC recalibration.
-				spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+				spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			}
 			else {
 				// Valid wake-up.
@@ -319,8 +330,6 @@ int main (void) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
-			// DMA.
-			DMA1_Init();
 			// Analog.
 			ADC1_Init();
 			// Communication interfaces.
@@ -330,6 +339,8 @@ int main (void) {
 #ifdef HW2_0
 			SPI2_Init();
 #endif
+			// DMA.
+			DMA1_Init();
 			// Hardware AES.
 			AES_Init();
 			// Init components.
@@ -345,15 +356,15 @@ int main (void) {
 			SI1133_Init();
 			// Compute next state.
 			if (spsws_ctx.spsws_por_flag == 0) {
-				spsws_ctx.spsws_state = SPSWS_STATE_MEASURE;
+				spsws_ctx.spsws_state = SPSWS_STATE_STATIC_MEASURE;
 			}
 			else {
 				spsws_ctx.spsws_state = SPSWS_STATE_POR;
 			}
 			break;
 
-		/* MEASURE */
-		case SPSWS_STATE_MEASURE:
+		/* STATIC MEASURE */
+		case SPSWS_STATE_STATIC_MEASURE:
 			// Retrieve internal ADC data.
 			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
@@ -372,19 +383,34 @@ int main (void) {
 #ifdef HW2_0
 			SPI2_PowerOff();
 #endif
+			// Convert channel results to mV.
 			MAX11136_GetChannel(MAX11136_CHANNEL_SOLAR_CELL, &max11136_result_12bits);
 			spsws_ctx.spsws_monitoring_data.monitoring_data_solar_cell_voltage_mv = (spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv * max11136_result_12bits * 269) / (MAX11136_FULL_SCALE * 34);
 			MAX11136_GetChannel(MAX11136_CHANNEL_SUPERCAP, &max11136_result_12bits);
 			spsws_ctx.spsws_monitoring_data.monitoring_data_supercap_voltage_mv = (spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv * max11136_result_12bits * 269) / (MAX11136_FULL_SCALE * 34);
+			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &max11136_result_12bits);
+			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_result_12bits / MAX11136_FULL_SCALE) * 100;
 			// Retrieve weather sensors data.
 			I2C1_PowerOn();
+			// Internal temperature/humidity sensor.
 			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
-			I2C1_PowerOff();
 			SHT3X_GetTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees);
 			SHT3X_GetHumidity(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent);
+			// External temperature/humidity sensor.
+			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
+			SHT3X_GetTemperature(&spsws_ctx.spsws_weather_data.weather_data_temperature_degrees);
+			SHT3X_GetHumidity(&spsws_ctx.spsws_weather_data.weather_data_humidity_percent);
+			// External pressure/temperature sensor.
+			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
+			DPS310_GetPressure(&spsws_ctx.spsws_weather_data.weather_data_pressure_pa);
+			// External UV index sensor.
+			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
+			SI1133_GetUvIndex(&spsws_ctx.spsws_weather_data.weather_data_uv_index);
+			// Turn sensors off.
+			I2C1_PowerOff();
 			// Read status byte.
 			spsws_ctx.spsws_monitoring_data.monitoring_data_status_byte = spsws_ctx.spsws_status_byte;
-			// Go to MONITORING state.
+			// Compute next state.
 			spsws_ctx.spsws_state = SPSWS_STATE_MONITORING;
 			break;
 
@@ -399,6 +425,20 @@ int main (void) {
 			}
 			SIGFOX_API_close();
 			// Compute next state.
+			spsws_ctx.spsws_state = SPSWS_STATE_WEATHER_DATA;
+			break;
+
+		/* WEATHER DATA */
+		case SPSWS_STATE_WEATHER_DATA:
+			// Build Sigfox frame.
+			WEATHER_BuildSigfoxData(&spsws_ctx.spsws_weather_data, spsws_ctx.spsws_sfx_uplink_data);
+			// Send uplink monitoring frame.
+			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, WEATHER_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+			}
+			SIGFOX_API_close();
+			// Compute next state.
 			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX)) == 0) {
 				// Perform RTC calibration.
 				spsws_ctx.spsws_state = SPSWS_STATE_RTC_CALIBRATION;
@@ -410,7 +450,7 @@ int main (void) {
 				}
 				else {
 					// Enter standby mode.
-					spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+					spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 				}
 			}
 			break;
@@ -449,26 +489,27 @@ int main (void) {
 			else {
 				// Set fix duration to timeout.
 				spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
+				geoloc_timeout = 1;
 			}
 			// Build Sigfox frame.
-			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_sfx_uplink_data);
-			// Send uplink monitoring frame.
+			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
+			// Send uplink geolocation frame.
 			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
 			if (sfx_error == SFX_ERR_NONE) {
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, GEOLOC_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (geoloc_timeout ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Enter standby mode.
-			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;
 
 		/* RTC CALIBRATION */
 		case SPSWS_STATE_RTC_CALIBRATION:
-			// Get current timestamp from GPS.
+			// Get current timestamp from GPS.{
 			LPUART1_PowerOn();
 			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
 			LPUART1_PowerOff();
-			// Calibrate RTC if a valid timestamp is available.
+			// Calibrate RTC if timestamp is available.
 			if (neom8n_return_code == NEOM8N_SUCCESS) {
 				// Update RTC registers.
 				RTC_Calibrate(&spsws_ctx.spsws_current_timestamp);
@@ -481,18 +522,42 @@ int main (void) {
 				spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX);
 			}
 			// Enter standby mode.
+			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
+			break;
+
+		/* OFF */
+		case SPSWS_STATE_OFF:
+			// Switch to internal clock.
+			RCC_SwitchToHsi();
+			// Turn all peripherals off.
+#ifdef HW2_0
+			SX1232_Tcxo(0);
+#endif
+			TIM21_Disable();
+			TIM22_Disable();
+			LPTIM1_Disable();
+			DMA1_Disable();
+			AES_Disable();
+			LPUART1_Disable();
+			I2C1_Disable();
+			SPI1_Disable();
+#ifdef HW2_0
+			SPI2_Disable();
+#endif
+			// Store status byte in NVM.
+			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
+			NVM_Disable();
+#ifdef DEBUG
+			GPIO_Write(&GPIO_LED, 0);
+#endif
+			// Clear RTC flags.
+			RTC_ClearAlarmFlags();
+			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 
 		/* SLEEP */
 		case SPSWS_STATE_SLEEP:
-			// Write status byte in NVM.
-			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
-			NVM_Disable();
-			// Clear reset flags.
-			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
-			// Clear RTC flags.
-			RTC_ClearAlarmFlags();
 			// Enter standby mode.
 			PWR_EnterStandbyMode();
 			break;
@@ -500,11 +565,10 @@ int main (void) {
 		/* UNKNOWN STATE */
 		default:
 			// Enter standby mode.
-			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
+			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;
 		}
 	}
-
 	return 0;
 }
 #endif
@@ -529,17 +593,20 @@ int main (void) {
 int main (void) {
 
 	/* Init memory */
+	NVIC_Init();
 	FLASH_Init();
 
 	/* Init GPIO (required for clock tree configuration) */
 	GPIO_Init();
+#ifdef DEBUG
 	SPSWS_BlinkLed(10);
+#endif
 
 	/* Init clocks */
 	RCC_Init();
 	// High speed oscillator.
-	if (RCC_SwitchToTcxo16MHz() == 0) {
-		while (RCC_SwitchToInternal16MHz() == 0);
+	if (RCC_SwitchToHse() == 0) {
+		while (RCC_SwitchToHsi() == 0);
 	}
 
 	/* Init peripherals */
@@ -547,10 +614,10 @@ int main (void) {
 	EXTI_Init();
 	// Timers.
 	TIM21_Init();
-	TIM21_Enable();
+	TIM21_Start();
 	TIM22_Init();
-	TIM22_Enable();
-	LPTIM1_Init();
+	TIM22_Start();
+	LPTIM1_Init(0);
 	// DMA.
 	DMA1_Init();
 	// Analog.
@@ -573,6 +640,9 @@ int main (void) {
 
 	/* Init components */
 	SX1232_Init();
+#ifdef HW2_0
+	SX1232_Tcxo(1);
+#endif
 	SKY13317_Init();
 #ifdef AT_COMMANDS_GPS
 	NEOM8N_Init();

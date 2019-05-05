@@ -199,7 +199,6 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 	}
 
 	/* Perform encryption */
-	AES_Enable();
 	for (block_idx=0; block_idx<number_of_blocks ; block_idx++) {
 		// Fill input data and initialization vector with previous result.
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) data_in[byte_idx] = data_to_encrypt[(block_idx * AES_BLOCK_SIZE) + byte_idx];
@@ -209,7 +208,6 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 		// Fill output data.
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) encrypted_data[(block_idx * AES_BLOCK_SIZE) + byte_idx] = data_out[byte_idx];
 	}
-	AES_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -238,8 +236,6 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// |  PN  |  SEQ  |  FH  |  RL  |
 	// |______|_______|______|______|
 
-	// Enable NVM interface.
-	NVM_Enable();
 	// PN.
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN+1]));
@@ -251,8 +247,6 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
 	// RL.
 	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
-	// Disable NVM interface.
-	NVM_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -282,8 +276,6 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// |  PN  |  SEQ  |  FH  |  RL  |
 	// |______|_______|______|______|
 
-	// Enable NVM interface.
-	NVM_Enable();
 	// PN.
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN+1]);
@@ -295,8 +287,6 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
 	// RL.
 	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
-	// Disable NVM interface.
-	NVM_Disable();
 
 	return SFX_ERR_NONE;
 }

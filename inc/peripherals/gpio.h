@@ -48,9 +48,9 @@ typedef enum {
 /*** GPIO functions ***/
 
 void GPIO_Init(void);
-void GPIO_Configure(GPIO gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO_OutputSpeed output_speed, GPIO_PullResistor pull_resistor);
-void GPIO_Write(GPIO gpio, unsigned char state);
-unsigned char GPIO_Read(GPIO gpio);
-void GPIO_Toggle(GPIO gpio);
+void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO_OutputSpeed output_speed, GPIO_PullResistor pull_resistor);
+void GPIO_Write(const GPIO* gpio, unsigned char state);
+unsigned char GPIO_Read(const GPIO* gpio);
+void GPIO_Toggle(const GPIO* gpio);
 
 #endif /* GPIO_H */

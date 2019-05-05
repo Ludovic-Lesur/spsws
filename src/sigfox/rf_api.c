@@ -88,10 +88,10 @@ RF_API_Context rf_api_ctx;
 		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
 			// Switch radio off.
 #ifdef HW1_0
-			GPIO_Write(GPIO_SX1232_DIOX, 0);
+			GPIO_Write(&GPIO_SX1232_DIOX, 0);
 #endif
 #ifdef HW2_0
-			GPIO_Write(GPIO_SX1232_DIO2, 0);
+			GPIO_Write(&GPIO_SX1232_DIO2, 0);
 #endif
 			// Change frequency.
 			if (rf_api_ctx.rf_api_frequency_shift_direction == 0) {
@@ -119,10 +119,10 @@ RF_API_Context rf_api_ctx;
 			SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
 			// Switch radio on.
 #ifdef HW1_0
-			GPIO_Write(GPIO_SX1232_DIOX, 1);
+			GPIO_Write(&GPIO_SX1232_DIOX, 1);
 #endif
 #ifdef HW2_0
-			GPIO_Write(GPIO_SX1232_DIO2, 1);
+			GPIO_Write(&GPIO_SX1232_DIO2, 1);
 #endif
 		}
 		// Update event status (set current and clear previous).
@@ -231,10 +231,7 @@ void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 
 	/* Switch RF on and init transceiver */
-	SPI1_Enable();
 	SPI1_PowerOn();
-
-	/* Enable TCXO */
 	SX1232_SetOscillator(SX1232_OSCILLATOR_TCXO);
 
 	/* Configure switch */
@@ -294,7 +291,6 @@ sfx_u8 RF_API_stop(void) {
 	/* Power transceiver down */
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 	SPI1_PowerOff();
-	SPI1_Disable();
 
 	return SFX_ERR_NONE;
 }
@@ -560,7 +556,7 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 	unsigned int rx_window_start_time_seconds = TIM22_GetSeconds();
 	(*state) = DL_PASSED;
 	sfx_u8 sfx_err = SFX_ERR_NONE;
-	while (GPIO_Read(GPIO_SX1232_DIO0) == 0) {
+	while (GPIO_Read(&GPIO_SX1232_DIO0) == 0) {
 		// Get RSSI when preamble is found.
 		if (((SX1232_GetIrqFlags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
 			(*rssi) = (sfx_s16) ((-1) * SX1232_GetRssi());
@@ -572,8 +568,6 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 			sfx_err = RF_ERR_API_WAIT_FRAME;
 			break;
 		}
-		// Reload watchdog.
-		IWDG_Reload();
 	}
 
 	/* Read FIFO if data was retrieved */

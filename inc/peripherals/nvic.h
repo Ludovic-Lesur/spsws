@@ -45,6 +45,7 @@ typedef enum {
 
 /*** NVIC functions ***/
 
+void NVIC_Init(void);
 void NVIC_EnableInterrupt(InterruptVector it_num);
 void NVIC_DisableInterrupt(InterruptVector it_num);
 void NVIC_SetPriority(InterruptVector it_num, unsigned char priority);

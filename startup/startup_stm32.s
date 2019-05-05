@@ -74,8 +74,8 @@ LoopFillZerobss:
   cmp r2, r4
   bcc FillZerobss
 
-/* Call the clock system intitialization function.*/
-  bl  SystemInit
+/* Call the clock system intitialization function.
+  bl  SystemInit */
 /* Call static constructors */
   bl __libc_init_array
 /* Call the application's entry point.*/
@@ -129,36 +129,36 @@ g_pfnVectors:
   .word	0
   .word	PendSV_Handler
   .word	SysTick_Handler
-  .word	0 // Watchdog
-  .word	0 // PVD
-  .word	0 // RTC
-  .word	0 // Flash
-  .word	0 // RCC
-  .word	EXTI_0_1_IRQHandler // EXTI lines [1:0] interrupts
-  .word	EXTI_2_3_IRQHandler // EXTI lines [3:2] interrupts
-  .word	EXTI_4_15_IRQHandler // EXTI lines [15:4] interrupts
-  .word	0 // Reserved
-  .word	0 // DMA1 channel 1
-  .word	0 // DMA1 channels 2-3
-  .word	0 // DMA1 channels 4-7
-  .word	0 // ADC, COMP1 and COMP2.
-  .word	0 // LPTIM1 through EXTI29
-  .word	0 // USART4 and USART5
-  .word	TIM2_IRQHandler // TIM2
-  .word	0 // TIM3
-  .word	0 // TIM6 and DAC
-  .word	0 // TIM7 and DAC
-  .word	0 // Reserved
-  .word	TIM21_IRQHandler // TIM21
-  .word	0 // I2C3
-  .word	0 // TIM22
-  .word	0 // I2C1
-  .word	0 // I2C2
-  .word 0 // SPI1
-  .word	0 // SPI2
-  .word	USART1_IRQHandler // USART1
-  .word	USART2_IRQHandler // USART2
-  .word	LPUART1_IRQHandler // AES, RNG and LPUART1.
+  .word	WWDG_IRQHandler           			/* Window Watchdog interrupt                                                      */
+  .word	PVD_IRQHandler            			/* PVD through EXTI line detection                                                */
+  .word	RTC_IRQHandler            			/* RTC global interrupt                                                           */
+  .word	FLASH_IRQHandler          			/* Flash global interrupt                                                         */
+  .word	RCC_IRQHandler            			/* RCC global interrupt                                                           */
+  .word	EXTI0_1_IRQHandler        			/* EXTI Line[1:0] interrupts                                                      */
+  .word	EXTI2_3_IRQHandler        			/* EXTI Line[3:2] interrupts                                                      */
+  .word	EXTI4_15_IRQHandler       			/* EXTI Line15 and EXTI4 interrupts                                               */
+  .word	0                         			/* Reserved                                                                       */
+  .word	DMA1_Channel1_IRQHandler  			/* DMA1 Channel1 global interrupt                                                 */
+  .word	DMA1_Channel2_3_IRQHandler			/* DMA1 Channel2 and 3 interrupts                                                 */
+  .word	DMA1_Channel4_7_IRQHandler			/* DMA1 Channel4 to 7 interrupts                                                  */
+  .word	ADC_COMP_IRQHandler       			/* ADC and comparator 1 and 2                                                     */
+  .word	LPTIM1_IRQHandler         			/* LPTIMER1 interrupt through EXTI29                                              */
+  .word	USART4_USART5_IRQHandler  			/* USART4/USART5 global interrupt                                                 */
+  .word	TIM2_IRQHandler           			/* TIM2 global interrupt                                                          */
+  .word	TIM3_IRQHandler           			/* TIM3 global interrupt                                                          */
+  .word	TIM6_IRQHandler           			/* TIM6 global interrupt and DAC                                                  */
+  .word	TIM7_IRQHandler           			/* TIM7 global interrupt and DAC                                                  */
+  .word	0                         			/* Reserved                                                                       */
+  .word	TIM21_IRQHandler          			/* TIMER21 global interrupt                                                       */
+  .word	I2C3_IRQHandler           			/* I2C3 global interrupt                                                          */
+  .word	TIM22_IRQHandler          			/* TIMER22 global interrupt                                                       */
+  .word	I2C1_IRQHandler           			/* I2C1 global interrupt                                                          */
+  .word	I2C2_IRQHandler           			/* I2C2 global interrupt                                                          */
+  .word	SPI1_IRQHandler           			/* SPI1_global_interrupt                                                          */
+  .word	SPI2_IRQHandler           			/* SPI2 global interrupt                                                          */
+  .word	USART1_IRQHandler         			/* USART1 global interrupt                                                        */
+  .word	USART2_IRQHandler         			/* USART2 global interrupt                                                        */
+  .word	AES_RNG_LPUART1_IRQHandler			/* AES global interrupt RNG global interrupt and LPUART1 global interrupt through */
 
 /*******************************************************************************
 *
@@ -183,17 +183,80 @@ g_pfnVectors:
 	.weak	SysTick_Handler
 	.thumb_set SysTick_Handler,Default_Handler
 
-	.weak	EXTI_0_1_IRQHandler
-	.thumb_set EXTI_0_1_IRQHandler,Default_Handler
+	.weak	WWDG_IRQHandler
+	.thumb_set WWDG_IRQHandler,Default_Handler
 
-	.weak	EXTI_2_3_IRQHandler
-	.thumb_set EXTI_2_3_IRQHandler,Default_Handler
+	.weak	PVD_IRQHandler
+	.thumb_set PVD_IRQHandler,Default_Handler
 
-	.weak	EXTI_4_15_IRQHandler
-	.thumb_set EXTI_4_15_IRQHandler,Default_Handler
+	.weak	RTC_IRQHandler
+	.thumb_set RTC_IRQHandler,Default_Handler
+
+	.weak	FLASH_IRQHandler
+	.thumb_set FLASH_IRQHandler,Default_Handler
+
+	.weak	RCC_IRQHandler
+	.thumb_set RCC_IRQHandler,Default_Handler
+
+	.weak	EXTI0_1_IRQHandler
+	.thumb_set EXTI0_1_IRQHandler,Default_Handler
+
+	.weak	EXTI2_3_IRQHandler
+	.thumb_set EXTI2_3_IRQHandler,Default_Handler
+
+	.weak	EXTI4_15_IRQHandler
+	.thumb_set EXTI4_15_IRQHandler,Default_Handler
+
+	.weak	DMA1_Channel1_IRQHandler
+	.thumb_set DMA1_Channel1_IRQHandler,Default_Handler
+
+	.weak	DMA1_Channel2_3_IRQHandler
+	.thumb_set DMA1_Channel2_3_IRQHandler,Default_Handler
+
+	.weak	DMA1_Channel4_7_IRQHandler
+	.thumb_set DMA1_Channel4_7_IRQHandler,Default_Handler
+
+	.weak	ADC_COMP_IRQHandler
+	.thumb_set ADC_COMP_IRQHandler,Default_Handler
+
+	.weak	LPTIM1_IRQHandler
+	.thumb_set LPTIM1_IRQHandler,Default_Handler
+
+	.weak	USART4_USART5_IRQHandler
+	.thumb_set USART4_USART5_IRQHandler,Default_Handler
+
+	.weak	TIM2_IRQHandler
+	.thumb_set TIM2_IRQHandler,Default_Handler
+
+	.weak	TIM3_IRQHandler
+	.thumb_set TIM3_IRQHandler,Default_Handler
+
+	.weak	TIM6_IRQHandler
+	.thumb_set TIM6_IRQHandler,Default_Handler
+
+	.weak	TIM7_IRQHandler
+	.thumb_set TIM7_IRQHandler,Default_Handler
+
+	.weak	TIM21_IRQHandler
+	.thumb_set TIM21_IRQHandler,Default_Handler
+
+	.weak	I2C3_IRQHandler
+	.thumb_set I2C3_IRQHandler,Default_Handler
+
+	.weak	TIM22_IRQHandler
+	.thumb_set TIM22_IRQHandler,Default_Handler
+
+	.weak	I2C1_IRQHandler
+	.thumb_set I2C1_IRQHandler,Default_Handler
+
+	.weak	I2C2_IRQHandler
+	.thumb_set I2C2_IRQHandler,Default_Handler
+
+	.weak	SPI1_IRQHandler
+	.thumb_set SPI1_IRQHandler,Default_Handler
 	
-	.weak	LPUART1_IRQHandler
-	.thumb_set LPUART1_IRQHandler,Default_Handler
+	.weak	SPI2_IRQHandler
+	.thumb_set SPI2_IRQHandler,Default_Handler
 	
 	.weak	USART1_IRQHandler
 	.thumb_set USART1_IRQHandler,Default_Handler
@@ -201,11 +264,8 @@ g_pfnVectors:
 	.weak	USART2_IRQHandler
 	.thumb_set USART2_IRQHandler,Default_Handler
 
-	.weak	TIM21_IRQHandler
-	.thumb_set TIM21_IRQHandler,Default_Handler
-
-	.weak	TIM2_IRQHandler
-	.thumb_set TIM2_IRQHandler,Default_Handler
+	.weak	AES_RNG_LPUART1_IRQHandler
+	.thumb_set AES_RNG_LPUART1_IRQHandler,Default_Handler
 
 	.weak	SystemInit
 

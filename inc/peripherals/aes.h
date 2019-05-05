@@ -15,7 +15,6 @@
 /*** AES functions ***/
 
 void AES_Init(void);
-void AES_Enable(void);
 void AES_Disable(void);
 void AES_EncodeCbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]);
 

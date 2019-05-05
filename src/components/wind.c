@@ -79,15 +79,20 @@ void WIND_Init(void) {
 	wind_ctx.wind_direction_data_count = 0;
 	wind_ctx.wind_direction_degrees_average = 0;
 
+	/* GPIO mapping selection */
+	GPIO_WIND_SPEED = GPIO_DIO0;
+#ifdef WIND_VANE_ULTIMETER
+	GPIO_WIND_DIRECTION = GPIO_DIO1;
+#endif
+
 	/* Init GPIOs and EXTI */
-	// Wind speed.
-	GPIO_Configure(GPIO_WIND_SPEED, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
-	EXTI_ConfigureInterrupt(GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
+	GPIO_Configure(&GPIO_WIND_SPEED, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
 	// Wind direction.
 #ifdef WIND_VANE_ULTIMETER
-	GPIO_Configure(GPIO_WIND_DIRECTION, Input, OpenDrain, HighSpeed, NoPullUpNoPullDown);
-	EXTI_ConfigureInterrupt(GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
-	// Init phase shift timer and associated variables/
+	GPIO_Configure(&GPIO_WIND_DIRECTION, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	EXTI_ConfigureInterrupt(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
+	// Init phase shift timer and associated variables.
 	TIM2_Init(TIM2_MODE_WIND, 0);
 #endif
 }

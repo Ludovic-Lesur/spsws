@@ -20,7 +20,7 @@
  * @param:	None.
  * @return:	None.
  */
-void EXTI_0_1_IRQHandler(void) {
+void EXTI0_1_IRQHandler(void) {
 	// Unused.
 }
 
@@ -28,7 +28,7 @@ void EXTI_0_1_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void EXTI_2_3_IRQHandler(void) {
+void EXTI2_3_IRQHandler(void) {
 	// Unused.
 }
 
@@ -36,7 +36,7 @@ void EXTI_2_3_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void EXTI_4_15_IRQHandler(void) {
+void EXTI4_15_IRQHandler(void) {
 
 #if (defined CM_RTC || defined ATM)
 	/* Speed edge interrupt */
@@ -83,37 +83,37 @@ void EXTI_Init(void) {
  * @edge_trigger:	Interrupt edge trigger (see EXTI_Trigger enumeration in exti.h).
  * @return:			None.
  */
-void EXTI_ConfigureInterrupt(GPIO gpio, EXTI_Trigger edge_trigger) {
+void EXTI_ConfigureInterrupt(GPIO* gpio, EXTI_Trigger edge_trigger) {
 
 	/* Select GPIO port */
-	SYSCFG -> EXTICR[(gpio.num / 4)] &= ~(0b1111 << (4 * (gpio.num % 4)));
-	SYSCFG -> EXTICR[(gpio.num / 4)] |= (gpio.port_index << (4 * (gpio.num % 4)));
+	SYSCFG -> EXTICR[((gpio -> num) / 4)] &= ~(0b1111 << (4 * ((gpio -> num) % 4)));
+	SYSCFG -> EXTICR[((gpio -> num) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> num) % 4)));
 
 	/* Select triggers */
 	switch (edge_trigger) {
 	// Rising edge only.
 	case EXTI_TRIGGER_RISING_EDGE:
-		EXTI -> IMR |= (0b1 << (gpio.num)); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << (gpio.num)); // Rising edge enabled.
-		EXTI -> FTSR &= ~(0b1 << (gpio.num)); // Falling edge disabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> num))); // Rising edge enabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> num))); // Falling edge disabled.
 		break;
 	// Falling edge only.
 	case EXTI_TRIGGER_FALLING_EDGE:
-		EXTI -> IMR |= (0b1 << (gpio.num)); // IMx='1'.
-		EXTI -> RTSR &= ~(0b1 << (gpio.num)); // Rising edge disabled.
-		EXTI -> FTSR |= (0b1 << (gpio.num)); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> num))); // Rising edge disabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> num))); // Falling edge enabled.
 		break;
 	// Both edges.
 	case EXTI_TRIGGER_ANY_EDGE:
-		EXTI -> IMR |= (0b1 << (gpio.num)); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << (gpio.num)); // Rising edge enabled.
-		EXTI -> FTSR |= (0b1 << (gpio.num)); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> num))); // Rising edge enabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> num))); // Falling edge enabled.
 		break;
 	// Unknown configuration.
 	default:
-		EXTI -> IMR &= ~(0b1 << (gpio.num)); // IMx='0'.
-		EXTI -> RTSR &= ~(0b1 << (gpio.num)); // Rising edge disabled.
-		EXTI -> FTSR &= ~(0b1 << (gpio.num)); // Falling edge disabled.
+		EXTI -> IMR &= ~(0b1 << ((gpio -> num))); // IMx='0'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> num))); // Rising edge disabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> num))); // Falling edge disabled.
 		break;
 	}
 }

@@ -13,6 +13,9 @@
 #include "lpuart.h"
 #include "tim.h"
 
+#include "gpio.h"
+#include "mapping.h"
+
 /*** NEOM8N local macros ***/
 
 #define NEOM8N_MSG_OVERHEAD_LENGTH			8 // 6 bytes header + 2 bytes checksum.
@@ -548,7 +551,6 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 	// Select ZDA message to get complete timestamp.
 	NEOM8N_SelectNmeaMessages(NMEA_ZDA_MASK);
 	// Start DMA.
-	DMA1_Enable();
 	DMA1_Stop();
 	DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	neom8n_ctx.nmea_rx_lf_flag = 0;
@@ -581,14 +583,10 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 			}
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
-			// Reload watchdog.
-			IWDG_Reload();
 		}
 	}
 	// Stop LPUART and DMA.
 	DMA1_Stop();
-	DMA1_Disable();
-	LPUART1_Disable();
 	// Reset GPS timestamp data in case of failure.
 	if (return_code != NEOM8N_SUCCESS) {
 		(*gps_timestamp).date = 0;
@@ -631,7 +629,6 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 	// Select GGA message to get complete position.
 	NEOM8N_SelectNmeaMessages(NMEA_GGA_MASK);
 	// Start DMA.
-	DMA1_Enable();
 	DMA1_Stop();
 	DMA1_SetDestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	neom8n_ctx.nmea_rx_fill_buf1 = 1;
@@ -664,14 +661,10 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 			}
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
-			// Reload watchdog.
-			IWDG_Reload();
 		}
 	}
 	// Stop DMA.
 	DMA1_Stop();
-	DMA1_Disable();
-	LPUART1_Disable();
 	// Reset GPS timestamp data in case of failure.
 	if (return_code != NEOM8N_SUCCESS) {
 		(*gps_position).lat_degrees = 0;
@@ -688,10 +681,10 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 }
 
 /* SWITCH DMA DESTINATION BUFFER (CALLED BY LPUART CM INTERRUPT).
- * @param:	None.
- * @return:	None.
+ * @param lf_flag:	Indicates if characters match interrupt occured (LPUART).
+ * @return:			None.
  */
-void NEOM8N_SwitchDmaBuffer(void) {
+void NEOM8N_SwitchDmaBuffer(unsigned char lf_flag) {
 
 	/* Stop and start DMA transfer to switch buffer */
 	DMA1_Stop();
@@ -706,9 +699,9 @@ void NEOM8N_SwitchDmaBuffer(void) {
 		neom8n_ctx.nmea_rx_fill_buf1 = 1;
 	}
 
+	/* Update LF flag to start decoding or not */
+	neom8n_ctx.nmea_rx_lf_flag = lf_flag;
+
 	/* Restart DMA transfer */
 	DMA1_Start();
-
-	/* Set LF flag to start decoding current buffer */
-	neom8n_ctx.nmea_rx_lf_flag = 1;
 }

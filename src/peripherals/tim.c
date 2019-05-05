@@ -17,19 +17,18 @@
 
 /*** TIM local functions ***/
 
-#if (defined CM_RTC || defined ATM)
 /* TIM21 INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
  */
 void TIM21_IRQHandler(void) {
-
 	// Clear flag.
 	TIM21 -> SR &= ~(0b1 << 0); // UIF='0'.
+#if (defined CM_RTC || defined ATM)
 	// Call WIND callback.
 	WIND_MeasurementPeriodCallback();
-}
 #endif
+}
 
 /*** TIM functions ***/
 
@@ -44,12 +43,12 @@ void TIM21_Init(void) {
 
 	/* Reset timer before configuration */
 	TIM21 -> CR1 &= ~(0b1 << 0); // Disable TIM21 (CEN='0').
-	TIM21 -> CNT = 0; // Reset counter.
+	TIM21 -> CNT &= 0xFFFF0000; // Reset counter.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
 
 	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
 	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
-	TIM21 -> ARR = 1000; // 999 ?
+	TIM21 -> ARR = 1000;
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').
 
@@ -76,15 +75,27 @@ void TIM21_Start(void) {
 	TIM21 -> CR1 |= (0b1 << 0); // Enable TIM21 (CEN='1').
 }
 
-/* DISABLE TIM21 PERIPHERAL.
+/* STOP TIM21 COUNTER.
  * @param:	None.
  * @return:	None.
  */
 void TIM21_Stop(void) {
 
-	/* Disable TIM21 peripheral */
-	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	/* Stop TIM21 */
 	NVIC_DisableInterrupt(IT_TIM21);
+	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+}
+
+/* DISABLE TIM21 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM21_Disable(void) {
+
+	/* Disable TIM21 peripheral */
+	NVIC_DisableInterrupt(IT_TIM21);
+	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
 }
 
 /* CONFIGURE TIM22 TO COUNT SECONDS SINCE START-UP.
@@ -98,7 +109,7 @@ void TIM22_Init(void) {
 
 	/* Reset timer before configuration */
 	TIM22 -> CR1 &= ~(0b1 << 0); // Disable TIM22 (CEN='0').
-	TIM22 -> CNT = 0; // Reset counter.
+	TIM22 -> CNT &= 0xFFFF0000; // Reset counter.
 	TIM22 -> SR &= 0xFFFFF9B8; // Clear all flags.
 
 	/* Configure TIM22 as slave to count seconds */
@@ -119,7 +130,7 @@ void TIM22_Start(void) {
 	TIM22 -> CR1 |= (0b1 << 0); // Enable TIM22 (CEN='1').
 }
 
-/* DISABLE TIM22 PERIPHERAL.
+/* STOP TIM22 COUNTER.
  * @param:	None.
  * @return:	None.
  */
@@ -129,11 +140,22 @@ void TIM22_Stop(void) {
 	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 }
 
+/* DISABLE TIM22 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM22_Disable(void) {
+
+	/* Disable TIM22 peripheral */
+	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='0'.
+}
+
 /* RETURNS THE NUMBER OF SECONDS ELLAPSED SINCE START-UP.
  * @param:	None.
  * @return:	Number of seconds ellapsed since start-up.
  */
-unsigned int TIM22_GetSeconds(void) {
+volatile unsigned int TIM22_GetSeconds(void) {
 	return (TIM22 -> CNT);
 }
 
@@ -148,8 +170,8 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 
 	/* Reset timer before configuration */
-	TIM2 -> CR1 = 0; // Disable TIM2 (CEN='0').
-	TIM2 -> CNT = 0; // Reset counter.
+	TIM2 -> CR1 &= 0xFFFFFE00; // Disable TIM2 (CEN='0').
+	TIM2 -> CNT &= 0xFFFF0000; // Reset counter.
 	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 
 #if (defined CM_RTC || defined ATM)
@@ -164,13 +186,15 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 	case TIM2_MODE_WIND:
 		/* Configure TIM2 to overflow every (WIND_MEASUREMENT_PERIOD_SECONDS + 1) seconds */
 		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).
-		TIM2 -> ARR = arr_value;
+		TIM2 -> ARR &= 0xFFFF0000; // Reset all bits.
+		TIM2 -> ARR |= arr_value;
 		// PSC = (desired_period * timer_input_clock) / (ARR).
 		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_SYSCLK_KHZ*1000)) / (arr_value);
 		if (psc_value > 0xFFFF) {
 			psc_value = 0xFFFF;
 		}
-		TIM2 -> PSC = psc_value; // Timer is clocked by SYSCLK (see RCC_Init() function).
+		TIM2 -> PSC &= 0xFFFF0000; // Reset all bits.
+		TIM2 -> PSC |= psc_value; // Timer is clocked by SYSCLK (see RCC_Init() function).
 		break;
 #endif
 
@@ -197,7 +221,6 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 	}
 
 	/* Disable interrupt by default */
-	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
 	NVIC_DisableInterrupt(IT_TIM2);
 }
 
@@ -208,8 +231,8 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 void TIM2_Enable(void) {
 
 	/* Enable TIM2 peripheral */
-	NVIC_EnableInterrupt(IT_TIM2);
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
+	NVIC_EnableInterrupt(IT_TIM2);
 }
 
 /* DISABLE TIM2 PERIPHERAL.
@@ -219,8 +242,8 @@ void TIM2_Enable(void) {
 void TIM2_Disable(void) {
 
 	/* Disable TIM2 peripheral */
-	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
 	NVIC_DisableInterrupt(IT_TIM2);
+	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
 }
 
 /* START TIMER2.
@@ -230,7 +253,7 @@ void TIM2_Disable(void) {
 void TIM2_Start(void) {
 
 	/* Reset and start counter */
-	TIM2 -> CNT = 0;
+	TIM2 -> CNT &= 0xFFFF0000;
 	TIM2 -> CR1 |= (0b1 << 0); // CEN='1'.
 }
 

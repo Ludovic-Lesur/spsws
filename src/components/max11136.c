@@ -11,11 +11,13 @@
 #include "mapping.h"
 #include "max11136_reg.h"
 #include "spi.h"
+#include "tim.h"
 
 /*** MAX11136 local macros ***/
 
-#define MAX11136_NUMBER_OF_CHANNELS		8
-#define MAX11136_CONVERSION_LOOPS		3
+#define MAX11136_NUMBER_OF_CHANNELS				8
+#define MAX11136_CONVERSION_LOOPS				3
+#define MAX11136_CONVERSION_TIMEOUT_SECONDS		3
 
 /*** MAX11136 local structures ***/
 
@@ -33,9 +35,9 @@ static MAX11136_Context max11136_ctx;
 /* MAX11136 REGISTER WRITE FUNCTION.
  * @param addr:		Register address (5 bits).
  * @param valie:	Value to write in register.
- * @return:			None.
+ * @return:			1 in case of success, 0 in case of failure.
  */
-void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
+unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	unsigned short spi_command = 0;
 
 	/* Build SPI command */
@@ -50,19 +52,22 @@ void MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	}
 
 	/* Send command */
-	GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
+	GPIO_Write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 #ifdef HW1_0
-	SPI1_WriteShort(spi_command);
+	unsigned char spi_access = SPI1_WriteShort(spi_command);
 #endif
 #ifdef HW2_0
-	SPI2_WriteShort(spi_command);
+	unsigned char spi_access = SPI2_WriteShort(spi_command);
 #endif
-	GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
+	GPIO_Write(&GPIO_MAX11136_CS, 1); // Set CS pin.
+
+	/* Return SPI access result */
+	return spi_access;
 }
 
 /* PERFORM ADC CONVERSION ON ALL CHANNELS.
- * @param:					None.
- * @return max11136_status:	Conversion result status (see context).
+ * @param:	None.
+ * @return:	None.
  */
 void MAX11136_ConvertAllChannels12Bits(void) {
 
@@ -73,25 +78,35 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 
 	/* Configure ADC */
 	// External single ended: REFSEL='0' and PDIFF_COM='1'.
-	MAX11136_WriteRegister(MAX11136_REG_UNIPOLAR, 0x0004);
+	unsigned char spi_access = MAX11136_WriteRegister(MAX11136_REG_UNIPOLAR, 0x0004);
+	if (spi_access == 0) return;
 	// Single-ended: unipolar_register=0 and bipolar_register=0 (allready done at POR).
 	// Enable averaging: AVGON='1' and NAVG='11' (32 conversions).
-	MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0380);
+	spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0380);
+	if (spi_access == 0) return;
 	// Scan mode = standard internal: SCAN='0011'.
 	// Perform conversion from AIN0 to AIN7: CHSEL='0111'.
 	// Reset the FIFO: RESET='01'.
 	// Auto shutdown: PM='01'.
 	// Start conversion: SWCNV='1'.
-	MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
+	spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
+	if (spi_access == 0) return;
 
 	/* Wait for conversions to complete */
+	unsigned int conversion_start_time = TIM22_GetSeconds();
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
-	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
+	// Wait for EOC to be pulled low.
+	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
+		if (TIM22_GetSeconds() > (conversion_start_time + MAX11136_CONVERSION_TIMEOUT_SECONDS)) return;
+	}
 #endif
 #endif
 #ifdef HW2_0
-	while (GPIO_Read(GPIO_MAX11136_EOC) != 0); // Wait for EOC to be pulled low.
+	// Wait for EOC to be pulled low.
+	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
+		if (TIM22_GetSeconds() > (conversion_start_time + MAX11136_CONVERSION_TIMEOUT_SECONDS)) return ;
+	}
 #endif
 
 	/* Read results in FIFO */
@@ -101,14 +116,15 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 	// Wait for all channels to be read or timeout (TBD).
 	for (channel_idx=0 ; channel_idx<MAX11136_NUMBER_OF_CHANNELS ; channel_idx++) {
 		// Get data from SPI.
-		GPIO_Write(GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
+		GPIO_Write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 #ifdef HW1_0
-		SPI1_ReadShort(0x0000, &max11136_dout);
+		spi_access = SPI1_ReadShort(0x0000, &max11136_dout);
 #endif
 #ifdef HW2_0
-		SPI2_ReadShort(0x0000, &max11136_dout);
+		spi_access = SPI2_ReadShort(0x0000, &max11136_dout);
 #endif
-		GPIO_Write(GPIO_MAX11136_CS, 1); // Set CS pin.
+		if (spi_access == 0) return;
+		GPIO_Write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;
 		if (channel < MAX11136_NUMBER_OF_CHANNELS) {
@@ -136,19 +152,19 @@ void MAX11136_Init(void) {
 	/* Configure EOC GPIO */
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
-	GPIO_Configure(GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
+	GPIO_Configure(&GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
 #endif
 #endif
 #ifdef HW2_0
-	GPIO_Configure(GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
+	GPIO_Configure(&GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
 #endif
 }
 
 /* PERFORM ADC CONVERSION ON ALL CHANNELS.
- * @param:					None.
- * @return max11136_status:	Conversion result status (see context).
+ * @param:	None.
+ * @return:	None.
  */
-unsigned char MAX11136_PerformMeasurements(void) {
+void MAX11136_PerformMeasurements(void) {
 
 	/* Reset results */
 	unsigned char idx = 0;
@@ -156,26 +172,11 @@ unsigned char MAX11136_PerformMeasurements(void) {
 	max11136_ctx.max11136_status = 0;
 
 	/* Perform conversion until all channels are successfully retrieved or maximum number of loops is reached */
-#ifdef HW1_0
-	SPI1_Enable();
-#endif
-#ifdef HW2_0
-	SPI2_Enable();
-#endif
 	idx = 0;
 	while ((max11136_ctx.max11136_status != 0xFF) && (idx < MAX11136_CONVERSION_LOOPS)) {
 		MAX11136_ConvertAllChannels12Bits();
 		idx++;
 	}
-#ifdef HW1_0
-	SPI1_Disable();
-#endif
-#ifdef HW2_0
-	SPI2_Disable();
-#endif
-
-	/* Return status */
-	return max11136_ctx.max11136_status;
 }
 
 /* GET CHANNEL RESULT.

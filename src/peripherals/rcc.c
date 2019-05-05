@@ -11,8 +11,10 @@
 #include "lptim.h"
 #include "lptim_reg.h"
 #include "mapping.h"
+#include "nvic.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
+#include "scb_reg.h"
 #include "tim.h"
 #include "tim_reg.h"
 
@@ -45,15 +47,15 @@ void RCC_Init(void) {
 	RCC -> CFGR &= ~(0b111 << 11); // PCLK2 = HCLK = 16MHz (PPRE2='000').
 
 	/* Peripherals clock source */
-	RCC -> CCIPR = 0; // All peripherals clocked via the corresponding APBx line.
+	RCC -> CCIPR &= 0xFFF0C3F0; // All peripherals clocked via the corresponding APBx line.
 
 	/* Unlock back-up registers */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock back-up registers write protection.
 
 	/* Configure TCXO power enable pin as output */
-	GPIO_Configure(GPIO_TCXO16_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
+	GPIO_Configure(&GPIO_TCXO16_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 0);
 }
 
 /* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16MHz INTERNAL RC).
@@ -89,15 +91,12 @@ unsigned char RCC_SwitchToHsi(void) {
 
 		/* Check timeout */
 		if (second_count < RCC_TIMEOUT_SECONDS) {
-
-			/* Disable MSI and HSE */
+			// Disable MSI and HSE.
 			RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
 			RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
-
-			/* Disable 16MHz TCXO power supply */
-			GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
-
-			/* Update flag */
+			// Disable 16MHz TCXO power supply.
+			GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 0);
+			// Update flag.
 			sysclk_on_hsi = 1;
 		}
 	}
@@ -112,7 +111,7 @@ unsigned char RCC_SwitchToHsi(void) {
 unsigned char RCC_SwitchToHse(void) {
 
 	/* Enable 16MHz TCXO */
-	GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 1);
+	GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 1);
 
 	/* Init HSE */
 	RCC -> CR |= (0b1 << 18); // Bypass oscillator (HSEBYP='1').
@@ -142,19 +141,17 @@ unsigned char RCC_SwitchToHse(void) {
 
 		/* Check timeout */
 		if (second_count < RCC_TIMEOUT_SECONDS) {
-
-			/* Disable MSI and HSI */
+			// Disable MSI and HSI */
 			RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
 			RCC -> CR &= ~(0b1 << 0); // Disable HSI (HSI16ON='0').
-
-			/* Update flag */
+			// Update flag.
 			sysclk_on_hse = 1;
 		}
 	}
 
 	/* Switch TCXO off if any failure occured */
 	if (sysclk_on_hse == 0) {
-		GPIO_Write(GPIO_TCXO16_POWER_ENABLE, 0);
+		GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 0);
 	}
 
 	return sysclk_on_hse;
@@ -224,7 +221,7 @@ unsigned int RCC_GetLsiFrequency(void) {
 unsigned char RCC_EnableLse(void) {
 
 	/* Configure drive level */
-	RCC -> CSR |= (0b11 << 11);
+	//RCC -> CSR |= (0b11 << 11);
 
 	/* Enable LSE (32.768kHz crystal) */
 	RCC -> CSR |= (0b1 << 8); // LSEON='1'.

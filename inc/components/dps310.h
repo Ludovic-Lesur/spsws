@@ -10,7 +10,8 @@
 
 /*** DPS310 macros ***/
 
-#define DPS310_EXTERNAL_I2C1_ADDRESS	0x77
+#define DPS310_EXTERNAL_I2C_ADDRESS		0x77
+#define DPS310_PRESSURE_ERROR_VALUE		0xFFFFFFFF
 
 /*** DPS310 functions ***/
 

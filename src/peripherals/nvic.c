@@ -8,8 +8,17 @@
 #include "nvic.h"
 
 #include "nvic_reg.h"
+#include "scb_reg.h"
 
 /*** NVIC functions ***/
+
+/* INIT VECTOR TABLE ADDRESS.
+ * @param:	None.
+ * @return:	None.
+ */
+void NVIC_Init(void) {
+	SCB -> VTOR = 0x08000000;
+}
 
 /* ENABLE AN INTERRUPT LINE.
  * @param it_num: 	Interrupt number (0 to 29, use the InterruptVector enum defined in 'nvic_reg.h').

@@ -22,22 +22,9 @@ void AES_Init(void) {
 	RCC -> AHBENR |= (0b1 << 24); // CRYPTOEN='1'.
 
 	/* Configure peripheral */
-	AES -> CR = 0; // Disable peripheral.
+	AES -> CR &= 0xFFFFE000; // Disable peripheral.
 	AES -> CR |= (0b01 << 5); // CBC algorithme (CHMOD='01').
 	AES -> CR &= ~(0b11 << 1); // No swapping (DATATYPE='00').
-
-	/* Disable AES peripheral by default */
-	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='0'.
-}
-
-/* ENABLE AES PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void AES_Enable(void) {
-
-	/* Enable AES peripheral */
-	RCC -> AHBENR |= (0b1 << 24); // CRYPTOEN='1'.
 }
 
 /* DISABLE AES PERIPHERAL.

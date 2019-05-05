@@ -60,6 +60,6 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 
 /*** NEOM8N utility functions ***/
 
-void NEOM8N_SwitchDmaBuffer(void);
+void NEOM8N_SwitchDmaBuffer(unsigned char lf_flag);
 
 #endif /* NEOM8N_H */

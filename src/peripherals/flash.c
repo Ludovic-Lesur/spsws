@@ -18,4 +18,6 @@
 void FLASH_Init(void) {
 	// Add 1 wait state.
 	FLASH -> ACR |= (0b1 << 0); // LATENCY='1'.
+	// Wait until configuration is done.
+	while (((FLASH -> ACR) & (0b1 << 0)) == 0);
 }

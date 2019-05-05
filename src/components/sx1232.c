@@ -52,10 +52,10 @@ void SX1232_WriteRegister(unsigned char addr, unsigned char value) {
 		unsigned char sx1232_spi_command = 0;
 		sx1232_spi_command |= (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
 		/* Write access sequence */
-		GPIO_Write(GPIO_SX1232_CS, 0); // Falling edge on CS pin.
+		GPIO_Write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
 		SPI1_WriteByte(sx1232_spi_command);
 		SPI1_WriteByte(value);
-		GPIO_Write(GPIO_SX1232_CS, 1); // Set CS pin.
+		GPIO_Write(&GPIO_SX1232_CS, 1); // Set CS pin.
 	}
 }
 
@@ -71,10 +71,10 @@ void SX1232_ReadRegister(unsigned char addr, unsigned char* value) {
 		unsigned char sx1232_spi_command = 0;
 		sx1232_spi_command |= addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
 		/* Write access sequence */
-		GPIO_Write(GPIO_SX1232_CS, 0); // Falling edge on CS pin.
+		GPIO_Write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
 		SPI1_WriteByte(sx1232_spi_command);
 		SPI1_ReadByte(0xFF, value);
-		GPIO_Write(GPIO_SX1232_CS, 1); // Set CS pin.
+		GPIO_Write(&GPIO_SX1232_CS, 1); // Set CS pin.
 	}
 }
 
@@ -93,17 +93,17 @@ void SX1232_Init(void) {
 	/* Init SX1232 DIOx */
 #ifdef HW1_0
 #ifdef USE_SX1232_DIOX
-	GPIO_Configure(GPIO_SX1232_DIOX, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_SX1232_DIOX, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 #endif
 #endif
 #ifdef HW2_0
-	GPIO_Configure(GPIO_SX1232_DIO2, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_SX1232_DIO2, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 #endif
-	GPIO_Configure(GPIO_SX1232_DIO0, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_SX1232_DIO0, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 #ifdef HW2_0
 	/* Init 32MHz TCXO power control */
-	GPIO_Configure(GPIO_TCXO32_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_TCXO32_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 #endif
 }
 
@@ -116,10 +116,10 @@ void SX1232_Tcxo(unsigned char tcxo_enable) {
 
 	/* Update power control */
 	if (tcxo_enable == 0) {
-		GPIO_Write(GPIO_TCXO32_POWER_ENABLE, 0);
+		GPIO_Write(&GPIO_TCXO32_POWER_ENABLE, 0);
 	}
 	else {
-		GPIO_Write(GPIO_TCXO32_POWER_ENABLE, 1);
+		GPIO_Write(&GPIO_TCXO32_POWER_ENABLE, 1);
 		// Wait for TCXO to warm-up.
 		LPTIM1_DelayMilliseconds(100);
 	}
@@ -592,10 +592,10 @@ void SX1232_EnableFastFrequencyHopping(void) {
 void SX1232_StartCw(void) {
 	// Start data signal.
 #ifdef HW1_0
-	GPIO_Write(GPIO_SX1232_DIOX, 1);
+	GPIO_Write(&GPIO_SX1232_DIOX, 1);
 #endif
 #ifdef HW2_0
-	GPIO_Write(GPIO_SX1232_DIO2, 1);
+	GPIO_Write(&GPIO_SX1232_DIO2, 1);
 #endif
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
@@ -611,10 +611,10 @@ void SX1232_StartCw(void) {
 void SX1232_StopCw(void) {
 	// Stop data signal and radio.
 #ifdef HW1_0
-	GPIO_Write(GPIO_SX1232_DIOX, 0);
+	GPIO_Write(&GPIO_SX1232_DIOX, 0);
 #endif
 #ifdef HW2_0
-	GPIO_Write(GPIO_SX1232_DIO2, 0);
+	GPIO_Write(&GPIO_SX1232_DIO2, 0);
 #endif
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 }

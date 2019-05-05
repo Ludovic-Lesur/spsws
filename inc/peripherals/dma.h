@@ -11,7 +11,6 @@
 /*** DMA functions ***/
 
 void DMA1_Init(void);
-void DMA1_Enable(void);
 void DMA1_Disable(void);
 void DMA1_Start(void);
 void DMA1_Stop(void);

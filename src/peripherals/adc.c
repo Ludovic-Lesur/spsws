@@ -32,7 +32,7 @@ static ADC_Context adc_ctx;
 void ADC1_ComputeMcuSupplyVoltage(void) {
 
 	/* Select ADC_IN17 input channel*/
-	ADC1 -> CHSELR = 0;
+	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
 	ADC1 -> CHSELR |= (0b1 << 17);
 
 	/* Set sampling time (see p.89 of STM32L031x4/6 datasheet) */
@@ -62,7 +62,7 @@ void ADC1_ComputeMcuSupplyVoltage(void) {
 void ADC1_ComputeMcuTemperature(void) {
 
 	/* Select ADC_IN18 input channel*/
-	ADC1 -> CHSELR = 0;
+	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
 	ADC1 -> CHSELR |= (0b1 << 18);
 
 	/* Set sampling time (see p.89 of STM32L031x4/6 datasheet) */
@@ -103,7 +103,7 @@ void ADC1_Init(void) {
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 
 	/* Disable ADC before configure it */
-	ADC1 -> CR = 0; // ADEN='0'.
+	ADC1 -> CR &= 0x6FFFFFE8; // ADEN='0'.
 
 	/* Enable ADC voltage regulator */
 	ADC1 -> CR |= (0b1 << 28);

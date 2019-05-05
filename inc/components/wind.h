@@ -8,6 +8,8 @@
 #ifndef WIND_H
 #define WIND_H
 
+#include "gpio.h"
+#include "mapping.h"
 #include "mode.h"
 
 #if (defined CM_RTC || defined ATM)
@@ -15,6 +17,13 @@
 /*** WIND macros ***/
 
 #define WIND_MEASUREMENT_PERIOD_SECONDS		4
+
+/*** WIND global variables ***/
+
+GPIO GPIO_WIND_SPEED;
+#ifdef WIND_VANE_ULTIMETER
+GPIO GPIO_WIND_DIRECTION;
+#endif
 
 /*** WIND functions ***/
 

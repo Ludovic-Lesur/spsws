@@ -51,7 +51,7 @@
 									<listOptionValue builtIn="false" value="SFX_LIB_V2.3.0"/>
 									<listOptionValue builtIn="false" value="SFX_ADDON_VERIFIED_V1.0.1_FDL"/>
 								</option>
-								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.799685104" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" useByScannerDiscovery="false" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW1_0\LinkerScript.ld" valueType="string"/>
+								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.799685104" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" useByScannerDiscovery="false" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW1_0\LinkerScript.ld" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1673363373" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -108,7 +108,7 @@
 							<builder buildPath="${workspace_loc:/SigfoxWeatherStation}/Debug" id="fr.ac6.managedbuild.builder.gnu.cross.2004098205" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.32437505" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler">
 								<option id="fr.ac6.managedbuild.gnu.c.compiler.option.optimization.level.1134677422" name="Optimization Level" superClass="fr.ac6.managedbuild.gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" value="fr.ac6.managedbuild.gnu.c.optimization.level.none" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.debugging.level.1325697267" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.debugging.level.1325697267" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.minimal" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.802498780" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="HW2_0"/>
 								</option>
@@ -136,7 +136,7 @@
 									<listOptionValue builtIn="false" value="SFX_LIB_V2.3.0"/>
 									<listOptionValue builtIn="false" value="SFX_ADDON_VERIFIED_V1.0.1_FDL"/>
 								</option>
-								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.517814521" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW2_0\LinkerScript.ld" valueType="string"/>
+								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.517814521" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW2_0\LinkerScript.ld" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.8025263" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
