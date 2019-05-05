@@ -14,6 +14,9 @@
 
 void RTC_Reset(void);
 void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
+#ifdef CM_RTC
+volatile unsigned char RTC_GetAlarmFlag(void);
+#endif
 void RTC_ClearAlarmFlags(void);
 void RTC_Calibrate(Timestamp* gps_timestamp);
 void RTC_GetTimestamp(Timestamp* rtc_timestamp);

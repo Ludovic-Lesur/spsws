@@ -28,9 +28,9 @@ typedef struct {
 	unsigned char weather_data_uv_index;
 	unsigned int weather_data_pressure_pa;
 #ifdef CM_RTC
-	unsigned char weather_data_average_wind_speed_kmh;
-	unsigned char weather_data_peak_wind_speed_kmh;
-	unsigned char weather_data_average_wind_direction_degrees;
+	unsigned int weather_data_average_wind_speed_mh;
+	unsigned int weather_data_peak_wind_speed_mh;
+	unsigned int weather_data_average_wind_direction_degrees;
 	unsigned char weather_data_rain_mm;
 #endif
 } WEATHER_Data;

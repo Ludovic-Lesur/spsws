@@ -41,12 +41,12 @@ typedef struct {
 	unsigned int wind_speed_mh_average; // Average wind speed (m/h).
 	unsigned int wind_speed_mh_peak; // Peak wind speed (m/h).
 	// Wind direction.
+	unsigned int wind_direction_degrees; // Current value.
 #ifdef WIND_VANE_ULTIMETER
 	unsigned int wind_direction_pwm_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
 	unsigned int wind_direction_pwm_duty_cycle; // TIM2 counter value when edge interrupt detected on wind direction input.
 #endif
 	unsigned int wind_direction_data_count;
-	unsigned int wind_direction_degrees; // Current value.
 	unsigned int wind_direction_degrees_average; // Average wind direction (°).
 } WIND_Context;
 
@@ -62,23 +62,6 @@ static volatile WIND_Context wind_ctx;
  */
 void WIND_Init(void) {
 
-	/* Init context */
-	// Measurement period.
-	wind_ctx.wind_seconds_count = 0;
-	// Wind speed.
-	wind_ctx.wind_speed_edge_count = 0;
-	wind_ctx.wind_speed_data_count = 0;
-	wind_ctx.wind_speed_mh = 0;
-	wind_ctx.wind_speed_mh_average = 0;
-	wind_ctx.wind_speed_mh_peak = 0;
-	// Wind direction.
-#ifdef WIND_VANE_ULTIMETER
-	wind_ctx.wind_direction_pwm_period = 0;
-	wind_ctx.wind_direction_pwm_duty_cycle = 0;
-#endif
-	wind_ctx.wind_direction_data_count = 0;
-	wind_ctx.wind_direction_degrees_average = 0;
-
 	/* GPIO mapping selection */
 	GPIO_WIND_SPEED = GPIO_DIO0;
 #ifdef WIND_VANE_ULTIMETER
@@ -86,10 +69,15 @@ void WIND_Init(void) {
 #endif
 
 	/* Init GPIOs and EXTI */
+#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
+	GPIO_Configure(&GPIO_WIND_SPEED, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
+#endif
+#ifdef WIND_VANE_ULTIMETER
+	// Wind speed.
 	GPIO_Configure(&GPIO_WIND_SPEED, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
 	// Wind direction.
-#ifdef WIND_VANE_ULTIMETER
 	GPIO_Configure(&GPIO_WIND_DIRECTION, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
 	// Init phase shift timer and associated variables.
@@ -162,6 +150,9 @@ void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
  */
 void WIND_ResetData(void) {
 
+	/* Measurement period */
+	wind_ctx.wind_seconds_count = 0;
+
 	/* Wind speed */
 	wind_ctx.wind_speed_edge_count = 0;
 	wind_ctx.wind_speed_data_count = 0;
@@ -170,6 +161,7 @@ void WIND_ResetData(void) {
 	wind_ctx.wind_speed_mh_peak = 0;
 
 	/* Wind direction */
+	wind_ctx.wind_direction_degrees = 0;
 #ifdef WIND_VANE_ULTIMETER
 	wind_ctx.wind_direction_pwm_period = 0;
 	wind_ctx.wind_direction_pwm_duty_cycle = 0;
@@ -242,11 +234,21 @@ void WIND_MeasurementPeriodCallback(void) {
 		/* Wind direction */
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 		// Get analog value from ADC.
+#ifdef HW1_0
 		SPI1_PowerOn();
+#endif
+#ifdef HW2_0
+		SPI2_PowerOn();
+#endif
 		MAX11136_PerformMeasurements();
-		SPI1_PowerOff();
-		unsigned int wind_direction_mv = 0;
-		MAX11136_GetChannelVoltage(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_mv);
+#ifdef HW1_0
+			SPI1_PowerOff();
+#endif
+#ifdef HW2_0
+			SPI2_PowerOff();
+#endif
+		unsigned int wind_direction_12bits = 0;
+		MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);
 		// Convert voltage to direction (TBD).
 		wind_ctx.wind_direction_degrees = 0;
 #endif
@@ -262,7 +264,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		USARTx_SendValue(wind_ctx.wind_speed_mh_peak, USART_FORMAT_DECIMAL, 0);
 		USARTx_SendString("m/h ---- Average direction = ");
 		USARTx_SendValue(wind_ctx.wind_direction_degrees_average, USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("\n");
+		USARTx_SendString("°\n");
 #endif
 
 		/* Reset seconds counter */

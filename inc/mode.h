@@ -13,8 +13,8 @@
 /*** Wheather station mode ***/
 
 //#define ATM 		// AT command mode.
-#define IM_RTC 		// Intermittent mode with RTC as time reference.
-//#define CM_RTC 	// Continuous mode with RTC as time reference.
+//#define IM_RTC 	// Intermittent mode with RTC as time reference.
+#define CM_RTC 		// Continuous mode with RTC as time reference.
 //#define IM_HWT 	// Intermittent mode with hardware timer as time reference.
 
 /*** Sigfox RC configuration ***/

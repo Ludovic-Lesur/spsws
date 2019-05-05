@@ -68,10 +68,7 @@ typedef enum {
 	SPSWS_STATE_HOUR_CHECK,
 	SPSWS_STATE_INIT,
 	SPSWS_STATE_POR,
-	SPSWS_STATE_STATIC_MEASURE,
-#ifdef CM_RTC
-	SPSWS_STATE_CONTINUOUS_MEASURE,
-#endif
+	SPSWS_STATE_MEASURE,
 	SPSWS_STATE_MONITORING,
 	SPSWS_STATE_WEATHER_DATA,
 	SPSWS_STATE_GEOLOC,
@@ -194,7 +191,7 @@ void SPSWS_UpdatePwut(void) {
 
 /*** SPSWS main function ***/
 
-#ifdef IM_RTC
+#if (defined IM_RTC || defined CM_RTC)
 /* MAIN FUNCTION FOR IM_RTC MODE.
  * @param: 	None.
  * @return: 0.
@@ -208,19 +205,20 @@ int main (void) {
 
 	/* Init GPIOs (required for clock tree configuration) */
 	GPIO_Init();
-#ifdef DEBUG
-	GPIO_Write(&GPIO_LED, 1);
-#endif
 
 	/* Init context */
+	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 	spsws_ctx.spsws_por_flag = 0;
 	spsws_ctx.spsws_hour_changed_flag = 0;
 	spsws_ctx.spsws_day_changed_flag = 0;
 	spsws_ctx.spsws_is_afternoon_flag = 0;
-	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
+#ifdef IM_RTC
 	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // IM = 0b0.
+#else
+	spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // CM = 0b1.
+#endif
 
 	/* Local variables */
 	unsigned char rtc_use_lse = 0;
@@ -239,6 +237,10 @@ int main (void) {
 
 		/* RESET */
 		case SPSWS_STATE_RESET:
+#ifdef DEBUG
+			// Turn LED on.
+			GPIO_Write(&GPIO_LED, 1);
+#endif
 			// Check reset reason.
 			if (((RCC -> CSR) & (0b1 << 29)) != 0) {
 				// IWDG reset: directly enter standby mode.
@@ -330,6 +332,10 @@ int main (void) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
+#ifdef CM_RTC
+			// External interrupts.
+			EXTI_Init();
+#endif
 			// Analog.
 			ADC1_Init();
 			// Communication interfaces.
@@ -354,9 +360,12 @@ int main (void) {
 			SHT3X_Init();
 			DPS310_Init();
 			SI1133_Init();
+#ifdef CM_RTC
+			WIND_Init();
+#endif
 			// Compute next state.
 			if (spsws_ctx.spsws_por_flag == 0) {
-				spsws_ctx.spsws_state = SPSWS_STATE_STATIC_MEASURE;
+				spsws_ctx.spsws_state = SPSWS_STATE_MEASURE;
 			}
 			else {
 				spsws_ctx.spsws_state = SPSWS_STATE_POR;
@@ -364,7 +373,7 @@ int main (void) {
 			break;
 
 		/* STATIC MEASURE */
-		case SPSWS_STATE_STATIC_MEASURE:
+		case SPSWS_STATE_MEASURE:
 			// Retrieve internal ADC data.
 			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
@@ -408,6 +417,13 @@ int main (void) {
 			SI1133_GetUvIndex(&spsws_ctx.spsws_weather_data.weather_data_uv_index);
 			// Turn sensors off.
 			I2C1_PowerOff();
+#ifdef CM_RTC
+			// Retrieve wind measurements.
+			WIND_GetSpeed(&spsws_ctx.spsws_weather_data.weather_data_average_wind_speed_mh, &spsws_ctx.spsws_weather_data.weather_data_peak_wind_speed_mh);
+			WIND_GetDirection(&spsws_ctx.spsws_weather_data.weather_data_average_wind_direction_degrees);
+			// Retrieve rain measurements.
+			//RAIN_GetPluviometry(&spsws_ctx.spsws_weather_data.weather_data_rain_mm);
+#endif
 			// Read status byte.
 			spsws_ctx.spsws_monitoring_data.monitoring_data_status_byte = spsws_ctx.spsws_status_byte;
 			// Compute next state.
@@ -527,39 +543,67 @@ int main (void) {
 
 		/* OFF */
 		case SPSWS_STATE_OFF:
+			// Clear POR flag.
+			spsws_ctx.spsws_por_flag = 0;
 			// Switch to internal clock.
 			RCC_SwitchToHsi();
-			// Turn all peripherals off.
+			// Turn peripherals off.
+			ADC1_Disable();
 #ifdef HW2_0
 			SX1232_Tcxo(0);
 #endif
+#ifdef IM_RTC
 			TIM21_Disable();
 			TIM22_Disable();
 			LPTIM1_Disable();
-			DMA1_Disable();
-			AES_Disable();
-			LPUART1_Disable();
-			I2C1_Disable();
-			SPI1_Disable();
 #ifdef HW2_0
 			SPI2_Disable();
 #endif
+#endif
+#ifdef HW2_0
+			SPI1_Disable();
+#endif
+			DMA1_Disable();
+			LPUART1_Disable();
+			I2C1_Disable();
+			AES_Disable();
 			// Store status byte in NVM.
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
 #ifdef DEBUG
 			GPIO_Write(&GPIO_LED, 0);
 #endif
+#ifdef CM_RTC
+			// Re-start continuous measurements.
+			WIND_ResetData();
+			WIND_StartContinuousMeasure();
+#endif
 			// Clear RTC flags.
 			RTC_ClearAlarmFlags();
+#ifdef CM_RTC
+			NVIC_EnableInterrupt(IT_RTC);
+#endif
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 
 		/* SLEEP */
 		case SPSWS_STATE_SLEEP:
+#ifdef IM_RTC
 			// Enter standby mode.
 			PWR_EnterStandbyMode();
+#endif
+#ifdef CM_RTC
+			// Enter sleep mode.
+			PWR_EnterSleepMode();
+			// Check RTC flag.
+			if (RTC_GetAlarmFlag() != 0) {
+				// Stop continuous measurements.
+				WIND_StopContinuousMeasure();
+				// Wake-up.
+				spsws_ctx.spsws_state = SPSWS_STATE_RESET;
+			}
+#endif
 			break;
 
 		/* UNKNOWN STATE */
@@ -579,12 +623,6 @@ int main (void) {
 }
 #endif
 
-#ifdef CM_RTC
-int main (void) {
-	return 0;
-}
-#endif
-
 #ifdef ATM
 /* MAIN FUNCTION FOR AT MODE.
  * @param: 	None.
@@ -595,6 +633,7 @@ int main (void) {
 	/* Init memory */
 	NVIC_Init();
 	FLASH_Init();
+	NVM_Enable();
 
 	/* Init GPIO (required for clock tree configuration) */
 	GPIO_Init();
@@ -610,18 +649,18 @@ int main (void) {
 	}
 
 	/* Init peripherals */
-	// External interrupts.
-	EXTI_Init();
 	// Timers.
 	TIM21_Init();
-	TIM21_Start();
 	TIM22_Init();
+	TIM21_Start();
 	TIM22_Start();
 	LPTIM1_Init(0);
 	// DMA.
 	DMA1_Init();
 	// Analog.
 	ADC1_Init();
+	// External interrupts.
+	EXTI_Init();
 	// Communication interfaces.
 	LPUART1_Init();
 #ifdef HW1_0
@@ -660,8 +699,7 @@ int main (void) {
 
 	/* Main loop */
 	while (1) {
-
-		/* Perform tasks */
+		// Perform AT commands parsing.
 		AT_Task();
 	}
 

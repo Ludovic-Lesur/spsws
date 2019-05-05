@@ -13,17 +13,14 @@
 
 /*** PWR functions ***/
 
-/* FUNCTION TO ENTER LOW POWER SLEEP MODE.
+/* FUNCTION TO ENTER SLEEP MODE.
  * @param:	None.
  * @return:	None.
  */
-void PWR_EnterLowPowerSleepMode(void) {
+void PWR_EnterSleepMode(void) {
 
 	/* Enable power interface clock */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
-
-	/* Switch internal voltage reference off in low power mode */
-	PWR -> CR |= (0b1 << 9); // ULP='1'.
 
 	/* Enter low power sleep mode */
 	SCB -> SCR &= ~(0b1 << 1); // Do not return in low power sleep mode after wake-up (SLEEPONEXIT='0').

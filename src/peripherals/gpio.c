@@ -224,6 +224,7 @@ void GPIO_Init(void) {
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
 
 	/* Configure standalone GPIOs */
+	// LED.
 #ifndef IM_HWT
 #ifdef DEBUG
 	GPIO_Configure(&GPIO_LED, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
@@ -231,10 +232,31 @@ void GPIO_Init(void) {
 	GPIO_Configure(&GPIO_LED, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 #endif
 #endif
+	// Programming pins.
 #ifdef HW2_0
 #ifndef DEBUG
 	GPIO_Configure(&GPIO_SWDIO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Configure(&GPIO_SWCLK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
+	// Digital I/O.
+#ifdef HW1_0
+#ifndef IM_HWT
+	GPIO_Configure(&GPIO_DIO0, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
+#ifndef USE_MAX11136_EOC
+	GPIO_Configure(&GPIO_DIO1, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
+	GPIO_Configure(&GPIO_DIO2, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#ifndef USE_SX1232_DIOX
+	GPIO_Configure(&GPIO_DIO3, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
+#endif
+#ifdef HW2_0
+	GPIO_Configure(&GPIO_DIO0, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_DIO1, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_DIO2, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_DIO3, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_DIO4, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 #endif
 #endif
 

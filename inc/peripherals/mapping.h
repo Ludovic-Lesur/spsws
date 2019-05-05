@@ -21,8 +21,8 @@
 #endif
 
 // Wind vane type.
-#define WIND_VANE_ULTIMETER					// Phase shift technique.
-//#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
+//#define WIND_VANE_ULTIMETER				// Phase shift technique.
+#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
 
 // Analog inputs (MAX11136 channels mapping).
 #ifdef HW1_0

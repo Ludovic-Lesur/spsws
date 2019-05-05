@@ -9,18 +9,42 @@
 
 #include "at.h"
 #include "exti_reg.h"
+#include "mode.h"
 #include "nvic.h"
-#include "pwr_reg.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
 #include "tim.h"
-#include "usart_reg.h"
 
 /*** RTC local macros ***/
 
 #define RTC_INIT_TIMEOUT_SECONDS	5
 
+/*** RTC local global variables ***/
+
+#ifdef CM_RTC
+volatile unsigned char rtc_alra_flag;
+#endif
+
 /*** RTC local functions ***/
+
+#ifdef CM_RTC
+/* RTC INTERRUPT HANDLER.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_IRQHandler(void) {
+
+	/* Alarm A interrupt */
+	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
+		// Update flag
+		rtc_alra_flag = 1;
+		// Disable interrupt.
+		NVIC_DisableInterrupt(IT_RTC);
+		// Clear flag.
+		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
+	}
+}
+#endif
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
  * @param:						None.
@@ -126,6 +150,16 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	EXTI -> PR |= (0b1 << 17); // Clear flag.
 }
 
+#ifdef CM_RTC
+/* RETURN THE CURRENT ALARM INTERRUPT STATUS.
+ * @param:	None.
+ * @return:	1 if the RTC interrupt occured, 0 otherwise.
+ */
+volatile unsigned char RTC_GetAlarmFlag(void) {
+	return rtc_alra_flag;
+}
+#endif
+
 /* CLEAR ALARM INTERRUPT FLAGS.
  * @param:	None.
  * @return:	None.
@@ -134,6 +168,9 @@ void RTC_ClearAlarmFlags(void) {
 	// Clear ALARM and EXTI flags.
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 	EXTI -> PR |= (0b1 << 17);
+#ifdef CM_RTC
+	rtc_alra_flag = 0;
+#endif
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.

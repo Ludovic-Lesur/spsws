@@ -12,6 +12,10 @@
 #include "rcc_reg.h"
 #include "tim.h"
 
+/*** ADC local macros ***/
+
+#define ADC_TIMEOUT_SECONDS		3
+
 /*** ADC local structures ***/
 
 typedef struct {
@@ -37,7 +41,7 @@ void ADC1_ComputeMcuSupplyVoltage(void) {
 
 	/* Set sampling time (see p.89 of STM32L031x4/6 datasheet) */
 	ADC1 -> SMPR &= ~(0b111 << 0); // Reset bits 0-2.
-	ADC1 -> SMPR |= (0b110 << 0); // Sampling time for internal voltage reference is 10�s typical, 79.5*(1/ADCCLK) = 9.94�s for SYSCLK = 16MHz;
+	ADC1 -> SMPR |= (0b110 << 0); // Sampling time for internal voltage reference is 10us typical, 79.5*(1/ADCCLK) = 9.94us for ADCCLK = SYSCLK/2 = 8MHz;
 
 	/* Wake-up internal voltage reference */
 	ADC1 -> CCR |= (0b1 << 22); // VREFEN='1'.
@@ -45,7 +49,11 @@ void ADC1_ComputeMcuSupplyVoltage(void) {
 
 	/* Read raw supply voltage */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
-	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((ADC1 -> ISR) & (0b1 << 2)) == 0) {
+		// Wait end of conversion ('EOC='1') or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) return;
+	}
 	unsigned int raw_supply_voltage_12bits = (ADC1 -> DR);
 
 	/* Compute temperature according to MCU factory calibration (see p.301 of RM0377 datasheet) */
@@ -66,7 +74,7 @@ void ADC1_ComputeMcuTemperature(void) {
 	ADC1 -> CHSELR |= (0b1 << 18);
 
 	/* Set sampling time (see p.89 of STM32L031x4/6 datasheet) */
-	ADC1 -> SMPR |= (0b111 << 0); // Sampling time for temperature sensor must be greater than 10µs, 160.5*(1/ADCCLK) = 20µs for SYSCLK = 16MHz;
+	ADC1 -> SMPR |= (0b111 << 0); // Sampling time for temperature sensor must be greater than 10us, 160.5*(1/ADCCLK) = 20us for ADCCLK = SYSCLK/2 = 8MHz;
 
 	/* Wake-up temperature sensor */
 	ADC1 -> CCR |= (0b1 << 23); // TSEN='1'.
@@ -74,7 +82,11 @@ void ADC1_ComputeMcuTemperature(void) {
 
 	/* Read raw temperature */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
-	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((ADC1 -> ISR) & (0b1 << 2)) == 0) {
+		// Wait end of conversion ('EOC='1') or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) return;
+	}
 	int raw_temp_sensor_12bits = (ADC1 -> DR);
 
 	/* Compute temperature according to MCU factory calibration (see p.301 and p.847 of RM0377 datasheet) */
@@ -102,8 +114,10 @@ void ADC1_Init(void) {
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 
-	/* Disable ADC before configure it */
-	ADC1 -> CR &= 0x6FFFFFE8; // ADEN='0'.
+	/* Ensure ADC is disabled */
+	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
+		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
+	}
 
 	/* Enable ADC voltage regulator */
 	ADC1 -> CR |= (0b1 << 28);
@@ -113,14 +127,32 @@ void ADC1_Init(void) {
 	ADC1 -> CFGR2 &= ~(0b11 << 30); // Reset bits 30-31.
 	ADC1 -> CFGR2 |= (0b01 << 30); // Use (PCLK2/2) as ADCCLK = SYSCLK/2 (see RCC_Init() function).
 	ADC1 -> CFGR1 &= (0b1 << 13); // Single conversion mode.
-	ADC1 -> CFGR1 &= ~(0b11 << 0); // Data rsolution = 12 bits (RES='00').
+	ADC1 -> CFGR1 &= ~(0b11 << 0); // Data resolution = 12 bits (RES='00').
+	ADC1 -> CCR &= 0xFC03FFFF; // No prescaler.
 
 	/* ADC calibration */
 	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
-	while (((ADC1 -> CR) & (0b1 << 31)) != 0); // Wait until calibration is done.
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while ((((ADC1 -> CR) & (0b1 << 31)) != 0) && (((ADC1 -> ISR) & (0b1 << 11)) == 0)) {
+		// Wait until calibration is done or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) break;
+	}
 
-	/* Disable peripheral by default */
-	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='0'.
+	/* Clear all flags */
+	ADC1 -> ISR |= 0x0000089F; // Clear all flags.
+}
+
+/* DISABLE INTERNAL ADC PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void ADC1_Disable(void) {
+
+	/* Disable peripheral */
+	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
+		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
+	}
+	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
 }
 
 /* PERFORM INTERNAL ADC MEASUREMENTS.
@@ -130,17 +162,24 @@ void ADC1_Init(void) {
 void ADC1_PerformMeasurements(void) {
 
 	/* Enable ADC peripheral */
-	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 	ADC1 -> CR |= (0b1 << 0); // ADEN='1'.
-	while (((ADC1 -> ISR) & (0b1 << 0)) == 0); // Wait for ADC to be ready (ADRDY='1').
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((ADC1 -> ISR) & (0b1 << 0)) == 0) {
+		// Wait for ADC to be ready (ADRDY='1') or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) return;
+	}
 
 	/* Perform measurements */
 	ADC1_ComputeMcuSupplyVoltage();
 	ADC1_ComputeMcuTemperature();
 
-	/* Disable ADC1 peripheral */
-	ADC1 -> CR &= ~(0b1 << 0); // ADEN='0'.
-	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
+	/* Clear all flags */
+	ADC1 -> ISR |= 0x0000089F; // Clear all flags.
+
+	/* Disable ADC peripheral */
+	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
+		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
+	}
 }
 
 /* GET MCU SUPPLY VOLTAGE.
