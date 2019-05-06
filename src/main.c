@@ -223,7 +223,8 @@ int main (void) {
 
 	/* Local variables */
 	unsigned char rtc_use_lse = 0;
-	unsigned int max11136_result_12bits = 0;
+	unsigned int max11136_bandgap_12bits = 0;
+	unsigned int max11136_channel_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	unsigned int geoloc_fix_start_time_seconds = 0;
 	unsigned char geoloc_timeout = 0;
@@ -381,6 +382,7 @@ int main (void) {
 			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
 			ADC1_GetMcuSupplyVoltage(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv);
 			// Retrieve external ADC data.
+			I2C1_PowerOn(); // Must be called before ADC since LDR is on the MSM module powered by I2C.
 #ifdef HW1_0
 			SPI1_PowerOn();
 #endif
@@ -388,6 +390,7 @@ int main (void) {
 			SPI2_PowerOn();
 #endif
 			MAX11136_PerformMeasurements();
+
 #ifdef HW1_0
 			SPI1_PowerOff();
 #endif
@@ -395,14 +398,14 @@ int main (void) {
 			SPI2_PowerOff();
 #endif
 			// Convert channel results to mV.
-			MAX11136_GetChannel(MAX11136_CHANNEL_SOLAR_CELL, &max11136_result_12bits);
-			spsws_ctx.spsws_monitoring_data.monitoring_data_solar_cell_voltage_mv = (spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv * max11136_result_12bits * 269) / (MAX11136_FULL_SCALE * 34);
-			MAX11136_GetChannel(MAX11136_CHANNEL_SUPERCAP, &max11136_result_12bits);
-			spsws_ctx.spsws_monitoring_data.monitoring_data_supercap_voltage_mv = (spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv * max11136_result_12bits * 269) / (MAX11136_FULL_SCALE * 34);
-			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &max11136_result_12bits);
-			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_result_12bits / MAX11136_FULL_SCALE) * 100;
+			MAX11136_GetChannel(MAX11136_CHANNEL_BANDGAP, &max11136_bandgap_12bits);
+			MAX11136_GetChannel(MAX11136_CHANNEL_SOLAR_CELL, &max11136_channel_12bits);
+			spsws_ctx.spsws_monitoring_data.monitoring_data_solar_cell_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
+			MAX11136_GetChannel(MAX11136_CHANNEL_SUPERCAP, &max11136_channel_12bits);
+			spsws_ctx.spsws_monitoring_data.monitoring_data_supercap_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
+			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &max11136_channel_12bits);
+			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_channel_12bits / MAX11136_FULL_SCALE) * 100;
 			// Retrieve weather sensors data.
-			I2C1_PowerOn();
 			// Internal temperature/humidity sensor.
 			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
 			SHT3X_GetTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees);

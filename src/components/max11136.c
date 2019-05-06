@@ -77,12 +77,9 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 #endif
 
 	/* Configure ADC */
-	// External single ended: REFSEL='0' and PDIFF_COM='1'.
-	unsigned char spi_access = MAX11136_WriteRegister(MAX11136_REG_UNIPOLAR, 0x0004);
-	if (spi_access == 0) return;
-	// Single-ended: unipolar_register=0 and bipolar_register=0 (allready done at POR).
-	// Enable averaging: AVGON='1' and NAVG='11' (32 conversions).
-	spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0380);
+	// Single-ended unipolar (allready done at POR).
+	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
+	unsigned char spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0200);
 	if (spi_access == 0) return;
 	// Scan mode = standard internal: SCAN='0011'.
 	// Perform conversion from AIN0 to AIN7: CHSEL='0111'.

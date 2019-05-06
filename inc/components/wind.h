@@ -17,6 +17,7 @@
 /*** WIND macros ***/
 
 #define WIND_MEASUREMENT_PERIOD_SECONDS		4
+#define WIND_DIRECTION_ERROR_VALUE			0xFFFFFFFF
 
 /*** WIND global variables ***/
 

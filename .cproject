@@ -51,7 +51,7 @@
 									<listOptionValue builtIn="false" value="SFX_LIB_V2.3.0"/>
 									<listOptionValue builtIn="false" value="SFX_ADDON_VERIFIED_V1.0.1_FDL"/>
 								</option>
-								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.799685104" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" useByScannerDiscovery="false" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW1_0\LinkerScript.ld" valueType="string"/>
+								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.799685104" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" useByScannerDiscovery="false" value="${ProjDirPath}/linker/HW1_0/LinkerScript.ld" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1673363373" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -136,7 +136,7 @@
 									<listOptionValue builtIn="false" value="SFX_LIB_V2.3.0"/>
 									<listOptionValue builtIn="false" value="SFX_ADDON_VERIFIED_V1.0.1_FDL"/>
 								</option>
-								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.517814521" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" value="C:\Users\Ludovic\Documents\Eclipse\SPSWS\linker\HW2_0\LinkerScript.ld" valueType="string"/>
+								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.517814521" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" value="${ProjDirPath}/linker/HW2_0/LinkerScript.ld" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.8025263" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
