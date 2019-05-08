@@ -30,7 +30,13 @@
  */
 void RCC_DelaySecondMsi(void) {
 	unsigned int j = 0;
-	for (j=0 ; j<133000 ; j++);
+	for (j=0 ; j<133000 ; j++) {
+		// Poll a bit always read as '0'.
+		// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
+		if (((RCC -> CR) & (0b1 << 24)) != 0) {
+			break;
+		}
+	}
 }
 
 /*** RCC functions ***/

@@ -39,7 +39,7 @@ void EXTI2_3_IRQHandler(void) {
  */
 void EXTI4_15_IRQHandler(void) {
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 	/* Speed edge interrupt */
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.num))) != 0) {
 		// Clear flag.

@@ -17,6 +17,7 @@
 
 /*** TIM local functions ***/
 
+#if (defined CM || defined ATM)
 /* TIM21 INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -24,11 +25,11 @@
 void TIM21_IRQHandler(void) {
 	// Clear flag.
 	TIM21 -> SR &= ~(0b1 << 0); // UIF='0'.
-#if (defined CM_RTC || defined ATM)
+
 	// Call WIND callback.
 	WIND_MeasurementPeriodCallback();
-#endif
 }
+#endif
 
 /*** TIM functions ***/
 
@@ -52,7 +53,7 @@ void TIM21_Init(void) {
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 	/* Enable interrupt for wind measurements */
 	TIM21 -> DIER |= (0b1 << 0); // UIE='1'.
 #endif
@@ -174,7 +175,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 	TIM2 -> CNT &= 0xFFFF0000; // Reset counter.
 	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 	/* ocal variables */
 	unsigned int arr_value = 0;
 	unsigned int psc_value = 0;
@@ -182,7 +183,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 
 	switch (mode) {
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 	case TIM2_MODE_WIND:
 		/* Configure TIM2 to overflow every (WIND_MEASUREMENT_PERIOD_SECONDS + 1) seconds */
 		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).

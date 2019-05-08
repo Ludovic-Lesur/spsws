@@ -19,7 +19,6 @@
 #include "usart_reg.h"
 
 #ifdef ATM
-
 /*** USART local macros ***/
 
 // If defined, use TXE interrupt for sending data.
@@ -175,6 +174,7 @@ unsigned int USARTx_Pow10(unsigned char power) {
 	}
 	return result;
 }
+#endif
 
 /*** USART functions ***/
 
@@ -184,7 +184,7 @@ unsigned int USARTx_Pow10(unsigned char power) {
  * @return:	None.
  */
 void USART2_Init(void) {
-
+#ifdef ATM
 #ifdef USE_TXE_INTERRUPT
 	/* Init context */
 	unsigned int idx = 0;
@@ -197,8 +197,8 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -213,12 +213,17 @@ void USART2_Init(void) {
 	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
 
 	/* Switch MCP2221A on */
-	GPIO_Write(GPIO_DEBUG_POWER_ENABLE, 1);
+	GPIO_Write(&GPIO_DEBUG_POWER_ENABLE, 1);
 	LPTIM1_DelayMilliseconds(100);
 
 	/* Enable peripheral */
 	USART2 -> CR1 |= (0b1 << 0);
 	NVIC_EnableInterrupt(IT_USART2);
+#else
+	/* Configure TX and RX GPIOs */
+	GPIO_Configure(&GPIO_USART2_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART2_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
 }
 #endif
 
@@ -228,7 +233,7 @@ void USART2_Init(void) {
  * @return:	None.
  */
 void USART1_Init(void) {
-
+#ifdef ATM
 #ifdef USE_TXE_INTERRUPT
 	/* Init context */
 	unsigned int idx = 0;
@@ -259,9 +264,15 @@ void USART1_Init(void) {
 	/* Disable peripheral by default */
 	USART1 -> CR1 |= (0b1 << 0);
 	NVIC_EnableInterrupt(IT_USART1);
+#else
+	/* Configure TX and RX GPIOs */
+	GPIO_Configure(&GPIO_USART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+#endif
 }
 #endif
 
+#ifdef ATM
 /* SEND A BYTE THROUGH USART.
  * @param byte_to_send:	The byte to send.
  * @param format:		Display format (see ByteDisplayFormat enumeration in usart.h).

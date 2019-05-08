@@ -10,7 +10,10 @@
 #include "exti.h"
 #include "gpio.h"
 #include "mapping.h"
+#include "mode.h"
 #include "nvic.h"
+
+#if (defined CM || defined ATM)
 
 /*** RAIN local macros ***/
 
@@ -83,3 +86,5 @@ void RAIN_EdgeCallback(void) {
 	// Increment edge count.
 	rain_edge_count++;
 }
+
+#endif

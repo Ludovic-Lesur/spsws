@@ -7,6 +7,7 @@
 
 #include "pwr.h"
 
+#include "mapping.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
 #include "scb_reg.h"
@@ -37,7 +38,7 @@ void PWR_EnterStandbyMode(void) {
 	/* Enable power interface clock */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 
-#ifdef IM_HWT
+#ifdef USE_HWT
 	/* Configure WKUP pin */
 	PWR -> CSR |= (0b1 << 8); // Use WKUP1 pin (PA0) rising edge to exit standby mode (EWUP1='1').
 #endif

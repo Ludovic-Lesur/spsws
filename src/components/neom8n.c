@@ -13,9 +13,6 @@
 #include "lpuart.h"
 #include "tim.h"
 
-#include "gpio.h"
-#include "mapping.h"
-
 /*** NEOM8N local macros ***/
 
 #define NEOM8N_MSG_OVERHEAD_LENGTH			8 // 6 bytes header + 2 bytes checksum.

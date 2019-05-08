@@ -8,7 +8,7 @@
 #ifndef NVM_H
 #define NVM_H
 
-#include "mode.h"
+#include "mapping.h"
 
 /*** NVM macros ***/
 
@@ -37,7 +37,7 @@
 #define NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET			41
 #define NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET			42
 
-#ifdef IM_HWT
+#ifdef USE_HWT
 // HWT.
 #define NVM_HWT_PGT_YEAR_ADDRESS_OFFSET				43
 #define NVM_HWT_PGT_MONTH_ADDRESS_OFFSET			45

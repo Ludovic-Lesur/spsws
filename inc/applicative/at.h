@@ -9,7 +9,6 @@
 #define AT_H
 
 #include "mode.h"
-#include "neom8n.h"
 
 #ifdef ATM
 
@@ -31,9 +30,6 @@ void AT_Task(void);
 /*** AT utility functions ***/
 
 void AT_FillRxBuffer(unsigned char rx_byte);
-
-// DEBUG
-void AT_PrintTimestamp(Timestamp* timestamp_to_print);
 
 #endif
 

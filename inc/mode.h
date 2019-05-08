@@ -13,26 +13,18 @@
 /*** Wheather station mode ***/
 
 //#define ATM 		// AT command mode.
-//#define IM_RTC 	// Intermittent mode with RTC as time reference.
-#define CM_RTC 		// Continuous mode with RTC as time reference.
-//#define IM_HWT 	// Intermittent mode with hardware timer as time reference.
-
-/*** Sigfox RC configuration ***/
-
-#define SPSWS_SIGFOX_RC		RC1
+#define IM 			// Intermittent mode with RTC as time reference.
+//#define CM 		// Continuous mode with RTC as time reference.
 
 /*** Debug mode ***/
 
-#define DEBUG		// Use LED and programming pins for debug purpose.
+#define DEBUG		// Use LED and programming pins for debug purpose if defined.
 
 /*** Error management ***/
 
-#if ((defined ATM && defined IM_RTC) || \
-	 (defined ATM && defined CM_RTC) || \
-	 (defined ATM && defined IM_HWT) || \
-	 (defined IM_RTC && defined CM_RTC) || \
-	 (defined IM_RTC && defined IM_HWT) || \
-	 (defined CM_RTC && defined IM_HWT))
+#if ((defined ATM && defined IM) || \
+	 (defined ATM && defined CM) || \
+	 (defined IM && defined CM))
 #error "Only 1 weather station mode must be selected."
 #endif
 

@@ -11,6 +11,7 @@
 #include "aes.h"
 #include "lptim.h"
 #include "max11136.h"
+#include "mode.h"
 #include "nvm.h"
 #include "sigfox_types.h"
 #include "tim.h"

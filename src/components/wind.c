@@ -17,7 +17,7 @@
 #include "tim_reg.h"
 #include "usart.h"
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 
 /*** WIND local macros ***/
 
@@ -74,7 +74,12 @@ void WIND_Init(void) {
 	/* GPIO mapping selection */
 	GPIO_WIND_SPEED = GPIO_DIO0;
 #ifdef WIND_VANE_ULTIMETER
+#ifdef HW1_0
+	GPIO_WIND_DIRECTION = GPIO_DIO2;
+#endif
+#ifdef HW2_0
 	GPIO_WIND_DIRECTION = GPIO_DIO1;
+#endif
 #endif
 
 	/* Init GPIOs and EXTI */
@@ -89,8 +94,6 @@ void WIND_Init(void) {
 	// Wind direction.
 	GPIO_Configure(&GPIO_WIND_DIRECTION, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
-	// Init phase shift timer and associated variables.
-	TIM2_Init(TIM2_MODE_WIND, 0);
 #endif
 }
 
@@ -299,8 +302,14 @@ void WIND_MeasurementPeriodCallback(void) {
 		// Convert voltage to direction (TBD).
 		wind_ctx.wind_direction_degrees = WIND_VoltageToAngle(wind_vcc_mv, wind_direction_mv);
 #endif
-		// Update average value.
+#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
+		// Update average value if direction is valid.
 		if (wind_ctx.wind_direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
+#endif
+#ifdef WIND_VANE_ULTIMETER
+		// Update average value only there is wind (direction is valid only when a speed is computed).
+		if (wind_ctx.wind_speed_edge_count != 0) {
+#endif
 			wind_ctx.wind_direction_degrees_average = ((wind_ctx.wind_direction_degrees_average * wind_ctx.wind_direction_data_count) + wind_ctx.wind_direction_degrees) / (wind_ctx.wind_direction_data_count + 1);
 			wind_ctx.wind_direction_data_count++;
 		}

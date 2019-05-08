@@ -16,7 +16,6 @@
  * @return:	None.
  */
 void IWDG_Init(void) {
-#if 0
 	/* Configure peripheral */
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.
@@ -26,7 +25,6 @@ void IWDG_Init(void) {
 	IWDG -> RLR = 1484; // 1484 * 6.74ms = 10s.
 	// Wait for register to be updated.
 	while (IWDG -> SR != 0); // Wait for WVU='0', RVU='0' and PVU='0'.
-#endif
 }
 
 /* RELOAD WATCHDOG COUNTER.
@@ -34,8 +32,6 @@ void IWDG_Init(void) {
  * @return:	None.
  */
 void IWDG_Reload(void) {
-#if 0
 	// Reload counter.
 	IWDG -> KR = 0x0000AAAA;
-#endif
 }

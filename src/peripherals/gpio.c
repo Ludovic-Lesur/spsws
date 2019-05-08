@@ -9,6 +9,7 @@
 
 #include "gpio_reg.h"
 #include "mapping.h"
+#include "mode.h"
 #include "rcc_reg.h"
 
 /*** GPIO local macros ***/
@@ -225,7 +226,7 @@ void GPIO_Init(void) {
 
 	/* Configure standalone GPIOs */
 	// LED.
-#ifndef IM_HWT
+#ifndef USE_HWT
 #ifdef DEBUG
 	GPIO_Configure(&GPIO_LED, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 #else
@@ -238,9 +239,10 @@ void GPIO_Init(void) {
 	GPIO_Configure(&GPIO_SWDIO, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Configure(&GPIO_SWCLK, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 #endif
+#endif
 	// Digital I/O.
 #ifdef HW1_0
-#ifndef IM_HWT
+#ifndef USE_HWT
 	GPIO_Configure(&GPIO_DIO0, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 #endif
 #ifndef USE_MAX11136_EOC
@@ -257,7 +259,6 @@ void GPIO_Init(void) {
 	GPIO_Configure(&GPIO_DIO2, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Configure(&GPIO_DIO3, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Configure(&GPIO_DIO4, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-#endif
 #endif
 
 	/* Others GPIOs are configured in their corresponding peripheral or applicative driver */

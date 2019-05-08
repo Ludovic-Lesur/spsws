@@ -8,13 +8,14 @@
 #ifndef RTC_H
 #define RTC_H
 
+#include "mode.h"
 #include "neom8n.h"
 
 /*** RTC functions ***/
 
 void RTC_Reset(void);
 void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
-#ifdef CM_RTC
+#ifdef CM
 volatile unsigned char RTC_GetAlarmFlag(void);
 #endif
 void RTC_ClearAlarmFlags(void);

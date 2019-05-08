@@ -11,7 +11,6 @@
 #include "mode.h"
 
 #ifdef ATM
-
 /*** USART structures ***/
 
 typedef enum {
@@ -20,6 +19,7 @@ typedef enum {
 	USART_FORMAT_DECIMAL,
 	USART_FORMAT_ASCII
 } USART_Format;
+#endif
 
 /*** USART functions ***/
 
@@ -29,9 +29,9 @@ void USART2_Init(void);
 #ifdef HW2_0
 void USART1_Init(void);
 #endif
+#ifdef ATM
 void USARTx_SendValue(unsigned int tx_value, USART_Format format, unsigned char print_prefix);
 void USARTx_SendString(char* tx_string);
-
 #endif
 
 #endif /* USART_H */

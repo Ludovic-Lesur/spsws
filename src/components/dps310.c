@@ -294,7 +294,7 @@ void DPS310_Init(void) {
  */
 void DPS310_PerformMeasurements(unsigned char dps310_i2c_address) {
 
-	/* Compute raw temperature */
+	/* Compute raw results */
 	unsigned char i2c_access = DPS310_ComputeRawTemperature(dps310_i2c_address);
 	if (i2c_access == 0) return;
 	i2c_access = DPS310_ComputeRawPressure(dps310_i2c_address);
@@ -312,7 +312,7 @@ void DPS310_PerformMeasurements(unsigned char dps310_i2c_address) {
 void DPS310_GetPressure(unsigned int* pressure_pa) {
 
 	/* Check sensor result */
-	if (dps310_ctx.dps310_tmp_raw == DPS310_RAW_ERROR_VALUE) {
+	if (dps310_ctx.dps310_prs_raw == DPS310_RAW_ERROR_VALUE) {
 		// Return error value.
 		(*pressure_pa) = DPS310_PRESSURE_ERROR_VALUE;
 	}
@@ -338,7 +338,7 @@ void DPS310_GetPressure(unsigned int* pressure_pa) {
 	}
 
 	/* Reset results for next conversion */
-	dps310_ctx.dps310_tmp_raw = DPS310_RAW_ERROR_VALUE;
+	dps310_ctx.dps310_prs_raw = DPS310_RAW_ERROR_VALUE;
 }
 
 /* READ TEMPERATURE FROM DPS310 SENSOR.

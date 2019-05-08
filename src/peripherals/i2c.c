@@ -19,6 +19,23 @@
 
 #define I2C_ACCESS_TIMEOUT_SECONDS	3
 
+/*** I2C local functions ***/
+
+/* CLEAR ALL I2C PERIPHERAL FLAGS
+ * @param:	None.
+ * @return:	None.
+ */
+void I2C_Clear(void) {
+
+	/* Disable peripheral */
+	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
+	LPTIM1_DelayMilliseconds(1);
+
+	/* Enable peripheral and clear all flags */
+	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
+	I2C1 -> ICR |= 0x00003F38;
+}
+
 /*** I2C functions ***/
 
 /* CONFIGURE I2C1 PERIPHERAL.
@@ -102,6 +119,9 @@ void I2C1_PowerOff(void) {
  */
 unsigned char I2C1_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length) {
 
+	/* Clear peripheral */
+	I2C_Clear();
+
 	/* Wait for I2C bus to be ready */
 	unsigned int loop_start_time = TIM22_GetSeconds();
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
@@ -166,6 +186,9 @@ unsigned char I2C1_Write(unsigned char slave_address, unsigned char* tx_buf, uns
  * @return:					1 in case of success, 0 in case of failure.
  */
 unsigned char I2C1_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+
+	/* Clear peripheral */
+	I2C_Clear();
 
 	/* Wait for I2C bus to be ready */
 	unsigned int loop_start_time = TIM22_GetSeconds();

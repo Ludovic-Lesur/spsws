@@ -9,6 +9,9 @@
 #define RAIN_H
 
 #include "gpio.h"
+#include "mode.h"
+
+#if (defined CM || defined ATM)
 
 /*** RAIN global variables ***/
 
@@ -25,5 +28,7 @@ void RAIN_ResetData(void);
 /*** RAIN utility functions ***/
 
 void RAIN_EdgeCallback(void);
+
+#endif
 
 #endif /* RAIN_H */

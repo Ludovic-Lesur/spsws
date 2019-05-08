@@ -6,9 +6,7 @@
  */
 
 // Registers
-#include "pwr_reg.h"
 #include "rcc_reg.h"
-#include "scb_reg.h"
 // Peripherals.
 #include "adc.h"
 #include "aes.h"
@@ -32,7 +30,6 @@
 // Components.
 #include "dps310.h"
 #include "max11136.h"
-#include "max5495.h"
 #include "neom8n.h"
 #include "sht3x.h"
 #include "si1133.h"
@@ -44,9 +41,6 @@
 #include "at.h"
 #include "dlk.h"
 #include "geoloc.h"
-#ifdef IM_HWT
-#include "hwt.h"
-#endif
 #include "mode.h"
 #include "monitoring.h"
 #include "rain.h"
@@ -192,8 +186,8 @@ void SPSWS_UpdatePwut(void) {
 
 /*** SPSWS main function ***/
 
-#if (defined IM_RTC || defined CM_RTC)
-/* MAIN FUNCTION FOR IM_RTC MODE.
+#if (defined IM || defined CM)
+/* MAIN FUNCTION FOR IM MODE.
  * @param: 	None.
  * @return: 0.
  */
@@ -215,7 +209,7 @@ int main (void) {
 	spsws_ctx.spsws_is_afternoon_flag = 0;
 	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
-#ifdef IM_RTC
+#ifdef IM
 	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // IM = 0b0.
 #else
 	spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // CM = 0b1.
@@ -334,13 +328,17 @@ int main (void) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
-#ifdef CM_RTC
 			// External interrupts.
 			EXTI_Init();
-#endif
 			// Analog.
 			ADC1_Init();
 			// Communication interfaces.
+#ifdef HW1_0
+			USART2_Init();
+#endif
+#ifdef HW2_0
+			USART1_Init();
+#endif
 			LPUART1_Init();
 			I2C1_Init();
 			SPI1_Init();
@@ -362,7 +360,7 @@ int main (void) {
 			SHT3X_Init();
 			DPS310_Init();
 			SI1133_Init();
-#ifdef CM_RTC
+#ifdef CM
 			WIND_Init();
 			RAIN_Init();
 #endif
@@ -404,16 +402,26 @@ int main (void) {
 			MAX11136_GetChannel(MAX11136_CHANNEL_SUPERCAP, &max11136_channel_12bits);
 			spsws_ctx.spsws_monitoring_data.monitoring_data_supercap_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
 			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &max11136_channel_12bits);
-			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_channel_12bits / MAX11136_FULL_SCALE) * 100;
+			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_channel_12bits * 100) / MAX11136_FULL_SCALE;
 			// Retrieve weather sensors data.
+#ifdef HW1_0
+			I2C1_PowerOn();
+#endif
 			// Internal temperature/humidity sensor.
 			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
 			SHT3X_GetTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees);
 			SHT3X_GetHumidity(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent);
 			// External temperature/humidity sensor.
+#ifdef HW1_0
+			spsws_ctx.spsws_weather_data.weather_data_temperature_degrees = spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees;
+			spsws_ctx.spsws_weather_data.weather_data_humidity_percent = spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent;
+#endif
+#ifdef HW2_0
+
 			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 			SHT3X_GetTemperature(&spsws_ctx.spsws_weather_data.weather_data_temperature_degrees);
 			SHT3X_GetHumidity(&spsws_ctx.spsws_weather_data.weather_data_humidity_percent);
+#endif
 			// External pressure/temperature sensor.
 			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			DPS310_GetPressure(&spsws_ctx.spsws_weather_data.weather_data_pressure_pa);
@@ -422,7 +430,7 @@ int main (void) {
 			SI1133_GetUvIndex(&spsws_ctx.spsws_weather_data.weather_data_uv_index);
 			// Turn sensors off.
 			I2C1_PowerOff();
-#ifdef CM_RTC
+#ifdef CM
 			// Retrieve wind measurements.
 			WIND_GetSpeed(&spsws_ctx.spsws_weather_data.weather_data_average_wind_speed_mh, &spsws_ctx.spsws_weather_data.weather_data_peak_wind_speed_mh);
 			WIND_GetDirection(&spsws_ctx.spsws_weather_data.weather_data_average_wind_direction_degrees);
@@ -557,7 +565,7 @@ int main (void) {
 #ifdef HW2_0
 			SX1232_Tcxo(0);
 #endif
-#ifdef IM_RTC
+#ifdef IM
 			TIM21_Disable();
 			TIM22_Disable();
 			LPTIM1_Disable();
@@ -578,7 +586,7 @@ int main (void) {
 #ifdef DEBUG
 			GPIO_Write(&GPIO_LED, 0);
 #endif
-#ifdef CM_RTC
+#ifdef CM
 			// Re-start continuous measurements.
 			WIND_ResetData();
 			RAIN_ResetData();
@@ -587,7 +595,7 @@ int main (void) {
 #endif
 			// Clear RTC flags.
 			RTC_ClearAlarmFlags();
-#ifdef CM_RTC
+#ifdef CM
 			NVIC_EnableInterrupt(IT_RTC);
 #endif
 			// Enter standby mode.
@@ -596,11 +604,11 @@ int main (void) {
 
 		/* SLEEP */
 		case SPSWS_STATE_SLEEP:
-#ifdef IM_RTC
+#ifdef IM
 			// Enter standby mode.
 			PWR_EnterStandbyMode();
 #endif
-#ifdef CM_RTC
+#ifdef CM
 			// Enter sleep mode.
 			PWR_EnterSleepMode();
 			// Check RTC flag.
@@ -621,12 +629,6 @@ int main (void) {
 			break;
 		}
 	}
-	return 0;
-}
-#endif
-
-#ifdef IM_HWT
-int main (void) {
 	return 0;
 }
 #endif

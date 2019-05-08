@@ -12,12 +12,15 @@
 #include "mapping.h"
 #include "mode.h"
 
-#if (defined CM_RTC || defined ATM)
+#if (defined CM || defined ATM)
 
 /*** WIND macros ***/
 
 #define WIND_MEASUREMENT_PERIOD_SECONDS		4
 #define WIND_DIRECTION_ERROR_VALUE			0xFFFFFFFF
+// Wind vane type.
+#define WIND_VANE_ULTIMETER					// Phase shift technique.
+//#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
 
 /*** WIND global variables ***/
 
@@ -41,6 +44,12 @@ void WIND_MeasurementPeriodCallback(void);
 void WIND_SpeedEdgeCallback(void);
 #ifdef WIND_VANE_ULTIMETER
 void WIND_DirectionEdgeCallback(void);
+#endif
+
+/*** Errors management ***/
+
+#if (defined WIND_VANE_ULTIMETER && defined WIND_VANE_ARGENT_DATA_SYSTEMS)
+#error "Only one wind vane type must be selected"
 #endif
 
 #endif /* WIND_H */

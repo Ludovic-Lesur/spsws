@@ -12,49 +12,16 @@
 #include "gpio_reg.h"
 #include "mode.h"
 
-/* --------------------------------------------- Hardware configuration (to be set) --------------------------------------------- */
-
 // PCB internal configuration.
 #ifdef HW1_0
-#define USE_SX1232_DIOX 					// To be defined if SX1232_DIOx pin is connected to MCU, otherwise DIO3 available.
-#define USE_MAX11136_EOC 					// To be defined is EOC pin connected to MCU, otherwise DIO1 available.
+#define USE_SX1232_DIOX 	// To be defined if SX1232_DIOx pin is connected to MCU, otherwise DIO3 available.
+#define USE_MAX11136_EOC 	// To be defined is EOC pin connected to MCU, otherwise DIO1 available.
+//#define USE_HWT			// Use HWT I/O if defined, LSE crytal otherwise.
 #endif
-
-// Wind vane type.
-//#define WIND_VANE_ULTIMETER				// Phase shift technique.
-#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
-
-// Analog inputs (MAX11136 channels mapping).
-#ifdef HW1_0
-#if (defined CM_RTC || defined ATM)
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define MAX11136_CHANNEL_WIND_DIRECTION		MAX11136_CHANNEL_AIN0
-#endif
-#endif
-#define MAX11136_CHANNEL_SOLAR_CELL			MAX11136_CHANNEL_AIN4
-#define MAX11136_CHANNEL_SUPERCAP			MAX11136_CHANNEL_AIN5
-#define MAX11136_CHANNEL_LDR				MAX11136_CHANNEL_AIN6
-#define MAX11136_CHANNEL_BANDGAP			MAX11136_CHANNEL_AIN7
-#define MAX11136_BANDGAP_VOLTAGE_MV			2048
-#endif
-#ifdef HW2_0
-#if (defined CM_RTC || defined ATM)
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define MAX11136_CHANNEL_WIND_DIRECTION		MAX11136_CHANNEL_AIN0
-#endif
-#endif
-#define MAX11136_CHANNEL_LDR				MAX11136_CHANNEL_AIN1
-#define MAX11136_CHANNEL_BANDGAP			MAX11136_CHANNEL_AIN5
-#define MAX11136_BANDGAP_VOLTAGE_MV			2048
-#define MAX11136_CHANNEL_SOLAR_CELL			MAX11136_CHANNEL_AIN6
-#define MAX11136_CHANNEL_SUPERCAP			MAX11136_CHANNEL_AIN7
-#endif
-
-/* ------------------------------------------------------------------------------------------------------------------------------ */
 
 // DIO0 / MAX5495_CS.
 #ifdef HW1_0
-#ifdef IM_HWT
+#ifdef USE_HWT
 static const GPIO GPIO_MAX5495_CS = 			(GPIO) {GPIOA, 0, 1, 0};
 #else
 static const GPIO GPIO_DIO0 = 					(GPIO) {GPIOA, 0, 1, 0};
@@ -66,7 +33,7 @@ static const GPIO GPIO_DIO0 = 					(GPIO) {GPIOA, 0, 10, 0};
 
 // Debug LED / HWT_Out.
 #ifdef HW1_0
-#ifdef IM_HWT
+#ifdef USE_HWT
 static const GPIO GPIO_HWT_OUT = 				(GPIO) {GPIOA, 0, 2, 0};
 #else
 #ifdef DEBUG
@@ -237,22 +204,16 @@ static const GPIO GPIO_TCXO32_POWER_ENABLE =	(GPIO) {GPIOA, 0, 3, 0};
 
 // 32.768kHz quartz / Main power disable.
 #ifdef HW1_0
-#ifdef IM_HWT
+#ifdef USE_HWT
 static const GPIO GPIO_MAIN_POWER_DISABLE =		(GPIO) {GPIOC, 2, 14, 0};
 #endif
 #endif
 
 // 32.768kHz quartz / HWT_Reset.
 #ifdef HW1_0
-#ifdef IM_HWT
+#ifdef USE_HWT
 static const GPIO GPIO_HWT_RESET =				(GPIO) {GPIOC, 2, 15, 0};
 #endif
-#endif
-
-/*** Errors management ***/
-
-#if (defined WIND_VANE_ULTIMETER && defined WIND_VANE_ARGENT_DATA_SYSTEMS)
-#error "Only one wind vane type must be selected"
 #endif
 
 #endif /* MAPPING_H */

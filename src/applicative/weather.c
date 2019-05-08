@@ -35,7 +35,7 @@ void WEATHER_BuildSigfoxData(WEATHER_Data* weather_data, unsigned char* weather_
 		weather_sigfox_data[4] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0xFF00) >> 8;
 		weather_sigfox_data[5] = (((weather_data -> weather_data_pressure_pa) / (10)) & 0x00FF) >> 0;
 	}
-#ifdef CM_RTC
+#ifdef CM
 	// Average wind speed.
 	weather_sigfox_data[6] = (weather_data -> weather_data_average_wind_speed_mh) / 1000;
 	// Peak wind speed.

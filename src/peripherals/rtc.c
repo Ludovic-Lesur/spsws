@@ -21,13 +21,13 @@
 
 /*** RTC local global variables ***/
 
-#ifdef CM_RTC
+#ifdef CM
 volatile unsigned char rtc_alra_flag;
 #endif
 
 /*** RTC local functions ***/
 
-#ifdef CM_RTC
+#ifdef CM
 /* RTC INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -150,7 +150,7 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	EXTI -> PR |= (0b1 << 17); // Clear flag.
 }
 
-#ifdef CM_RTC
+#ifdef CM
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
@@ -168,7 +168,7 @@ void RTC_ClearAlarmFlags(void) {
 	// Clear ALARM and EXTI flags.
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 	EXTI -> PR |= (0b1 << 17);
-#ifdef CM_RTC
+#ifdef CM
 	rtc_alra_flag = 0;
 #endif
 }

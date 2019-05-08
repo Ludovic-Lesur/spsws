@@ -296,6 +296,7 @@
 #define PAC_LENGTH     					(sfx_u8)(8)  	/* Size of device initial PAC */
 #define SFX_UPLINK_DATA_MAX_SIZE_BYTES	(sfx_u8)(12)	/* Maximum ize of uplink data in bytes */
 #define SFX_DOWNLINK_DATA_SIZE_BYTES	(sfx_u8)(8)		/* Size of downlink data in bytes */
+#define SPSWS_SIGFOX_RC					RC1				/* Device radio zone */
 
 /********************************
  * \enum sfx_spectrum_access_t

@@ -7,6 +7,7 @@
 
 #include "nvm.h"
 
+#include "mapping.h"
 #include "flash_reg.h"
 #include "rcc_reg.h"
 
@@ -113,7 +114,7 @@ void NVM_ResetDefault(void) {
 	NVM_WriteByte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, 0x00);
 	NVM_WriteByte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, 0x00);
 	NVM_WriteByte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, 0x00);
-#ifdef IM_HWT
+#ifdef USE_HWT
 	// HWT.
 	NVM_WriteByte((NVM_HWT_PGT_YEAR_ADDRESS_OFFSET + 0), 0x00);
 	NVM_WriteByte((NVM_HWT_PGT_YEAR_ADDRESS_OFFSET + 1), 0x00);

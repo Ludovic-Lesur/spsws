@@ -48,7 +48,7 @@ void SPI1_Init(void) {
 #ifdef HW1_0
 	GPIO_Configure(&GPIO_MAX11136_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Write(&GPIO_MAX11136_CS, 0);
-#ifdef IM_HWT
+#ifdef USE_HWT
 	GPIO_Configure(&GPIO_MAX5495_CS, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
 	GPIO_Write(&GPIO_MAX5495_CS, 0);
 #endif
@@ -116,8 +116,7 @@ void SPI1_PowerOn(void) {
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	GPIO_Write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
 	LPTIM1_DelayMilliseconds(100);
-
-#ifdef IM_HWT
+#ifdef USE_HWT
 	/* MAX5495 */
 	GPIO_Write(&GPIO_MAX5495_CS, 1); // CS high (idle state).
 #endif
@@ -138,8 +137,7 @@ void SPI1_PowerOff(void) {
 	/* Switch MAX11136 off */
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	GPIO_Write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
-
-#ifdef IM_HWT
+#ifdef USE_HWT
 	/* MAX5495 */
 	GPIO_Write(&GPIO_MAX5495_CS, 0); // CS low (to avoid powering slaves via SPI bus).
 #endif
