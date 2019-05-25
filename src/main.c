@@ -198,8 +198,12 @@ int main (void) {
 	FLASH_Init();
 	NVM_Enable();
 
-	/* Init GPIOs (required for clock tree configuration) */
-	GPIO_Init();
+	/* Init GPIOs */
+	GPIO_Init(); // Required for clock tree configuration.
+	EXTI_Init(); // Required to clear RTC flags (EXTI 17).
+
+	/* Init clock module */
+	RCC_Init();
 
 	/* Init context */
 	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
@@ -249,7 +253,7 @@ int main (void) {
 					spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 				}
 				else {
-					// Other resetor RTC wake-up: standard flow.
+					// Other reset or RTC wake-up: standard flow.
 					spsws_ctx.spsws_state = SPSWS_STATE_HOUR_CHECK;
 				}
 			}
@@ -289,8 +293,6 @@ int main (void) {
 
 		/* INIT */
 		case SPSWS_STATE_INIT:
-			// Init clocks.
-			RCC_Init();
 			// Low speed oscillators (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
 				// Reset RTC before starting oscillators.
@@ -328,8 +330,6 @@ int main (void) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
-			// External interrupts.
-			EXTI_Init();
 			// Analog.
 			ADC1_Init();
 			// Communication interfaces.
@@ -534,6 +534,10 @@ int main (void) {
 
 		/* RTC CALIBRATION */
 		case SPSWS_STATE_RTC_CALIBRATION:
+			// Turn radio TCXO off since Sigfox is not required anymore.
+#ifdef HW2_0
+			SX1232_Tcxo(0);
+#endif
 			// Get current timestamp from GPS.{
 			LPUART1_PowerOn();
 			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
