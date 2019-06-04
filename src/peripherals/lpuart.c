@@ -90,12 +90,12 @@ void LPUART1_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 
 	/* Configure power enable pin */
-	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
 
 	/* Configure TX and RX GPIOs (first as high impedance) */
-	GPIO_Configure(&GPIO_LPUART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_LPUART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Configure peripheral */
 	LPUART1 -> CR1 &= 0xEC008000; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -103,7 +103,7 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR3 &= 0xFF0F0836;
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
-	LPUART1 -> BRR |= ((RCC_SYSCLK_KHZ * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> BRR |= ((RCC_GetSysclkKhz() * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 
 	/* Configure character match interrupt and DMA */
 	LPUART1 -> CR2 |= (NMEA_LF << 24); // LF character used to trigger CM interrupt.
@@ -150,6 +150,9 @@ void LPUART1_Disable(void) {
 	LPUART1 -> CR1 &= ~(0b1 << 2); // Disable transmitter and receiver (TE='0' adnd RE='0').
 	LPUART1 -> CR1 &= ~(0b1 << 0);
 	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
+
+	/* Disable power control pin */
+	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* POWER LPUART1 SLAVE ON.
@@ -159,8 +162,8 @@ void LPUART1_Disable(void) {
 void LPUART1_PowerOn(void) {
 
 	/* Enable GPIOs */
-	GPIO_Configure(&GPIO_LPUART1_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_LPUART1_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Switch NEOM8N on */
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 1);
@@ -177,8 +180,8 @@ void LPUART1_PowerOff(void) {
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
 
 	/* Disable LPUART alternate function */
-	GPIO_Configure(&GPIO_LPUART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_LPUART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Delay required if another cycle is requested by applicative layer */
 	LPTIM1_DelayMilliseconds(100);

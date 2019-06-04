@@ -14,35 +14,35 @@
 
 // GPIO structure.
 typedef struct {
-	GPIO_BaseAddress* port_address; // GPIOA to GPIOC.
-	unsigned port_index; // 0 for GPIOA, 1 for GPIOB, etc.
-	unsigned char num; // 0 to 15.
-	unsigned char af_num; // Alternate function number if used.
+	GPIO_BaseAddress* gpio_port_address; // GPIOA to GPIOC.
+	unsigned char gpio_port_index; // 0 for GPIOA, 1 for GPIOB, etc.
+	unsigned char gpio_num; // 0 to 15.
+	unsigned char gpio_af_num; // Alternate function number if used.
 } GPIO;
 
 typedef enum {
-	Input,
-	Output,
-	AlternateFunction,
-	Analog
+	GPIO_MODE_INPUT,
+	GPIO_MODE_OUTPUT,
+	GPIO_MODE_ALTERNATE_FUNCTION,
+	GPIO_MODE_ANALOG
 } GPIO_Mode;
 
 typedef enum {
-	PushPull,
-	OpenDrain
+	GPIO_TYPE_PUSH_PULL,
+	GPIO_TYPE_OPEN_DRAIN
 } GPIO_OutputType;
 
 typedef enum {
-	LowSpeed,
-	MediumSpeed,
-	HighSpeed,
-	VeryHighSpeed
+	GPIO_SPEED_LOW,
+	GPIO_SPEED_MEDIUM,
+	GPIO_SPEED_HIGH,
+	GPIO_SPEED_VERY_HIGH,
 } GPIO_OutputSpeed;
 
 typedef enum {
-	NoPullUpNoPullDown,
-	PullUp,
-	PullDown
+	GPIO_PULL_NONE,
+	GPIO_PULL_UP,
+	GPIO_PULL_DOWN
 } GPIO_PullResistor;
 
 /*** GPIO functions ***/

@@ -371,6 +371,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.rf_api_ramp_duration_us;
 	TIM2_Init(TIM2_MODE_SIGFOX, dbpsk_timings);
 	TIM2_Enable();
+	NVIC_EnableInterrupt(IT_TIM2);
 	rf_api_ctx.rf_api_tim2_event_mask = 0;
 
 	/* Start CW */

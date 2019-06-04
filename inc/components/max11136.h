@@ -8,6 +8,8 @@
 #ifndef MAX11136_H
 #define MAX11136_H
 
+#include "wind.h"
+
 /*** MAX11136 macros ***/
 
 // Full scale on 12-bits.
@@ -52,6 +54,7 @@
 /*** MAX11136 functions ***/
 
 void MAX11136_Init(void);
+void MAX11136_DisableGpio(void);
 void MAX11136_PerformMeasurements(void);
 void MAX11136_GetChannel(unsigned char channel, unsigned int* channel_result_12bits);
 

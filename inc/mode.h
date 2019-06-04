@@ -13,8 +13,8 @@
 /*** Wheather station mode ***/
 
 //#define ATM 		// AT command mode.
-#define IM 			// Intermittent mode with RTC as time reference.
-//#define CM 		// Continuous mode with RTC as time reference.
+#define IM 			// Intermittent mode.
+//#define CM 		// Continuous mode.
 
 /*** Debug mode ***/
 

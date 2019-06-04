@@ -11,6 +11,7 @@
 /*** SPI functions ***/
 
 void SPI1_Init(void);
+void SPI1_Enable(void);
 void SPI1_Disable(void);
 void SPI1_PowerOn(void);
 void SPI1_PowerOff(void);
@@ -26,6 +27,7 @@ unsigned char SPI1_ReadShort(unsigned short tx_data, unsigned short* rx_data);
 
 #ifdef HW2_0
 void SPI2_Init(void);
+void SPI2_Enable(void);
 void SPI2_Disable(void);
 void SPI2_PowerOn(void);
 void SPI2_PowerOff(void);

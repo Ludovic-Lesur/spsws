@@ -7,21 +7,33 @@
 
 #include "pwr.h"
 
+#include "flash_reg.h"
 #include "mapping.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
+#include "rcc.h"
 #include "scb_reg.h"
 
 /*** PWR functions ***/
 
-/* FUNCTION TO ENTER SLEEP MODE.
+/* FUNCTION TO ENTER LOW POWER SLEEP MODE.
  * @param:	None.
  * @return:	None.
  */
-void PWR_EnterSleepMode(void) {
+void PWR_EnterLowPowerSleepMode(void) {
 
 	/* Enable power interface clock */
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
+
+	/* Power memories down when entering sleep mode */
+	FLASH -> ACR |= (0b1 << 3); // SLEEP_PD='1'.
+
+	/* Regulator in low power mode */
+	PWR -> CR |= (0b1 << 0); // LPSDSR='1'.
+
+	/* Switch to 65kHz MSI clock */
+	RCC_SwitchToMsi();
+	RCC_DisableGpio();
 
 	/* Enter low power sleep mode */
 	SCB -> SCR &= ~(0b1 << 1); // Do not return in low power sleep mode after wake-up (SLEEPONEXIT='0').

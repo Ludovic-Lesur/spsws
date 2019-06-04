@@ -20,6 +20,7 @@ typedef enum {
 /*** SKY13317 functions ***/
 
 void SKY13317_Init(void);
+void SKY13317_DisableGpio(void);
 void SKY13317_SetChannel(SKY13317_Channel channel);
 
 #endif /* SKY13317_H */

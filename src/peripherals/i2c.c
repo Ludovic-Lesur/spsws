@@ -48,12 +48,12 @@ void I2C1_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 21); // I2C1EN='1'.
 
 	/* Configure power enable pin */
-	GPIO_Configure(&GPIO_SENSORS_POWER_ENABLE, Output, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
 
 	/* Configure SCL and SDA (first as high impedance) */
-	GPIO_Configure(&GPIO_I2C1_SCL, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_I2C1_SDA, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Configure peripheral */
 	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').
@@ -77,6 +77,9 @@ void I2C1_Disable(void) {
 	/* Disable I2C1 peripheral */
 	I2C1 -> CR1 &= ~(0b1 << 0);
 	RCC -> APB1ENR &= ~(0b1 << 21); // I2C1EN='0'.
+
+	/* Disable power control pin */
+	GPIO_Configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
@@ -86,8 +89,8 @@ void I2C1_Disable(void) {
 void I2C1_PowerOn(void) {
 
 	/* Enable GPIOs */
-	GPIO_Configure(&GPIO_I2C1_SCL, AlternateFunction, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_I2C1_SDA, AlternateFunction, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Switch SHT3x, DPS310 and SI1133 on */
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 1);
@@ -104,8 +107,8 @@ void I2C1_PowerOff(void) {
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
 
 	/* Disable I2C alternate function */
-	GPIO_Configure(&GPIO_I2C1_SCL, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_I2C1_SDA, Input, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Delay required if another cycle is requested by applicative layer */
 	LPTIM1_DelayMilliseconds(100);

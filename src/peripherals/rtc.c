@@ -21,13 +21,14 @@
 
 /*** RTC local global variables ***/
 
-#ifdef CM
+#if (defined CM || defined ATM)
 volatile unsigned char rtc_alra_flag;
+volatile unsigned char rtc_alrb_flag;
 #endif
 
 /*** RTC local functions ***/
 
-#ifdef CM
+#if (defined CM || defined ATM)
 /* RTC INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -38,11 +39,20 @@ void RTC_IRQHandler(void) {
 	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
 		// Update flag
 		rtc_alra_flag = 1;
-		// Disable interrupt.
-		NVIC_DisableInterrupt(IT_RTC);
 		// Clear flag.
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 	}
+
+	/* Alarm B interrupt */
+	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
+		// Update flag
+		rtc_alrb_flag = 1;
+		// Clear flag.
+		RTC -> ISR &= ~(0b1 << 9); // ALRNF='0'.
+	}
+
+	/* Clear EXTI flag */
+	EXTI -> PR |= (0b1 << 17);
 }
 #endif
 
@@ -131,14 +141,25 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 		RTC -> PRER = (127 << 16) | (((lsi_freq_hz / 128) - 1) << 0); // PREDIV_A=127 and PREDIV_S=((lsi_freq_hz/128)-1).
 	}
 
-	/* Configure Alarm A to wake-up MCU every hour */
+	/* Bypass shadow registers */
+	RTC -> CR |= (0b1 << 5); // BYPSHAD='1'.
+
+	/* Configure alarm A to wake-up MCU every hour */
 	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
 	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
-	RTC -> CR |= (0b1 << 5); // Bypass shadow register for read accesses (BYPSHAD='1').
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
+
+#if (defined CM || defined ATM)
+	/* Configure alarm B to wake-up every seconds (wind measurements) */
+	RTC -> ALRMBR = 0;
+	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.
+	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
+	RTC -> CR |= (0b1 << 13); // Enable interrupt (ALRBIE='1').
+	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
+#endif
 
 	/* Exit initialization mode */
 	RTC_ExitInitializationMode();
@@ -150,26 +171,47 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	EXTI -> PR |= (0b1 << 17); // Clear flag.
 }
 
-#ifdef CM
+#if (defined CM || defined ATM)
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
-volatile unsigned char RTC_GetAlarmFlag(void) {
+volatile unsigned char RTC_GetAlarmAFlag(void) {
 	return rtc_alra_flag;
+}
+
+/* RETURN THE CURRENT ALARM INTERRUPT STATUS.
+ * @param:	None.
+ * @return:	1 if the RTC interrupt occured, 0 otherwise.
+ */
+volatile unsigned char RTC_GetAlarmBFlag(void) {
+	return rtc_alrb_flag;
 }
 #endif
 
-/* CLEAR ALARM INTERRUPT FLAGS.
+/* CLEAR ALARM A INTERRUPT FLAG.
  * @param:	None.
  * @return:	None.
  */
-void RTC_ClearAlarmFlags(void) {
+void RTC_ClearAlarmAFlag(void) {
 	// Clear ALARM and EXTI flags.
-	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
+	RTC -> ISR &= ~(0b11 << 8); // Clear flags.
 	EXTI -> PR |= (0b1 << 17);
-#ifdef CM
+#if (defined CM || defined ATM)
 	rtc_alra_flag = 0;
+#endif
+}
+
+/* CLEAR ALARM A INTERRUPT FLAG.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_ClearAlarmBFlag(void) {
+	// Clear ALARM and EXTI flags.
+	RTC -> ISR &= ~(0b11 << 8); // Clear flags.
+	EXTI -> PR |= (0b1 << 17);
+#if (defined CM || defined ATM)
+	rtc_alrb_flag = 0;
 #endif
 }
 

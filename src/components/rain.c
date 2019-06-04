@@ -12,6 +12,7 @@
 #include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
+#include "usart.h"
 
 #if (defined CM || defined ATM)
 
@@ -36,7 +37,7 @@ void RAIN_Init(void) {
 	GPIO_RAIN = GPIO_DIO2;
 
 	/* Init GPIOs and EXTI */
-	GPIO_Configure(&GPIO_RAIN, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_RAIN, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureInterrupt(&GPIO_RAIN, EXTI_TRIGGER_FALLING_EDGE);
 }
 
@@ -47,6 +48,7 @@ void RAIN_Init(void) {
 void RAIN_StartContinuousMeasure(void) {
 
 	/* Enable required interrupt */
+	EXTI_ClearAllFlags();
 	NVIC_EnableInterrupt(IT_EXTI_4_15);
 }
 
@@ -83,8 +85,16 @@ void RAIN_ResetData(void) {
  * @return:	None.
  */
 void RAIN_EdgeCallback(void) {
-	// Increment edge count.
+
+	/* Increment edge count */
 	rain_edge_count++;
+
+	/* Print data */
+#ifdef ATM
+	USARTx_SendString("Rain=");
+	USARTx_SendValue(rain_edge_count, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("\n");
+#endif
 }
 
 #endif

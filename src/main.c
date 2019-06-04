@@ -241,21 +241,21 @@ int main (void) {
 			// Turn LED on.
 			GPIO_Write(&GPIO_LED, 1);
 #endif
+#ifdef CM
+			// Enable NVM.
+			NVM_Enable();
+			// Enable TCXO power control.
+			RCC_EnableGpio();
+#endif
 			// Check reset reason.
-			if (((RCC -> CSR) & (0b1 << 29)) != 0) {
-				// IWDG reset: directly enter standby mode.
-				spsws_ctx.spsws_state = SPSWS_STATE_OFF;
+			if (((RCC -> CSR) & (0b111 << 26)) != 0) {
+				// SW, NRST or POR reset: directly go to INIT state.
+				spsws_ctx.spsws_por_flag = 1;
+				spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 			}
 			else {
-				if (((RCC -> CSR) & (0b111 << 26)) != 0) {
-					// SW, NRST or POR reset: directly go to INIT state.
-					spsws_ctx.spsws_por_flag = 1;
-					spsws_ctx.spsws_state = SPSWS_STATE_INIT;
-				}
-				else {
-					// Other reset or RTC wake-up: standard flow.
-					spsws_ctx.spsws_state = SPSWS_STATE_HOUR_CHECK;
-				}
+				// Other reset or RTC wake-up: standard flow.
+				spsws_ctx.spsws_state = SPSWS_STATE_HOUR_CHECK;
 			}
 			// Clear reset flags.
 			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
@@ -273,6 +273,7 @@ int main (void) {
 			else {
 				// Valid wake-up.
 				spsws_ctx.spsws_state = SPSWS_STATE_NVM_WAKE_UP_UPDATE;
+				spsws_ctx.spsws_hour_changed_flag = 0; // Reset flag.
 			}
 			break;
 
@@ -286,6 +287,10 @@ int main (void) {
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_RTC_CALIBRATION_BIT_IDX);
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX);
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
+				// Reset flags.
+				spsws_ctx.spsws_day_changed_flag = 0;
+				spsws_ctx.spsws_hour_changed_flag = 0;
+				spsws_ctx.spsws_is_afternoon_flag = 0;
 			}
 			// Go to INIT state.
 			spsws_ctx.spsws_state = SPSWS_STATE_INIT;
@@ -304,9 +309,6 @@ int main (void) {
 				spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				spsws_ctx.spsws_status_byte |= (RCC_EnableLse() << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 			}
-			// Watchdog.
-			//IWDG_Init();
-			//IWDG_Reload();
 			// High speed oscillator.
 			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
 			spsws_ctx.spsws_status_byte |= (RCC_SwitchToHse() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
@@ -380,11 +382,11 @@ int main (void) {
 			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
 			ADC1_GetMcuSupplyVoltage(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv);
 			// Retrieve external ADC data.
-			I2C1_PowerOn(); // Must be called before ADC since LDR is on the MSM module powered by I2C.
 #ifdef HW1_0
 			SPI1_PowerOn();
 #endif
 #ifdef HW2_0
+			I2C1_PowerOn(); // Must be called before ADC since LDR is on the MSM module (powered by I2C sensors supply).
 			SPI2_PowerOn();
 #endif
 			MAX11136_PerformMeasurements();
@@ -562,24 +564,19 @@ int main (void) {
 		case SPSWS_STATE_OFF:
 			// Clear POR flag.
 			spsws_ctx.spsws_por_flag = 0;
-			// Switch to internal clock.
-			RCC_SwitchToHsi();
 			// Turn peripherals off.
-			ADC1_Disable();
+			SX1232_DisableGpio();
+			SKY13317_DisableGpio();
+			MAX11136_DisableGpio();
 #ifdef HW2_0
 			SX1232_Tcxo(0);
+			SPI2_Disable();
 #endif
-#ifdef IM
+			ADC1_Disable();
 			TIM21_Disable();
 			TIM22_Disable();
 			LPTIM1_Disable();
-#ifdef HW2_0
-			SPI2_Disable();
-#endif
-#endif
-#ifdef HW2_0
 			SPI1_Disable();
-#endif
 			DMA1_Disable();
 			LPUART1_Disable();
 			I2C1_Disable();
@@ -587,10 +584,9 @@ int main (void) {
 			// Store status byte in NVM.
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
-#ifdef DEBUG
-			GPIO_Write(&GPIO_LED, 0);
-#endif
 #ifdef CM
+			// Switch to internal MSI 65kHz (must be called before WIND functions to init TIM2 with right clock frequency).
+			RCC_SwitchToMsi();
 			// Re-start continuous measurements.
 			WIND_ResetData();
 			RAIN_ResetData();
@@ -598,9 +594,13 @@ int main (void) {
 			RAIN_StartContinuousMeasure();
 #endif
 			// Clear RTC flags.
-			RTC_ClearAlarmFlags();
+			RTC_ClearAlarmAFlag();
 #ifdef CM
+			RTC_ClearAlarmBFlag();
 			NVIC_EnableInterrupt(IT_RTC);
+#endif
+#ifdef DEBUG
+			GPIO_Write(&GPIO_LED, 0);
 #endif
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
@@ -614,12 +614,22 @@ int main (void) {
 #endif
 #ifdef CM
 			// Enter sleep mode.
-			PWR_EnterSleepMode();
-			// Check RTC flag.
-			if (RTC_GetAlarmFlag() != 0) {
+			PWR_EnterLowPowerSleepMode();
+			// Check RTC flags.
+			if (RTC_GetAlarmBFlag() != 0) {
+				// Call WIND callback.
+				WIND_MeasurementPeriodCallback();
+				// Clear RTC flags.
+				RTC_ClearAlarmBFlag();
+			}
+			if (RTC_GetAlarmAFlag() != 0) {
+				// Disable RTC interrupt.
+				NVIC_DisableInterrupt(IT_RTC);
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();
 				RAIN_StopContinuousMeasure();
+				// Clear RTC flags.
+				RTC_ClearAlarmAFlag();
 				// Wake-up.
 				spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 			}
@@ -657,18 +667,23 @@ int main (void) {
 
 	/* Init clocks */
 	RCC_Init();
+	RTC_Reset();
+	RCC_EnableLsi();
 	// High speed oscillator.
 	if (RCC_SwitchToHse() == 0) {
 		while (RCC_SwitchToHsi() == 0);
 	}
 
 	/* Init peripherals */
+	unsigned int lsi_frequency_hz = RCC_GetLsiFrequency();
 	// Timers.
 	TIM21_Init();
 	TIM22_Init();
 	TIM21_Start();
 	TIM22_Start();
 	LPTIM1_Init(0);
+	// RTC.
+	RTC_Init(0, lsi_frequency_hz);
 	// DMA.
 	DMA1_Init();
 	// Analog.
@@ -703,6 +718,7 @@ int main (void) {
 #ifdef AT_COMMANDS_SENSORS
 	MAX11136_Init();
 	WIND_Init();
+	RAIN_Init();
 	SHT3X_Init();
 	DPS310_Init();
 	SI1133_Init();
@@ -715,6 +731,12 @@ int main (void) {
 	while (1) {
 		// Perform AT commands parsing.
 		AT_Task();
+		// Check RTC flag for wind measurements.
+		if (RTC_GetAlarmBFlag() != 0) {
+			// Call WIND callback.
+			WIND_MeasurementPeriodCallback();
+			RTC_ClearAlarmBFlag();
+		}
 	}
 
 	return 0;

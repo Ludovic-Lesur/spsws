@@ -15,22 +15,6 @@
 #include "usart.h"
 #include "wind.h"
 
-/*** TIM local functions ***/
-
-#if (defined CM || defined ATM)
-/* TIM21 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void TIM21_IRQHandler(void) {
-	// Clear flag.
-	TIM21 -> SR &= ~(0b1 << 0); // UIF='0'.
-
-	// Call WIND callback.
-	WIND_MeasurementPeriodCallback();
-}
-#endif
-
 /*** TIM functions ***/
 
 /* CONFIGURE TIM21 TO OVERFLOW EVERY SECOND.
@@ -48,21 +32,13 @@ void TIM21_Init(void) {
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
 
 	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
-	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
+	TIM21 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
 	TIM21 -> ARR = 1000;
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').
 
-#if (defined CM || defined ATM)
-	/* Enable interrupt for wind measurements */
-	TIM21 -> DIER |= (0b1 << 0); // UIE='1'.
-#endif
-
 	/* Generate event to update registers */
 	TIM21 -> EGR |= (0b1 << 0); // UG='1'.
-
-	/* Disable interrupt by default */
-	NVIC_DisableInterrupt(IT_TIM21);
 }
 
 /* ENABLE TIM21 PERIPHERAL.
@@ -70,6 +46,9 @@ void TIM21_Init(void) {
  * @return:	None.
  */
 void TIM21_Start(void) {
+
+	/* Enable peripheral clock */
+	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
 
 	/* Enable TIM21 peripheral */
 	TIM21 -> SR &= ~(0b1 << 0); // Clear flag (UIF='0').
@@ -83,7 +62,6 @@ void TIM21_Start(void) {
 void TIM21_Stop(void) {
 
 	/* Stop TIM21 */
-	NVIC_DisableInterrupt(IT_TIM21);
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 }
 
@@ -94,8 +72,8 @@ void TIM21_Stop(void) {
 void TIM21_Disable(void) {
 
 	/* Disable TIM21 peripheral */
-	NVIC_DisableInterrupt(IT_TIM21);
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	TIM21 -> CNT = 0;
 	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
 }
 
@@ -127,6 +105,9 @@ void TIM22_Init(void) {
  */
 void TIM22_Start(void) {
 
+	/* Enable peripheral clock */
+	RCC -> APB2ENR |= (0b1 << 5); // TIM22EN='1'.
+
 	/* Enable TIM22 peripheral */
 	TIM22 -> CR1 |= (0b1 << 0); // Enable TIM22 (CEN='1').
 }
@@ -149,6 +130,7 @@ void TIM22_Disable(void) {
 
 	/* Disable TIM22 peripheral */
 	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	TIM22 -> CNT = 0;
 	RCC -> APB2ENR &= ~(0b1 << 5); // TIM22EN='0'.
 }
 
@@ -190,7 +172,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 		TIM2 -> ARR &= 0xFFFF0000; // Reset all bits.
 		TIM2 -> ARR |= arr_value;
 		// PSC = (desired_period * timer_input_clock) / (ARR).
-		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_SYSCLK_KHZ*1000)) / (arr_value);
+		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_GetSysclkKhz() * 1000)) / (arr_value);
 		if (psc_value > 0xFFFF) {
 			psc_value = 0xFFFF;
 		}
@@ -201,7 +183,7 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 
 	case TIM2_MODE_SIGFOX:
 		/* Configure TIM2 to overflow every timing[0] microseconds */
-		TIM2 -> PSC = (RCC_SYSCLK_KHZ / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
+		TIM2 -> PSC = (RCC_GetSysclkKhz() / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
 		TIM2 -> ARR = timings[TIM2_TIMINGS_ARRAY_ARR_IDX];
 		// Configure events timestamps.
 		TIM2 -> CCR1 = timings[TIM2_TIMINGS_ARRAY_CCR1_IDX];
@@ -233,7 +215,6 @@ void TIM2_Enable(void) {
 
 	/* Enable TIM2 peripheral */
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
-	NVIC_EnableInterrupt(IT_TIM2);
 }
 
 /* DISABLE TIM2 PERIPHERAL.
@@ -244,6 +225,8 @@ void TIM2_Disable(void) {
 
 	/* Disable TIM2 peripheral */
 	NVIC_DisableInterrupt(IT_TIM2);
+	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	TIM2 -> CNT = 0;
 	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
 }
 

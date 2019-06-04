@@ -43,7 +43,7 @@ void LPTIM1_Init(unsigned char lptim1_use_lsi) {
 		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period.
 	}
 	else {
-		LPTIM1 -> ARR = RCC_SYSCLK_KHZ; // Overflow period = 1ms.
+		LPTIM1 -> ARR = RCC_GetSysclkKhz(); // Overflow period = 1ms.
 	}
 	unsigned int loop_start_time = TIM22_GetSeconds();
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
@@ -79,6 +79,16 @@ void LPTIM1_Stop(void) {
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 
+/* ENABLE LPTIM1 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPTIM1_Enable(void) {
+
+	/* Enable timer clock */
+	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
+}
+
 /* DISABLE LPTIM1 PERIPHERAL.
  * @param:	None.
  * @return:	None.
@@ -87,6 +97,7 @@ void LPTIM1_Disable(void) {
 
 	/* Disable timer */
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
+	LPTIM1 -> CNT = 0;
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 }
 

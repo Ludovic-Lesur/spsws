@@ -19,7 +19,9 @@
 #include "max11136.h"
 #include "mode.h"
 #include "neom8n.h"
+#include "nvic.h"
 #include "nvm.h"
+#include "rain.h"
 #include "rf_api.h"
 #include "sht3x.h"
 #include "si1133.h"
@@ -816,6 +818,7 @@ void AT_DecodeRxBuffer(void) {
 		else if (AT_CompareCommand(AT_IN_COMMAND_ELDR) == AT_NO_ERROR) {
 			// Perform measurements.
 #ifdef HW1_0
+			I2C1_PowerOn();
 			SPI1_PowerOn();
 #endif
 #ifdef HW2_0
@@ -828,6 +831,7 @@ void AT_DecodeRxBuffer(void) {
 #endif
 #ifdef HW2_0
 			SPI2_PowerOff();
+			I2C1_PowerOff();
 #endif
 			ADC1_PerformMeasurements();
 			// Get LDR and supply voltage.
@@ -864,10 +868,12 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start or stop wind continuous measurements.
 				if (enable == 0) {
+					NVIC_DisableInterrupt(IT_RTC);
 					WIND_StopContinuousMeasure();
 				}
 				else {
 					WIND_StartContinuousMeasure();
+					NVIC_EnableInterrupt(IT_RTC);
 				}
 				AT_ReplyOk();
 			}
@@ -884,10 +890,12 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start or stop rain continuous measurements.
 				if (enable == 0) {
-					//RAIN_StopContinuousMeasure();
+					NVIC_DisableInterrupt(IT_RTC);
+					RAIN_StopContinuousMeasure();
 				}
 				else {
-					//RAIN_StartContinuousMeasure();
+					RAIN_StartContinuousMeasure();
+					NVIC_EnableInterrupt(IT_RTC);
 				}
 				AT_ReplyOk();
 			}

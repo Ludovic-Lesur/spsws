@@ -8,10 +8,12 @@
 #include "wind.h"
 
 #include "exti.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "max11136.h"
 #include "mode.h"
 #include "nvic.h"
+#include "rcc.h"
 #include "spi.h"
 #include "tim.h"
 #include "tim_reg.h"
@@ -23,7 +25,7 @@
 
 // Speed count conversion ratio.
 #ifdef WIND_VANE_ULTIMETER
-#define WIND_SPEED_1HZ_TO_MH		2400
+#define WIND_SPEED_1HZ_TO_MH		5400
 #endif
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 #define WIND_SPEED_1HZ_TO_MH		2400
@@ -49,7 +51,7 @@ typedef struct {
 	unsigned int wind_direction_pwm_duty_cycle; // TIM2 counter value when edge interrupt detected on wind direction input.
 #endif
 	unsigned int wind_direction_data_count;
-	unsigned int wind_direction_degrees_average; // Average wind direction (°).
+	unsigned int wind_direction_degrees_average; // Average wind direction.
 } WIND_Context;
 
 /*** WIND local global variables ***/
@@ -84,15 +86,15 @@ void WIND_Init(void) {
 
 	/* Init GPIOs and EXTI */
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-	GPIO_Configure(&GPIO_WIND_SPEED, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
 #endif
 #ifdef WIND_VANE_ULTIMETER
 	// Wind speed.
-	GPIO_Configure(&GPIO_WIND_SPEED, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
 	// Wind direction.
-	GPIO_Configure(&GPIO_WIND_DIRECTION, Input, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_WIND_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
 #endif
 }
@@ -113,7 +115,7 @@ void WIND_StartContinuousMeasure(void) {
 #endif
 
 	/* Enable required interrupts */
-	NVIC_EnableInterrupt(IT_TIM21);
+	EXTI_ClearAllFlags();
 	NVIC_EnableInterrupt(IT_EXTI_4_15);
 }
 
@@ -125,7 +127,6 @@ void WIND_StopContinuousMeasure(void) {
 
 	/* Disable required interrupts */
 	NVIC_DisableInterrupt(IT_EXTI_4_15);
-	NVIC_DisableInterrupt(IT_TIM21);
 
 #ifdef WIND_VANE_ULTIMETER
 	/* Stop TIM2 */
@@ -145,7 +146,7 @@ void WIND_GetSpeed(unsigned int* average_wind_speed_mh, unsigned int* peak_wind_
 }
 
 /* GET AVERAGE AVERAGE WIND DIRECTION VALUE SINCE LAST MEASUREMENT START.
- * @param average_wind_direction_degrees:	Pointer to int that will contain average wind direction value in °.
+ * @param average_wind_direction_degrees:	Pointer to int that will contain average wind direction value in ï¿½.
  * @return:									None.
  */
 void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
@@ -277,20 +278,34 @@ void WIND_MeasurementPeriodCallback(void) {
 
 		/* Wind direction */
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-		// Get analog value from ADC.
+		// Internal 16MHz clock.
+		RCC_SwitchToHsi();
+		// Timers.
+		TIM21_Start();
+		TIM22_Start();
+		LPTIM1_Enable();
+		// SPI.
 #ifdef HW1_0
+		SPI1_Enable();
 		SPI1_PowerOn();
 #endif
 #ifdef HW2_0
+		SPI2_Enable();
 		SPI2_PowerOn();
 #endif
 		MAX11136_PerformMeasurements();
 #ifdef HW1_0
 		SPI1_PowerOff();
+		SPI1_Disable();
 #endif
 #ifdef HW2_0
 		SPI2_PowerOff();
+		SPI2_Disable();
 #endif
+		// Turn timers off.
+		TIM21_Disable();
+		TIM22_Disable();
+		LPTIM1_Disable();
 		// Get 12-bits result.
 		unsigned int bandgap_12bits = 0;
 		unsigned int wind_direction_12bits = 0;
@@ -316,12 +331,10 @@ void WIND_MeasurementPeriodCallback(void) {
 
 		/* Print data */
 #ifdef ATM
-		USARTx_SendString("Average speed = ");
-		USARTx_SendValue(wind_ctx.wind_speed_mh_average, USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("m/h ---- Peak speed = ");
-		USARTx_SendValue(wind_ctx.wind_speed_mh_peak, USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("m/h ---- Average direction = ");
-		USARTx_SendValue(wind_ctx.wind_direction_degrees_average, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendString("Speed=");
+		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendString("m/h Direction=");
+		USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
 		USARTx_SendString("°\n");
 #endif
 

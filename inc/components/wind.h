@@ -19,8 +19,8 @@
 #define WIND_MEASUREMENT_PERIOD_SECONDS		4
 #define WIND_DIRECTION_ERROR_VALUE			0xFFFFFFFF
 // Wind vane type.
-#define WIND_VANE_ULTIMETER					// Phase shift technique.
-//#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
+//#define WIND_VANE_ULTIMETER				// Phase shift technique.
+#define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
 
 /*** WIND global variables ***/
 

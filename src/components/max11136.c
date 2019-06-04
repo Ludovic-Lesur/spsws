@@ -149,11 +149,26 @@ void MAX11136_Init(void) {
 	/* Configure EOC GPIO */
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
-	GPIO_Configure(&GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 #endif
 #endif
 #ifdef HW2_0
-	GPIO_Configure(&GPIO_MAX11136_EOC, Input, OpenDrain, LowSpeed, PullUp);
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
+#endif
+}
+
+/* DISABLE MAX11136 GPIO.
+ * @param:	None.
+ * @return:	None.
+ */
+void MAX11136_DisableGpio(void) {
+#ifdef HW1_0
+#ifdef USE_MAX11136_EOC
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
+#endif
+#ifdef HW2_0
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 }
 

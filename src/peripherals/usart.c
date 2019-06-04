@@ -197,15 +197,15 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(&GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	USART2 -> CR2 = 0; // 1 stop bit (STOP='00').
 	USART2 -> CR3 = 0;
 	USART2 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART2 -> BRR = ((RCC_SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART2 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	USART2 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Enable transmitter and receiver */
@@ -221,8 +221,8 @@ void USART2_Init(void) {
 	NVIC_EnableInterrupt(IT_USART2);
 #else
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(&GPIO_USART2_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_USART2_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 }
 #endif
@@ -246,15 +246,15 @@ void USART1_Init(void) {
 	RCC -> APB2ENR |= (0b1 << 14); // USART1EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(&GPIO_USART1_TX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_USART1_RX, AlternateFunction, PushPull, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Configure peripheral */
 	USART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	USART1 -> CR2 = 0; // 1 stop bit (STOP='00').
 	USART1 -> CR3 = 0;
 	USART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART1 -> BRR = ((RCC_SYSCLK_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	USART1 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	USART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
 
 	/* Enable transmitter and receiver */
@@ -266,8 +266,8 @@ void USART1_Init(void) {
 	NVIC_EnableInterrupt(IT_USART1);
 #else
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(&GPIO_USART1_TX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(&GPIO_USART1_RX, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_USART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 }
 #endif

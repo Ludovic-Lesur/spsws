@@ -41,28 +41,28 @@ void EXTI4_15_IRQHandler(void) {
 
 #if (defined CM || defined ATM)
 	/* Speed edge interrupt */
-	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.num))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.gpio_num))) != 0) {
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_WIND_SPEED.num)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_WIND_SPEED.gpio_num)); // PIFx='1' (writing '1' clears the bit).
 		// Call WIND callback.
 		WIND_SpeedEdgeCallback();
 	}
 
 #ifdef WIND_VANE_ULTIMETER
 	/* Direction edge interrupt */
-	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.num))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.gpio_num))) != 0) {
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_WIND_DIRECTION.num)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_WIND_DIRECTION.gpio_num)); // PIFx='1' (writing '1' clears the bit).
 		// Call WIND callback.
 		WIND_DirectionEdgeCallback();
 	}
 #endif
 
 	/* Rain edge interrupt */
-	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.num))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.gpio_num))) != 0) {
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_RAIN.num)); // PIFx='1' (writing '1' clears the bit).
-		// Call WIND callback.
+		EXTI -> PR |= (0b1 << (GPIO_RAIN.gpio_num)); // PIFx='1' (writing '1' clears the bit).
+		// Call RAIN callback.
 		RAIN_EdgeCallback();
 	}
 #endif
@@ -87,40 +87,49 @@ void EXTI_Init(void) {
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
  * @param gpio:		GPIO to be attached to EXTI peripheral.
- * @edge_trigger:	Interrupt edge trigger (see EXTI_Trigger enumeration in exti.h).
+ * @edge_trigger:	Interrupt edge trigger (see EXTI_Trigger egpio_numeration in exti.h).
  * @return:			None.
  */
 void EXTI_ConfigureInterrupt(GPIO* gpio, EXTI_Trigger edge_trigger) {
 
 	/* Select GPIO port */
-	SYSCFG -> EXTICR[((gpio -> num) / 4)] &= ~(0b1111 << (4 * ((gpio -> num) % 4)));
-	SYSCFG -> EXTICR[((gpio -> num) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> num) % 4)));
+	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] &= ~(0b1111 << (4 * ((gpio -> gpio_num) % 4)));
+	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] |= ((gpio -> gpio_port_index) << (4 * ((gpio -> gpio_num) % 4)));
 
 	/* Select triggers */
 	switch (edge_trigger) {
 	// Rising edge only.
 	case EXTI_TRIGGER_RISING_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << ((gpio -> num))); // Rising edge enabled.
-		EXTI -> FTSR &= ~(0b1 << ((gpio -> num))); // Falling edge disabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> gpio_num))); // Rising edge enabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> gpio_num))); // Falling edge disabled.
 		break;
 	// Falling edge only.
 	case EXTI_TRIGGER_FALLING_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
-		EXTI -> RTSR &= ~(0b1 << ((gpio -> num))); // Rising edge disabled.
-		EXTI -> FTSR |= (0b1 << ((gpio -> num))); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> gpio_num))); // Rising edge disabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> gpio_num))); // Falling edge enabled.
 		break;
 	// Both edges.
 	case EXTI_TRIGGER_ANY_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> num))); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << ((gpio -> num))); // Rising edge enabled.
-		EXTI -> FTSR |= (0b1 << ((gpio -> num))); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> gpio_num))); // Rising edge enabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> gpio_num))); // Falling edge enabled.
 		break;
 	// Unknown configuration.
 	default:
-		EXTI -> IMR &= ~(0b1 << ((gpio -> num))); // IMx='0'.
-		EXTI -> RTSR &= ~(0b1 << ((gpio -> num))); // Rising edge disabled.
-		EXTI -> FTSR &= ~(0b1 << ((gpio -> num))); // Falling edge disabled.
+		EXTI -> IMR &= ~(0b1 << ((gpio -> gpio_num))); // IMx='0'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> gpio_num))); // Rising edge disabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> gpio_num))); // Falling edge disabled.
 		break;
 	}
+}
+
+/* CLEAR ALL EXTI FLAGS.
+ * @param:	None.
+ * @return:	None.
+ */
+void EXTI_ClearAllFlags(void) {
+	// Clear all flags.
+	EXTI -> PR |= 0x007BFFFF; // PIFx='1'.
 }

@@ -15,10 +15,12 @@
 
 void RTC_Reset(void);
 void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
-#ifdef CM
-volatile unsigned char RTC_GetAlarmFlag(void);
+#if (defined CM || defined ATM)
+volatile unsigned char RTC_GetAlarmAFlag(void);
+volatile unsigned char RTC_GetAlarmBFlag(void);
 #endif
-void RTC_ClearAlarmFlags(void);
+void RTC_ClearAlarmAFlag(void);
+void RTC_ClearAlarmBFlag(void);
 void RTC_Calibrate(Timestamp* gps_timestamp);
 void RTC_GetTimestamp(Timestamp* rtc_timestamp);
 
