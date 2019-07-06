@@ -152,6 +152,13 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 
+#ifdef IM
+	/* Disable alarm B */
+	RTC -> ALRMBR = 0;
+	RTC -> CR &= ~(0b1 << 9); // Disable Alarm B.
+	RTC -> CR &= ~(0b1 << 13); // Disable interrupt (ALRBIE='0').
+	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
+#endif
 #if (defined CM || defined ATM)
 	/* Configure alarm B to wake-up every seconds (wind measurements) */
 	RTC -> ALRMBR = 0;
@@ -195,7 +202,7 @@ volatile unsigned char RTC_GetAlarmBFlag(void) {
  */
 void RTC_ClearAlarmAFlag(void) {
 	// Clear ALARM and EXTI flags.
-	RTC -> ISR &= ~(0b11 << 8); // Clear flags.
+	RTC -> ISR &= ~(0b1 << 8); // Clear flags.
 	EXTI -> PR |= (0b1 << 17);
 #if (defined CM || defined ATM)
 	rtc_alra_flag = 0;
@@ -208,7 +215,7 @@ void RTC_ClearAlarmAFlag(void) {
  */
 void RTC_ClearAlarmBFlag(void) {
 	// Clear ALARM and EXTI flags.
-	RTC -> ISR &= ~(0b11 << 8); // Clear flags.
+	RTC -> ISR &= ~(0b1 << 9); // Clear flags.
 	EXTI -> PR |= (0b1 << 17);
 #if (defined CM || defined ATM)
 	rtc_alrb_flag = 0;

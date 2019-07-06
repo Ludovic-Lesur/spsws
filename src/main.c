@@ -103,6 +103,7 @@ typedef struct {
 	// Geoloc.
 	Position spsws_geoloc_position;
 	unsigned char spsws_geoloc_fix_duration_seconds;
+	unsigned char spsws_geoloc_timeout;
 	// Sigfox.
 	unsigned char spsws_sfx_uplink_data[SFX_UPLINK_DATA_MAX_SIZE_BYTES];
 	unsigned char spsws_sfx_downlink_data[SFX_DOWNLINK_DATA_SIZE_BYTES];
@@ -211,6 +212,7 @@ int main (void) {
 	spsws_ctx.spsws_hour_changed_flag = 0;
 	spsws_ctx.spsws_day_changed_flag = 0;
 	spsws_ctx.spsws_is_afternoon_flag = 0;
+	spsws_ctx.spsws_geoloc_timeout = 0;
 	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
 #ifdef IM
@@ -225,7 +227,6 @@ int main (void) {
 	unsigned int max11136_channel_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	unsigned int geoloc_fix_start_time_seconds = 0;
-	unsigned char geoloc_timeout = 0;
 	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) SPSWS_SIGFOX_RC;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 
@@ -520,16 +521,19 @@ int main (void) {
 			else {
 				// Set fix duration to timeout.
 				spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
-				geoloc_timeout = 1;
+				spsws_ctx.spsws_geoloc_timeout = 1;
 			}
 			// Build Sigfox frame.
-			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
+			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink geolocation frame.
 			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
 			if (sfx_error == SFX_ERR_NONE) {
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (geoloc_timeout ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (spsws_ctx.spsws_geoloc_timeout ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
+			// Reset geoloc variables.
+			spsws_ctx.spsws_geoloc_timeout = 0;
+			spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;
