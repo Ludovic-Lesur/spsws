@@ -50,7 +50,10 @@
 /*** SPSWS macros ***/
 
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	120
-#define SPSWS_LOCAL_UTC_OFFSET					2
+#define SPSWS_LOCAL_UTC_OFFSET_WINTER			1
+#define SPSWS_LOCAL_UTC_OFFSET_SUMMER			2
+#define SPSWS_WINTER_TIME_LAST_MONTH				3
+#define SPSWS_WINTER_TIME_FIRST_MONTH			11
 #define SPSWS_NUMBER_OF_HOURS_PER_DAY			24
 #define SPSWS_AFTERNOON_HOUR_THRESHOLD			12
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS			120
@@ -161,7 +164,11 @@ void SPSWS_UpdateTimestampFlags(void) {
 		spsws_ctx.spsws_hour_changed_flag = 1;
 	}
 	// Check if we are in afternoon (to enable device geolocation).
-	signed char local_hour = (spsws_ctx.spsws_current_timestamp.hours + SPSWS_LOCAL_UTC_OFFSET) % SPSWS_NUMBER_OF_HOURS_PER_DAY;
+	unsigned char local_utc_offset = SPSWS_LOCAL_UTC_OFFSET_WINTER;
+	if ((spsws_ctx.spsws_current_timestamp.month > SPSWS_WINTER_TIME_LAST_MONTH) && (spsws_ctx.spsws_current_timestamp.month < SPSWS_WINTER_TIME_FIRST_MONTH)) {
+		local_utc_offset = SPSWS_LOCAL_UTC_OFFSET_SUMMER;
+	}
+	signed char local_hour = (spsws_ctx.spsws_current_timestamp.hours + local_utc_offset) % SPSWS_NUMBER_OF_HOURS_PER_DAY;
 	if (local_hour < 0) {
 		local_hour += SPSWS_NUMBER_OF_HOURS_PER_DAY;
 	}

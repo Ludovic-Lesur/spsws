@@ -117,9 +117,19 @@ unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_addres
 	dps310_ctx.dps310_coef_c21 = 0;
 	dps310_ctx.dps310_coef_c30 = 0;
 
-	/* Read all coefficients */
+	/* Wait for coefficients to be ready for reading */
 	unsigned char read_byte = 0;
-	unsigned char i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0B, &read_byte);
+	unsigned char i2c_access = 0;
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while ((read_byte & (0b1 << 7)) == 0) { // Wait for COEF_RDY='1'.
+		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
+		if (i2c_access == 0) return 0;
+		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+	}
+
+	/* Read all coefficients */
+	read_byte = 0;
+	i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0B, &read_byte);
 	if (i2c_access == 0) return 0;
 	dps310_ctx.dps310_coef_c0 |= (read_byte << 4);
 	i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0A_C1B, &read_byte);
@@ -185,16 +195,25 @@ unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_addres
  */
 unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
 
+	/* Wait for sensor to be ready */
+	unsigned char read_byte = 0;
+	unsigned char i2c_access = 0;
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while ((read_byte & (0b1 << 6)) == 0) { // Wait for SENSOR_RDY='1'.
+		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
+		if (i2c_access == 0) return 0;
+		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+	}
+
 	/* Trigger temperature measurement */
-	unsigned char i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_TMP_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
+	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
 	if (i2c_access == 0) return 0;
-	dps310_ctx.dps310_kT = 3670016;
+	dps310_ctx.dps310_kT = 524288;
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 	if (i2c_access == 0) return 0;
 
 	/* Wait for temperature to be ready */
-	unsigned char read_byte = 0;
-	unsigned loop_start_time = TIM22_GetSeconds();
+	loop_start_time = TIM22_GetSeconds();
 	while ((read_byte & (0b1 << 5)) == 0) { // Wait for TMP_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
@@ -226,16 +245,26 @@ unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
  */
 unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
 
+	/* Wait for sensor to be ready */
+	unsigned char read_byte = 0;
+	unsigned char i2c_access = 0;
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while ((read_byte & (0b1 << 6)) == 0) { // Wait for SENSOR_RDY='1'.
+		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
+		if (i2c_access == 0) return 0;
+		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+	}
+
 	/* Trigger pressure measurement */
-	unsigned char i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x22); // Rate = 4 meas/s, oversampling = 4times.
+	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
 	if (i2c_access == 0) return 0;
-	dps310_ctx.dps310_kP = 3670016;
+	dps310_ctx.dps310_kP = 1572864;
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x01);
 	if (i2c_access == 0) return 0;
 
 	/* Wait for pressure to be ready */
-	unsigned char read_byte = 0;
-	unsigned loop_start_time = TIM22_GetSeconds();
+	read_byte = 0;
+	loop_start_time = TIM22_GetSeconds();
 	while ((read_byte & (0b1 << 4)) == 0) { // Wait for PRS_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
@@ -336,9 +365,6 @@ void DPS310_GetPressure(unsigned int* pressure_pa) {
 		psr_temp += last_term;
 		(*pressure_pa) = (unsigned int) psr_temp;
 	}
-
-	/* Reset results for next conversion */
-	dps310_ctx.dps310_prs_raw = DPS310_RAW_ERROR_VALUE;
 }
 
 /* READ TEMPERATURE FROM DPS310 SENSOR.
@@ -359,7 +385,4 @@ void DPS310_GetTemperature(signed char* temperature_degrees) {
 		signed long long tmp_temp = (c0 / 2) + (c1 * dps310_ctx.dps310_tmp_raw) / dps310_ctx.dps310_kT;
 		(*temperature_degrees) = (unsigned char) tmp_temp;
 	}
-
-	/* Reset results for next conversion */
-	dps310_ctx.dps310_tmp_raw = DPS310_RAW_ERROR_VALUE;
 }
