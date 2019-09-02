@@ -52,7 +52,7 @@
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	120
 #define SPSWS_LOCAL_UTC_OFFSET_WINTER			1
 #define SPSWS_LOCAL_UTC_OFFSET_SUMMER			2
-#define SPSWS_WINTER_TIME_LAST_MONTH				3
+#define SPSWS_WINTER_TIME_LAST_MONTH			3
 #define SPSWS_WINTER_TIME_FIRST_MONTH			11
 #define SPSWS_NUMBER_OF_HOURS_PER_DAY			24
 #define SPSWS_AFTERNOON_HOUR_THRESHOLD			12
@@ -128,9 +128,21 @@ void SPSWS_BlinkLed(unsigned char number_of_blinks) {
 	unsigned int k = 0;
 	for (j=0 ; j<number_of_blinks ; j++) {
 		GPIO_Write(&GPIO_LED, 1);
-		for (k=0 ; k<10000 ; k++);
+		for (k=0 ; k<20000 ; k++) {
+			// Poll a bit always read as '0'.
+			// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
+			if (((RCC -> CR) & (0b1 << 24)) != 0) {
+				break;
+			}
+		}
 		GPIO_Write(&GPIO_LED, 0);
-		for (k=0 ; k<10000 ; k++);
+		for (k=0 ; k<20000 ; k++) {
+			// Poll a bit always read as '0'.
+			// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
+			if (((RCC -> CR) & (0b1 << 24)) != 0) {
+				break;
+			}
+		}
 	}
 }
 #endif

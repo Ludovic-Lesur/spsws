@@ -36,15 +36,11 @@ static const GPIO GPIO_DIO0 = 					(GPIO) {GPIOA, 0, 10, 0};
 #ifdef USE_HWT
 static const GPIO GPIO_HWT_OUT = 				(GPIO) {GPIOA, 0, 2, 0};
 #else
-#ifdef DEBUG
 static const GPIO GPIO_LED = 					(GPIO) {GPIOA, 0, 2, 0};
 #endif
 #endif
-#endif
 #ifdef HW2_0
-#ifdef DEBUG
 static const GPIO GPIO_LED = 					(GPIO) {GPIOA, 0, 12, 0};
-#endif
 #endif
 
 // RF switch control.

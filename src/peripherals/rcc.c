@@ -241,9 +241,10 @@ unsigned char RCC_SwitchToHse(void) {
 		}
 	}
 
-	/* Switch TCXO off if any failure occured */
+	/* Switch TCXO and HSE off if any failure occured */
 	if (sysclk_on_hse == 0) {
 		GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 0);
+		RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
 	}
 
 	return sysclk_on_hse;
@@ -330,6 +331,10 @@ unsigned char RCC_EnableLse(void) {
 	if (count < RCC_TIMEOUT_COUNT) {
 		// Update flag.
 		lse_available = 1;
+	}
+	else {
+		// Switch LSE off if any failure occured.
+		RCC -> CSR &= ~(0b1 << 8); // LSEON='0'.
 	}
 
 	return lse_available;

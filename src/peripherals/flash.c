@@ -9,6 +9,10 @@
 
 #include "flash_reg.h"
 
+/*** FLASH local macros ***/
+
+#define FLASH_TIMEOUT_COUNT		1000
+
 /*** FLASH functions ***/
 
 /* INIT FLASH LATENCY.
@@ -19,5 +23,8 @@ void FLASH_Init(void) {
 	// Add 1 wait state.
 	FLASH -> ACR |= (0b1 << 0); // LATENCY='1'.
 	// Wait until configuration is done.
-	while (((FLASH -> ACR) & (0b1 << 0)) == 0);
+	unsigned int count = 0;
+	while ((((FLASH -> ACR) & (0b1 << 0)) == 0) && (count < FLASH_TIMEOUT_COUNT)) {
+		count++;
+	}
 }

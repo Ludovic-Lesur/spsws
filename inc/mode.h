@@ -18,7 +18,7 @@
 
 /*** Debug mode ***/
 
-#define DEBUG		// Use LED and programming pins for debug purpose if defined.
+//#define DEBUG		// Use LED and programming pins for debug purpose if defined.
 
 /*** Error management ***/
 
