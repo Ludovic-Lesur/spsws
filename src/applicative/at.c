@@ -999,7 +999,7 @@ void AT_DecodeRxBuffer(void) {
 
 		/* Set key command AT$KEY=<id><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_KEY) == AT_NO_ERROR) {
-			unsigned char param_key[ID_LENGTH] = {0};
+			unsigned char param_key[AES_BLOCK_SIZE] = {0};
 			get_param_result = AT_GetByteArray(1, param_key, AES_BLOCK_SIZE, &extracted_length);
 			if (get_param_result == AT_NO_ERROR) {
 				// Check length.

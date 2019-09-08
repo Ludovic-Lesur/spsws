@@ -24,6 +24,8 @@
 /*** WIND local macros ***/
 
 // Speed count conversion ratio.
+#define WIND_ANGLE_ERROR_VALUE		0xFFFFFFFF
+#define WIND_DIRECTION_ERROR_VALUE	0xFF
 #ifdef WIND_VANE_ULTIMETER
 #define WIND_SPEED_1HZ_TO_MH		5400
 #endif
@@ -72,6 +74,9 @@ static const unsigned int wind_vane_angle_table_degrees[WIND_NUMBER_OF_DIRECTION
  * @return:	None.
  */
 void WIND_Init(void) {
+
+	/* Init data */
+	WIND_ResetData();
 
 	/* GPIO mapping selection */
 	GPIO_WIND_SPEED = GPIO_DIO0;
@@ -170,13 +175,13 @@ void WIND_ResetData(void) {
 	wind_ctx.wind_speed_mh_peak = 0;
 
 	/* Wind direction */
-	wind_ctx.wind_direction_degrees = 0;
+	wind_ctx.wind_direction_degrees = WIND_ANGLE_ERROR_VALUE;
 #ifdef WIND_VANE_ULTIMETER
 	wind_ctx.wind_direction_pwm_period = 0;
 	wind_ctx.wind_direction_pwm_duty_cycle = 0;
 #endif
 	wind_ctx.wind_direction_data_count = 0;
-	wind_ctx.wind_direction_degrees_average = 0;
+	wind_ctx.wind_direction_degrees_average = WIND_DIRECTION_ERROR_VALUE;
 }
 
 /*** Wind utility functions ***/
@@ -225,7 +230,7 @@ void WIND_DirectionEdgeCallback(void) {
 unsigned int WIND_VoltageToAngle(unsigned int vcc_mv, unsigned int direction_mv) {
 
 	/* Local variables */
-	unsigned int wind_vane_angle = WIND_DIRECTION_ERROR_VALUE;
+	unsigned int wind_vane_angle = WIND_ANGLE_ERROR_VALUE;
 	unsigned char idx = 0;
 	unsigned int lower_voltage_mv = 0;
 	unsigned int upper_voltage_mv = 0;
@@ -276,57 +281,56 @@ void WIND_MeasurementPeriodCallback(void) {
 		wind_ctx.wind_speed_mh_average = ((wind_ctx.wind_speed_mh_average * wind_ctx.wind_speed_data_count) + wind_ctx.wind_speed_mh) / (wind_ctx.wind_speed_data_count + 1);
 		wind_ctx.wind_speed_data_count++;
 
-		/* Wind direction */
+		/* Wind direction (only if there is wind) */
+		if (wind_ctx.wind_speed_mh > 0) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-		// Internal 16MHz clock.
-		RCC_SwitchToHsi();
-		// Timers.
-		TIM21_Start();
-		TIM22_Start();
-		LPTIM1_Enable();
-		// SPI.
+			// Internal 16MHz clock.
+			RCC_SwitchToHsi();
+			// Timers.
+			TIM21_Start();
+			TIM22_Start();
+			LPTIM1_Enable();
+			// SPI.
 #ifdef HW1_0
-		SPI1_Enable();
-		SPI1_PowerOn();
+			SPI1_Enable();
+			SPI1_PowerOn();
 #endif
 #ifdef HW2_0
-		SPI2_Enable();
-		SPI2_PowerOn();
+			SPI2_Enable();
+			SPI2_PowerOn();
 #endif
-		MAX11136_PerformMeasurements();
+			MAX11136_PerformMeasurements();
 #ifdef HW1_0
-		SPI1_PowerOff();
-		SPI1_Disable();
+			SPI1_PowerOff();
+			SPI1_Disable();
 #endif
 #ifdef HW2_0
-		SPI2_PowerOff();
-		SPI2_Disable();
+			SPI2_PowerOff();
+			SPI2_Disable();
 #endif
-		// Turn timers off.
-		TIM21_Disable();
-		TIM22_Disable();
-		LPTIM1_Disable();
-		// Get 12-bits result.
-		unsigned int bandgap_12bits = 0;
-		unsigned int wind_direction_12bits = 0;
-		MAX11136_GetChannel(MAX11136_CHANNEL_BANDGAP, &bandgap_12bits);
-		MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);
-		// Convert to mV.
-		unsigned int wind_vcc_mv = (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / bandgap_12bits;
-		unsigned int wind_direction_mv = (wind_direction_12bits * MAX11136_BANDGAP_VOLTAGE_MV) / (bandgap_12bits);
-		// Convert voltage to direction (TBD).
-		wind_ctx.wind_direction_degrees = WIND_VoltageToAngle(wind_vcc_mv, wind_direction_mv);
+			// Turn timers off.
+			TIM21_Disable();
+			TIM22_Disable();
+			LPTIM1_Disable();
+			// Get 12-bits result.
+			unsigned int bandgap_12bits = 0;
+			unsigned int wind_direction_12bits = 0;
+			MAX11136_GetChannel(MAX11136_CHANNEL_BANDGAP, &bandgap_12bits);
+			MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);
+			// Convert to mV.
+			unsigned int wind_vcc_mv = (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / bandgap_12bits;
+			unsigned int wind_direction_mv = (wind_direction_12bits * MAX11136_BANDGAP_VOLTAGE_MV) / (bandgap_12bits);
+			// Convert voltage to direction (TBD).
+			wind_ctx.wind_direction_degrees = WIND_VoltageToAngle(wind_vcc_mv, wind_direction_mv);
 #endif
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-		// Update average value if direction is valid.
-		if (wind_ctx.wind_direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
-#endif
-#ifdef WIND_VANE_ULTIMETER
-		// Update average value only there is wind (direction is valid only when a speed is computed).
-		if (wind_ctx.wind_speed_edge_count != 0) {
-#endif
-			wind_ctx.wind_direction_degrees_average = ((wind_ctx.wind_direction_degrees_average * wind_ctx.wind_direction_data_count) + wind_ctx.wind_direction_degrees) / (wind_ctx.wind_direction_data_count + 1);
-			wind_ctx.wind_direction_data_count++;
+			// Update average value if direction is valid.
+			if (wind_ctx.wind_direction_degrees != WIND_ANGLE_ERROR_VALUE) {
+				wind_ctx.wind_direction_degrees_average = ((wind_ctx.wind_direction_degrees_average * wind_ctx.wind_direction_data_count) + wind_ctx.wind_direction_degrees) / (wind_ctx.wind_direction_data_count + 1);
+				wind_ctx.wind_direction_data_count++;
+			}
+		}
+		else {
+			wind_ctx.wind_direction_degrees = WIND_ANGLE_ERROR_VALUE;
 		}
 
 		/* Print data */
