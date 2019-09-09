@@ -9,6 +9,7 @@
 
 #include "dps310.h"
 #include "mode.h"
+#include "wind.h"
 
 /*** WEATHER functions ***/
 
@@ -41,7 +42,12 @@ void WEATHER_BuildSigfoxData(WEATHER_Data* weather_data, unsigned char* weather_
 	// Peak wind speed.
 	weather_sigfox_data[7] = (weather_data -> weather_data_peak_wind_speed_mh) / 1000;
 	// Average wind direction.
-	weather_sigfox_data[8] = (weather_data -> weather_data_average_wind_direction_degrees) / 2;
+	if ((weather_data -> weather_data_average_wind_direction_degrees) != WIND_DIRECTION_ERROR_VALUE) {
+		weather_sigfox_data[8] = (weather_data -> weather_data_average_wind_direction_degrees) / 2;
+	}
+	else {
+		weather_sigfox_data[8] = 0xFF;
+	}
 	// Rain.
 	weather_sigfox_data[9] = weather_data -> weather_data_rain_mm;
 #endif

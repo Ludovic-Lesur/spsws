@@ -21,6 +21,8 @@
 //#define WIND_VANE_ULTIMETER				// Phase shift technique.
 #define WIND_VANE_ARGENT_DATA_SYSTEMS		// Analog technique.
 
+#define WIND_DIRECTION_ERROR_VALUE			0xFFFFFFFF
+
 /*** WIND global variables ***/
 
 GPIO GPIO_WIND_SPEED;

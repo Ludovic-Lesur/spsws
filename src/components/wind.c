@@ -24,8 +24,6 @@
 /*** WIND local macros ***/
 
 // Speed count conversion ratio.
-#define WIND_ANGLE_ERROR_VALUE		0xFFFFFFFF
-#define WIND_DIRECTION_ERROR_VALUE	0xFF
 #ifdef WIND_VANE_ULTIMETER
 #define WIND_SPEED_1HZ_TO_MH		5400
 #endif
@@ -175,7 +173,7 @@ void WIND_ResetData(void) {
 	wind_ctx.wind_speed_mh_peak = 0;
 
 	/* Wind direction */
-	wind_ctx.wind_direction_degrees = WIND_ANGLE_ERROR_VALUE;
+	wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 #ifdef WIND_VANE_ULTIMETER
 	wind_ctx.wind_direction_pwm_period = 0;
 	wind_ctx.wind_direction_pwm_duty_cycle = 0;
@@ -230,7 +228,7 @@ void WIND_DirectionEdgeCallback(void) {
 unsigned int WIND_VoltageToAngle(unsigned int vcc_mv, unsigned int direction_mv) {
 
 	/* Local variables */
-	unsigned int wind_vane_angle = WIND_ANGLE_ERROR_VALUE;
+	unsigned int wind_vane_angle = WIND_DIRECTION_ERROR_VALUE;
 	unsigned char idx = 0;
 	unsigned int lower_voltage_mv = 0;
 	unsigned int upper_voltage_mv = 0;
@@ -324,13 +322,13 @@ void WIND_MeasurementPeriodCallback(void) {
 			wind_ctx.wind_direction_degrees = WIND_VoltageToAngle(wind_vcc_mv, wind_direction_mv);
 #endif
 			// Update average value if direction is valid.
-			if (wind_ctx.wind_direction_degrees != WIND_ANGLE_ERROR_VALUE) {
+			if (wind_ctx.wind_direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
 				wind_ctx.wind_direction_degrees_average = ((wind_ctx.wind_direction_degrees_average * wind_ctx.wind_direction_data_count) + wind_ctx.wind_direction_degrees) / (wind_ctx.wind_direction_data_count + 1);
 				wind_ctx.wind_direction_data_count++;
 			}
 		}
 		else {
-			wind_ctx.wind_direction_degrees = WIND_ANGLE_ERROR_VALUE;
+			wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 		}
 
 		/* Print data */
