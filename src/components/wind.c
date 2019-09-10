@@ -73,9 +73,6 @@ static const unsigned int wind_vane_angle_table_degrees[WIND_NUMBER_OF_DIRECTION
  */
 void WIND_Init(void) {
 
-	/* Init data */
-	WIND_ResetData();
-
 	/* GPIO mapping selection */
 	GPIO_WIND_SPEED = GPIO_DIO0;
 #ifdef WIND_VANE_ULTIMETER
