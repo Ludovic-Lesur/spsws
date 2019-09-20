@@ -10,6 +10,7 @@
 #include "exti.h"
 #include "lptim.h"
 #include "mapping.h"
+#include "math.h"
 #include "max11136.h"
 #include "mode.h"
 #include "nvic.h"
@@ -25,12 +26,11 @@
 
 // Speed count conversion ratio.
 #ifdef WIND_VANE_ULTIMETER
-#define WIND_SPEED_1HZ_TO_MH		5400
+#define WIND_SPEED_1HZ_TO_MH				5400
 #endif
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define WIND_SPEED_1HZ_TO_MH		2400
-#define WIND_NUMBER_OF_DIRECTIONS	16 // Number of positions.
-#define WIND_DIRECTION_PULL_UP_OHM	10000 // Pull-resistor value in Ohms.
+#define WIND_SPEED_1HZ_TO_MH				2400
+#define WIND_NUMBER_OF_DIRECTIONS			16 // Number of positions.
 #endif
 
 /*** WIND local structures ***/
@@ -50,20 +50,50 @@ typedef struct {
 	unsigned int wind_direction_pwm_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
 	unsigned int wind_direction_pwm_duty_cycle; // TIM2 counter value when edge interrupt detected on wind direction input.
 #endif
-	unsigned int wind_direction_data_count;
-	unsigned int wind_direction_degrees_average; // Average wind direction.
+	signed int wind_direction_x; // x coordinate of wind direction trend point.
+	signed int wind_direction_y; // y coordinate of wind direction trend point.
 } WIND_Context;
 
 /*** WIND local global variables ***/
 
 static volatile WIND_Context wind_ctx;
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-// Warning: resistor table should be sorted in ascending order.
-static const unsigned int wind_vane_resistor_table_ohm[WIND_NUMBER_OF_DIRECTIONS] = {688, 891, 1000, 1410, 2200, 3140, 3900, 6570, 8200, 14120, 16000, 21880, 33000, 42120, 64900, 120000};
-static unsigned int wind_vane_threshold_table_mv[WIND_NUMBER_OF_DIRECTIONS];
-// Warning: angles have to be provided in the same order as the resistor table.
-static const unsigned int wind_vane_angle_table_degrees[WIND_NUMBER_OF_DIRECTIONS] = {112, 67, 90, 157, 135, 202, 180, 22, 45, 247, 225, 337, 0, 292, 315, 270};
+// Rp = 10k (pull-up resistor).
+// Rw = 688, 891, 1000, 1410, 2200, 3140, 3900, 6570, 8200, 14120, 16000, 21880, 33000, 42120, 64900 and 120000.
+// Resistor divider ratio values = 1000 * ((Rw) / (Rw + Rp)).
+// The following table gives the mean between two consecutive ratios (used as threshold). It must be sorted in ascending order.
+static const unsigned int WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {73, 86, 107, 152, 210, 318, 424, 518, 600, 651, 727, 788, 837, 895, 1000};
+// Angle table (must be mapped on the ratio table: angle[i] = angle for ratio[i]).
+static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {112, 67, 90, 157, 135, 202, 180, 22, 45, 247, 225, 337, 0, 292, 315, 270};
 #endif
+
+/*** WIND local functions ***/
+
+/* COMPUTE THE TREND POINT DIRECTION (ATAN2 FUNCTION).
+ * @param x:	x coordinate of the trend point.
+ * @param y:	y coordinate of the trend point.
+ * @return:		Angle of the point (x,y).
+ */
+unsigned int WIND_Atan2(signed int x, signed int y) {
+
+	/* Compute atan2 function */
+	unsigned int alpha = WIND_DIRECTION_ERROR_VALUE;
+	if ((x != 0) || (y != 0)) {
+		if (x == 0) {
+			alpha = (y > 0) ? 90 : 270;
+		}
+		else {
+			//alpha = ARCTAN(y/x); // TBD.
+			if (x < 0) {
+				alpha += 180;
+			}
+			else {
+				alpha += (y < 0) ? 360 : 0;
+			}
+		}
+	}
+	return alpha;
+}
 
 /*** WIND functions ***/
 
@@ -146,11 +176,17 @@ void WIND_GetSpeed(unsigned int* average_wind_speed_mh, unsigned int* peak_wind_
 }
 
 /* GET AVERAGE AVERAGE WIND DIRECTION VALUE SINCE LAST MEASUREMENT START.
- * @param average_wind_direction_degrees:	Pointer to int that will contain average wind direction value in �.
+ * @param average_wind_direction_degrees:	Pointer to int that will contain average wind direction value in degrees.
  * @return:									None.
  */
 void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
-	(*average_wind_direction_degrees) = wind_ctx.wind_direction_degrees_average;
+	if ((wind_ctx.wind_direction_x == 0) && (wind_ctx.wind_direction_y == 0)) {
+		(*average_wind_direction_degrees) = WIND_DIRECTION_ERROR_VALUE;
+	}
+	else {
+		// Compute trend point angle (considered as average wind direction).
+		(*average_wind_direction_degrees) = WIND_Atan2(wind_ctx.wind_direction_x, wind_ctx.wind_direction_y);
+	}
 }
 
 /* RESET WIND MEASUREMENT DATA.
@@ -175,8 +211,8 @@ void WIND_ResetData(void) {
 	wind_ctx.wind_direction_pwm_period = 0;
 	wind_ctx.wind_direction_pwm_duty_cycle = 0;
 #endif
-	wind_ctx.wind_direction_data_count = 0;
-	wind_ctx.wind_direction_degrees_average = WIND_DIRECTION_ERROR_VALUE;
+	wind_ctx.wind_direction_x = 0;
+	wind_ctx.wind_direction_y = 0;
 }
 
 /*** Wind utility functions ***/
@@ -218,37 +254,27 @@ void WIND_DirectionEdgeCallback(void) {
 
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 /* CONVERT OUTPUT VOLTAGE TO WIND VANE ANGLE.
- * @param vcc_mv:			Voltage divider supply in mV.
- * @param direction_mv:		Voltage divider output voltage in mV.
- * @return wind_vane_angle:	Corresponding angle in degrees.
+ * @param vcc_mv:		Voltage divider supply in mV.
+ * @param direction_mv:	Voltage divider output voltage in mV.
+ * @return:				None.
  */
-unsigned int WIND_VoltageToAngle(unsigned int vcc_mv, unsigned int direction_mv) {
+void WIND_VoltageToAngle(unsigned int direction_12bits) {
 
-	/* Local variables */
-	unsigned int wind_vane_angle = WIND_DIRECTION_ERROR_VALUE;
-	unsigned char idx = 0;
-	unsigned int lower_voltage_mv = 0;
-	unsigned int upper_voltage_mv = 0;
+	/* Reset result */
+	wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 
-	/* Compute threshold table */
-	for (idx=0 ; idx<(WIND_NUMBER_OF_DIRECTIONS-1) ; idx++) {
-		// Lower voltage.
-		lower_voltage_mv = (wind_vane_resistor_table_ohm[idx] * vcc_mv) / (wind_vane_resistor_table_ohm[idx] + WIND_DIRECTION_PULL_UP_OHM);
-		upper_voltage_mv = (wind_vane_resistor_table_ohm[idx+1] * vcc_mv) / (wind_vane_resistor_table_ohm[idx+1] + WIND_DIRECTION_PULL_UP_OHM);
-		// Compute average.
-		wind_vane_threshold_table_mv[idx] = (lower_voltage_mv + upper_voltage_mv) / 2;
-	}
-	// Last threshold is Vcc.
-	wind_vane_threshold_table_mv[WIND_NUMBER_OF_DIRECTIONS-1] = vcc_mv;
+	/* Compute ratio */
+	unsigned int ratio = (direction_12bits * 1000) / (MAX11136_FULL_SCALE);
 
 	/* Compute angle */
+	unsigned char idx = 0;
 	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
-		if (direction_mv < wind_vane_threshold_table_mv[idx]) {
-			wind_vane_angle = wind_vane_angle_table_degrees[idx];
+		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
+			// Update current angle and table index.
+			wind_ctx.wind_direction_degrees = WIND_DIRECTION_ANGLE_TABLE[idx];
 			break;
 		}
 	}
-	return wind_vane_angle;
 }
 #endif
 
@@ -308,20 +334,17 @@ void WIND_MeasurementPeriodCallback(void) {
 			TIM22_Disable();
 			LPTIM1_Disable();
 			// Get 12-bits result.
-			unsigned int bandgap_12bits = 0;
 			unsigned int wind_direction_12bits = 0;
-			MAX11136_GetChannel(MAX11136_CHANNEL_BANDGAP, &bandgap_12bits);
 			MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);
-			// Convert to mV.
-			unsigned int wind_vcc_mv = (MAX11136_BANDGAP_VOLTAGE_MV * MAX11136_FULL_SCALE) / bandgap_12bits;
-			unsigned int wind_direction_mv = (wind_direction_12bits * MAX11136_BANDGAP_VOLTAGE_MV) / (bandgap_12bits);
-			// Convert voltage to direction (TBD).
-			wind_ctx.wind_direction_degrees = WIND_VoltageToAngle(wind_vcc_mv, wind_direction_mv);
+			// Convert voltage to direction.
+			WIND_VoltageToAngle(wind_direction_12bits);
 #endif
-			// Update average value if direction is valid.
+			// Update trend point if direction is valid.
 			if (wind_ctx.wind_direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
-				wind_ctx.wind_direction_degrees_average = ((wind_ctx.wind_direction_degrees_average * wind_ctx.wind_direction_data_count) + wind_ctx.wind_direction_degrees) / (wind_ctx.wind_direction_data_count + 1);
-				wind_ctx.wind_direction_data_count++;
+				// Convert degrees to radians.
+				// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
+				wind_ctx.wind_direction_x += (wind_ctx.wind_speed_mh / 1000) * MATH_COS_TABLE[wind_ctx.wind_direction_degrees];
+				wind_ctx.wind_direction_y += (wind_ctx.wind_speed_mh / 1000) * MATH_SIN_TABLE[wind_ctx.wind_direction_degrees];
 			}
 		}
 		else {

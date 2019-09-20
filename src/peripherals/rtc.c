@@ -97,7 +97,13 @@ void RTC_Reset(void) {
 	/* Reset RTC peripheral */
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
 	unsigned char j = 0;
-	for (j=0 ; j<100 ; j++);
+	for (j=0 ; j<100 ; j++) {
+		// Poll a bit always read as '0'.
+		// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
+		if (((RCC -> CR) & (0b1 << 24)) != 0) {
+			break;
+		}
+	}
 	RCC -> CSR &= ~(0b1 << 19); // RTCRST='0'.
 }
 

@@ -333,7 +333,7 @@ int main (void) {
 			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
 			spsws_ctx.spsws_status_byte |= (RCC_SwitchToHse() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
 			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX)) == 0) {
-				while (RCC_SwitchToHsi() == 0);
+				RCC_SwitchToHsi();
 			}
 			// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
 			spsws_ctx.spsws_lsi_frequency_hz = RCC_GetLsiFrequency();
