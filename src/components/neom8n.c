@@ -11,10 +11,15 @@
 #include "iwdg.h"
 #include "lptim.h"
 #include "lpuart.h"
+#include "mode.h"
 #include "tim.h"
+#include "usart.h"
 
 /*** NEOM8N local macros ***/
 
+#ifdef ATM
+//#define NEOM8N_PRINT_NMEA					// Print NMEA frames if defined.
+#endif
 #define NEOM8N_MSG_OVERHEAD_LENGTH			8 // 6 bytes header + 2 bytes checksum.
 #define NEOM8N_CHECKSUM_OVERHEAD_LENGTH		4
 #define NEOM8N_CHECKSUM_OFFSET				2
@@ -44,7 +49,9 @@
 #define NMEA_GGA_EO_FIELD_LENGTH			1
 #define NMEA_GGA_EAST						'E'
 #define NMEA_GGA_WEST						'O'
+#define NMEA_GGA_QUALITY_FIELD_LENGTH		1
 #define NMEA_GGA_ALT_UNIT_FIELD_LENGTH		1
+#define NMEA_GGA_ALT_STABILITY_COUNT		10
 #define NMEA_GGA_METERS						'M'
 
 #define NMEA_CHECKSUM_START_CHAR			'*' // To skip '$'.
@@ -61,7 +68,9 @@ typedef struct {
 	unsigned char nmea_zda_parsing_success;				// Set to '1' as soon an NMEA ZDA message was successfully parsed.
 	unsigned char nmea_zda_data_valid;					// set to '1' if retrieved NMEA ZDA data is valid.
 	unsigned char nmea_gga_parsing_success;				// Set to '1' as soon an NMEA GGA message was successfully parsed.
-	unsigned char nmea_gga_data_valid;					// set to '1' if retrieved NMEA GGA data is valid.
+	unsigned char nmea_gga_same_altitude_count;			// Number of consecutive same altitudes.
+	unsigned int nmea_gga_previous_altitude;
+	unsigned char nmea_gga_high_quality_flag;			// Set to '1' when fix quality indicator is > 1.
 } NEOM8N_Context;
 
 /*** NEOM8N local global variables ***/
@@ -74,7 +83,7 @@ static NEOM8N_Context neom8n_ctx;
  * @param c:			Hexadecimal character to convert.
  * @return hexa_value:	Result of conversion.
  */
-unsigned char AsciiToHexa(unsigned char c) {
+unsigned char NEOM8N_AsciiToHexa(unsigned char c) {
 	unsigned char value = 0;
 	if ((c >= '0') && (c <= '9')) {
 		value = c - '0';
@@ -91,7 +100,7 @@ unsigned char AsciiToHexa(unsigned char c) {
  * @param power:	The desired power.
  * @return result:	Result of computation.
  */
-unsigned int Pow10(unsigned char n) {
+unsigned int NEOM8N_Pow10(unsigned char n) {
 	unsigned int result = 0;
 	unsigned int pow10_buf[9] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};
 	if (n <= 9) {
@@ -132,7 +141,7 @@ unsigned char NEOM8N_GetNmeaChecksum(unsigned char* nmea_rx_buf) {
 		checksum_start_char_idx++;
 	}
 	if (checksum_start_char_idx < NMEA_RX_BUFFER_SIZE) {
-		ck = (AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+2]);
+		ck = (NEOM8N_AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + NEOM8N_AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+2]);
 	}
 	return ck;
 }
@@ -205,10 +214,10 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_times
 
 				/* Field 2 = time = <hhmmss.ss> */
 				case 2:
-					if ((idx-sep_idx) == (NMEA_ZDA_TIME_FIELD_LENGTH+1)) {
-						(*gps_timestamp).hours = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
-						(*gps_timestamp).minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+4]);
-						(*gps_timestamp).seconds = AsciiToHexa(nmea_rx_buf[sep_idx+5])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+6]);
+					if ((idx - sep_idx) == (NMEA_ZDA_TIME_FIELD_LENGTH + 1)) {
+						(*gps_timestamp).hours = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_timestamp).minutes = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+3]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+4]);
+						(*gps_timestamp).seconds = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+5]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+6]);
 					}
 					else {
 						error_found = 1;
@@ -217,8 +226,8 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_times
 
 				/* Field 3 = day = <dd> */
 				case 3:
-					if ((idx-sep_idx) == (NMEA_ZDA_DAY_FIELD_LENGTH+1)) {
-						(*gps_timestamp).date = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+					if ((idx - sep_idx) == (NMEA_ZDA_DAY_FIELD_LENGTH + 1)) {
+						(*gps_timestamp).date = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -226,8 +235,8 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_times
 					break;
 
 				case 4:
-					if ((idx-sep_idx) == (NMEA_ZDA_MONTH_FIELD_LENGTH+1)) {
-						(*gps_timestamp).month = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10 + AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+					if ((idx - sep_idx) == (NMEA_ZDA_MONTH_FIELD_LENGTH + 1)) {
+						(*gps_timestamp).month = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+2]);
 					}
 					else {
 						error_found = 1;
@@ -235,10 +244,10 @@ void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_times
 					break;
 
 				case 5:
-					if ((idx-sep_idx) == (NMEA_ZDA_YEAR_FIELD_LENGTH+1)) {
+					if ((idx - sep_idx) == (NMEA_ZDA_YEAR_FIELD_LENGTH + 1)) {
 						(*gps_timestamp).year = 0;
 						for (k=0 ; k<NMEA_ZDA_YEAR_FIELD_LENGTH ; k++) {
-							(*gps_timestamp).year += Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
+							(*gps_timestamp).year += NEOM8N_Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH-1-k) * NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 						}
 						// Last field retrieved, parsing process succeeded.
 						neom8n_ctx.nmea_zda_parsing_success = 1;
@@ -316,12 +325,12 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 
 				/* Field 3 = latitude = <ddmm.mmmmm> */
 				case 3:
-					if ((idx-sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH+1)) {
-						(*gps_position).lat_degrees = AsciiToHexa(nmea_rx_buf[sep_idx+1])*10+AsciiToHexa(nmea_rx_buf[sep_idx+2]);
-						(*gps_position).lat_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+3])*10+AsciiToHexa(nmea_rx_buf[sep_idx+4]);
+					if ((idx - sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH + 1)) {
+						(*gps_position).lat_degrees = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+2]);
+						(*gps_position).lat_minutes = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+3]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+4]);
 						(*gps_position).lat_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).lat_seconds += Pow10(4-k)*AsciiToHexa(nmea_rx_buf[sep_idx+6+k]);
+							(*gps_position).lat_seconds += NEOM8N_Pow10(4-k) * NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+6+k]);
 						}
 					}
 					else {
@@ -331,7 +340,7 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 
 				/* Field 4 = <N> or <S> */
 				case 4:
-					if ((idx-sep_idx) == (NMEA_GGA_NS_FIELD_LENGTH+1)) {
+					if ((idx - sep_idx) == (NMEA_GGA_NS_FIELD_LENGTH + 1)) {
 						switch (nmea_rx_buf[sep_idx+1]) {
 						case NMEA_GGA_NORTH:
 							(*gps_position).lat_north = 1;
@@ -352,15 +361,15 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 
 				/* Field 5 = longitude = <dddmm.mmmmm> */
 				case 5:
-					if ((idx-sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH+1)) {
+					if ((idx - sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH + 1)) {
 						(*gps_position).long_degrees = 0;
 						for (k=0 ; k<3 ; k++) {
-							(*gps_position).long_degrees += Pow10(2-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
+							(*gps_position).long_degrees += NEOM8N_Pow10(2-k) * NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 						}
-						(*gps_position).long_minutes = AsciiToHexa(nmea_rx_buf[sep_idx+4])*10+AsciiToHexa(nmea_rx_buf[sep_idx+5]);
+						(*gps_position).long_minutes = NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+4]) * 10 + NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+5]);
 						(*gps_position).long_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).long_seconds += Pow10(4-k)*AsciiToHexa(nmea_rx_buf[sep_idx+7+k]);
+							(*gps_position).long_seconds += NEOM8N_Pow10(4-k) * NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+7+k]);
 						}
 					}
 					else {
@@ -370,7 +379,7 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 
 				/* Field 6 = <E> or <O> */
 				case 6:
-					if ((idx-sep_idx) == (NMEA_GGA_EO_FIELD_LENGTH+1)) {
+					if ((idx - sep_idx) == (NMEA_GGA_EO_FIELD_LENGTH + 1)) {
 						switch (nmea_rx_buf[sep_idx+1]) {
 						case NMEA_GGA_EAST:
 							(*gps_position).long_east = 1;
@@ -389,28 +398,37 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 					}
 					break;
 
+				/* Field 7 = quality indicator */
+				case 7:
+					if ((idx - sep_idx) == (NMEA_GGA_QUALITY_FIELD_LENGTH + 1)) {
+						if (NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1]) > 1) {
+							neom8n_ctx.nmea_gga_high_quality_flag = 1;
+						}
+						else {
+							neom8n_ctx.nmea_gga_high_quality_flag = 0;
+						}
+					}
+					break;
+
 				/* Field 10 = altitude */
 				case 10:
-					alt_field_length = (idx-sep_idx)-1;
+					alt_field_length = (idx - sep_idx) - 1;
 					if (alt_field_length >= 1) {
-
-						/* Get number of digits of integer part (search dot) */
+						// Get number of digits of integer part (search dot).
 						for (alt_number_of_digits=0 ; alt_number_of_digits<alt_field_length ; alt_number_of_digits++) {
 							if (nmea_rx_buf[sep_idx+1+alt_number_of_digits] == NMEA_DOT) {
 								break; // Dot found, stop counting integer part length.
 							}
 						}
-
-						/* Compute integer part */
+						// Compute integer part.
 						if (alt_number_of_digits > 0) {
 							(*gps_position).altitude = 0;
 							for (k=0 ; k<alt_number_of_digits ; k++) {
-								(*gps_position).altitude += Pow10(alt_number_of_digits-1-k)*AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
+								(*gps_position).altitude += NEOM8N_Pow10(alt_number_of_digits-1-k) * NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+1+k]);
 							}
-
-							/* Rounding operation if fractionnal part exists (not required for success) */
+							// Rounding operation if fractionnal part exists (not required for success).
 							if ((idx-(sep_idx+alt_number_of_digits)-1) >= 2) {
-								if (AsciiToHexa(nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
+								if (NEOM8N_AsciiToHexa(nmea_rx_buf[sep_idx+alt_number_of_digits+2]) >= 5) {
 									(*gps_position).altitude++; // Add '1' to altitude.
 								}
 							}
@@ -426,7 +444,7 @@ void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_positi
 
 				/* Field 11 = altitude unit */
 				case 11:
-					if ((idx-sep_idx) == (NMEA_GGA_ALT_UNIT_FIELD_LENGTH+1)) {
+					if ((idx - sep_idx) == (NMEA_GGA_ALT_UNIT_FIELD_LENGTH + 1)) {
 						if (nmea_rx_buf[sep_idx+1] == NMEA_GGA_METERS) {
 							// Last field retrieved, parsing process succeeded.
 							neom8n_ctx.nmea_gga_parsing_success = 1;
@@ -532,7 +550,9 @@ void NEOM8N_Init(void) {
 	neom8n_ctx.nmea_zda_parsing_success = 0;
 	neom8n_ctx.nmea_zda_data_valid = 0;
 	neom8n_ctx.nmea_gga_parsing_success = 0;
-	neom8n_ctx.nmea_gga_data_valid = 0;
+	neom8n_ctx.nmea_gga_same_altitude_count = 0;
+	neom8n_ctx.nmea_gga_previous_altitude = 0;
+	neom8n_ctx.nmea_gga_high_quality_flag = 0;
 }
 
 /* GET CURRENT GPS TIMESTAMP VIA ZDA NMEA  MESSAGES.
@@ -562,13 +582,26 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
 			// Decode incoming NMEA message.
 			if (neom8n_ctx.nmea_rx_fill_buf1 == 1) {
+#ifdef NEOM8N_PRINT_NMEA
+				unsigned char byte_idx = 0;
+				for (byte_idx=0 ; byte_idx<NMEA_RX_BUFFER_SIZE ; byte_idx++) {
+					USARTx_SendValue(neom8n_ctx.nmea_rx_buf2[byte_idx], USART_FORMAT_ASCII, 0);
+					if (neom8n_ctx.nmea_rx_buf2[byte_idx] == NMEA_LF) break;
+				}
+#endif
 				NEOM8N_ParseNmeaZdaMessage(neom8n_ctx.nmea_rx_buf2, gps_timestamp); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
 			}
 			else {
+#ifdef NEOM8N_PRINT_NMEA
+				unsigned char byte_idx = 0;
+				for (byte_idx=0 ; byte_idx<NMEA_RX_BUFFER_SIZE ; byte_idx++) {
+					USARTx_SendValue(neom8n_ctx.nmea_rx_buf1[byte_idx], USART_FORMAT_ASCII, 0);
+					if (neom8n_ctx.nmea_rx_buf1[byte_idx] == NMEA_LF) break;
+				}
+#endif
 				NEOM8N_ParseNmeaZdaMessage(neom8n_ctx.nmea_rx_buf1, gps_timestamp); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
 			}
 			if (neom8n_ctx.nmea_zda_parsing_success == 1) {
-				return_code = NEOM8N_INVALID_DATA;
 				// Check data.
 				if (NEOM8N_TimestampIsValid(gps_timestamp) == 1) {
 					neom8n_ctx.nmea_zda_data_valid = 1;
@@ -592,6 +625,7 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 		(*gps_timestamp).hours = 0;
 		(*gps_timestamp).minutes = 0;
 		(*gps_timestamp).seconds = 0;
+
 	}
 	return return_code;
 }
@@ -620,9 +654,12 @@ unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp) {
  */
 NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds) {
 	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
+	Position local_gps_position;
 	// Reset flags.
-	neom8n_ctx.nmea_gga_data_valid = 0;
 	neom8n_ctx.nmea_gga_parsing_success = 0;
+	neom8n_ctx.nmea_gga_same_altitude_count = 0;
+	neom8n_ctx.nmea_gga_previous_altitude = 0;
+	neom8n_ctx.nmea_gga_high_quality_flag = 0;
 	// Select GGA message to get complete position.
 	NEOM8N_SelectNmeaMessages(NMEA_GGA_MASK);
 	// Start DMA.
@@ -635,26 +672,61 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 	// Save fix start time.
 	unsigned int fix_start_time = TIM22_GetSeconds();
 	// Loop until data is retrieved or timeout expired.
-	while ((TIM22_GetSeconds() < (fix_start_time + timeout_seconds)) && (neom8n_ctx.nmea_gga_data_valid == 0)) {
+	while ((TIM22_GetSeconds() < (fix_start_time + timeout_seconds)) && (neom8n_ctx.nmea_gga_same_altitude_count < NMEA_GGA_ALT_STABILITY_COUNT) && (neom8n_ctx.nmea_gga_high_quality_flag == 0)) {
 		// Check LF flag to trigger parsing process.
-		if (neom8n_ctx.nmea_rx_lf_flag == 1) {
+		if (neom8n_ctx.nmea_rx_lf_flag != 0) {
 			// Decode incoming NMEA message.
-			if (neom8n_ctx.nmea_rx_fill_buf1 == 1) {
-				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf2, gps_position); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
+			if (neom8n_ctx.nmea_rx_fill_buf1 != 0) {
+#ifdef NEOM8N_PRINT_NMEA
+				unsigned char byte_idx = 0;
+				for (byte_idx=0 ; byte_idx<NMEA_RX_BUFFER_SIZE ; byte_idx++) {
+					USARTx_SendValue(neom8n_ctx.nmea_rx_buf2[byte_idx], USART_FORMAT_ASCII, 0);
+					if (neom8n_ctx.nmea_rx_buf2[byte_idx] == NMEA_LF) break;
+				}
+#endif
+				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf2, &local_gps_position); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
 			}
 			else {
-				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf1, gps_position); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
+#ifdef NEOM8N_PRINT_NMEA
+				unsigned char byte_idx = 0;
+				for (byte_idx=0 ; byte_idx<NMEA_RX_BUFFER_SIZE ; byte_idx++) {
+					USARTx_SendValue(neom8n_ctx.nmea_rx_buf1[byte_idx], USART_FORMAT_ASCII, 0);
+					if (neom8n_ctx.nmea_rx_buf1[byte_idx] == NMEA_LF) break;
+				}
+#endif
+				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf1, &local_gps_position); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
 			}
-			if (neom8n_ctx.nmea_gga_parsing_success == 1) {
-				return_code = NEOM8N_INVALID_DATA;
+			if (neom8n_ctx.nmea_gga_parsing_success != 0) {
 				// Check data.
-				if (NEOM8N_PositionIsValid(gps_position) == 1) {
-					neom8n_ctx.nmea_gga_data_valid = 1;
+				if (NEOM8N_PositionIsValid(&local_gps_position) != 0) {
 					return_code = NEOM8N_SUCCESS;
+					// Save data.
+					(*gps_position).lat_degrees = local_gps_position.lat_degrees;
+					(*gps_position).lat_minutes = local_gps_position.lat_minutes;
+					(*gps_position).lat_seconds = local_gps_position.lat_seconds;
+					(*gps_position).lat_north = local_gps_position.lat_north;
+					(*gps_position).long_degrees = local_gps_position.long_degrees;
+					(*gps_position).long_minutes = local_gps_position.long_minutes;
+					(*gps_position).long_seconds = local_gps_position.long_seconds;
+					(*gps_position).long_east = local_gps_position.long_east;
+					(*gps_position).altitude = local_gps_position.altitude;
+					// Manage altitude stability count.
+					if (local_gps_position.altitude == neom8n_ctx.nmea_gga_previous_altitude) {
+						neom8n_ctx.nmea_gga_same_altitude_count++;
+					}
+					else {
+						neom8n_ctx.nmea_gga_same_altitude_count = 0;
+					}
+					// Update previous altitude.
+					neom8n_ctx.nmea_gga_previous_altitude = local_gps_position.altitude;
 				}
 				else {
 					neom8n_ctx.nmea_gga_parsing_success = 0;
+					neom8n_ctx.nmea_gga_same_altitude_count = 0;
 				}
+			}
+			else {
+				neom8n_ctx.nmea_gga_same_altitude_count = 0;
 			}
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
@@ -662,18 +734,7 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 	}
 	// Stop DMA.
 	DMA1_Stop();
-	// Reset GPS timestamp data in case of failure.
-	if (return_code != NEOM8N_SUCCESS) {
-		(*gps_position).lat_degrees = 0;
-		(*gps_position).lat_minutes = 0;
-		(*gps_position).lat_seconds = 0;
-		(*gps_position).lat_north = 0;
-		(*gps_position).long_degrees = 0;
-		(*gps_position).long_minutes = 0;
-		(*gps_position).long_seconds = 0;
-		(*gps_position).long_east = 0;
-		(*gps_position).altitude = 0;
-	}
+	// Return result.
 	return return_code;
 }
 

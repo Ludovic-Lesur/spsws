@@ -43,7 +43,6 @@ typedef struct {
 
 typedef enum {
 	NEOM8N_SUCCESS,			// Parsing successful and data valid.
-	NEOM8N_INVALID_DATA,	// Parsing successful but data invalid.
 	NEOM8N_TIMEOUT			// Parsing failure (= timeout).
 } NEOM8N_ReturnCode;
 

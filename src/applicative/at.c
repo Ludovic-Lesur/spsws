@@ -110,8 +110,7 @@
 #define AT_OUT_ERROR_UNKNOWN_TEST_MODE					0x86			// Unknown test mode.
 
 // Components errors
-#define AT_OUT_ERROR_NEOM8N_INVALID_DATA				0x87			// Invalid data retrieved by GPS.
-#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x88			// GPS timeout.
+#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
 
 // Duration of RSSI command.
 #define AT_RSSI_REPORT_DURATION_SECONDS					60
@@ -675,9 +674,6 @@ void AT_DecodeRxBuffer(void) {
 				case NEOM8N_SUCCESS:
 					AT_PrintTimestamp(&gps_timestamp);
 					break;
-				case NEOM8N_INVALID_DATA:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
-					break;
 				case NEOM8N_TIMEOUT:
 					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
 					break;
@@ -705,9 +701,6 @@ void AT_DecodeRxBuffer(void) {
 				switch (get_position_result) {
 				case NEOM8N_SUCCESS:
 					AT_PrintPosition(&gps_position);
-					break;
-				case NEOM8N_INVALID_DATA:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_INVALID_DATA);
 					break;
 				case NEOM8N_TIMEOUT:
 					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
