@@ -167,12 +167,12 @@ void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]
 
 #if (defined CM || defined ATM)
 	case TIM2_MODE_WIND:
-		/* Configure TIM2 to overflow every (WIND_MEASUREMENT_PERIOD_SECONDS + 1) seconds */
+		/* Configure TIM2 to overflow every (WIND_SPEED_MEASUREMENT_PERIOD_SECONDS + 1) seconds */
 		arr_value = 0xFFFF; // Maximum overflow value for the desired period (to optimize "dynamic" = accuracy).
 		TIM2 -> ARR &= 0xFFFF0000; // Reset all bits.
 		TIM2 -> ARR |= arr_value;
 		// PSC = (desired_period * timer_input_clock) / (ARR).
-		psc_value = ((WIND_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_GetSysclkKhz() * 1000)) / (arr_value);
+		psc_value = ((WIND_SPEED_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_GetSysclkKhz() * 1000)) / (arr_value);
 		if (psc_value > 0xFFFF) {
 			psc_value = 0xFFFF;
 		}

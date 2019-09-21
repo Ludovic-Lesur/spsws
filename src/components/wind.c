@@ -36,8 +36,9 @@
 /*** WIND local structures ***/
 
 typedef struct {
-	// Measurement period.
-	unsigned char wind_seconds_count;
+	// Measurements period.
+	unsigned char wind_speed_seconds_count;
+	unsigned char wind_direction_seconds_count;
 	// Wind speed.
 	unsigned int wind_speed_edge_count;
 	unsigned int wind_speed_data_count;
@@ -62,7 +63,7 @@ static volatile WIND_Context wind_ctx;
 // Rw = 688, 891, 1000, 1410, 2200, 3140, 3900, 6570, 8200, 14120, 16000, 21880, 33000, 42120, 64900 and 120000.
 // Resistor divider ratio values = 1000 * ((Rw) / (Rw + Rp)).
 // The following table gives the mean between two consecutive ratios (used as threshold). It must be sorted in ascending order.
-static const unsigned int WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {73, 86, 107, 152, 210, 318, 424, 518, 600, 651, 727, 788, 837, 895, 1000};
+static const unsigned int WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {73, 86, 107, 152, 210, 260, 338, 424, 518, 600, 651, 727, 788, 837, 895, 1000};
 // Angle table (must be mapped on the ratio table: angle[i] = angle for ratio[i]).
 static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {112, 67, 90, 157, 135, 202, 180, 22, 45, 247, 225, 337, 0, 292, 315, 270};
 #endif
@@ -135,8 +136,9 @@ void WIND_Init(void) {
  */
 void WIND_StartContinuousMeasure(void) {
 
-	/* Reset second counter */
-	wind_ctx.wind_seconds_count = 0;
+	/* Reset second counters */
+	wind_ctx.wind_speed_seconds_count = 0;
+	wind_ctx.wind_direction_seconds_count = 0;
 
 #ifdef WIND_VANE_ULTIMETER
 	/* Init TIM2 for phase shift operation */
@@ -195,8 +197,9 @@ void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
  */
 void WIND_ResetData(void) {
 
-	/* Measurement period */
-	wind_ctx.wind_seconds_count = 0;
+	/* Measurement periods */
+	wind_ctx.wind_speed_seconds_count = 0;
+	wind_ctx.wind_direction_seconds_count = 0;
 
 	/* Wind speed */
 	wind_ctx.wind_speed_edge_count = 0;
@@ -266,7 +269,7 @@ void WIND_VoltageToAngle(unsigned int direction_12bits) {
 	/* Compute ratio */
 	unsigned int ratio = (direction_12bits * 1000) / (MAX11136_FULL_SCALE);
 
-	/* Compute angle */
+	/* Get corresponding angle */
 	unsigned char idx = 0;
 	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
 		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
@@ -284,15 +287,14 @@ void WIND_VoltageToAngle(unsigned int direction_12bits) {
  */
 void WIND_MeasurementPeriodCallback(void) {
 
-	/* Update counter */
-	wind_ctx.wind_seconds_count++;
+	/* Update counters */
+	wind_ctx.wind_speed_seconds_count++;
+	wind_ctx.wind_direction_seconds_count++;
 
-	/* Update wind measurements if period is reached */
-	if (wind_ctx.wind_seconds_count == WIND_MEASUREMENT_PERIOD_SECONDS) {
-
-		/* Wind speed */
+	/* Update wind speed if period is reached */
+	if (wind_ctx.wind_speed_seconds_count >= WIND_SPEED_MEASUREMENT_PERIOD_SECONDS) {
 		// Compute new value.
-		wind_ctx.wind_speed_mh = (wind_ctx.wind_speed_edge_count * WIND_SPEED_1HZ_TO_MH) / (WIND_MEASUREMENT_PERIOD_SECONDS);
+		wind_ctx.wind_speed_mh = (wind_ctx.wind_speed_edge_count * WIND_SPEED_1HZ_TO_MH) / (WIND_SPEED_MEASUREMENT_PERIOD_SECONDS);
 		wind_ctx.wind_speed_edge_count = 0;
 		// Update peak value if required.
 		if (wind_ctx.wind_speed_mh > wind_ctx.wind_speed_mh_peak) {
@@ -301,8 +303,19 @@ void WIND_MeasurementPeriodCallback(void) {
 		// Update average value.
 		wind_ctx.wind_speed_mh_average = ((wind_ctx.wind_speed_mh_average * wind_ctx.wind_speed_data_count) + wind_ctx.wind_speed_mh) / (wind_ctx.wind_speed_data_count + 1);
 		wind_ctx.wind_speed_data_count++;
+		// Reset seconds counter.
+		wind_ctx.wind_speed_seconds_count = 0;
+#ifdef ATM
+		// Print data.
+		USARTx_SendString("Speed=");
+		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
+		USARTx_SendString("m/h\n");
+#endif
+	}
 
-		/* Wind direction (only if there is wind) */
+	/* Update wind direction if period is reached */
+	if (wind_ctx.wind_direction_seconds_count >= WIND_DIRECTION_MEASUREMENT_PERIOD_SECONDS) {
+		// Compute direction only if there is wind.
 		if (wind_ctx.wind_speed_mh > 0) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 			// Internal 16MHz clock.
@@ -350,18 +363,19 @@ void WIND_MeasurementPeriodCallback(void) {
 		else {
 			wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 		}
-
-		/* Print data */
+		// Reset seconds counter.
+		wind_ctx.wind_direction_seconds_count = 0;
 #ifdef ATM
-		USARTx_SendString("Speed=");
-		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("m/h Direction=");
-		USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
+		// Print data.
+		USARTx_SendString("Direction=");
+		if (wind_ctx.wind_direction_degrees == WIND_DIRECTION_ERROR_VALUE) {
+			USARTx_SendString("unknown");
+		}
+		else {
+			USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
+		}
 		USARTx_SendString("°\n");
 #endif
-
-		/* Reset seconds counter */
-		wind_ctx.wind_seconds_count = 0;
 	}
 }
 
