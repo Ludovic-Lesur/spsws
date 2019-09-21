@@ -614,6 +614,7 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char ti
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 		}
+		IWDG_Reload();
 	}
 	// Stop LPUART and DMA.
 	DMA1_Stop();
@@ -731,6 +732,7 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeo
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 		}
+		IWDG_Reload();
 	}
 	// Stop DMA.
 	DMA1_Stop();

@@ -257,19 +257,16 @@ int main (void) {
 
 		/* RESET */
 		case SPSWS_STATE_RESET:
+			IWDG_Reload();
 #ifdef DEBUG
 			// Turn LED on.
 			GPIO_Write(&GPIO_LED, 1);
 #endif
-#ifdef CM
 			// Enable NVM.
 			NVM_Enable();
-			// Enable TCXO power control.
-			RCC_EnableGpio();
-#endif
 			// Check reset reason.
-			if (((RCC -> CSR) & (0b111 << 26)) != 0) {
-				// SW, NRST or POR reset: directly go to INIT state.
+			if (((RCC -> CSR) & (0b1111 << 26)) != 0) {
+				// IWDG, SW, NRST or POR reset: directly go to INIT state.
 				spsws_ctx.spsws_por_flag = 1;
 				spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 			}
@@ -318,8 +315,10 @@ int main (void) {
 
 		/* INIT */
 		case SPSWS_STATE_INIT:
-			// Low speed oscillators (only at POR).
+			// Low speed oscillators and watchdog (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
+				// Start independant watchdog.
+				IWDG_Init();
 				// Reset RTC before starting oscillators.
 				RTC_Reset();
 				// LSI.
@@ -330,6 +329,8 @@ int main (void) {
 				spsws_ctx.spsws_status_byte |= (RCC_EnableLse() << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 			}
 			// High speed oscillator.
+			IWDG_Reload();
+			RCC_EnableGpio();
 			spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
 			spsws_ctx.spsws_status_byte |= (RCC_SwitchToHse() << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX);
 			if ((spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_MCU_CLOCK_SOURCE_BIT_IDX)) == 0) {
@@ -337,6 +338,7 @@ int main (void) {
 			}
 			// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
 			spsws_ctx.spsws_lsi_frequency_hz = RCC_GetLsiFrequency();
+			IWDG_Reload();
 			// Timers (must be called before RTC inititialization to have timeout available).
 			TIM21_Init();
 			TIM22_Init();
@@ -352,6 +354,7 @@ int main (void) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
+			IWDG_Reload();
 			// Analog.
 			ADC1_Init();
 			// Communication interfaces.
@@ -397,6 +400,7 @@ int main (void) {
 
 		/* STATIC MEASURE */
 		case SPSWS_STATE_MEASURE:
+			IWDG_Reload();
 			// Retrieve internal ADC data.
 			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
@@ -409,6 +413,7 @@ int main (void) {
 			I2C1_PowerOn(); // Must be called before ADC since LDR is on the MSM module (powered by I2C sensors supply).
 			SPI2_PowerOn();
 #endif
+			IWDG_Reload();
 			MAX11136_PerformMeasurements();
 
 #ifdef HW1_0
@@ -430,6 +435,7 @@ int main (void) {
 			I2C1_PowerOn();
 #endif
 			// Internal temperature/humidity sensor.
+			IWDG_Reload();
 			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
 			SHT3X_GetTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees);
 			SHT3X_GetHumidity(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent);
@@ -439,20 +445,23 @@ int main (void) {
 			spsws_ctx.spsws_weather_data.weather_data_humidity_percent = spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent;
 #endif
 #ifdef HW2_0
-
+			IWDG_Reload();
 			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 			SHT3X_GetTemperature(&spsws_ctx.spsws_weather_data.weather_data_temperature_degrees);
 			SHT3X_GetHumidity(&spsws_ctx.spsws_weather_data.weather_data_humidity_percent);
 #endif
 			// External pressure/temperature sensor.
+			IWDG_Reload();
 			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			DPS310_GetPressure(&spsws_ctx.spsws_weather_data.weather_data_pressure_pa);
 			// External UV index sensor.
+			IWDG_Reload();
 			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
 			SI1133_GetUvIndex(&spsws_ctx.spsws_weather_data.weather_data_uv_index);
 			// Turn sensors off.
 			I2C1_PowerOff();
 #ifdef CM
+			IWDG_Reload();
 			// Retrieve wind measurements.
 			WIND_GetSpeed(&spsws_ctx.spsws_weather_data.weather_data_average_wind_speed_mh, &spsws_ctx.spsws_weather_data.weather_data_peak_wind_speed_mh);
 			WIND_GetDirection(&spsws_ctx.spsws_weather_data.weather_data_average_wind_direction_degrees);
@@ -467,6 +476,7 @@ int main (void) {
 
 		/* MONITORING */
 		case SPSWS_STATE_MONITORING:
+			IWDG_Reload();
 			// Build Sigfox frame.
 			MONITORING_BuildSigfoxData(&spsws_ctx.spsws_monitoring_data, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink monitoring frame.
@@ -481,6 +491,7 @@ int main (void) {
 
 		/* WEATHER DATA */
 		case SPSWS_STATE_WEATHER_DATA:
+			IWDG_Reload();
 			// Build Sigfox frame.
 			WEATHER_BuildSigfoxData(&spsws_ctx.spsws_weather_data, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink monitoring frame.
@@ -508,6 +519,7 @@ int main (void) {
 
 		/* POR */
 		case SPSWS_STATE_POR:
+			IWDG_Reload();
 			// Send OOB frame.
 			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
 			if (sfx_error == SFX_ERR_NONE) {
@@ -525,6 +537,7 @@ int main (void) {
 
 		/* GEOLOC */
 		case SPSWS_STATE_GEOLOC:
+			IWDG_Reload();
 			// Get position from GPS.
 			LPUART1_PowerOn();
 			geoloc_fix_start_time_seconds = TIM22_GetSeconds();
@@ -536,12 +549,16 @@ int main (void) {
 			if (neom8n_return_code == NEOM8N_SUCCESS) {
 				// Get fix duration and update flag.
 				spsws_ctx.spsws_geoloc_fix_duration_seconds = TIM22_GetSeconds() - geoloc_fix_start_time_seconds;
+				if (spsws_ctx.spsws_geoloc_fix_duration_seconds > SPSWS_GEOLOC_TIMEOUT_SECONDS) {
+					spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
+				}
 			}
 			else {
 				// Set fix duration to timeout.
 				spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
 				spsws_ctx.spsws_geoloc_timeout = 1;
 			}
+			IWDG_Reload();
 			// Build Sigfox frame.
 			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink geolocation frame.
@@ -559,6 +576,7 @@ int main (void) {
 
 		/* RTC CALIBRATION */
 		case SPSWS_STATE_RTC_CALIBRATION:
+			IWDG_Reload();
 			// Turn radio TCXO off since Sigfox is not required anymore.
 #ifdef HW2_0
 			SX1232_Tcxo(0);
@@ -585,6 +603,7 @@ int main (void) {
 
 		/* OFF */
 		case SPSWS_STATE_OFF:
+			IWDG_Reload();
 			// Clear POR flag.
 			spsws_ctx.spsws_por_flag = 0;
 			// Turn peripherals off.
@@ -607,9 +626,10 @@ int main (void) {
 			// Store status byte in NVM.
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
-#ifdef CM
 			// Switch to internal MSI 65kHz (must be called before WIND functions to init TIM2 with right clock frequency).
 			RCC_SwitchToMsi();
+			RCC_DisableGpio();
+#ifdef CM
 			// Re-start continuous measurements.
 			WIND_ResetData();
 			RAIN_ResetData();
@@ -618,11 +638,10 @@ int main (void) {
 #endif
 			// Clear RTC flags.
 			RTC_ClearAlarmAFlag();
-#ifdef CM
 			RTC_ClearAlarmBFlag();
 			NVIC_EnableInterrupt(IT_RTC);
-#endif
 #ifdef DEBUG
+			// Turn LED off.
 			GPIO_Write(&GPIO_LED, 0);
 #endif
 			// Enter standby mode.
@@ -631,36 +650,37 @@ int main (void) {
 
 		/* SLEEP */
 		case SPSWS_STATE_SLEEP:
-#ifdef IM
-			// Enter standby mode.
-			PWR_EnterStandbyMode();
-#endif
-#ifdef CM
+			IWDG_Reload();
 			// Enter sleep mode.
 			PWR_EnterLowPowerSleepMode();
 			// Check RTC flags.
 			if (RTC_GetAlarmBFlag() != 0) {
+#ifdef CM
 				// Call WIND callback.
 				WIND_MeasurementPeriodCallback();
+#endif
 				// Clear RTC flags.
 				RTC_ClearAlarmBFlag();
 			}
+
 			if (RTC_GetAlarmAFlag() != 0) {
 				// Disable RTC interrupt.
 				NVIC_DisableInterrupt(IT_RTC);
+#ifdef CM
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();
 				RAIN_StopContinuousMeasure();
+#endif
 				// Clear RTC flags.
 				RTC_ClearAlarmAFlag();
 				// Wake-up.
 				spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 			}
-#endif
 			break;
 
 		/* UNKNOWN STATE */
 		default:
+			IWDG_Reload();
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;

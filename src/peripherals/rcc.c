@@ -64,10 +64,6 @@ void RCC_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	PWR -> CR |= (0b1 << 8); // Set DBP bit to unlock back-up registers write protection.
 
-	/* Configure TCXO power enable pin as output */
-	GPIO_Configure(&GPIO_TCXO16_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Write(&GPIO_TCXO16_POWER_ENABLE, 0);
-
 	/* Reset clock is MSI 2.1MHz */
 	rcc_sysclk_khz = 2100;
 }

@@ -21,14 +21,11 @@
 
 /*** RTC local global variables ***/
 
-#if (defined CM || defined ATM)
 volatile unsigned char rtc_alra_flag;
 volatile unsigned char rtc_alrb_flag;
-#endif
 
 /*** RTC local functions ***/
 
-#if (defined CM || defined ATM)
 /* RTC INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -54,7 +51,6 @@ void RTC_IRQHandler(void) {
 	/* Clear EXTI flag */
 	EXTI -> PR |= (0b1 << 17);
 }
-#endif
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
  * @param:						None.
@@ -158,21 +154,12 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 
-#ifdef IM
-	/* Disable alarm B */
-	RTC -> ALRMBR = 0;
-	RTC -> CR &= ~(0b1 << 9); // Disable Alarm B.
-	RTC -> CR &= ~(0b1 << 13); // Disable interrupt (ALRBIE='0').
-	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
-#endif
-#if (defined CM || defined ATM)
-	/* Configure alarm B to wake-up every seconds (wind measurements) */
+	/* Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM) */
 	RTC -> ALRMBR = 0;
 	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.
 	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
 	RTC -> CR |= (0b1 << 13); // Enable interrupt (ALRBIE='1').
 	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
-#endif
 
 	/* Exit initialization mode */
 	RTC_ExitInitializationMode();
@@ -184,7 +171,6 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	EXTI -> PR |= (0b1 << 17); // Clear flag.
 }
 
-#if (defined CM || defined ATM)
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
@@ -200,7 +186,6 @@ volatile unsigned char RTC_GetAlarmAFlag(void) {
 volatile unsigned char RTC_GetAlarmBFlag(void) {
 	return rtc_alrb_flag;
 }
-#endif
 
 /* CLEAR ALARM A INTERRUPT FLAG.
  * @param:	None.
@@ -210,9 +195,7 @@ void RTC_ClearAlarmAFlag(void) {
 	// Clear ALARM and EXTI flags.
 	RTC -> ISR &= ~(0b1 << 8); // Clear flags.
 	EXTI -> PR |= (0b1 << 17);
-#if (defined CM || defined ATM)
 	rtc_alra_flag = 0;
-#endif
 }
 
 /* CLEAR ALARM A INTERRUPT FLAG.
@@ -223,9 +206,8 @@ void RTC_ClearAlarmBFlag(void) {
 	// Clear ALARM and EXTI flags.
 	RTC -> ISR &= ~(0b1 << 9); // Clear flags.
 	EXTI -> PR |= (0b1 << 17);
-#if (defined CM || defined ATM)
 	rtc_alrb_flag = 0;
-#endif
+
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
