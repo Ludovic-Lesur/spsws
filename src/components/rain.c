@@ -20,10 +20,11 @@
 
 // Pluviometry conversion ratio.
 #define RAIN_EDGE_TO_UM		279
+#define RAIN_MAX_VALUE_MM	0xFF
 
 /*** RAIN local global variables ***/
 
-volatile unsigned char rain_edge_count;
+volatile unsigned int rain_edge_count;
 
 /*** RAIN functions ***/
 
@@ -68,7 +69,20 @@ void RAIN_StopContinuousMeasure(void) {
  */
 void RAIN_GetPluviometry(unsigned char* rain_pluviometry_mm) {
 	// Convert edge count to mm of rain.
-	(*rain_pluviometry_mm) = (rain_edge_count * RAIN_EDGE_TO_UM) / 1000;
+	unsigned int rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
+	unsigned int rain_mm = (rain_um / 1000);
+	// Rounding operation.
+	unsigned int remainder = rain_um - (rain_mm * 1000);
+	if (remainder >= 500) {
+		rain_mm++;
+	}
+	// Clip value.
+	if (rain_mm > RAIN_MAX_VALUE_MM) {
+		(*rain_pluviometry_mm) = RAIN_MAX_VALUE_MM;
+	}
+	else {
+		(*rain_pluviometry_mm) = (unsigned char) rain_mm;
+	}
 }
 
 /* RESET RAIN MEASUREMENT DATA.
