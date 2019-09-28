@@ -714,7 +714,7 @@ int main (void) {
 	RCC_EnableLsi();
 	// High speed oscillator.
 	if (RCC_SwitchToHse() == 0) {
-		while (RCC_SwitchToHsi() == 0);
+		RCC_SwitchToHsi();
 	}
 
 	/* Init peripherals */

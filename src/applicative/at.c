@@ -810,8 +810,8 @@ void AT_DecodeRxBuffer(void) {
 		/* External LDR command AT$LDR?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ELDR) == AT_NO_ERROR) {
 			// Perform measurements.
-#ifdef HW1_0
 			I2C1_PowerOn();
+#ifdef HW1_0
 			SPI1_PowerOn();
 #endif
 #ifdef HW2_0
@@ -824,8 +824,8 @@ void AT_DecodeRxBuffer(void) {
 #endif
 #ifdef HW2_0
 			SPI2_PowerOff();
-			I2C1_PowerOff();
 #endif
+			I2C1_PowerOff();
 			ADC1_PerformMeasurements();
 			// Get LDR and supply voltage.
 			unsigned int ldr_output_mv = 0;

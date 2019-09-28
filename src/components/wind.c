@@ -70,6 +70,21 @@ static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] 
 
 /*** WIND local functions ***/
 
+/* COMPUTE ABSOLUTE VALUE.
+ * @param x:	Parameter.
+ * @return:		|x|.
+ */
+unsigned int WIND_Abs(signed int x) {
+	unsigned int result = 0;
+	if (x > 0) {
+		result = x;
+	}
+	if (x < 0) {
+		result = (-1) * x;
+	}
+	return result;
+}
+
 /* COMPUTE THE TREND POINT DIRECTION (ATAN2 FUNCTION).
  * @param x:	x coordinate of the trend point.
  * @param y:	y coordinate of the trend point.
@@ -77,23 +92,71 @@ static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] 
  */
 unsigned int WIND_Atan2(signed int x, signed int y) {
 
-	/* Compute atan2 function */
+	/* Check x and y are not null */
 	unsigned int alpha = WIND_DIRECTION_ERROR_VALUE;
 	if ((x != 0) || (y != 0)) {
-		if (x == 0) {
-			alpha = (y > 0) ? 90 : 270;
+
+		/* Scale x and y to avoid overflow */
+		signed int local_x = x;
+		signed int local_y = y;
+		while ((WIND_Abs(local_x) > 10000) || (WIND_Abs(local_y) > 10000)) {
+			local_x = local_x >> 1;
+			local_y = local_y >> 1;
+		}
+
+		/* Compute atan2 function */
+		unsigned int abs_x = WIND_Abs(local_x);
+		unsigned int abs_y = WIND_Abs(local_y);
+		// Use the quotient within [-1,1]
+		if (abs_x >= abs_y) {
+			// Use arctan approximation: arctan(z)=(pi/4)*z.
+			alpha = (((45 * abs_y) << 10) / (abs_x)) >> 10; // Quadrant 1.
+			// Add offset depending on quadrant.
+			if ((x > 0) && (y < 0)) {
+				// Quadrant 8.
+				alpha = (360 - alpha);
+			}
+			if (x < 0) {
+				if (y > 0) {
+					// Quadrant 4.
+					alpha = (180 - alpha);
+				}
+				else {
+					// Quadrant 5.
+					alpha = (180 + alpha);
+				}
+			}
 		}
 		else {
-			//alpha = ARCTAN(y/x); // TBD.
-			if (x < 0) {
-				alpha += 180;
+			// Use arctan approximation: arctan(z)=(pi/4)*z.
+			alpha = (((45 * abs_x) << 10) / (abs_y)) >> 10;
+			// Add offset depending on quadrant and arctan(1/z)=+/-90-arctan(z).
+			if (x > 0) {
+				if (y > 0) {
+					// Quadrant 2.
+					alpha = (90 - alpha);
+				}
+				else {
+					// Quadrant 7.
+					alpha = (270 + alpha);
+				}
 			}
 			else {
-				alpha += (y < 0) ? 360 : 0;
+				if (y > 0) {
+					// Quadrant 3.
+					alpha = (90 + alpha);
+				}
+				else {
+					// Quadrant 6.
+					alpha = (270 - alpha);
+				}
 			}
 		}
+		// Ensure angle is in [0,359] range.
+		alpha = (alpha % 360);
 	}
-	return alpha;
+	// Ensure angle is in [0,359] range.
+	return (alpha);
 }
 
 /*** WIND functions ***/
@@ -182,13 +245,8 @@ void WIND_GetSpeed(unsigned int* average_wind_speed_mh, unsigned int* peak_wind_
  * @return:									None.
  */
 void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
-	if ((wind_ctx.wind_direction_x == 0) && (wind_ctx.wind_direction_y == 0)) {
-		(*average_wind_direction_degrees) = WIND_DIRECTION_ERROR_VALUE;
-	}
-	else {
-		// Compute trend point angle (considered as average wind direction).
-		(*average_wind_direction_degrees) = WIND_Atan2(wind_ctx.wind_direction_x, wind_ctx.wind_direction_y);
-	}
+	// Compute trend point angle (considered as average wind direction).
+	(*average_wind_direction_degrees) = WIND_Atan2(wind_ctx.wind_direction_x, wind_ctx.wind_direction_y);
 }
 
 /* RESET WIND MEASUREMENT DATA.
@@ -316,7 +374,7 @@ void WIND_MeasurementPeriodCallback(void) {
 	/* Update wind direction if period is reached */
 	if (wind_ctx.wind_direction_seconds_count >= WIND_DIRECTION_MEASUREMENT_PERIOD_SECONDS) {
 		// Compute direction only if there is wind.
-		if (wind_ctx.wind_speed_mh > 0) {
+		if ((wind_ctx.wind_speed_mh / 1000) > 0) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 			// Internal 16MHz clock.
 			RCC_SwitchToHsi();
