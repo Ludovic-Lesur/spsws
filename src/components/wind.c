@@ -155,7 +155,6 @@ unsigned int WIND_Atan2(signed int x, signed int y) {
 		// Ensure angle is in [0,359] range.
 		alpha = (alpha % 360);
 	}
-	// Ensure angle is in [0,359] range.
 	return (alpha);
 }
 
@@ -365,7 +364,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		wind_ctx.wind_speed_seconds_count = 0;
 #ifdef ATM
 		// Print data.
-		USARTx_SendString("Speed=");
+		USARTx_SendString("speed=");
 		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
 		USARTx_SendString("m/h\n");
 #endif
@@ -412,10 +411,25 @@ void WIND_MeasurementPeriodCallback(void) {
 #endif
 			// Update trend point if direction is valid.
 			if (wind_ctx.wind_direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
-				// Convert degrees to radians.
 				// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
 				wind_ctx.wind_direction_x += (wind_ctx.wind_speed_mh / 1000) * MATH_COS_TABLE[wind_ctx.wind_direction_degrees];
 				wind_ctx.wind_direction_y += (wind_ctx.wind_speed_mh / 1000) * MATH_SIN_TABLE[wind_ctx.wind_direction_degrees];
+#ifdef ATM
+				// Print data.
+				USARTx_SendString("direction=");
+				USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("d x=");
+				if (wind_ctx.wind_direction_x < 0) {
+					USARTx_SendString("-");
+				}
+				USARTx_SendValue(WIND_Abs(wind_ctx.wind_direction_x), USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString(" y=");
+				if (wind_ctx.wind_direction_y < 0) {
+					USARTx_SendString("-");
+				}
+				USARTx_SendValue(WIND_Abs(wind_ctx.wind_direction_y), USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("\n");
+#endif
 			}
 		}
 		else {
@@ -423,17 +437,6 @@ void WIND_MeasurementPeriodCallback(void) {
 		}
 		// Reset seconds counter.
 		wind_ctx.wind_direction_seconds_count = 0;
-#ifdef ATM
-		// Print data.
-		USARTx_SendString("Direction=");
-		if (wind_ctx.wind_direction_degrees == WIND_DIRECTION_ERROR_VALUE) {
-			USARTx_SendString("unknown");
-		}
-		else {
-			USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
-		}
-		USARTx_SendString("°\n");
-#endif
 	}
 }
 

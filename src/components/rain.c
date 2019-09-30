@@ -105,7 +105,7 @@ void RAIN_EdgeCallback(void) {
 
 	/* Print data */
 #ifdef ATM
-	USARTx_SendString("Rain=");
+	USARTx_SendString("rain_edge_count=");
 	USARTx_SendValue(rain_edge_count, USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("\n");
 #endif

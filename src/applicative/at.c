@@ -863,6 +863,25 @@ void AT_DecodeRxBuffer(void) {
 				if (enable == 0) {
 					NVIC_DisableInterrupt(IT_RTC);
 					WIND_StopContinuousMeasure();
+					// Get results.
+					unsigned int wind_average_direction = 0;
+					WIND_GetDirection(&wind_average_direction);
+					unsigned int wind_average_speed = 0;
+					unsigned int wind_peak_speed = 0;
+					WIND_GetSpeed(&wind_average_speed, &wind_peak_speed);
+					// Print data.
+					USARTx_SendString("WindAverageSpeed=");
+					USARTx_SendValue(wind_average_speed, USART_FORMAT_DECIMAL, 0);
+					USARTx_SendString("m/h WindPeakSpeed=");
+					USARTx_SendValue(wind_peak_speed, USART_FORMAT_DECIMAL, 0);
+					if (wind_average_direction != WIND_DIRECTION_ERROR_VALUE) {
+						USARTx_SendString("m/h WindAverageDirection=");
+						USARTx_SendValue(wind_average_direction, USART_FORMAT_DECIMAL, 0);
+						USARTx_SendString("d");
+					}
+					USARTx_SendString("\n");
+					// Reset data.
+					WIND_ResetData();
 				}
 				else {
 					WIND_StartContinuousMeasure();
@@ -883,12 +902,19 @@ void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start or stop rain continuous measurements.
 				if (enable == 0) {
-					NVIC_DisableInterrupt(IT_RTC);
 					RAIN_StopContinuousMeasure();
+					// Get result.
+					unsigned char rain_mm = 0;
+					RAIN_GetPluviometry(&rain_mm);
+					// Print data.
+					USARTx_SendString("Rain=");
+					USARTx_SendValue(rain_mm, USART_FORMAT_DECIMAL,0);
+					USARTx_SendString("mm\n");
+					// Reset data.
+					RAIN_ResetData();
 				}
 				else {
 					RAIN_StartContinuousMeasure();
-					NVIC_EnableInterrupt(IT_RTC);
 				}
 				AT_ReplyOk();
 			}
