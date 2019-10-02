@@ -24,8 +24,10 @@
 
 /*** RF API local macros ***/
 
+#ifdef ATM
 // If defined, print the Sigfox bit stream on UART.
 //#define RF_API_LOG_FRAME
+#endif
 
 // Uplink parameters.
 #define RF_API_UPLINK_OUTPUT_POWER_ETSI		14
@@ -451,9 +453,10 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 #ifdef HW2_0
 	NVIC_EnableInterrupt(IT_USART1);
 #endif
+#endif
 #ifdef RF_API_LOG_FRAME
 	// Print frame on UART.
-	USARTx_SendString("sfx_frame = [");
+	USARTx_SendString("Uplink frame = [");
 	for (stream_byte_idx=0 ; stream_byte_idx<size ; stream_byte_idx++) {
 		USARTx_SendValue(sfx_frame[stream_byte_idx], USART_FORMAT_HEXADECIMAL, 1);
 		if (stream_byte_idx < (size - 1)) {
@@ -461,7 +464,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 		}
 	}
 	USARTx_SendString("]\n");
-#endif
 #endif
 	return SFX_ERR_NONE;
 }
@@ -569,11 +571,25 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 			sfx_err = RF_ERR_API_WAIT_FRAME;
 			break;
 		}
+		// Reload watchdog.
+		IWDG_Reload();
 	}
 
 	/* Read FIFO if data was retrieved */
 	if ((*state) == DL_PASSED) {
 		SX1232_ReadFifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+#ifdef RF_API_LOG_FRAME
+		// Print frame on UART.
+		USARTx_SendString("Downlink frame = [");
+		unsigned char byte_idx = 0;
+		for (byte_idx=0 ; byte_idx<RF_API_DOWNLINK_FRAME_LENGTH_BYTES ; byte_idx++) {
+			USARTx_SendValue(frame[byte_idx], USART_FORMAT_HEXADECIMAL, 1);
+			if (byte_idx < (RF_API_DOWNLINK_FRAME_LENGTH_BYTES - 1)) {
+				USARTx_SendString(" ");
+			}
+		}
+		USARTx_SendString("]\n");
+#endif
 	}
 
 	return sfx_err;
