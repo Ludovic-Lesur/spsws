@@ -16,9 +16,25 @@
  */
 void MONITORING_BuildSigfoxData(MONITORING_Data* monitoring_data, unsigned char* monitoring_sigfox_data) {
 	// MCU temperature (°C).
-	monitoring_sigfox_data[0] = monitoring_data -> monitoring_data_mcu_temperature_degrees;
+	monitoring_sigfox_data[0] = 0x00;
+	if ((monitoring_data -> monitoring_data_mcu_temperature_degrees) < 0) {
+		monitoring_sigfox_data[0] |= 0x80;
+		unsigned char temperature_abs = (-1) * (monitoring_data -> monitoring_data_mcu_temperature_degrees);
+		monitoring_sigfox_data[0] |= (temperature_abs & 0x7F);
+	}
+	else {
+		monitoring_sigfox_data[0] |= ((monitoring_data -> monitoring_data_mcu_temperature_degrees) & 0x7F);
+	}
 	// PCB temperature (°C).
-	monitoring_sigfox_data[1] = monitoring_data -> monitoring_data_pcb_temperature_degrees;
+	monitoring_sigfox_data[1] = 0x00;
+	if ((monitoring_data -> monitoring_data_pcb_temperature_degrees) < 0) {
+		monitoring_sigfox_data[1] |= 0x80;
+		unsigned char temperature_abs = (-1) * (monitoring_data -> monitoring_data_pcb_temperature_degrees);
+		monitoring_sigfox_data[1] |= (temperature_abs & 0x7F);
+	}
+	else {
+		monitoring_sigfox_data[1] |= ((monitoring_data -> monitoring_data_pcb_temperature_degrees) & 0x7F);
+	}
 	// PCB humidity (%).
 	monitoring_sigfox_data[2] = monitoring_data -> monitoring_data_pcb_humidity_percent;
 	// Solar cell voltage (mV).
