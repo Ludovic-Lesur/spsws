@@ -19,8 +19,16 @@
  * @return:						None.
  */
 void WEATHER_BuildSigfoxData(WEATHER_Data* weather_data, unsigned char* weather_sigfox_data) {
-	// Temperature (°C)
-	weather_sigfox_data[0] = weather_data -> weather_data_temperature_degrees;
+	// Temperature (°C).
+	weather_sigfox_data[0] = 0x00;
+	if ((weather_data -> weather_data_temperature_degrees) < 0) {
+		weather_sigfox_data[0] |= 0x80;
+		unsigned char temperature_abs = (-1) * (weather_data -> weather_data_temperature_degrees);
+		weather_sigfox_data[0] |= (temperature_abs & 0x7F);
+	}
+	else {
+		weather_sigfox_data[0] |= ((weather_data -> weather_data_temperature_degrees) & 0x7F);
+	}
 	// Humidity (%).
 	weather_sigfox_data[1] = weather_data -> weather_data_humidity_percent;
 	// Light (%).

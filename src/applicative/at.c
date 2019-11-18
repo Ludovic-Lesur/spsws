@@ -33,6 +33,8 @@
 #include "usart.h"
 #include "wind.h"
 
+#include "weather.h"
+
 #ifdef ATM
 
 /*** AT local macros ***/
@@ -774,6 +776,7 @@ void AT_DecodeRxBuffer(void) {
 		/* External temperature and humidity sensor command AT$ETHS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ETHS) == AT_NO_ERROR) {
 			signed char sht3x_temperature_degrees = 0;
+			unsigned char sht3x_temperature_abs_degrees = 0;
 			unsigned char sht3x_humidity_percent = 0;
 			// Perform measurements.
 			I2C1_PowerOn();
@@ -783,7 +786,14 @@ void AT_DecodeRxBuffer(void) {
 			SHT3X_GetHumidity(&sht3x_humidity_percent);
 			// Print results.
 			USARTx_SendString("T=");
-			USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			if (sht3x_temperature_degrees < 0) {
+				sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
+				USARTx_SendString("-");
+				USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			}
+			else {
+				USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			}
 			USARTx_SendString("°C H=");
 			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("%\n");
