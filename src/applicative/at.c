@@ -33,8 +33,6 @@
 #include "usart.h"
 #include "wind.h"
 
-#include "weather.h"
-
 #ifdef ATM
 
 /*** AT local macros ***/
@@ -742,7 +740,7 @@ void AT_DecodeRxBuffer(void) {
 		/* MCU command AT$MCU?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
 			unsigned int mcu_supply_voltage_mv = 0;
-			signed char mcu_temperature_degrees = 0;;
+			signed char mcu_temperature_degrees = 0;
 			// Trigger internal ADC conversions.
 			ADC1_PerformMeasurements();
 			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
@@ -751,7 +749,14 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendString("Vcc=");
 			USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("mV T=");
-			USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			if (mcu_temperature_degrees < 0) {
+				unsigned char mcu_temperature_abs_degrees = (-1) * mcu_temperature_degrees;
+				USARTx_SendString("-");
+				USARTx_SendValue(mcu_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			}
+			else {
+				USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			}
 			USARTx_SendString("°C\n");
 		}
 #ifdef HW2_0
@@ -767,7 +772,14 @@ void AT_DecodeRxBuffer(void) {
 			SHT3X_GetHumidity(&sht3x_humidity_percent);
 			// Print results.
 			USARTx_SendString("T=");
-			USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			if (sht3x_temperature_degrees < 0) {
+				unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
+				USARTx_SendString("-");
+				USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			}
+			else {
+				USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			}
 			USARTx_SendString("°C H=");
 			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("%\n");
@@ -776,7 +788,6 @@ void AT_DecodeRxBuffer(void) {
 		/* External temperature and humidity sensor command AT$ETHS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ETHS) == AT_NO_ERROR) {
 			signed char sht3x_temperature_degrees = 0;
-			unsigned char sht3x_temperature_abs_degrees = 0;
 			unsigned char sht3x_humidity_percent = 0;
 			// Perform measurements.
 			I2C1_PowerOn();
@@ -787,7 +798,7 @@ void AT_DecodeRxBuffer(void) {
 			// Print results.
 			USARTx_SendString("T=");
 			if (sht3x_temperature_degrees < 0) {
-				sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
+				unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
 				USARTx_SendString("-");
 				USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
 			}
@@ -813,7 +824,14 @@ void AT_DecodeRxBuffer(void) {
 			USARTx_SendString("P=");
 			USARTx_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
 			USARTx_SendString("Pa T=");
-			USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			if (dps310_temperature_degrees < 0) {
+				unsigned char dps310_temperature_abs_degrees = (-1) * dps310_temperature_degrees;
+				USARTx_SendString("-");
+				USARTx_SendValue(dps310_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			}
+			else {
+				USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+			}
 			USARTx_SendString("°C\n");
 		}
 
