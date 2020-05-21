@@ -95,9 +95,7 @@ typedef enum {
 
 void SX1232_Init(void);
 void SX1232_DisableGpio(void);
-#ifdef HW2_0
 void SX1232_Tcxo(unsigned char tcxo_enable);
-#endif
 
 // Common settings.
 void SX1232_SetOscillator(SX1232_Oscillator oscillator);

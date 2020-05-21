@@ -91,20 +91,9 @@ void SX1232_Init(void) {
 	sx1232_ctx.sx1232_rssi_offset = 0;
 
 	/* Init SX1232 DIOx */
-#ifdef HW1_0
-#ifdef USE_SX1232_DIOX
-	GPIO_Configure(&GPIO_SX1232_DIOX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-#endif
-#ifdef HW2_0
 	GPIO_Configure(&GPIO_SX1232_DIO2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 	GPIO_Configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-#ifdef HW2_0
-	/* Init 32MHz TCXO power control */
 	GPIO_Configure(&GPIO_TCXO32_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 }
 
 /* DISABLE ALL SX1232 GPIOs.
@@ -112,23 +101,11 @@ void SX1232_Init(void) {
  * @return:	None.
  */
 void SX1232_DisableGpio(void) {
-#ifdef HW1_0
-#ifdef USE_SX1232_DIOX
-	GPIO_Configure(&GPIO_SX1232_DIOX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-#endif
-#ifdef HW2_0
-	GPIO_Configure(&GPIO_SX1232_DIO2, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 	GPIO_Configure(&GPIO_SX1232_DIO0, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-#ifdef HW2_0
-	/* Init 32MHz TCXO power control */
+	GPIO_Configure(&GPIO_SX1232_DIO2, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TCXO32_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 }
 
-#ifdef HW2_0
 /* SWITCH SX1232 EXTERNAL TCXO ON OR OFF.
  * @param tcxo_enable:	Power down 32MHz TCXO if 0, power on otherwise.
  * @return:				None.
@@ -145,7 +122,6 @@ void SX1232_Tcxo(unsigned char tcxo_enable) {
 		LPTIM1_DelayMilliseconds(100);
 	}
 }
-#endif
 
 /* SELECT SX1232 OSCILLATOR CONFIGURATION.
  * @param oscillator:	Type of external oscillator used (see SX1232_Oscillator enumeration in sx1232.h).
@@ -612,12 +588,7 @@ void SX1232_EnableFastFrequencyHopping(void) {
  */
 void SX1232_StartCw(void) {
 	// Start data signal.
-#ifdef HW1_0
-	GPIO_Write(&GPIO_SX1232_DIOX, 1);
-#endif
-#ifdef HW2_0
 	GPIO_Write(&GPIO_SX1232_DIO2, 1);
-#endif
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
 	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60µs typical.
@@ -631,12 +602,7 @@ void SX1232_StartCw(void) {
  */
 void SX1232_StopCw(void) {
 	// Stop data signal and radio.
-#ifdef HW1_0
-	GPIO_Write(&GPIO_SX1232_DIOX, 0);
-#endif
-#ifdef HW2_0
 	GPIO_Write(&GPIO_SX1232_DIO2, 0);
-#endif
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 }
 

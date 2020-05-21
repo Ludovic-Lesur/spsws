@@ -376,9 +376,7 @@ int main (void) {
 			AES_Init();
 			// Init components.
 			SX1232_Init();
-#ifdef HW2_0
 			SX1232_Tcxo(1);
-#endif
 			SKY13317_Init();
 			NEOM8N_Init();
 			MAX11136_Init();
@@ -578,9 +576,7 @@ int main (void) {
 		case SPSWS_STATE_RTC_CALIBRATION:
 			IWDG_Reload();
 			// Turn radio TCXO off since Sigfox is not required anymore.
-#ifdef HW2_0
 			SX1232_Tcxo(0);
-#endif
 			// Get current timestamp from GPS.{
 			LPUART1_PowerOn();
 			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
@@ -610,8 +606,8 @@ int main (void) {
 			SX1232_DisableGpio();
 			SKY13317_DisableGpio();
 			MAX11136_DisableGpio();
-#ifdef HW2_0
 			SX1232_Tcxo(0);
+#ifdef HW2_0
 			SPI2_Disable();
 #endif
 			ADC1_Disable();
@@ -710,6 +706,7 @@ int main (void) {
 
 	/* Init clocks */
 	RCC_Init();
+	RCC_EnableGpio();
 	RTC_Reset();
 	RCC_EnableLsi();
 	// High speed oscillator.
@@ -751,9 +748,7 @@ int main (void) {
 
 	/* Init components */
 	SX1232_Init();
-#ifdef HW2_0
 	SX1232_Tcxo(1);
-#endif
 	SKY13317_Init();
 #ifdef AT_COMMANDS_GPS
 	NEOM8N_Init();

@@ -83,18 +83,15 @@ RF_API_Context rf_api_ctx;
 		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
+		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
+			// Turn signal off (ramp down is done by the transceiver OOK modulation shaping).
+			GPIO_Write(&GPIO_SX1232_DIO2, 0);
+		}
 	}
 
 	/* CCR2 = ramp down end + frequency shift start */
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX)) != 0) {
 		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
-			// Switch radio off.
-#ifdef HW1_0
-			GPIO_Write(&GPIO_SX1232_DIOX, 0);
-#endif
-#ifdef HW2_0
-			GPIO_Write(&GPIO_SX1232_DIO2, 0);
-#endif
 			// Change frequency.
 			if (rf_api_ctx.rf_api_frequency_shift_direction == 0) {
 				// Decrease frequency.
@@ -119,13 +116,8 @@ RF_API_Context rf_api_ctx;
 		if (rf_api_ctx.rf_api_phase_shift_required != 0){
 			// Come back to uplink frequency.
 			SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
-			// Switch radio on.
-#ifdef HW1_0
-			GPIO_Write(&GPIO_SX1232_DIOX, 1);
-#endif
-#ifdef HW2_0
+			// Turn signal on (ramp up is done by the transceiver OOK modulation shaping).
 			GPIO_Write(&GPIO_SX1232_DIO2, 1);
-#endif
 		}
 		// Update event status (set current and clear previous).
 		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
@@ -249,7 +241,7 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		SX1232_EnableLowPnPll();
 		SX1232_EnableFastFrequencyHopping();
 		SX1232_SetModulation(SX1232_MODULATION_OOK, SX1232_MODULATION_SHAPING_OOK_BITRATE);
-		SX1232_SetBitRate(4800); // Set bit rate for modulation shaping.
+		SX1232_SetBitRate(500); // Set bit rate for modulation shaping.
 		SX1232_SetDataMode(SX1232_DATA_MODE_CONTINUOUS);
 		break;
 
