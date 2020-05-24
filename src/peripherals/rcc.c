@@ -282,7 +282,7 @@ unsigned int RCC_GetLsiFrequency(void) {
 	unsigned int lsi_freq_hz = 0;
 
 	/* Init and start timers */
-	LPTIM1_Init(1);
+	LPTIM1_Init(LPTIM_MODE_LSI_CALIBRATION);
 	TIM21_Init();
 	LPTIM1_Start();
 	TIM21_Start();

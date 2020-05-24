@@ -9,6 +9,7 @@
 
 #include "exti.h"
 #include "lptim.h"
+#include "lptim_reg.h"
 #include "mapping.h"
 #include "math.h"
 #include "max11136.h"
@@ -17,7 +18,6 @@
 #include "rcc.h"
 #include "spi.h"
 #include "tim.h"
-#include "tim_reg.h"
 #include "usart.h"
 
 #if (defined CM || defined ATM)
@@ -203,9 +203,9 @@ void WIND_StartContinuousMeasure(void) {
 	wind_ctx.wind_direction_seconds_count = 0;
 
 #ifdef WIND_VANE_ULTIMETER
-	/* Init TIM2 for phase shift operation */
-	TIM2_Init(TIM2_MODE_WIND, 0);
-	TIM2_Enable();
+	/* Init LPTIM for phase shift operation */
+	LPTIM1_Init(LPTIM_MODE_ULTIMETER);
+	LPTIM1_Enable();
 #endif
 
 	/* Enable required interrupts */
@@ -224,8 +224,11 @@ void WIND_StopContinuousMeasure(void) {
 
 #ifdef WIND_VANE_ULTIMETER
 	/* Stop TIM2 */
-	TIM2_Stop();
-	TIM2_Disable();
+	LPTIM1_Stop();
+	LPTIM1_Disable();
+#endif
+#ifdef ATM
+	LPTIM1_Init(LPTIM_MODE_DELAY);
 #endif
 }
 
@@ -289,14 +292,14 @@ void WIND_SpeedEdgeCallback(void) {
 	/* Wind direction */
 #ifdef WIND_VANE_ULTIMETER
 	// Capture PWM period.
-	TIM2_Stop();
-	wind_ctx.wind_direction_pwm_period = TIM2_GetCounter();
+	LPTIM1_Stop();
+	wind_ctx.wind_direction_pwm_period = LPTIM1_GetCounter();
 	// Compute direction
 	if ((wind_ctx.wind_direction_pwm_period > 0) && (wind_ctx.wind_direction_pwm_duty_cycle <= wind_ctx.wind_direction_pwm_period)) {
 		wind_ctx.wind_direction_degrees = (wind_ctx.wind_direction_pwm_duty_cycle * 360) / (wind_ctx.wind_direction_pwm_period);
 	}
 	// Start new cycle.
-	TIM2_Start();
+	LPTIM1_Start();
 #endif
 }
 
@@ -308,7 +311,7 @@ void WIND_SpeedEdgeCallback(void) {
 void WIND_DirectionEdgeCallback(void) {
 
 	/* Capture PWM duty cycle */
-	wind_ctx.wind_direction_pwm_duty_cycle = TIM2_GetCounter();
+	wind_ctx.wind_direction_pwm_duty_cycle = LPTIM1_GetCounter();
 }
 #endif
 
@@ -380,6 +383,7 @@ void WIND_MeasurementPeriodCallback(void) {
 			// Timers.
 			TIM21_Start();
 			TIM22_Start();
+			LPTIM1_Init(LPTIM1_MODE_DELAY);
 			LPTIM1_Enable();
 			// SPI.
 #ifdef HW1_0

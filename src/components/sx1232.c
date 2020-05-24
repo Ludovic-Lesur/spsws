@@ -591,9 +591,9 @@ void SX1232_StartCw(void) {
 	GPIO_Write(&GPIO_SX1232_DIO2, 1);
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
+	LPTIM1_DelayMilliseconds(2); // Wait TS_FS=60탎 typical.
 	SX1232_SetMode(SX1232_MODE_TX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
+	LPTIM1_DelayMilliseconds(2); // Wait TS_TR=120탎 typical.
 }
 
 /* STOP CONTINUOUS WAVE OUTPUT.
@@ -603,6 +603,7 @@ void SX1232_StartCw(void) {
 void SX1232_StopCw(void) {
 	// Stop data signal and radio.
 	GPIO_Write(&GPIO_SX1232_DIO2, 0);
+	LPTIM1_DelayMilliseconds(2); // Wait ramp down.
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 }
 

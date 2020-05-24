@@ -49,7 +49,7 @@
 
 /*** SPSWS macros ***/
 
-#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	120
+#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	180
 #define SPSWS_LOCAL_UTC_OFFSET_WINTER			1
 #define SPSWS_LOCAL_UTC_OFFSET_SUMMER			2
 #define SPSWS_WINTER_TIME_LAST_MONTH			3
@@ -344,7 +344,7 @@ int main (void) {
 			TIM22_Init();
 			TIM21_Start();
 			TIM22_Start();
-			LPTIM1_Init(0);
+			LPTIM1_Init(LPTIM_MODE_DELAY);
 			// RTC (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
 				rtc_use_lse = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
@@ -613,6 +613,7 @@ int main (void) {
 			ADC1_Disable();
 			TIM21_Disable();
 			TIM22_Disable();
+			TIM2_Disable();
 			LPTIM1_Disable();
 			SPI1_Disable();
 			DMA1_Disable();
@@ -622,7 +623,7 @@ int main (void) {
 			// Store status byte in NVM.
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
-			// Switch to internal MSI 65kHz (must be called before WIND functions to init TIM2 with right clock frequency).
+			// Switch to internal MSI 65kHz (must be called before WIND functions to init LPTIM with right clock frequency).
 			RCC_SwitchToMsi();
 			RCC_DisableGpio();
 #ifdef CM
@@ -721,7 +722,7 @@ int main (void) {
 	TIM22_Init();
 	TIM21_Start();
 	TIM22_Start();
-	LPTIM1_Init(0);
+	LPTIM1_Init(LPTIM_MODE_DELAY);
 	// RTC.
 	RTC_Init(0, lsi_frequency_hz);
 	// DMA.

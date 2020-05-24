@@ -108,6 +108,7 @@
 #define AT_OUT_ERROR_RF_OUTPUT_POWER_OVERFLOW			0x84			// RF output power is too high.
 #define AT_OUT_ERROR_UNKNOWN_RC							0x85			// Unknown RC.
 #define AT_OUT_ERROR_UNKNOWN_TEST_MODE					0x86			// Unknown test mode.
+#define AT_OUT_ERROR_FORBIDDEN_COMMAND					0x87			// Forbidden command.
 
 // Components errors
 #define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
@@ -137,6 +138,8 @@ typedef struct {
 	unsigned int start_idx;
 	unsigned int end_idx;
 	unsigned int separator_idx;
+	// Wind measurement flag.
+	unsigned char wind_measurement_flag;
 } AT_Context;
 
 /*** AT local global variables ***/
@@ -661,225 +664,279 @@ void AT_DecodeRxBuffer(void) {
 #ifdef AT_COMMANDS_GPS
 		/* TIME command AT$TIME=<timeout_seconds><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
-			unsigned int timeout_seconds = 0;
-			// Search timeout parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-			if (get_param_result == AT_NO_ERROR) {
-				// Start GPS fix.
-				Timestamp gps_timestamp;
-				LPUART1_PowerOn();
-				NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
-				LPUART1_PowerOff();
-				switch (get_timestamp_result) {
-				case NEOM8N_SUCCESS:
-					AT_PrintTimestamp(&gps_timestamp);
-					break;
-				case NEOM8N_TIMEOUT:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
-					break;
-				default:
-					break;
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int timeout_seconds = 0;
+				// Search timeout parameter.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
+				if (get_param_result == AT_NO_ERROR) {
+					// Start GPS fix.
+					Timestamp gps_timestamp;
+					LPUART1_PowerOn();
+					NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+					LPUART1_PowerOff();
+					switch (get_timestamp_result) {
+					case NEOM8N_SUCCESS:
+						AT_PrintTimestamp(&gps_timestamp);
+						break;
+					case NEOM8N_TIMEOUT:
+						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+						break;
+					default:
+						break;
+					}
+				}
+				else {
+					// Error in timeout parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 				}
 			}
 			else {
-				// Error in timeout parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 
 		/* GPS command AT$GPS=<timeout_seconds><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
-			unsigned int timeout_seconds = 0;
-			// Search timeout parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-			if (get_param_result == AT_NO_ERROR) {
-				// Start GPS fix.
-				Position gps_position;
-				LPUART1_PowerOn();
-				NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
-				LPUART1_PowerOff();
-				switch (get_position_result) {
-				case NEOM8N_SUCCESS:
-					AT_PrintPosition(&gps_position);
-					break;
-				case NEOM8N_TIMEOUT:
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
-					break;
-				default:
-					break;
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int timeout_seconds = 0;
+				// Search timeout parameter.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
+				if (get_param_result == AT_NO_ERROR) {
+					// Start GPS fix.
+					Position gps_position;
+					LPUART1_PowerOn();
+					NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+					LPUART1_PowerOff();
+					switch (get_position_result) {
+					case NEOM8N_SUCCESS:
+						AT_PrintPosition(&gps_position);
+						break;
+					case NEOM8N_TIMEOUT:
+						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+						break;
+					default:
+						break;
+					}
+				}
+				else {
+					// Error in timeout parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 				}
 			}
 			else {
-				// Error in timeout parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_SENSORS
 		/* ADC command AT$ADC?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
-			// Trigger external ADC convertions.
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// Trigger external ADC convertions.
 #ifdef HW1_0
-			SPI1_PowerOn();
+				SPI1_PowerOn();
 #endif
 #ifdef HW2_0
-			SPI2_PowerOn();
+				SPI2_PowerOn();
 #endif
-			// Run external ADC conversions.
-			MAX11136_PerformMeasurements();
+				// Run external ADC conversions.
+				MAX11136_PerformMeasurements();
 #ifdef HW1_0
-			SPI1_PowerOff();
+				SPI1_PowerOff();
 #endif
 #ifdef HW2_0
-			SPI2_PowerOff();
+				SPI2_PowerOff();
 #endif
-			// Print results.
-			AT_PrintAdcResults();
+				// Print results.
+				AT_PrintAdcResults();
+			}
+			else {
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+			}
 		}
 
 		/* MCU command AT$MCU?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
-			unsigned int mcu_supply_voltage_mv = 0;
-			signed char mcu_temperature_degrees = 0;
-			// Trigger internal ADC conversions.
-			ADC1_PerformMeasurements();
-			ADC1_GetMcuTemperature(&mcu_temperature_degrees);
-			ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
-			// Print results.
-			USARTx_SendString("Vcc=");
-			USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("mV T=");
-			if (mcu_temperature_degrees < 0) {
-				unsigned char mcu_temperature_abs_degrees = (-1) * mcu_temperature_degrees;
-				USARTx_SendString("-");
-				USARTx_SendValue(mcu_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int mcu_supply_voltage_mv = 0;
+				signed char mcu_temperature_degrees = 0;
+				// Trigger internal ADC conversions.
+				ADC1_PerformMeasurements();
+				ADC1_GetMcuTemperature(&mcu_temperature_degrees);
+				ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+				// Print results.
+				USARTx_SendString("Vcc=");
+				USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("mV T=");
+				if (mcu_temperature_degrees < 0) {
+					unsigned char mcu_temperature_abs_degrees = (-1) * mcu_temperature_degrees;
+					USARTx_SendString("-");
+					USARTx_SendValue(mcu_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				else {
+					USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				USARTx_SendString("캜\n");
 			}
 			else {
-				USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
-			USARTx_SendString("캜\n");
 		}
 #ifdef HW2_0
 		/* Internal temperature and humidity sensor command AT$ITHS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ITHS) == AT_NO_ERROR) {
-			signed char sht3x_temperature_degrees = 0;
-			unsigned char sht3x_humidity_percent = 0;
-			// Perform measurements.
-			I2C1_PowerOn();
-			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
-			I2C1_PowerOff();
-			SHT3X_GetTemperature(&sht3x_temperature_degrees);
-			SHT3X_GetHumidity(&sht3x_humidity_percent);
-			// Print results.
-			USARTx_SendString("T=");
-			if (sht3x_temperature_degrees < 0) {
-				unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
-				USARTx_SendString("-");
-				USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				signed char sht3x_temperature_degrees = 0;
+				unsigned char sht3x_humidity_percent = 0;
+				// Perform measurements.
+				I2C1_PowerOn();
+				SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
+				I2C1_PowerOff();
+				SHT3X_GetTemperature(&sht3x_temperature_degrees);
+				SHT3X_GetHumidity(&sht3x_humidity_percent);
+				// Print results.
+				USARTx_SendString("T=");
+				if (sht3x_temperature_degrees < 0) {
+					unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
+					USARTx_SendString("-");
+					USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				else {
+					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				USARTx_SendString("캜 H=");
+				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("%\n");
 			}
 			else {
-				USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
-			USARTx_SendString("캜 H=");
-			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("%\n");
 		}
 #endif
 		/* External temperature and humidity sensor command AT$ETHS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ETHS) == AT_NO_ERROR) {
-			signed char sht3x_temperature_degrees = 0;
-			unsigned char sht3x_humidity_percent = 0;
-			// Perform measurements.
-			I2C1_PowerOn();
-			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
-			I2C1_PowerOff();
-			SHT3X_GetTemperature(&sht3x_temperature_degrees);
-			SHT3X_GetHumidity(&sht3x_humidity_percent);
-			// Print results.
-			USARTx_SendString("T=");
-			if (sht3x_temperature_degrees < 0) {
-				unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
-				USARTx_SendString("-");
-				USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				signed char sht3x_temperature_degrees = 0;
+				unsigned char sht3x_humidity_percent = 0;
+				// Perform measurements.
+				I2C1_PowerOn();
+				SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
+				I2C1_PowerOff();
+				SHT3X_GetTemperature(&sht3x_temperature_degrees);
+				SHT3X_GetHumidity(&sht3x_humidity_percent);
+				// Print results.
+				USARTx_SendString("T=");
+				if (sht3x_temperature_degrees < 0) {
+					unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
+					USARTx_SendString("-");
+					USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				else {
+					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				USARTx_SendString("캜 H=");
+				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("%\n");
 			}
 			else {
-				USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
-			USARTx_SendString("캜 H=");
-			USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("%\n");
 		}
 
 		/* External pressure and temperature sensor command AT$PTS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_EPTS) == AT_NO_ERROR) {
-			unsigned int dps310_pressure_pa = 0;
-			signed char dps310_temperature_degrees = 0;
-			// Perform measurements.
-			I2C1_PowerOn();
-			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
-			I2C1_PowerOff();
-			DPS310_GetPressure(&dps310_pressure_pa);
-			DPS310_GetTemperature(&dps310_temperature_degrees);
-			// Print results.
-			USARTx_SendString("P=");
-			USARTx_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("Pa T=");
-			if (dps310_temperature_degrees < 0) {
-				unsigned char dps310_temperature_abs_degrees = (-1) * dps310_temperature_degrees;
-				USARTx_SendString("-");
-				USARTx_SendValue(dps310_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int dps310_pressure_pa = 0;
+				signed char dps310_temperature_degrees = 0;
+				// Perform measurements.
+				I2C1_PowerOn();
+				DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
+				I2C1_PowerOff();
+				DPS310_GetPressure(&dps310_pressure_pa);
+				DPS310_GetTemperature(&dps310_temperature_degrees);
+				// Print results.
+				USARTx_SendString("P=");
+				USARTx_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("Pa T=");
+				if (dps310_temperature_degrees < 0) {
+					unsigned char dps310_temperature_abs_degrees = (-1) * dps310_temperature_degrees;
+					USARTx_SendString("-");
+					USARTx_SendValue(dps310_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				else {
+					USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				}
+				USARTx_SendString("캜\n");
 			}
 			else {
-				USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
-			USARTx_SendString("캜\n");
 		}
 
 		/* External LDR command AT$LDR?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_ELDR) == AT_NO_ERROR) {
-			// Perform measurements.
-			I2C1_PowerOn();
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// Perform measurements.
+				I2C1_PowerOn();
 #ifdef HW1_0
-			SPI1_PowerOn();
+				SPI1_PowerOn();
 #endif
 #ifdef HW2_0
-			SPI2_PowerOn();
+				SPI2_PowerOn();
 #endif
-			// Run external ADC conversions.
-			MAX11136_PerformMeasurements();
+				// Run external ADC conversions.
+				MAX11136_PerformMeasurements();
 #ifdef HW1_0
-			SPI1_PowerOff();
+				SPI1_PowerOff();
 #endif
 #ifdef HW2_0
-			SPI2_PowerOff();
+				SPI2_PowerOff();
 #endif
-			I2C1_PowerOff();
-			ADC1_PerformMeasurements();
-			// Get LDR and supply voltage.
-			unsigned int ldr_output_mv = 0;
-			unsigned int ldr_supply_voltage_mv = 0;
-			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
-			ADC1_GetMcuSupplyVoltage(&ldr_supply_voltage_mv);
-			// Convert to percent.
-			unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
-			// Print result.
-			USARTx_SendString("Light=");
-			USARTx_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("%\n");
+				I2C1_PowerOff();
+				ADC1_PerformMeasurements();
+				// Get LDR and supply voltage.
+				unsigned int ldr_output_mv = 0;
+				unsigned int ldr_supply_voltage_mv = 0;
+				MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
+				ADC1_GetMcuSupplyVoltage(&ldr_supply_voltage_mv);
+				// Convert to percent.
+				unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
+				// Print result.
+				USARTx_SendString("Light=");
+				USARTx_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("%\n");
+			}
+			else {
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+			}
 		}
 
 		/* Externam UV index sensor command AT$UVS?<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_EUVS) == AT_NO_ERROR) {
-			unsigned char si1133_uv_index = 0;
-			// Perform measurements.
-			I2C1_PowerOn();
-			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
-			I2C1_PowerOff();
-			SI1133_GetUvIndex(&si1133_uv_index);
-			// Print result.
-			USARTx_SendString("UVI=");
-			USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
-			USARTx_SendString("\n");
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned char si1133_uv_index = 0;
+				// Perform measurements.
+				I2C1_PowerOn();
+				SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
+				I2C1_PowerOff();
+				SI1133_GetUvIndex(&si1133_uv_index);
+				// Print result.
+				USARTx_SendString("UVI=");
+				USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
+				USARTx_SendString("\n");
+			}
+			else {
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+			}
 		}
 
 		/* Wind measurements command AT$WIND=<enable><CR> */
@@ -910,10 +967,14 @@ void AT_DecodeRxBuffer(void) {
 					USARTx_SendString("\n");
 					// Reset data.
 					WIND_ResetData();
+					// Update flag.
+					at_ctx.wind_measurement_flag = 0;
 				}
 				else {
 					WIND_StartContinuousMeasure();
 					NVIC_EnableInterrupt(IT_RTC);
+					// Update flag.
+					at_ctx.wind_measurement_flag = 1;
 				}
 				AT_ReplyOk();
 			}
@@ -1074,282 +1135,324 @@ void AT_DecodeRxBuffer(void) {
 #ifdef AT_COMMANDS_SIGFOX
 		/* Sigfox send OOB command AT$SO<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
-			// Send Sigfox OOB frame.
-			sfx_error = SIGFOX_API_open(&rc1);
-			if (sfx_error == SFX_ERR_NONE) {
-				sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
-			}
-			SIGFOX_API_close();
-			if (sfx_error == SFX_ERR_NONE) {
-				AT_ReplyOk();
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// Send Sigfox OOB frame.
+				sfx_error = SIGFOX_API_open(&rc1);
+				if (sfx_error == SFX_ERR_NONE) {
+					sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+				}
+				SIGFOX_API_close();
+				if (sfx_error == SFX_ERR_NONE) {
+					AT_ReplyOk();
+				}
+				else {
+					// Error from Sigfox library.
+					AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+				}
 			}
 			else {
-				// Error from Sigfox library.
-				AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 
 		/* Sigfox send bit command AT$SB=<bit>,<downlink_request><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_SB) == AT_NO_ERROR) {
-			unsigned int data_bit = 0;
-			// First try with 2 parameters.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &data_bit);
-			if (get_param_result == AT_NO_ERROR) {
-				// Try parsing downlink request parameter.
-				unsigned int downlink_request = 0;
-				get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int data_bit = 0;
+				// First try with 2 parameters.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &data_bit);
 				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox bit with specified downlink request.
-					sfx_error = SIGFOX_API_open(&rc1);
-					if (sfx_error == SFX_ERR_NONE) {
-						sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
-					}
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						if (downlink_request == 1) {
-							AT_PrintDownlinkData(sfx_downlink_data);
+					// Try parsing downlink request parameter.
+					unsigned int downlink_request = 0;
+					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
+					if (get_param_result == AT_NO_ERROR) {
+						// Send Sigfox bit with specified downlink request.
+						sfx_error = SIGFOX_API_open(&rc1);
+						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
 						}
-						AT_ReplyOk();
+						SIGFOX_API_close();
+						if (sfx_error == SFX_ERR_NONE) {
+							if (downlink_request == 1) {
+								AT_PrintDownlinkData(sfx_downlink_data);
+							}
+							AT_ReplyOk();
+						}
+						else {
+							// Error from Sigfox library.
+							AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						}
 					}
 					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						// Error in downlink request parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 					}
 				}
 				else {
-					// Error in downlink request parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					// Try with 1 parameter.
+					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &data_bit);
+					if (get_param_result == AT_NO_ERROR) {
+						// Send Sigfox bit with no downlink request (by default).
+						sfx_error = SIGFOX_API_open(&rc1);
+						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+						}
+						SIGFOX_API_close();
+						if (sfx_error == SFX_ERR_NONE) {
+							AT_ReplyOk();
+						}
+						else {
+							// Error from Sigfox library.
+							AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						}
+					}
+					else {
+						// Error in data parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					}
 				}
 			}
 			else {
-				// Try with 1 parameter.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &data_bit);
-				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox bit with no downlink request (by default).
-					sfx_error = SIGFOX_API_open(&rc1);
-					if (sfx_error == SFX_ERR_NONE) {
-						sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
-					}
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						AT_ReplyOk();
-					}
-					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-					}
-				}
-				else {
-					// Error in data parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-				}
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 
 		/* Sigfox send empty frame command AT$SF<CR> */
 		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
-			// Send Sigfox empty frame.
-			sfx_error = SIGFOX_API_open(&rc1);
-			if (sfx_error == SFX_ERR_NONE) {
-				sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
-			}
-			SIGFOX_API_close();
-			if (sfx_error == SFX_ERR_NONE) {
-				AT_ReplyOk();
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// Send Sigfox empty frame.
+				sfx_error = SIGFOX_API_open(&rc1);
+				if (sfx_error == SFX_ERR_NONE) {
+					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
+				}
+				SIGFOX_API_close();
+				if (sfx_error == SFX_ERR_NONE) {
+					AT_ReplyOk();
+				}
+				else {
+					// Error from Sigfox library.
+					AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+				}
 			}
 			else {
-				// Error from Sigfox library.
-				AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 
 		/* Sigfox send frame command AT$SF=<data>,<downlink_request><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_SF) == AT_NO_ERROR) {
-			// First try with 2 parameters.
-			get_param_result = AT_GetByteArray(0, sfx_uplink_data, 12, &extracted_length);
-			if (get_param_result == AT_NO_ERROR) {
-				// Try parsing downlink request parameter.
-				unsigned int downlink_request = 0;
-				get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// First try with 2 parameters.
+				get_param_result = AT_GetByteArray(0, sfx_uplink_data, 12, &extracted_length);
 				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox frame with specified downlink request.
-					sfx_error = SIGFOX_API_open(&rc1);
-					if (sfx_error == SFX_ERR_NONE) {
-						sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
-					}
-
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						if (downlink_request == 1) {
-							AT_PrintDownlinkData(sfx_downlink_data);
+					// Try parsing downlink request parameter.
+					unsigned int downlink_request = 0;
+					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
+					if (get_param_result == AT_NO_ERROR) {
+						// Send Sigfox frame with specified downlink request.
+						sfx_error = SIGFOX_API_open(&rc1);
+						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
 						}
-						AT_ReplyOk();
+
+						SIGFOX_API_close();
+						if (sfx_error == SFX_ERR_NONE) {
+							if (downlink_request == 1) {
+								AT_PrintDownlinkData(sfx_downlink_data);
+							}
+							AT_ReplyOk();
+						}
+						else {
+							// Error from Sigfox library.
+							AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						}
 					}
 					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						// Error in downlink request parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 					}
 				}
 				else {
-					// Error in downlink request parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					// Try with 1 parameter.
+					get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
+					if (get_param_result == AT_NO_ERROR) {
+						// Send Sigfox frame with no downlink request (by default).
+						sfx_error = SIGFOX_API_open(&rc1);
+						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+						}
+						SIGFOX_API_close();
+						if (sfx_error == SFX_ERR_NONE) {
+							AT_ReplyOk();
+						}
+						else {
+							// Error from Sigfox library.
+							AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+						}
+					}
+					else {
+						// Error in data parameter.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					}
 				}
 			}
 			else {
-				// Try with 1 parameter.
-				get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
-				if (get_param_result == AT_NO_ERROR) {
-					// Send Sigfox frame with no downlink request (by default).
-					sfx_error = SIGFOX_API_open(&rc1);
-					if (sfx_error == SFX_ERR_NONE) {
-						sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
-					}
-					SIGFOX_API_close();
-					if (sfx_error == SFX_ERR_NONE) {
-						AT_ReplyOk();
-					}
-					else {
-						// Error from Sigfox library.
-						AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-					}
-				}
-				else {
-					// Error in data parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-				}
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_CW_RSSI
 		/* CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
-			unsigned int frequency_hz = 0;
-			// Search frequency parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &frequency_hz);
-			if (get_param_result == AT_NO_ERROR) {
-				unsigned int enable = 0;
-				// First try with 3 parameters.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &enable);
-				if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
-					// Power is not given, try to parse enable as last parameter.
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-					if (get_param_result == AT_NO_ERROR) {
-						// CW with default output power.
-						SIGFOX_API_stop_continuous_transmission();
-						if (enable != 0) {
-							SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int frequency_hz = 0;
+				// Search frequency parameter.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &frequency_hz);
+				if (get_param_result == AT_NO_ERROR) {
+					unsigned int enable = 0;
+					// First try with 3 parameters.
+					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &enable);
+					if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
+						// Power is not given, try to parse enable as last parameter.
+						get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
+						if (get_param_result == AT_NO_ERROR) {
+							// CW with default output power.
+							SIGFOX_API_stop_continuous_transmission();
+							if (enable != 0) {
+								SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
+							}
+							AT_ReplyOk();
 						}
-						AT_ReplyOk();
+						else {
+							// Error in enable parameter.
+							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						}
+					}
+					else if (get_param_result == AT_NO_ERROR) {
+						// There is a third parameter, try to parse power.
+						unsigned int output_power_dbm = 0;
+						get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &output_power_dbm);
+						if (get_param_result == AT_NO_ERROR) {
+							// CW with given output power.
+							SIGFOX_API_stop_continuous_transmission();
+							if (enable != 0) {
+								SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
+								SX1232_SetRfOutputPower(output_power_dbm);
+							}
+							AT_ReplyOk();
+						}
+						else {
+							// Error in power parameter.
+							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						}
 					}
 					else {
 						// Error in enable parameter.
 						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 					}
 				}
-				else if (get_param_result == AT_NO_ERROR) {
-					// There is a third parameter, try to parse power.
-					unsigned int output_power_dbm = 0;
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &output_power_dbm);
-					if (get_param_result == AT_NO_ERROR) {
-						// CW with given output power.
-						SIGFOX_API_stop_continuous_transmission();
-						if (enable != 0) {
-							SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
-							SX1232_SetRfOutputPower(output_power_dbm);
-						}
-						AT_ReplyOk();
-					}
-					else {
-						// Error in power parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
-					}
-				}
 				else {
-					// Error in enable parameter.
+					// Error in frequency parameter.
 					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 				}
 			}
 			else {
-				// Error in frequency parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 
 		/* RSSI report command AT$RSSI=<frequency_hz><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_RSSI) == AT_NO_ERROR) {
-			// Parse frequency parameter.
-			unsigned int frequency_hz = 0;
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &frequency_hz);
-			if (get_param_result == AT_NO_ERROR) {
-				RF_API_init(SFX_RF_MODE_RX);
-				RF_API_change_frequency(frequency_hz);
-				// Start continuous listening.
-				SX1232_SetMode(SX1232_MODE_FSRX);
-				LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
-				SX1232_SetMode(SX1232_MODE_RX);
-				LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
-				unsigned int rssi_print_start_time = TIM22_GetSeconds();
-				unsigned char rssi = 0;
-				while (TIM22_GetSeconds() < (rssi_print_start_time + AT_RSSI_REPORT_DURATION_SECONDS)) {
-					rssi = SX1232_GetRssi();
-					USARTx_SendString("RSSI = -");
-					USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
-					USARTx_SendString("\n");
-					LPTIM1_DelayMilliseconds(500);
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				// Parse frequency parameter.
+				unsigned int frequency_hz = 0;
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &frequency_hz);
+				if (get_param_result == AT_NO_ERROR) {
+					RF_API_init(SFX_RF_MODE_RX);
+					RF_API_change_frequency(frequency_hz);
+					// Start continuous listening.
+					SX1232_SetMode(SX1232_MODE_FSRX);
+					LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60탎 typical.
+					SX1232_SetMode(SX1232_MODE_RX);
+					LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120탎 typical.
+					unsigned int rssi_print_start_time = TIM22_GetSeconds();
+					unsigned char rssi = 0;
+					while (TIM22_GetSeconds() < (rssi_print_start_time + AT_RSSI_REPORT_DURATION_SECONDS)) {
+						rssi = SX1232_GetRssi();
+						USARTx_SendString("RSSI = -");
+						USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
+						USARTx_SendString("\n");
+						LPTIM1_DelayMilliseconds(500);
+					}
+					// Stop radio.
+					RF_API_stop();
+					AT_ReplyOk();
 				}
-				// Stop radio.
-				RF_API_stop();
-				AT_ReplyOk();
+				else {
+					// Error in frequency parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				}
 			}
 			else {
-				// Error in frequency parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_TEST_MODES
 		/* Sigfox test mode command AT$TM=<rc>,<test_mode><CR> */
 		else if (AT_CompareHeader(AT_IN_HEADER_TM) == AT_NO_ERROR) {
-			unsigned int rc = 0;
-			// Search RC parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &rc);
-			if (get_param_result == AT_NO_ERROR) {
-				// Check value.
-				if (rc < SFX_RC_LIST_MAX_SIZE) {
-					// Search test mode number.
-					unsigned int test_mode = 0;
-					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &test_mode);
-					if (get_param_result == AT_NO_ERROR) {
-						// Check parameters.
-						if (test_mode < SFX_TEST_MODE_LIST_MAX_SIZE) {
-							// Call test mode function wth public key.
-							sfx_error = ADDON_SIGFOX_VERIFIED_API_test_mode(rc, test_mode);
-							if (sfx_error == SFX_ERR_NONE) {
-								AT_ReplyOk();
+			// Check if wind measurement is not running.
+			if (at_ctx.wind_measurement_flag == 0) {
+				unsigned int rc = 0;
+				// Search RC parameter.
+				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &rc);
+				if (get_param_result == AT_NO_ERROR) {
+					// Check value.
+					if (rc < SFX_RC_LIST_MAX_SIZE) {
+						// Search test mode number.
+						unsigned int test_mode = 0;
+						get_param_result =  AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &test_mode);
+						if (get_param_result == AT_NO_ERROR) {
+							// Check parameters.
+							if (test_mode < SFX_TEST_MODE_LIST_MAX_SIZE) {
+								// Call test mode function wth public key.
+								sfx_error = ADDON_SIGFOX_VERIFIED_API_test_mode(rc, test_mode);
+								if (sfx_error == SFX_ERR_NONE) {
+									AT_ReplyOk();
+								}
+								else {
+									// Error from Sigfox library.
+									AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+								}
 							}
 							else {
-								// Error from Sigfox library.
-								AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
+								// Invalid test mode.
+								AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_TEST_MODE);
 							}
 						}
 						else {
-							// Invalid test mode.
-							AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_TEST_MODE);
+							// Error in test_mode parameter.
+							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 						}
 					}
 					else {
-						// Error in test_mode parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						// Invalid RC.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
 					}
 				}
 				else {
-					// Invalid RC.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+					// Error in RC parameter.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
 				}
 			}
 			else {
-				// Error in RC parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif

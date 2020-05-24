@@ -8,28 +8,29 @@
 #include "lptim.h"
 
 #include "lptim_reg.h"
+#include "mode.h"
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "tim.h"
+#include "wind.h"
 
 /*** LPTIM local macros ***/
 
-#define LPTIM_TIMEOUT_SECONDS	3
+#define LPTIM_TIMEOUT_COUNT		100
 
 /*** LPTIM functions ***/
 
 /* INIT LPTIM FOR DELAY OPERATION.
- * @param lptim1_use_lsi:	Use APB as clock source if 0, LSI otherwise.
- * @return:					None.
+ * @param lptim1_mode:	Timer mode (use enumeration in lptim.h).
+ * @return:				None.
  */
-void LPTIM1_Init(unsigned char lptim1_use_lsi) {
+void LPTIM1_Init(LPTIM_Mode lptim1_mode) {
 
 	/* Disable peripheral */
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 
-	/* Enable peripheral clock */
-	RCC -> CCIPR &= ~(0b11 << 18); // LPTIMSEL='00' (APB clock selected = 16MHz).
-	if (lptim1_use_lsi != 0) {
+	/* Select timer clock */
+	RCC -> CCIPR &= ~(0b11 << 18); // LPTIMSEL='00' (APB clock selected = 65kHz / 16MHz).
+	if (lptim1_mode == LPTIM_MODE_LSI_CALIBRATION) {
 		RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
 	}
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
@@ -39,16 +40,36 @@ void LPTIM1_Init(unsigned char lptim1_use_lsi) {
 	LPTIM1 -> CFGR |= (0b1 << 19); // Enable timeout.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1'), needed to write ARR.
-	if (lptim1_use_lsi != 0) {
-		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period.
+	// Set ARR and PSC according to mode.
+	switch (lptim1_mode) {
+	case LPTIM_MODE_DELAY:
+		// Overflow period = 1ms.
+		LPTIM1 -> ARR = RCC_GetSysclkKhz();
+		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Prescaler=1.
+		break;
+	case LPTIM_MODE_LSI_CALIBRATION:
+		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period to count LSI edges.
+		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Prescaler=1.
+		break;
+#if (defined CM || defined ATM)
+#ifdef WIND_VANE_ULTIMETER
+	case LPTIM_MODE_ULTIMETER:
+		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period to optimize dynamic (improve accuracy).
+		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Reset bits 9-11.
+		// Ensure timer overflow period is greated than speed measurement period.
+		LPTIM1 -> CFGR |= (((WIND_SPEED_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_GetSysclkKhz() * 1000)) / (0xFFFF)) + 1;
+		break;
+#endif
+#endif
+	default:
+		// Unknwon mode.
+		break;
 	}
-	else {
-		LPTIM1 -> ARR = RCC_GetSysclkKhz(); // Overflow period = 1ms.
-	}
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
 		// Wait for ARROK='1' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + LPTIM_TIMEOUT_SECONDS)) break;
+		loop_count++;
+		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
 	}
 
 	/* Clear all flags */
@@ -112,19 +133,12 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 
 	/* Make as many overflows as required */
 	unsigned int ms_count = 0;
-	unsigned int loop_start_time = 0;
 	unsigned char lptim_default = 0;
 	for (ms_count=0 ; ms_count<delay_ms ; ms_count++) {
 		// Start counter.
-		loop_start_time = TIM22_GetSeconds();
 		LPTIM1 -> CNT &= 0xFFFF0000;
 		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
-		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0) {
-			if (TIM22_GetSeconds() > (loop_start_time + LPTIM_TIMEOUT_SECONDS)) {
-				lptim_default = 1;
-				break;
-			}
-		}
+		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
 		// Clear flag.
 		LPTIM1 -> ICR |= (0b1 << 1);
 		// Exit in case of timeout.
@@ -135,4 +149,12 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 
 	/* Disable timer */
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
+}
+
+/* GET CURRENT LPTIM COUNTER VALUE.
+ * @param:	None.
+ * @return:	Current counter value.
+ */
+volatile unsigned int LPTIM1_GetCounter(void) {
+	return (LPTIM1 -> CNT);
 }

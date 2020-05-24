@@ -8,13 +8,6 @@
 #ifndef TIM_H
 #define TIM_H
 
-/*** TIM structures ***/
-
-typedef enum {
-	TIM2_MODE_WIND,
-	TIM2_MODE_SIGFOX
-} TIM2_Mode;
-
 /*** TIM macros ***/
 
 #define TIM2_TIMINGS_ARRAY_LENGTH		5
@@ -37,7 +30,7 @@ void TIM22_Stop(void);
 void TIM22_Disable(void);
 volatile unsigned int TIM22_GetSeconds(void);
 
-void TIM2_Init(TIM2_Mode mode, unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
+void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
 void TIM2_Enable(void);
 void TIM2_Disable(void);
 void TIM2_Start(void);

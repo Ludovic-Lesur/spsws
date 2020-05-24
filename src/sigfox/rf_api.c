@@ -45,7 +45,7 @@ typedef struct {
 	unsigned int rf_api_rf_frequency_hz;
 	// Modulation parameters.
 	unsigned short rf_api_symbol_duration_us;
-	volatile unsigned char rf_api_tim2_event_mask; // Read as [x x x CCR4 CCR3 CCR2 CCR1 ARR].
+	volatile unsigned char rf_api_tim2_arr_flag;
 	unsigned short rf_api_ramp_duration_us;
 	volatile unsigned char rf_api_phase_shift_required;
 	unsigned int rf_api_frequency_shift_hz;
@@ -69,18 +69,16 @@ RF_API_Context rf_api_ctx;
 
 	/* ARR = symbol rate */
 	if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) != 0) {
-		// Update event status (set current and clear previous).
-		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
-		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
+		// Update ARR flag.
+		rf_api_ctx.rf_api_tim2_arr_flag = 1;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
 	}
 
 	/* CCR1 = ramp down start */
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX)) != 0) {
-		// Update event status (set current and clear previous).
-		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
-		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
+		// Update ARR flag.
+		rf_api_ctx.rf_api_tim2_arr_flag = 0;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
 		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
@@ -104,9 +102,8 @@ RF_API_Context rf_api_ctx;
 				rf_api_ctx.rf_api_frequency_shift_direction = 0;
 			}
 		}
-		// Update event status (set current and clear previous).
-		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
-		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX);
+		// Update ARR flag.
+		rf_api_ctx.rf_api_tim2_arr_flag = 0;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
 	}
@@ -119,18 +116,16 @@ RF_API_Context rf_api_ctx;
 			// Turn signal on (ramp up is done by the transceiver OOK modulation shaping).
 			GPIO_Write(&GPIO_SX1232_DIO2, 1);
 		}
-		// Update event status (set current and clear previous).
-		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
-		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
+		// Update ARR flag.
+		rf_api_ctx.rf_api_tim2_arr_flag = 0;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
 	}
 
 	/* CCR4 = ramp-up end */
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX)) != 0) {
-		// Update event status.
-		rf_api_ctx.rf_api_tim2_event_mask |= (0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
-		rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
+		// Update ARR flag.
+		rf_api_ctx.rf_api_tim2_arr_flag = 0;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX);
 	}
@@ -325,19 +320,12 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	RF_API_SetTxModulationParameters(type);
 
 	/* Init common variables */
-	volatile unsigned int start_time = 0;
-	unsigned char output_power_idx = 0;
 	unsigned char stream_byte_idx = 0;
 	unsigned char stream_bit_idx = 0;
 #ifdef RF_API_LOG_FRAME
 	// Frame buffer (maximum length is 26 bytes in Sigfox V1 protocol).
 	unsigned char sfx_frame[26] = {0x00};
 #endif
-
-	/* Compute ramp steps */
-	unsigned char output_power_dynamic = (rf_api_ctx.rf_api_output_power_max - rf_api_ctx.rf_api_output_power_min) + 1;
-	unsigned int first_last_ramp_step_duration_us = (rf_api_ctx.rf_api_symbol_duration_us - 1000) / output_power_dynamic;
-	unsigned int ramp_step_duration_us = (rf_api_ctx.rf_api_ramp_duration_us) / output_power_dynamic;
 
 	/* Compute frequency shift duration required to invert signal phase */
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.
@@ -363,25 +351,21 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR2_IDX] = dbpsk_timings[1] + rf_api_ctx.rf_api_ramp_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR3_IDX] = dbpsk_timings[2] + frequency_shift_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.rf_api_ramp_duration_us;
-	TIM2_Init(TIM2_MODE_SIGFOX, dbpsk_timings);
+	TIM2_Init(dbpsk_timings);
 	TIM2_Enable();
 	NVIC_EnableInterrupt(IT_TIM2);
-	rf_api_ctx.rf_api_tim2_event_mask = 0;
+	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 
 	/* Start CW */
 	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
-	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_min);
+	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max);
 	SX1232_StartCw();
-	TIM2_Start();
 
 	/* First ramp-up */
-	start_time = TIM2_GetCounter();
-	for (output_power_idx=0 ; output_power_idx<output_power_dynamic ; output_power_idx++) {
-		SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_min + output_power_idx); // Update output power.
-		while (TIM2_GetCounter() < (start_time + (first_last_ramp_step_duration_us * (output_power_idx + 1)))); // Wait until step duration is reached.
-	}
-	// Wait the end of symbol period.
-	while ((rf_api_ctx.rf_api_tim2_event_mask & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) == 0);
+	rf_api_ctx.rf_api_tim2_arr_flag = 0;
+	rf_api_ctx.rf_api_phase_shift_required = 0;
+	TIM2_Start();
+	while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
 
 	/* Data transmission */
 	// Byte loop.
@@ -393,49 +377,29 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 		// Bit loop.
 		for (stream_bit_idx=0 ; stream_bit_idx<8 ; stream_bit_idx++) {
 			// Clear ARR flag.
-			rf_api_ctx.rf_api_tim2_event_mask &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
+			rf_api_ctx.rf_api_tim2_arr_flag = 0;
 			// Phase shift required is bit is '0'.
 			if ((stream[stream_byte_idx] & (0b1 << (7-stream_bit_idx))) == 0) {
-				// Update flag.
 				rf_api_ctx.rf_api_phase_shift_required = 1;
-				// First idle period.
-				while ((rf_api_ctx.rf_api_tim2_event_mask & (0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX)) == 0);
-				// Ramp down.
-				start_time = TIM2_GetCounter();
-				for (output_power_idx=0 ; output_power_idx<output_power_dynamic ; output_power_idx++) {
-					SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max - output_power_idx);
-					while (TIM2_GetCounter() < (start_time + (ramp_step_duration_us * (output_power_idx + 1)))); // Wait until step duration is reached.
-				}
-				// Frequency shift is made in timer interrupt.
-				while ((rf_api_ctx.rf_api_tim2_event_mask & (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX)) == 0);
-				// Ramp-up.
-				start_time = TIM2_GetCounter();
-				for (output_power_idx=0 ; output_power_idx<output_power_dynamic ; output_power_idx++) {
-					SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_min + output_power_idx);
-					while (TIM2_GetCounter() < (start_time + (ramp_step_duration_us * (output_power_idx + 1)))); // Wait until step duration is reached.
-				}
 			}
 			else {
 				rf_api_ctx.rf_api_phase_shift_required = 0;
 			}
 			// Wait the end of symbol period.
-			while ((rf_api_ctx.rf_api_tim2_event_mask & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) == 0);
+			while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
 		}
 	}
 
 	/* Last ramp down */
-	start_time = TIM2_GetCounter();
-	for (output_power_idx=0 ; output_power_idx<output_power_dynamic ; output_power_idx++) {
-		SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max - output_power_idx);
-		while (TIM2_GetCounter() < (start_time + (first_last_ramp_step_duration_us * (output_power_idx + 1)))); // Wait until step duration is reached.
-	}
-	// Wait the end of symbol period.
-	while ((rf_api_ctx.rf_api_tim2_event_mask & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) == 0);
+	rf_api_ctx.rf_api_tim2_arr_flag = 0;
+	rf_api_ctx.rf_api_phase_shift_required = 0;
+	GPIO_Write(&GPIO_SX1232_DIO2, 0);
+	while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
 
 	/* Stop CW */
+	SX1232_StopCw();
 	TIM2_Stop();
 	TIM2_Disable();
-	SX1232_StopCw();
 
 	/* Re-enable all interrupts */
 #ifdef ATM
