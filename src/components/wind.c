@@ -383,7 +383,7 @@ void WIND_MeasurementPeriodCallback(void) {
 			// Timers.
 			TIM21_Start();
 			TIM22_Start();
-			LPTIM1_Init(LPTIM1_MODE_DELAY);
+			LPTIM1_Init(LPTIM_MODE_DELAY);
 			LPTIM1_Enable();
 			// SPI.
 #ifdef HW1_0
