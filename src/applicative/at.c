@@ -487,6 +487,7 @@ unsigned short AT_GetByteArray(unsigned char last_param, unsigned char* byte_arr
 void AT_ReplyOk(void) {
 	USARTx_SendString(AT_OUT_COMMAND_OK);
 	USARTx_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	USARTx_SendValue(AT_LF_CHAR, USART_FORMAT_ASCII, 0);
 }
 
 /* PRINT AN ERROR THROUGH AT INTERFACE.
@@ -598,7 +599,7 @@ void AT_PrintPosition(Position* gps_position) {
 	// Latitude.
 	USARTx_SendString("Lat=");
 	USARTx_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("°");
+	USARTx_SendString("d");
 	USARTx_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
@@ -607,7 +608,7 @@ void AT_PrintPosition(Position* gps_position) {
 	// Longitude.
 	USARTx_SendString(" Long=");
 	USARTx_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("°");
+	USARTx_SendString("d");
 	USARTx_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
@@ -780,7 +781,7 @@ void AT_DecodeRxBuffer(void) {
 				else {
 					USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 				}
-				USARTx_SendString("°C\n");
+				USARTx_SendString("dC\n");
 			}
 			else {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
@@ -809,7 +810,7 @@ void AT_DecodeRxBuffer(void) {
 				else {
 					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 				}
-				USARTx_SendString("°C H=");
+				USARTx_SendString("dC H=");
 				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
 				USARTx_SendString("%\n");
 			}
@@ -840,7 +841,7 @@ void AT_DecodeRxBuffer(void) {
 				else {
 					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 				}
-				USARTx_SendString("°C H=");
+				USARTx_SendString("dC H=");
 				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
 				USARTx_SendString("%\n");
 			}
@@ -873,7 +874,7 @@ void AT_DecodeRxBuffer(void) {
 				else {
 					USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
 				}
-				USARTx_SendString("°C\n");
+				USARTx_SendString("dC\n");
 			}
 			else {
 				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
@@ -1378,9 +1379,9 @@ void AT_DecodeRxBuffer(void) {
 					RF_API_change_frequency(frequency_hz);
 					// Start continuous listening.
 					SX1232_SetMode(SX1232_MODE_FSRX);
-					LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60µs typical.
+					LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60us typical.
 					SX1232_SetMode(SX1232_MODE_RX);
-					LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120µs typical.
+					LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120us typical.
 					unsigned int rssi_print_start_time = TIM22_GetSeconds();
 					unsigned char rssi = 0;
 					while (TIM22_GetSeconds() < (rssi_print_start_time + AT_RSSI_REPORT_DURATION_SECONDS)) {
@@ -1482,6 +1483,14 @@ void AT_Init(void) {
 	at_ctx.start_idx = 0;
 	at_ctx.end_idx = 0;
 	at_ctx.separator_idx = 0;
+
+	/* Enable USART interrupt */
+#ifdef HW1_0
+	NVIC_EnableInterrupt(IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_EnableInterrupt(IT_USART1);
+#endif
 }
 
 /* MAIN TASK OF AT COMMAND MANAGER.
