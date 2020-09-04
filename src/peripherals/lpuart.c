@@ -40,7 +40,7 @@ static volatile LPUART_Context lpuart_ctx;
  * @param:	None.
  * @return:	None.
  */
-void AES_RNG_LPUART1_IRQHandler(void) {
+void LPUART1_IRQHandler(void) {
 
 	/* TXE interrupt */
 	if (((LPUART1 -> ISR) & (0b1 << 7)) != 0) {
