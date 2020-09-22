@@ -98,6 +98,8 @@
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
                                     									
                                     <listOptionValue builtIn="false" value="HW1_0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
@@ -130,6 +132,8 @@
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
                                     									
                                     <listOptionValue builtIn="false" value="HW1_0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
@@ -358,6 +362,8 @@
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
                                     									
                                     <listOptionValue builtIn="false" value="HW2_0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
@@ -390,6 +396,8 @@
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
                                     									
                                     <listOptionValue builtIn="false" value="HW2_0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
