@@ -25,29 +25,27 @@
  * @param mode: Desired mode ('GPIO_MODE_INPUT', 'GPIO_MODE_OUTPUT', 'AlternateFunction' or 'GPIO_MODE_ANALOG').
  * @return: 	None.
  */
-void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
+static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
+		// Set analog mode during transition.
+		(gpio -> gpio_port_address) -> MODER |= (0b11 << (2 * (gpio -> gpio_num))); // MODERy = '11'.
+		// Set required bits.
 		switch(mode) {
 		case GPIO_MODE_INPUT:
 			// MODERy = '00'.
-			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> MODER &= ~(0b11 << (2 * (gpio -> gpio_num)));
 			break;
 		case GPIO_MODE_OUTPUT:
 			// MODERy = '01'.
-			(gpio -> gpio_port_address) -> MODER |= (0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2*(gpio -> gpio_num)+1));
-			break;
-		case GPIO_MODE_ANALOG:
-			// MODERy = '11'.
-			(gpio -> gpio_port_address) -> MODER |= (0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> MODER |= (0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_MODE_ALTERNATE_FUNCTION:
 			// MODERy = '10'.
-			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> MODER |= (0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> MODER &= ~(0b1 << (2 * (gpio -> gpio_num)));
+			break;
+		case GPIO_MODE_ANALOG:
+			// Nothing to do.
 			break;
 		default:
 			break;
@@ -59,9 +57,9 @@ void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
  * @param gpio:			GPIO structure.
  * @return gpioMode: 	Current mode of the  GPIO ('GPIO_MODE_INPUT', 'GPIO_MODE_OUTPUT', 'AlternateFunction' or 'GPIO_MODE_ANALOG').
  */
-GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
-	unsigned char bit0 = (((gpio -> gpio_port_address) -> MODER) & (0b1 << (2*(gpio -> gpio_num)))) >> (2*(gpio -> gpio_num));
-	unsigned char bit1 = (((gpio -> gpio_port_address) -> MODER) & (0b1 << (2*(gpio -> gpio_num)+1))) >> (2*(gpio -> gpio_num)+1);
+static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
+	unsigned char bit0 = (((gpio -> gpio_port_address) -> MODER) & (0b1 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
+	unsigned char bit1 = (((gpio -> gpio_port_address) -> MODER) & (0b1 << (2 * (gpio -> gpio_num) + 1))) >> (2 * (gpio -> gpio_num) + 1);
 	GPIO_Mode gpioMode = (bit1 << 1) + bit0;
 	return gpioMode;
 }
@@ -71,7 +69,7 @@ GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
  * @param outputType: 	Desired output ('PushPull' or 'GPIO_TYPE_OPEN_DRAIN').
  * @return: 			None.
  */
-void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
+static void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		switch(output_type) {
@@ -94,29 +92,29 @@ void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
  * @param outputSpeed: 	Desired output speed ('GPIO_SPEED_LOW', 'MediumSpeed', 'HighSpeed' or 'VeryHighSpeed').
  * @return: 			None.
  */
-void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed) {
+static void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		switch(output_speed) {
 		case GPIO_SPEED_LOW:
 			// OSPEEDRy = '00'.
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_SPEED_MEDIUM:
 			// OSPEEDRy = '01'.
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_SPEED_HIGH:
 			// OSPEEDRy = '10'.
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_SPEED_VERY_HIGH:
 			// OSPEEDRy = '11'.
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		default:
 			break;
@@ -129,24 +127,24 @@ void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed) {
  * @param pullResistor: 	Desired configuration ('GPIO_PULL_NONE', 'PullUp', or 'PullDown').
  * @return: 				None.
  */
-void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resistor) {
+static void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resistor) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		switch(pull_resistor) {
 		case GPIO_PULL_NONE:
 			// PUPDRy = '00'.
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_PULL_UP:
 			// PUPDRy = '01'.
-			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_PULL_DOWN:
 			// PUPDRy = '10'.
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2*(gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2*(gpio -> gpio_num)+1));
+			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		default:
 			break;
@@ -159,7 +157,7 @@ void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resistor) {
  * @param gpio_af_num: 	Alternate function gpio_number (0 to 15).
  * @return: 		None.
  */
-void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
+static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
 	// Ensure alternate function exists.
 	if ((gpio_af_num >= 0) && (gpio_af_num < AF_PER_GPIO)) {
 		unsigned int i = 0;
@@ -169,11 +167,11 @@ void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
 			for (i=0 ; i<4 ; i++) {
 				if (gpio_af_num & (0b1 << i)) {
 					// Bit = '1'.
-					(gpio -> gpio_port_address) -> AFRL |= (0b1 << (4*(gpio -> gpio_num)+i));
+					(gpio -> gpio_port_address) -> AFRL |= (0b1 << (4 * (gpio -> gpio_num) + i));
 				}
 				else {
 					// Bit = '0'.
-					(gpio -> gpio_port_address) -> AFRL &= ~(0b1 << (4*(gpio -> gpio_num)+i));
+					(gpio -> gpio_port_address) -> AFRL &= ~(0b1 << (4 * (gpio -> gpio_num) + i));
 				}
 			}
 		}
@@ -183,11 +181,11 @@ void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
 				for (i=0 ; i<4 ; i++) {
 					if (gpio_af_num & (0b1 << i)) {
 						// Bit = '1'.
-						(gpio -> gpio_port_address) -> AFRH |= (0b1 << (4*((gpio -> gpio_num)-AFRH_OFFSET)+i));
+						(gpio -> gpio_port_address) -> AFRH |= (0b1 << (4 * ((gpio -> gpio_num) - AFRH_OFFSET) + i));
 					}
 					else {
 						// Bit = '0'.
-						(gpio -> gpio_port_address) -> AFRH &= ~(0b1 << (4*((gpio -> gpio_num)-AFRH_OFFSET)+i));
+						(gpio -> gpio_port_address) -> AFRH &= ~(0b1 << (4 * ((gpio -> gpio_num) - AFRH_OFFSET) + i));
 					}
 				}
 			}
