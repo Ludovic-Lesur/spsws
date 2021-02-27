@@ -282,7 +282,6 @@ sfx_u8 RF_API_stop(void) {
 sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Disable all interrupts.
 	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
-	NVIC_DisableInterrupt(NVIC_IT_TIM21);
 #ifdef HW1_0
 	NVIC_DisableInterrupt(NVIC_IT_USART2);
 #endif

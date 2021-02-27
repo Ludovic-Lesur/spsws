@@ -156,6 +156,8 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
 	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
 	EXTI -> PR |= (0b1 << 17); // Clear flag.
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_RTC, 1);
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.

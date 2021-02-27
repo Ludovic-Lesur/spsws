@@ -62,6 +62,8 @@ void DMA1_Init(void) {
 	// Configure channel 3 for LPUART RX (request number 5).
 	DMA1 -> CSELR &= ~(0b1111 << 8); // Reset bits 8-11.
 	DMA1 -> CSELR |= (0b0101 << 8); // DMA channel mapped on LPUART1_RX (C3S='0101').
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_DMA1_CH_2_3, 2);
 }
 
 /* DISABLE DMA1 PERIPHERAL.

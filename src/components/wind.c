@@ -227,6 +227,7 @@ void WIND_StartContinuousMeasure(void) {
 #endif
 	// Enable required interrupts.
 	EXTI_ClearAllFlags();
+	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 0);
 	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
 

@@ -153,6 +153,7 @@ void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable update and CCRx interrupts.
 	TIM2 -> DIER |= (0b11111 << 0);
 	// Disable interrupt by default.
+	NVIC_SetPriority(NVIC_IT_TIM2, 0);
 	NVIC_DisableInterrupt(NVIC_IT_TIM2);
 }
 

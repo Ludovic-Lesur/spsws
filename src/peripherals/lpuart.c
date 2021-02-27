@@ -107,6 +107,8 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_LPUART1, 1);
 }
 
 /* ENABLE LPUART TX OPERATION.
