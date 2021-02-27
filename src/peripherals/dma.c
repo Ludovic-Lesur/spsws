@@ -28,7 +28,7 @@ static unsigned char dma_default_buffer[DMA_DEFAULT_BUFFER_SIZE];
  * @return:	None.
  */
 void DMA1_Channel2_3_IRQHandler(void) {
-	/* Transfer complete interrupt (TCIF3='1') */
+	// Transfer complete interrupt (TCIF3='1').
 	if (((DMA1 -> ISR) & (0b1 << 9)) != 0) {
 		// Switch DMA buffer without decoding.
 		NEOM8N_SwitchDmaBuffer(0);
@@ -37,15 +37,16 @@ void DMA1_Channel2_3_IRQHandler(void) {
 	}
 }
 
+/*** DMA functions ***/
+
 /* CONFIGURE DMA1 CHANNEL3 FOR LPUART RX BYTES TRANSFER.
  * @param:	None.
  * @return:	None.
  */
 void DMA1_Init(void) {
-	/* Enable peripheral clock */
+	// Enable peripheral clock.
 	RCC -> AHBENR |= (0b1 << 0); // DMAEN='1'.
-
-	/* Configure peripheral */
+	// Configure peripheral.
 	DMA1 -> CPAR3 = (unsigned int) &(LPUART1 -> RDR); // Peripheral address = LPUART RX register.
 	DMA1 -> CMAR3 = (unsigned int) &(dma_default_buffer);
 	DMA1 -> CNDTR3 = DMA_DEFAULT_BUFFER_SIZE;
@@ -58,8 +59,7 @@ void DMA1_Init(void) {
 	DMA1 -> CCR3 |= (0b11 << 12); // Very high priority (PL='11').
 	DMA1 -> CCR3 |= (0b1 << 7); // Memory increment mode enabled (MINC='1').
 	DMA1 -> CCR3 |= (0b1 << 1); // Enable transfer complete interrupt (TCIE='1').
-
-	/* Configure channel 3 for LPUART RX (request number 5) */
+	// Configure channel 3 for LPUART RX (request number 5).
 	DMA1 -> CSELR &= ~(0b1111 << 8); // Reset bits 8-11.
 	DMA1 -> CSELR |= (0b0101 << 8); // DMA channel mapped on LPUART1_RX (C3S='0101').
 }
@@ -69,8 +69,8 @@ void DMA1_Init(void) {
  * @return:	None.
  */
 void DMA1_Disable(void) {
-	/* Disable DMA1 channel 3 */
-	NVIC_DisableInterrupt(IT_DMA1_Channel2_3);
+	// Disable DMA1 channel 3.
+	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_2_3);
 	RCC -> AHBENR &= ~(0b1 << 0); // DMAEN='0'.
 }
 
@@ -79,11 +79,10 @@ void DMA1_Disable(void) {
  * @return:	None.
  */
 void DMA1_Start(void) {
-	/* Clear all flags */
+	// Clear all flags.
 	DMA1 -> IFCR |= 0x0FFFFFFF;
-	NVIC_EnableInterrupt(IT_DMA1_Channel2_3);
-
-	/* Start transfer */
+	NVIC_EnableInterrupt(NVIC_IT_DMA1_CH_2_3);
+	// Start transfer.
 	DMA1 -> CCR3 |= (0b1 << 0); // EN='1'.
 }
 
@@ -92,9 +91,9 @@ void DMA1_Start(void) {
  * @return:	None.
  */
 void DMA1_Stop(void) {
-	/* Stop transfer */
+	// Stop transfer.
 	DMA1 -> CCR3 &= ~(0b1 << 0); // EN='0'.
-	NVIC_DisableInterrupt(IT_DMA1_Channel2_3);
+	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_2_3);
 }
 
 /* SET DMA1 DESTINATION BUFFER ADDRESS FOR STORING LPUART RX BYTES.

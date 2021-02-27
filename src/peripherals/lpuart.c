@@ -41,8 +41,7 @@ static volatile LPUART_Context lpuart_ctx;
  * @return:	None.
  */
 void LPUART1_IRQHandler(void) {
-
-	/* TXE interrupt */
+	// TXE interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 7)) != 0) {
 		if ((lpuart_ctx.tx_buf_read_idx) != (lpuart_ctx.tx_buf_write_idx)) {
 			LPUART1 -> TDR = lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
@@ -56,16 +55,14 @@ void LPUART1_IRQHandler(void) {
 			LPUART1 -> CR1 &= ~(0b1 << 7); // TXEIE='0'.
 		}
 	}
-
-	/* Character match interrupt */
+	// Character match interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
 		// Switch DMA buffer and decode buffer.
 		NEOM8N_SwitchDmaBuffer(1);
 		// Clear CM flag.
 		LPUART1 -> ICR |= (0b1 << 17);
 	}
-
-	/* Overrun error interrupt */
+	// Overrun error interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 3)) != 0) {
 		// Clear ORE flag.
 		LPUART1 -> ICR |= (0b1 << 3);
@@ -79,26 +76,21 @@ void LPUART1_IRQHandler(void) {
  * @return:	None.
  */
 void LPUART1_Init(void) {
-
-	/* Init context */
+	// Init context.
 	unsigned int idx = 0;
 	for (idx=0 ; idx<LPUART_TX_BUFFER_SIZE ; idx++) lpuart_ctx.tx_buf[idx] = 0;
 	lpuart_ctx.tx_buf_write_idx = 0;
 	lpuart_ctx.tx_buf_read_idx = 0;
-
-	/* Enable peripheral clock */
+	// Enable peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 10); // LPUART1SEL='00'.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
-
-	/* Configure power enable pin */
+	// Configure power enable pin.
 	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
-
-	/* Configure TX and RX GPIOs (first as high impedance) */
+	// Configure TX and RX GPIOs (first as high impedance).
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Configure peripheral */
+	// Configure peripheral.
 	LPUART1 -> CR1 &= 0xEC008000; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	LPUART1 -> CR2 &= 0x00F04FEF; // 1 stop bit (STOP='00').
 	LPUART1 -> CR3 &= 0xFF0F0836;
@@ -107,16 +99,13 @@ void LPUART1_Init(void) {
 	brr /= LPUART_BAUD_RATE;
 	brr *= 256;
 	LPUART1 -> BRR = (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
-
-	/* Configure character match interrupt and DMA */
+	// Configure character match interrupt and DMA.
 	LPUART1 -> CR2 |= (NMEA_LF << 24); // LF character used to trigger CM interrupt.
 	LPUART1 -> CR3 |= (0b1 << 6); // Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).
-
-	/* Enable transmitter and interrupts */
+	// Enable transmitter and interrupts.
 	LPUART1 -> CR1 |= (0b1 << 7); // Enable TXE interrupt (TXEIE='1').
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
-
-	/* Enable peripheral */
+	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
 }
 
@@ -125,10 +114,9 @@ void LPUART1_Init(void) {
  * @return:	None.
  */
 void LPUART1_EnableTx(void) {
-
-	/* Enable LPUART1 transmitter */
+	// Enable LPUART1 transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
-	NVIC_EnableInterrupt(IT_LPUART1);
+	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }
 
 /* ENABLE LPUART RX OPERATION.
@@ -136,10 +124,9 @@ void LPUART1_EnableTx(void) {
  * @return:	None.
  */
 void LPUART1_EnableRx(void) {
-
-	/* Enable LPUART1 receiver */
+	// Enable LPUART1 receiver.
 	LPUART1 -> CR1 |= (0b1 << 2); // Enable receiver (RE='1').
-	NVIC_EnableInterrupt(IT_LPUART1);
+	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }
 
 /* DISABLE LPUART PERIPHERAL.
@@ -147,14 +134,12 @@ void LPUART1_EnableRx(void) {
  * @return:	None.
  */
 void LPUART1_Disable(void) {
-
-	/* Disable LPUART1 peripheral */
-	NVIC_DisableInterrupt(IT_LPUART1);
+	// Disable LPUART1 peripheral.
+	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
 	LPUART1 -> CR1 &= ~(0b1 << 2); // Disable transmitter and receiver (TE='0' adnd RE='0').
 	LPUART1 -> CR1 &= ~(0b1 << 0);
 	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
-
-	/* Disable power control pin */
+	// Disable power control pin.
 	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
@@ -163,12 +148,10 @@ void LPUART1_Disable(void) {
  * @return:	None.
  */
 void LPUART1_PowerOn(void) {
-
-	/* Enable GPIOs */
+	// Enable GPIOs.
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Switch NEOM8N on */
+	// Switch NEOM8N on.
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 1);
 	LPTIM1_DelayMilliseconds(100);
 }
@@ -178,15 +161,12 @@ void LPUART1_PowerOn(void) {
  * @return:	None.
  */
 void LPUART1_PowerOff(void) {
-
-	/* Switch NEOM8N off */
+	// Switch NEOM8N off.
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
-
-	/* Disable LPUART alternate function */
+	// Disable LPUART alternate function.
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Delay required if another cycle is requested by applicative layer */
+	// Delay required if another cycle is requested by applicative layer.
 	LPTIM1_DelayMilliseconds(100);
 }
 
@@ -195,18 +175,15 @@ void LPUART1_PowerOff(void) {
  * @return:				None.
  */
 void LPUART1_SendByte(unsigned char byte_to_send) {
-
-	/* Disable interrupt */
-	NVIC_DisableInterrupt(IT_LPUART1);
-
-	/* Fill TX buffer with new byte */
+	// Disable interrupt.
+	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
+	// Fill TX buffer with new byte.
 	lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_write_idx] = byte_to_send;
 	lpuart_ctx.tx_buf_write_idx++;
 	if (lpuart_ctx.tx_buf_write_idx == LPUART_TX_BUFFER_SIZE) {
 		lpuart_ctx.tx_buf_write_idx = 0;
 	}
-
-	/* Enable interrupt */
+	// Enable interrupt.
 	LPUART1 -> CR1 |= (0b1 << 7); // TXEIE='1'.
-	NVIC_EnableInterrupt(IT_LPUART1);
+	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }

@@ -42,11 +42,11 @@ void WIND_ResetData(void);
 
 /*** WIND utility functions ***/
 
-void WIND_MeasurementPeriodCallback(void);
 void WIND_SpeedEdgeCallback(void);
 #ifdef WIND_VANE_ULTIMETER
 void WIND_DirectionEdgeCallback(void);
 #endif
+void WIND_MeasurementPeriodCallback(void);
 
 /*** Errors management ***/
 

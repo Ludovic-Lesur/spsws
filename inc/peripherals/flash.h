@@ -10,6 +10,6 @@
 
 /*** FLASH functions ***/
 
-void FLASH_Init(void);
+void FLASH_SetLatency(unsigned char wait_states);
 
 #endif /* FLASH_H */

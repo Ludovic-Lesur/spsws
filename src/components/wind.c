@@ -74,7 +74,7 @@ static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] 
  * @param x:	Parameter.
  * @return:		|x|.
  */
-unsigned int WIND_Abs(signed int x) {
+static unsigned int WIND_Abs(signed int x) {
 	unsigned int result = 0;
 	if (x > 0) {
 		result = x;
@@ -90,21 +90,18 @@ unsigned int WIND_Abs(signed int x) {
  * @param y:	y coordinate of the trend point.
  * @return:		Angle of the point (x,y).
  */
-unsigned int WIND_Atan2(signed int x, signed int y) {
-
-	/* Check x and y are not null */
+static unsigned int WIND_Atan2(signed int x, signed int y) {
+	// Check x and y are not null.
 	unsigned int alpha = WIND_DIRECTION_ERROR_VALUE;
 	if ((x != 0) || (y != 0)) {
-
-		/* Scale x and y to avoid overflow */
+		// Scale x and y to avoid overflow.
 		signed int local_x = x;
 		signed int local_y = y;
 		while ((WIND_Abs(local_x) > 10000) || (WIND_Abs(local_y) > 10000)) {
 			local_x = local_x >> 1;
 			local_y = local_y >> 1;
 		}
-
-		/* Compute atan2 function */
+		// Compute atan2 function.
 		unsigned int abs_x = WIND_Abs(local_x);
 		unsigned int abs_y = WIND_Abs(local_y);
 		// Use the quotient within [-1,1]
@@ -158,6 +155,31 @@ unsigned int WIND_Atan2(signed int x, signed int y) {
 	return (alpha);
 }
 
+#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
+/* CONVERT OUTPUT VOLTAGE TO WIND VANE ANGLE.
+ * @param vcc_mv:		Voltage divider supply in mV.
+ * @param direction_mv:	Voltage divider output voltage in mV.
+ * @return:				None.
+ */
+static void WIND_VoltageToAngle(unsigned int direction_12bits) {
+	// Reset result.
+	wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
+
+	/* Compute ratio */
+	unsigned int ratio = (direction_12bits * 1000) / (MAX11136_FULL_SCALE);
+
+	/* Get corresponding angle */
+	unsigned char idx = 0;
+	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
+		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
+			// Update current angle and table index.
+			wind_ctx.wind_direction_degrees = WIND_DIRECTION_ANGLE_TABLE[idx];
+			break;
+		}
+	}
+}
+#endif
+
 /*** WIND functions ***/
 
 /* INIT WIND VANE.
@@ -165,8 +187,7 @@ unsigned int WIND_Atan2(signed int x, signed int y) {
  * @return:	None.
  */
 void WIND_Init(void) {
-
-	/* GPIO mapping selection */
+	// GPIO mapping selection.
 	GPIO_WIND_SPEED = GPIO_DIO0;
 #ifdef WIND_VANE_ULTIMETER
 #ifdef HW1_0
@@ -176,8 +197,7 @@ void WIND_Init(void) {
 	GPIO_WIND_DIRECTION = GPIO_DIO1;
 #endif
 #endif
-
-	/* Init GPIOs and EXTI */
+	// Init GPIOs and EXTI.
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	GPIO_Configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
@@ -197,20 +217,17 @@ void WIND_Init(void) {
  * @return:	None.
  */
 void WIND_StartContinuousMeasure(void) {
-
-	/* Reset second counters */
+	// Reset second counters.
 	wind_ctx.wind_speed_seconds_count = 0;
 	wind_ctx.wind_direction_seconds_count = 0;
-
 #ifdef WIND_VANE_ULTIMETER
-	/* Init LPTIM for phase shift operation */
+	// Init LPTIM for phase shift operation.
 	LPTIM1_Init(LPTIM_MODE_ULTIMETER);
 	LPTIM1_Enable();
 #endif
-
-	/* Enable required interrupts */
+	// Enable required interrupts.
 	EXTI_ClearAllFlags();
-	NVIC_EnableInterrupt(IT_EXTI_4_15);
+	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
 
 /* STOP CONTINUOUS WIND MEASUREMENTS.
@@ -218,12 +235,10 @@ void WIND_StartContinuousMeasure(void) {
  * @return:	None.
  */
 void WIND_StopContinuousMeasure(void) {
-
-	/* Disable required interrupts */
-	NVIC_DisableInterrupt(IT_EXTI_4_15);
-
+	// Disable required interrupts.
+	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
 #ifdef WIND_VANE_ULTIMETER
-	/* Stop TIM2 */
+	// Stop LPTIM.
 	LPTIM1_Stop();
 	LPTIM1_Disable();
 #endif
@@ -256,19 +271,16 @@ void WIND_GetDirection(unsigned int* average_wind_direction_degrees) {
  * @return:	None.
  */
 void WIND_ResetData(void) {
-
-	/* Measurement periods */
+	// Measurement periods.
 	wind_ctx.wind_speed_seconds_count = 0;
 	wind_ctx.wind_direction_seconds_count = 0;
-
-	/* Wind speed */
+	// Wind speed.
 	wind_ctx.wind_speed_edge_count = 0;
 	wind_ctx.wind_speed_data_count = 0;
 	wind_ctx.wind_speed_mh = 0;
 	wind_ctx.wind_speed_mh_average = 0;
 	wind_ctx.wind_speed_mh_peak = 0;
-
-	/* Wind direction */
+	// Wind direction.
 	wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 #ifdef WIND_VANE_ULTIMETER
 	wind_ctx.wind_direction_pwm_period = 0;
@@ -278,18 +290,16 @@ void WIND_ResetData(void) {
 	wind_ctx.wind_direction_y = 0;
 }
 
-/*** Wind utility functions ***/
+/*** WIND utility functions ***/
 
 /* FUNCTION CALLED BY EXTI INTERRUPT HANDLER WHEN AN EDGE IS DETECTED ON THE SPEED SIGNAL.
  * @param:	None.
  * @return:	None.
  */
 void WIND_SpeedEdgeCallback(void) {
-
-	/* Wind speed */
+	// Wind speed.
 	wind_ctx.wind_speed_edge_count++;
-
-	/* Wind direction */
+	// Wind direction.
 #ifdef WIND_VANE_ULTIMETER
 	// Capture PWM period.
 	LPTIM1_Stop();
@@ -309,35 +319,8 @@ void WIND_SpeedEdgeCallback(void) {
  * @return:	None.
  */
 void WIND_DirectionEdgeCallback(void) {
-
-	/* Capture PWM duty cycle */
+	// Capture PWM duty cycle.
 	wind_ctx.wind_direction_pwm_duty_cycle = LPTIM1_GetCounter();
-}
-#endif
-
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-/* CONVERT OUTPUT VOLTAGE TO WIND VANE ANGLE.
- * @param vcc_mv:		Voltage divider supply in mV.
- * @param direction_mv:	Voltage divider output voltage in mV.
- * @return:				None.
- */
-void WIND_VoltageToAngle(unsigned int direction_12bits) {
-
-	/* Reset result */
-	wind_ctx.wind_direction_degrees = WIND_DIRECTION_ERROR_VALUE;
-
-	/* Compute ratio */
-	unsigned int ratio = (direction_12bits * 1000) / (MAX11136_FULL_SCALE);
-
-	/* Get corresponding angle */
-	unsigned char idx = 0;
-	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
-		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
-			// Update current angle and table index.
-			wind_ctx.wind_direction_degrees = WIND_DIRECTION_ANGLE_TABLE[idx];
-			break;
-		}
-	}
 }
 #endif
 
@@ -346,12 +329,10 @@ void WIND_VoltageToAngle(unsigned int direction_12bits) {
  * @return:	None.
  */
 void WIND_MeasurementPeriodCallback(void) {
-
-	/* Update counters */
+	// Update counters.
 	wind_ctx.wind_speed_seconds_count++;
 	wind_ctx.wind_direction_seconds_count++;
-
-	/* Update wind speed if period is reached */
+	// Update wind speed if period is reached.
 	if (wind_ctx.wind_speed_seconds_count >= WIND_SPEED_MEASUREMENT_PERIOD_SECONDS) {
 		// Compute new value.
 		wind_ctx.wind_speed_mh = (wind_ctx.wind_speed_edge_count * WIND_SPEED_1HZ_TO_MH) / (WIND_SPEED_MEASUREMENT_PERIOD_SECONDS);
@@ -372,8 +353,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		USARTx_SendString("m/h\n");
 #endif
 	}
-
-	/* Update wind direction if period is reached */
+	// Update wind direction if period is reached.
 	if (wind_ctx.wind_direction_seconds_count >= WIND_DIRECTION_MEASUREMENT_PERIOD_SECONDS) {
 		// Compute direction only if there is wind.
 		if ((wind_ctx.wind_speed_mh / 1000) > 0) {

@@ -50,7 +50,7 @@ static DPS310_Context dps310_ctx;
  * @param value:				Value to write in the selected register.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char DPS310_WriteRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char value) {
+static unsigned char DPS310_WriteRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char value) {
 	unsigned char register_write_command[2] = {register_address, value};
 	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, register_write_command, 2);
 	if (i2c_access == 0) return 0;
@@ -63,7 +63,7 @@ unsigned char DPS310_WriteRegister(unsigned char dps310_i2c_address, unsigned ch
  * @param value:				Pointer to byte that will contain the current value of the selected register.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char DPS310_ReadRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char* value) {
+static unsigned char DPS310_ReadRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char* value) {
 	unsigned char local_addr = register_address;
 	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, &local_addr, 1);
 	if (i2c_access == 0) return 0;
@@ -77,7 +77,7 @@ unsigned char DPS310_ReadRegister(unsigned char dps310_i2c_address, unsigned cha
  * @param sign_bit_position:	Position of the sign bit.
  * @return result:				Result of computation.
  */
-signed int DPS310_ComputeTwoComplement(unsigned int value, unsigned char sign_bit_position) {
+static signed int DPS310_ComputeTwoComplement(unsigned int value, unsigned char sign_bit_position) {
 	signed int result = 0;
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
@@ -103,9 +103,8 @@ signed int DPS310_ComputeTwoComplement(unsigned int value, unsigned char sign_bi
  * @param dps310_i2c_address:	Sensor address.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_address) {
-
-	/* Reset all coefficients */
+static unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_address) {
+	// Reset all coefficients.
 	dps310_ctx.dps310_coef_c0 = 0;
 	dps310_ctx.dps310_coef_c1 = 0;
 	dps310_ctx.dps310_coef_c00 = 0;
@@ -116,8 +115,7 @@ unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_addres
 	dps310_ctx.dps310_coef_c20 = 0;
 	dps310_ctx.dps310_coef_c21 = 0;
 	dps310_ctx.dps310_coef_c30 = 0;
-
-	/* Wait for coefficients to be ready for reading */
+	// Wait for coefficients to be ready for reading.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
 	unsigned int loop_start_time = TIM22_GetSeconds();
@@ -126,8 +124,7 @@ unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_addres
 		if (i2c_access == 0) return 0;
 		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
 	}
-
-	/* Read all coefficients */
+	// Read all coefficients.
 	read_byte = 0;
 	i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_COEF_C0B, &read_byte);
 	if (i2c_access == 0) return 0;
@@ -193,9 +190,8 @@ unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c_addres
  * @param dps310_i2c_address:	Sensor address.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
-
-	/* Wait for sensor to be ready */
+static unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
+	// Wait for sensor to be ready.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
 	unsigned int loop_start_time = TIM22_GetSeconds();
@@ -204,23 +200,20 @@ unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
 		if (i2c_access == 0) return 0;
 		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
 	}
-
-	/* Trigger temperature measurement */
+	// Trigger temperature measurement.
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
 	if (i2c_access == 0) return 0;
 	dps310_ctx.dps310_kT = 524288;
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 	if (i2c_access == 0) return 0;
-
-	/* Wait for temperature to be ready */
+	// Wait for temperature to be ready.
 	loop_start_time = TIM22_GetSeconds();
 	while ((read_byte & (0b1 << 5)) == 0) { // Wait for TMP_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
 		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
 	}
-
-	/* Read temperature */
+	// Read temperature.
 	unsigned int tmp_raw = 0;
 	// B2.
 	i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_TMP_B2, &read_byte);
@@ -243,9 +236,8 @@ unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_address) {
  * @param dps310_i2c_address:	Sensor address.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
-
-	/* Wait for sensor to be ready */
+static unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
+	// Wait for sensor to be ready.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
 	unsigned int loop_start_time = TIM22_GetSeconds();
@@ -254,15 +246,13 @@ unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
 		if (i2c_access == 0) return 0;
 		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
 	}
-
-	/* Trigger pressure measurement */
+	// Trigger pressure measurement.
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
 	if (i2c_access == 0) return 0;
 	dps310_ctx.dps310_kP = 1572864;
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x01);
 	if (i2c_access == 0) return 0;
-
-	/* Wait for pressure to be ready */
+	// Wait for pressure to be ready.
 	read_byte = 0;
 	loop_start_time = TIM22_GetSeconds();
 	while ((read_byte & (0b1 << 4)) == 0) { // Wait for PRS_RDY='1'.
@@ -270,8 +260,7 @@ unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
 		if (i2c_access == 0) return 0;
 		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
 	}
-
-	/* Read pressure */
+	// Read pressure.
 	unsigned int prs_raw = 0;
 	// B2.
 	i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_PRS_B2, &read_byte);
@@ -297,8 +286,6 @@ unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address) {
  * @return:	None.
  */
 void DPS310_Init(void) {
-
-	/* Init context */
 	// Sampling factors.
 	dps310_ctx.dps310_kT = 0;
 	dps310_ctx.dps310_kP = 0;
@@ -322,14 +309,12 @@ void DPS310_Init(void) {
  * @return:						1 in case of success, 0 in case of failure.
  */
 void DPS310_PerformMeasurements(unsigned char dps310_i2c_address) {
-
-	/* Compute raw results */
+	// Compute raw results.
 	unsigned char i2c_access = DPS310_ComputeRawTemperature(dps310_i2c_address);
 	if (i2c_access == 0) return;
 	i2c_access = DPS310_ComputeRawPressure(dps310_i2c_address);
 	if (i2c_access == 0) return;
-
-	/* Read calibration coefficients */
+	// Read calibration coefficients.
 	i2c_access = DPS310_ReadCalibrationCoefficients(dps310_i2c_address);
 	if (i2c_access == 0) return;
 }
@@ -339,8 +324,7 @@ void DPS310_PerformMeasurements(unsigned char dps310_i2c_address) {
  * @return:				None.
  */
 void DPS310_GetPressure(unsigned int* pressure_pa) {
-
-	/* Check sensor result */
+	// Check sensor result.
 	if (dps310_ctx.dps310_prs_raw == DPS310_RAW_ERROR_VALUE) {
 		// Return error value.
 		(*pressure_pa) = DPS310_PRESSURE_ERROR_VALUE;
@@ -368,18 +352,17 @@ void DPS310_GetPressure(unsigned int* pressure_pa) {
 }
 
 /* READ TEMPERATURE FROM DPS310 SENSOR.
- * @param temperature_degrees:	Pointer to byte that will contain temperature result (°C).
+ * @param temperature_degrees:	Pointer to byte that will contain temperature result (degrees).
  * @return:						None.
  */
 void DPS310_GetTemperature(signed char* temperature_degrees) {
-
-	/* Check sensor result */
+	// Check sensor result.
 	if (dps310_ctx.dps310_tmp_raw == DPS310_RAW_ERROR_VALUE) {
 		// Return error value.
 		(*temperature_degrees) = DPS310_TEMPERATURE_ERROR_VALUE;
 	}
 	else {
-		// Compute temperature in °C.
+		// Compute temperature in degrees.
 		signed int c0 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c0, 11);
 		signed int c1 = DPS310_ComputeTwoComplement(dps310_ctx.dps310_coef_c1, 11);
 		signed long long tmp_temp = (c0 / 2) + (c1 * dps310_ctx.dps310_tmp_raw) / dps310_ctx.dps310_kT;

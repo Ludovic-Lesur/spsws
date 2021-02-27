@@ -16,7 +16,7 @@
  * @return:	None.
  */
 void IWDG_Init(void) {
-	/* Configure peripheral */
+	// Configure peripheral.
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.
 	// Prescaler=256 -> watchdog clock = 38kHz / 256 = 148Hz.

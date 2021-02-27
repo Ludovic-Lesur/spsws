@@ -31,24 +31,21 @@ volatile unsigned char rtc_alrb_flag;
  * @return:	None.
  */
 void RTC_IRQHandler(void) {
-
-	/* Alarm A interrupt */
+	// Alarm A interrupt.
 	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
 		// Update flag
 		rtc_alra_flag = 1;
 		// Clear flag.
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 	}
-
-	/* Alarm B interrupt */
+	// Alarm B interrupt.
 	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
 		// Update flag
 		rtc_alrb_flag = 1;
 		// Clear flag.
 		RTC -> ISR &= ~(0b1 << 9); // ALRNF='0'.
 	}
-
-	/* Clear EXTI flag */
+	// Clear EXTI flag.
 	EXTI -> PR |= (0b1 << 17);
 }
 
@@ -56,7 +53,7 @@ void RTC_IRQHandler(void) {
  * @param:						None.
  * @return rtc_initf_success:	1 if RTC entered initialization mode, 0 otherwise.
  */
-unsigned char RTC_EnterInitializationMode(void) {
+static unsigned char RTC_EnterInitializationMode(void) {
 	// Local variables.
 	unsigned char rtc_initf_success = 1;
 	// Enter key.
@@ -78,7 +75,7 @@ unsigned char RTC_EnterInitializationMode(void) {
  * @param:	None.
  * @return:	None.
  */
-void RTC_ExitInitializationMode(void) {
+static void RTC_ExitInitializationMode(void) {
 	RTC -> ISR &= ~(0b1 << 7); // INIT='0'.
 }
 
@@ -89,8 +86,7 @@ void RTC_ExitInitializationMode(void) {
  * @return:	None.
  */
 void RTC_Reset(void) {
-
-	/* Reset RTC peripheral */
+	// Reset RTC peripheral.
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
 	unsigned char j = 0;
 	for (j=0 ; j<100 ; j++) {
@@ -109,8 +105,7 @@ void RTC_Reset(void) {
  * @return:				None.
  */
 void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
-
-	/* Manage RTC clock source */
+	// Manage RTC clock source.
 	if ((*rtc_use_lse) != 0) {
 		// Use LSE.
 		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
@@ -119,11 +114,9 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 		// Use LSI.
 		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
 	}
-
-	/* Enable RTC and register access */
+	// Enable RTC and register access.
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
-
-	/* Switch to LSI if RTC failed to enter initialization mode */
+	// Switch to LSI if RTC failed to enter initialization mode.
 	if (RTC_EnterInitializationMode() == 0) {
 		RTC_Reset();
 		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
@@ -132,8 +125,7 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 		// Update flag.
 		(*rtc_use_lse) = 0;
 	}
-
-	/* Configure prescaler */
+	// Configure prescaler.
 	if ((*rtc_use_lse) != 0) {
 		// LSE frequency is 32.768kHz typical.
 		RTC -> PRER = (127 << 16) | (255 << 0); // PREDIV_A=127 and PREDIV_S=255 (128*256 = 32768).
@@ -142,29 +134,24 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 		// Compute prescaler according to measured LSI frequency.
 		RTC -> PRER = (127 << 16) | (((lsi_freq_hz / 128) - 1) << 0); // PREDIV_A=127 and PREDIV_S=((lsi_freq_hz/128)-1).
 	}
-
-	/* Bypass shadow registers */
+	// Bypass shadow registers.
 	RTC -> CR |= (0b1 << 5); // BYPSHAD='1'.
-
-	/* Configure alarm A to wake-up MCU every hour */
+	// Configure alarm A to wake-up MCU every hour.
 	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
 	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
 	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
-
-	/* Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM) */
+	// Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM).
 	RTC -> ALRMBR = 0;
 	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.
 	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
 	RTC -> CR |= (0b1 << 13); // Enable interrupt (ALRBIE='1').
 	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
-
-	/* Exit initialization mode */
+	// Exit initialization mode.
 	RTC_ExitInitializationMode();
-
-	/* Enable RTC alarm interrupt (line 17) */
+	// Enable RTC alarm interrupt (line 17).
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
 	EXTI -> IMR |= (0b1 << 17); // IM17='1'.
 	EXTI -> RTSR |= (0b1 << 17); // RTC interrupt requires rising edge.
@@ -215,8 +202,7 @@ void RTC_ClearAlarmBFlag(void) {
  * @return:					None.
  */
 void RTC_Calibrate(Timestamp* gps_timestamp) {
-
-	/* Compute register values */
+	// Compute register values.
 	unsigned int tr_value = 0; // Reset all bits.
 	unsigned int dr_value = 0; // Reset all bits.
 	// Year.
@@ -243,15 +229,12 @@ void RTC_Calibrate(Timestamp* gps_timestamp) {
 	tens = (gps_timestamp -> seconds) / 10;
 	units = (gps_timestamp -> seconds) - (tens*10);
 	tr_value |= (tens << 4) | (units << 0);
-
-	/* Enter initialization mode */
+	// Enter initialization mode.
 	RTC_EnterInitializationMode();
-
-	/* Perform update */
+	// Perform update.
 	RTC -> TR = tr_value;
 	RTC -> DR = dr_value;
-
-	/* Exit initialization mode and restart RTC */
+	// Exit initialization mode and restart RTC.
 	RTC_ExitInitializationMode();
 }
 
@@ -260,12 +243,10 @@ void RTC_Calibrate(Timestamp* gps_timestamp) {
  * @return:					None.
  */
 void RTC_GetTimestamp(Timestamp* rtc_timestamp) {
-
-	/* Read registers */
+	// Read registers.
 	unsigned int dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
 	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
-
-	/* Parse registers into timestamp structure */
+	// Parse registers into timestamp structure.
 	rtc_timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
 	rtc_timestamp -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
 	rtc_timestamp -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);

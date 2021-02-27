@@ -28,11 +28,9 @@
 // If defined, print the Sigfox bit stream on UART.
 //#define RF_API_LOG_FRAME
 #endif
-
 // Uplink parameters.
 #define RF_API_UPLINK_OUTPUT_POWER_ETSI		14
 #define RF_API_UPLINK_OUTPUT_POWER_FCC		22
-
 // Downlink parameters.
 #define RF_API_DOWNLINK_FRAME_LENGTH_BYTES	15
 #define RF_API_DOWNLINK_TIMEOUT_SECONDS		25
@@ -57,7 +55,7 @@ typedef struct {
 
 /*** RF API local global variables ***/
 
-RF_API_Context rf_api_ctx;
+static RF_API_Context rf_api_ctx;
 
 /*** RF API local functions ***/
 
@@ -66,16 +64,14 @@ RF_API_Context rf_api_ctx;
  * @return:	None.
  */
  void TIM2_IRQHandler(void) {
-
-	/* ARR = symbol rate */
+	// ARR = symbol rate.
 	if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) != 0) {
 		// Update ARR flag.
 		rf_api_ctx.rf_api_tim2_arr_flag = 1;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX);
 	}
-
-	/* CCR1 = ramp down start */
+	// CCR1 = ramp down start.
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR1_IDX)) != 0) {
 		// Update ARR flag.
 		rf_api_ctx.rf_api_tim2_arr_flag = 0;
@@ -86,8 +82,7 @@ RF_API_Context rf_api_ctx;
 			GPIO_Write(&GPIO_SX1232_DIO2, 0);
 		}
 	}
-
-	/* CCR2 = ramp down end + frequency shift start */
+	// CCR2 = ramp down end + frequency shift start.
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX)) != 0) {
 		if (rf_api_ctx.rf_api_phase_shift_required != 0) {
 			// Change frequency.
@@ -107,8 +102,7 @@ RF_API_Context rf_api_ctx;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR2_IDX);
 	}
-
-	/* CCR3 = frequency shift end + ramp-up start */
+	// CCR3 = frequency shift end + ramp-up start.
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX)) != 0) {
 		if (rf_api_ctx.rf_api_phase_shift_required != 0){
 			// Come back to uplink frequency.
@@ -121,8 +115,7 @@ RF_API_Context rf_api_ctx;
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << TIM2_TIMINGS_ARRAY_CCR3_IDX);
 	}
-
-	/* CCR4 = ramp-up end */
+	// CCR4 = ramp-up end.
 	else if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_CCR4_IDX)) != 0) {
 		// Update ARR flag.
 		rf_api_ctx.rf_api_tim2_arr_flag = 0;
@@ -135,13 +128,11 @@ RF_API_Context rf_api_ctx;
  * @param modulation:	Modulation type asked by Sigfox library.
  * @return:				None.
  */
-void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
-
-	/* Init common parameters */
+static void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
+	// Init common parameters.
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	rf_api_ctx.rf_api_frequency_shift_direction = 0;
-
-	/* Init timings */
+	// Init timings.
 	switch (modulation) {
 	case SFX_DBPSK_100BPS:
 		// 100 bps timings.
@@ -164,11 +155,9 @@ void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
  * @param:	None.
  * @return:	None.
  */
-void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
-
-	/* Select TX / RX */
+static void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
+	// Select TX / RX.
 	switch (rf_mode) {
-
 	case SFX_RF_MODE_TX:
 		// Select TX path.
 		SX1232_SelectRfOutputPin(SX1232_RF_OUTPUT_PIN_PABOOST);
@@ -181,7 +170,6 @@ void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 		rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
 		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
 		break;
-
 	case SFX_RF_MODE_RX:
 		// Activate LNA path.
 #ifdef HW1_0
@@ -191,7 +179,6 @@ void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 		SKY13317_SetChannel(SKY13317_CHANNEL_RF3);
 #endif
 		break;
-
 	default:
 		// Disable every channel.
 		SKY13317_SetChannel(SKY13317_CHANNEL_NONE);
@@ -218,18 +205,14 @@ void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
  * \retval RF_ERR_API_INIT:          Init Radio link error
  *******************************************************************/
 sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
-
-	/* Switch RF on and init transceiver */
+	// Switch RF on and init transceiver.
 	SPI1_PowerOn();
 	SX1232_SetOscillator(SX1232_OSCILLATOR_TCXO);
-
-	/* Configure switch */
+	// Configure switch.
 	RF_API_SetRfPath(rf_mode);
-
-	/* Configure transceiver */
+	// Configure transceiver.
 	unsigned char downlink_sync_word[2] = {0xB2, 0x27};
 	switch (rf_mode) {
-
 	// Uplink.
 	case SFX_RF_MODE_TX:
 		// Prepare transceiver for uplink or continuous wave operation.
@@ -239,7 +222,6 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		SX1232_SetBitRate(500); // Set bit rate for modulation shaping.
 		SX1232_SetDataMode(SX1232_DATA_MODE_CONTINUOUS);
 		break;
-
 	// Downlink.
 	case SFX_RF_MODE_RX:
 		// Prepare transceiver for downlink operation (GFSK 800Hz 600bps).
@@ -255,7 +237,6 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		SX1232_SetDioMapping(0, 0); // Map payload ready interrupt on DIO0.
 		SX1232_SetDataMode(SX1232_DATA_MODE_PACKET);
 		break;
-
 	default:
 		break;
 	}
@@ -273,14 +254,11 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
  * \retval RF_ERR_API_STOP:           Close Radio link error
  *******************************************************************/
 sfx_u8 RF_API_stop(void) {
-
-	/* Disable all switch channels */
+	// Disable all switch channels.
 	SKY13317_SetChannel(SKY13317_CHANNEL_NONE);
-
-	/* Power transceiver down */
+	// Power transceiver down.
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 	SPI1_PowerOff();
-
 	return SFX_ERR_NONE;
 }
 
@@ -302,32 +280,26 @@ sfx_u8 RF_API_stop(void) {
  * \retval RF_ERR_API_SEND:                 Send data stream error
  *******************************************************************/
 sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
-
-	/* Disable all interrupts */
-	NVIC_DisableInterrupt(IT_EXTI_0_1);
-	NVIC_DisableInterrupt(IT_EXTI_2_3);
-	NVIC_DisableInterrupt(IT_EXTI_4_15);
-	NVIC_DisableInterrupt(IT_TIM21);
+	// Disable all interrupts.
+	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
+	NVIC_DisableInterrupt(NVIC_IT_TIM21);
 #ifdef HW1_0
-	NVIC_DisableInterrupt(IT_USART2);
+	NVIC_DisableInterrupt(NVIC_IT_USART2);
 #endif
 #ifdef HW2_0
-	NVIC_DisableInterrupt(IT_USART1);
+	NVIC_DisableInterrupt(NVIC_IT_USART1);
 #endif
-	NVIC_DisableInterrupt(IT_LPUART1);
-
-	/* Set modulation parameters */
+	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
+	// Set modulation parameters.
 	RF_API_SetTxModulationParameters(type);
-
-	/* Init common variables */
+	// Init common variables.
 	unsigned char stream_byte_idx = 0;
 	unsigned char stream_bit_idx = 0;
 #ifdef RF_API_LOG_FRAME
 	// Frame buffer (maximum length is 26 bytes in Sigfox V1 protocol).
 	unsigned char sfx_frame[26] = {0x00};
 #endif
-
-	/* Compute frequency shift duration required to invert signal phase */
+	// Compute frequency shift duration required to invert signal phase.
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.
 	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
 	unsigned int effective_uplink_frequency_hz = SX1232_GetRfFrequency();
@@ -343,8 +315,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	unsigned short high_shifted_idle_duration_us = (rf_api_ctx.rf_api_symbol_duration_us - (2 * rf_api_ctx.rf_api_ramp_duration_us) - (high_shifted_frequency_duration_us)) / (2);
 	unsigned short low_shifted_idle_duration_us = (rf_api_ctx.rf_api_symbol_duration_us - (2 * rf_api_ctx.rf_api_ramp_duration_us) - (low_shifted_frequency_duration_us)) / (2);
 	unsigned short idle_duration_us = (high_shifted_idle_duration_us + low_shifted_idle_duration_us) / (2);
-
-	/* Configure timer */
+	// Configure timer.
 	unsigned short dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_ARR_IDX] = rf_api_ctx.rf_api_symbol_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR1_IDX] = idle_duration_us;
@@ -353,21 +324,18 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.rf_api_ramp_duration_us;
 	TIM2_Init(dbpsk_timings);
 	TIM2_Enable();
-	NVIC_EnableInterrupt(IT_TIM2);
+	NVIC_EnableInterrupt(NVIC_IT_TIM2);
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
-
-	/* Start CW */
+	// Start CW.
 	SX1232_SetRfFrequency(rf_api_ctx.rf_api_rf_frequency_hz);
 	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max);
 	SX1232_StartCw();
-
-	/* First ramp-up */
+	// First ramp-up.
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	TIM2_Start();
 	while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
-
-	/* Data transmission */
+	// Data transmission.
 	// Byte loop.
 	for (stream_byte_idx=0 ; stream_byte_idx<size ; stream_byte_idx++) {
 #ifdef RF_API_LOG_FRAME
@@ -389,25 +357,22 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 			while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
 		}
 	}
-
-	/* Last ramp down */
+	// Last ramp down.
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	GPIO_Write(&GPIO_SX1232_DIO2, 0);
 	while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
-
-	/* Stop CW */
+	// Stop CW.
 	SX1232_StopCw();
 	TIM2_Stop();
 	TIM2_Disable();
-
-	/* Re-enable all interrupts */
+	// Re-enable all interrupts.
 #ifdef ATM
 #ifdef HW1_0
-	NVIC_EnableInterrupt(IT_USART2);
+	NVIC_EnableInterrupt(NVIC_IT_USART2);
 #endif
 #ifdef HW2_0
-	NVIC_EnableInterrupt(IT_USART1);
+	NVIC_EnableInterrupt(NVIC_IT_USART1);
 #endif
 #endif
 #ifdef RF_API_LOG_FRAME
@@ -435,11 +400,9 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
  * \retval RF_ERR_API_START_CONTINUOUS_TRANSMISSION:     Continuous Transmission Start error
  *******************************************************************/
 sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type) {
-
-	/* Start CW */
+	// Start CW.
 	SX1232_SetRfOutputPower(rf_api_ctx.rf_api_output_power_max);
 	SX1232_StartCw();
-
 	return SFX_ERR_NONE;
 }
 
@@ -451,10 +414,8 @@ sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type) {
  * \retval RF_ERR_API_STOP_CONTINUOUS_TRANSMISSION:      Continuous Transmission Stop error
  *******************************************************************/
 sfx_u8 RF_API_stop_continuous_transmission (void) {
-
-	/* Stop CW */
+	// Stop CW.
 	SX1232_StopCw();
-
 	return SFX_ERR_NONE;
 }
 
@@ -469,11 +430,9 @@ sfx_u8 RF_API_stop_continuous_transmission (void) {
  * \retval RF_ERR_API_CHANGE_FREQ:          Change frequency error
  *******************************************************************/
 sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
-
-	/* Program and save frequency */
+	// Program and save frequency.
 	SX1232_SetRfFrequency(frequency);
 	rf_api_ctx.rf_api_rf_frequency_hz = frequency;
-
 	return SFX_ERR_NONE;
 }
 
@@ -503,14 +462,12 @@ sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
 sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * state) {
-
-	/* Start radio */
+	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSRX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60µs typical.
+	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60us typical.
 	SX1232_SetMode(SX1232_MODE_RX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120µs typical.
-
-	/* Wait for external interrupt (payload ready on DIO0) */
+	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120us typical.
+	// Wait for external interrupt (payload ready on DIO0).
 	unsigned char rssi_retrieved = 0;
 	unsigned int rx_window_start_time_seconds = TIM22_GetSeconds();
 	(*state) = DL_PASSED;
@@ -530,8 +487,7 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 		// Reload watchdog.
 		IWDG_Reload();
 	}
-
-	/* Read FIFO if data was retrieved */
+	// Read FIFO if data was retrieved.
 	if ((*state) == DL_PASSED) {
 		SX1232_ReadFifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
 #ifdef RF_API_LOG_FRAME
@@ -547,7 +503,6 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 		USARTx_SendString("]\n");
 #endif
 	}
-
 	return sfx_err;
 }
 

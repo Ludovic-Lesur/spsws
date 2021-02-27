@@ -38,18 +38,16 @@ void EXTI2_3_IRQHandler(void) {
  * @return:	None.
  */
 void EXTI4_15_IRQHandler(void) {
-
 #if (defined CM || defined ATM)
-	/* Speed edge interrupt */
+	// Speed edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.gpio_num))) != 0) {
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_WIND_SPEED.gpio_num)); // PIFx='1' (writing '1' clears the bit).
 		// Call WIND callback.
 		WIND_SpeedEdgeCallback();
 	}
-
 #ifdef WIND_VANE_ULTIMETER
-	/* Direction edge interrupt */
+	// Direction edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.gpio_num))) != 0) {
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_WIND_DIRECTION.gpio_num)); // PIFx='1' (writing '1' clears the bit).
@@ -57,8 +55,7 @@ void EXTI4_15_IRQHandler(void) {
 		WIND_DirectionEdgeCallback();
 	}
 #endif
-
-	/* Rain edge interrupt */
+	// Rain edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.gpio_num))) != 0) {
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_RAIN.gpio_num)); // PIFx='1' (writing '1' clears the bit).
@@ -75,14 +72,8 @@ void EXTI4_15_IRQHandler(void) {
  * @return:	None.
  */
 void EXTI_Init(void) {
-
-	/* Enable peripheral clock */
+	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 0); // SYSCFEN='1'.
-
-	/* Disable interrupts by default */
-	NVIC_DisableInterrupt(IT_EXTI_0_1);
-	NVIC_DisableInterrupt(IT_EXTI_2_3);
-	NVIC_DisableInterrupt(IT_EXTI_4_15);
 }
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
@@ -91,12 +82,10 @@ void EXTI_Init(void) {
  * @return:			None.
  */
 void EXTI_ConfigureInterrupt(GPIO* gpio, EXTI_Trigger edge_trigger) {
-
-	/* Select GPIO port */
+	// Select GPIO port.
 	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] &= ~(0b1111 << (4 * ((gpio -> gpio_num) % 4)));
 	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] |= ((gpio -> gpio_port_index) << (4 * ((gpio -> gpio_num) % 4)));
-
-	/* Select triggers */
+	// Select triggers.
 	switch (edge_trigger) {
 	// Rising edge only.
 	case EXTI_TRIGGER_RISING_EDGE:

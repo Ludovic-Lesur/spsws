@@ -24,18 +24,15 @@
  * @return:				None.
  */
 void LPTIM1_Init(LPTIM_Mode lptim1_mode) {
-
-	/* Disable peripheral */
+	// Disable peripheral.
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
-
-	/* Select timer clock */
+	// Select timer clock.
 	RCC -> CCIPR &= ~(0b11 << 18); // LPTIMSEL='00' (APB clock selected = 65kHz / 16MHz).
 	if (lptim1_mode == LPTIM_MODE_LSI_CALIBRATION) {
 		RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
 	}
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
-
-	/* Configure peripheral */
+	// Configure peripheral.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
 	LPTIM1 -> CFGR |= (0b1 << 19); // Enable timeout.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
@@ -71,11 +68,9 @@ void LPTIM1_Init(LPTIM_Mode lptim1_mode) {
 		loop_count++;
 		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
 	}
-
-	/* Clear all flags */
+	// Clear all flags.
 	LPTIM1 -> ICR |= (0b1111111 << 0);
-
-	/* Disable peripheral by default */
+	// Disable peripheral by default.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 
@@ -84,8 +79,7 @@ void LPTIM1_Init(LPTIM_Mode lptim1_mode) {
  * @return:	None.
  */
 void LPTIM1_Start(void) {
-
-	/* Enable timer */
+	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
 	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 }
@@ -95,8 +89,7 @@ void LPTIM1_Start(void) {
  * @return:	None.
  */
 void LPTIM1_Stop(void) {
-
-	/* Stop timer */
+	// Stop timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 
@@ -105,8 +98,7 @@ void LPTIM1_Stop(void) {
  * @return:	None.
  */
 void LPTIM1_Enable(void) {
-
-	/* Enable timer clock */
+	// Enable timer clock.
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
 }
 
@@ -115,8 +107,7 @@ void LPTIM1_Enable(void) {
  * @return:	None.
  */
 void LPTIM1_Disable(void) {
-
-	/* Disable timer */
+	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 	LPTIM1 -> CNT = 0;
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
@@ -127,11 +118,9 @@ void LPTIM1_Disable(void) {
  * @return:			None.
  */
 void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
-
-	/* Enable timer */
+	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-
-	/* Make as many overflows as required */
+	// Make as many overflows as required.
 	unsigned int ms_count = 0;
 	unsigned char lptim_default = 0;
 	for (ms_count=0 ; ms_count<delay_ms ; ms_count++) {
@@ -146,8 +135,7 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 			break;
 		}
 	}
-
-	/* Disable timer */
+	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 

@@ -7,7 +7,6 @@
 
 #include "nvm.h"
 
-#include "mapping.h"
 #include "flash_reg.h"
 #include "rcc_reg.h"
 
@@ -17,7 +16,7 @@
  * @param:	None.
  * @return:	None.
  */
-void NVM_Unlock(void) {
+static void NVM_Unlock(void) {
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Check the NVM is not allready unlocked.
@@ -32,7 +31,7 @@ void NVM_Unlock(void) {
  * @param:	None.
  * @return:	None.
  */
-void NVM_Lock(void) {
+static void NVM_Lock(void) {
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Lock PECR register.
@@ -46,8 +45,7 @@ void NVM_Lock(void) {
  * @return:	None.
  */
 void NVM_Enable(void) {
-
-	/* Enable NVM peripheral */
+	// Enable NVM peripheral.
 	RCC -> AHBENR |= (0b1 << 8); // MIFEN='1'.
 }
 
@@ -56,8 +54,7 @@ void NVM_Enable(void) {
  * @return:	None.
  */
 void NVM_Disable(void) {
-
-	/* Disable NVM peripheral */
+	// Disable NVM peripheral.
 	RCC -> AHBENR &= ~(0b1 << 8); // MIFEN='1'.
 }
 

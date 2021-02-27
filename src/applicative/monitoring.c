@@ -15,7 +15,7 @@
  * @return:							None.
  */
 void MONITORING_BuildSigfoxData(MONITORING_Data* monitoring_data, unsigned char* monitoring_sigfox_data) {
-	// MCU temperature (°C).
+	// MCU temperature (degrees).
 	monitoring_sigfox_data[0] = 0x00;
 	if ((monitoring_data -> monitoring_data_mcu_temperature_degrees) < 0) {
 		monitoring_sigfox_data[0] |= 0x80;
@@ -25,7 +25,7 @@ void MONITORING_BuildSigfoxData(MONITORING_Data* monitoring_data, unsigned char*
 	else {
 		monitoring_sigfox_data[0] |= ((monitoring_data -> monitoring_data_mcu_temperature_degrees) & 0x7F);
 	}
-	// PCB temperature (°C).
+	// PCB temperature (degrees).
 	monitoring_sigfox_data[1] = 0x00;
 	if ((monitoring_data -> monitoring_data_pcb_temperature_degrees) < 0) {
 		monitoring_sigfox_data[1] |= 0x80;

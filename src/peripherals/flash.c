@@ -11,20 +11,21 @@
 
 /*** FLASH local macros ***/
 
-#define FLASH_TIMEOUT_COUNT		1000
+#define FLASH_TIMEOUT_COUNT		10000
 
 /*** FLASH functions ***/
 
-/* INIT FLASH LATENCY.
- * @param:	None.
- * @return:	None.
+/* SET FLASH LATENCY.
+ * @param wait_states:	Number of wait states.
+ * @return:				None.
  */
-void FLASH_Init(void) {
-	// Add 1 wait state.
-	FLASH -> ACR |= (0b1 << 0); // LATENCY='1'.
+void FLASH_SetLatency(unsigned char wait_states) {
+	// Configure number of wait states.
+	FLASH -> ACR &= ~(0b1 << 0); // Reset bit.
+	FLASH -> ACR |= ((wait_states & 0b1) << 0); // Set latency.
 	// Wait until configuration is done.
 	unsigned int count = 0;
-	while ((((FLASH -> ACR) & (0b1 << 0)) == 0) && (count < FLASH_TIMEOUT_COUNT)) {
+	while ((((FLASH -> ACR) & (0b1 << 0)) != ((wait_states & 0b1) << 0)) && (count < FLASH_TIMEOUT_COUNT)) {
 		count++;
 	}
 }

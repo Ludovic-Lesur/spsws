@@ -37,10 +37,9 @@ static MAX11136_Context max11136_ctx;
  * @param valie:	Value to write in register.
  * @return:			1 in case of success, 0 in case of failure.
  */
-unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
+static unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	unsigned short spi_command = 0;
-
-	/* Build SPI command */
+	// Build SPI command.
 	if (addr == MAX11136_REG_ADC_MODE_CONTROL) {
 		// Data is 15-bits length.
 		spi_command |= value & 0x00007FFF;
@@ -50,8 +49,7 @@ unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 		spi_command |= (addr & 0x0000001F) << 11;
 		spi_command |= (value & 0x000007FF);
 	}
-
-	/* Send command */
+	// Send command.
 	GPIO_Write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 #ifdef HW1_0
 	unsigned char spi_access = SPI1_WriteShort(spi_command);
@@ -60,8 +58,7 @@ unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	unsigned char spi_access = SPI2_WriteShort(spi_command);
 #endif
 	GPIO_Write(&GPIO_MAX11136_CS, 1); // Set CS pin.
-
-	/* Return SPI access result */
+	// Return SPI access result.
 	return spi_access;
 }
 
@@ -69,14 +66,12 @@ unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
  * @param:	None.
  * @return:	None.
  */
-void MAX11136_ConvertAllChannels12Bits(void) {
-
+static void MAX11136_ConvertAllChannels12Bits(void) {
 #ifdef HW1_0
-	/* Configure SPI */
+	// Configure SPI.
 	SPI1_SetClockPolarity(1);
 #endif
-
-	/* Configure ADC */
+	// Configure ADC.
 	// Single-ended unipolar (allready done at POR).
 	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
 	unsigned char spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_CONFIG, 0x0200);
@@ -88,8 +83,7 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 	// Start conversion: SWCNV='1'.
 	spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 	if (spi_access == 0) return;
-
-	/* Wait for conversions to complete */
+	// Wait for conversions to complete.
 	unsigned int conversion_start_time = TIM22_GetSeconds();
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
@@ -105,8 +99,7 @@ void MAX11136_ConvertAllChannels12Bits(void) {
 		if (TIM22_GetSeconds() > (conversion_start_time + MAX11136_CONVERSION_TIMEOUT_SECONDS)) return ;
 	}
 #endif
-
-	/* Read results in FIFO */
+	// Read results in FIFO.
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
 	unsigned char channel_idx = 0;
@@ -140,13 +133,11 @@ void MAX11136_ConvertAllChannels12Bits(void) {
  * @return:	None.
  */
 void MAX11136_Init(void) {
-
-	/* Init context */
+	// Init context.
 	unsigned char idx = 0;
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
 	max11136_ctx.max11136_status = 0;
-
-	/* Configure EOC GPIO */
+	// Configure EOC GPIO.
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
 	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
@@ -177,13 +168,11 @@ void MAX11136_DisableGpio(void) {
  * @return:	None.
  */
 void MAX11136_PerformMeasurements(void) {
-
-	/* Reset results */
+	// Reset results.
 	unsigned char idx = 0;
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
 	max11136_ctx.max11136_status = 0;
-
-	/* Perform conversion until all channels are successfully retrieved or maximum number of loops is reached */
+	// Perform conversion until all channels are successfully retrieved or maximum number of loops is reached.
 	idx = 0;
 	while ((max11136_ctx.max11136_status != 0xFF) && (idx < MAX11136_CONVERSION_LOOPS)) {
 		MAX11136_ConvertAllChannels12Bits();

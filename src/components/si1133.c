@@ -34,18 +34,16 @@ static SI1133_Context si1133_ctx;
  * @param value:	Value to write in the selected register.
  * @return:			None.
  */
-unsigned char SI1133_WriteRegisters(unsigned char si1133_i2c_address, unsigned char register_address, unsigned char* value_buf, unsigned char value_buf_length) {
+static unsigned char SI1133_WriteRegisters(unsigned char si1133_i2c_address, unsigned char register_address, unsigned char* value_buf, unsigned char value_buf_length) {
 	unsigned char register_write_command[SI1133_BURST_WRITE_MAX_LENGTH];
 	unsigned char tx_buf_length = value_buf_length + 1; // +1 for register address.
 	register_write_command[0] = register_address;
 	unsigned char byte_idx = 0;
-
-	/* Clamp buffer length */
+	// Clamp buffer length.
 	if (tx_buf_length >= SI1133_BURST_WRITE_MAX_LENGTH) {
 		tx_buf_length = SI1133_BURST_WRITE_MAX_LENGTH - 1; // -1 for register address.
 	}
-
-	/* Fill data */
+	// Fill data.
 	for (byte_idx=1 ; byte_idx<tx_buf_length ; byte_idx++) {
 		register_write_command[byte_idx] = value_buf[byte_idx-1];
 	}
@@ -59,7 +57,7 @@ unsigned char SI1133_WriteRegisters(unsigned char si1133_i2c_address, unsigned c
  * @param value:	Pointer to byte that will contain the current value of the selected register.
  * @return:			None.
  */
-unsigned char SI1133_ReadRegister(unsigned char si1133_i2c_address, unsigned char register_address, unsigned char* value) {
+static unsigned char SI1133_ReadRegister(unsigned char si1133_i2c_address, unsigned char register_address, unsigned char* value) {
 	unsigned char local_addr = register_address;
 	unsigned char i2c_access = I2C1_Write(si1133_i2c_address, &local_addr, 1);
 	if (i2c_access == 0) return 0;
@@ -72,7 +70,7 @@ unsigned char SI1133_ReadRegister(unsigned char si1133_i2c_address, unsigned cha
  * @param:	None.
  * @return:	1 in case of success, 0 in case of failure.
  */
-unsigned char SI1133_WaitUntilSleep(unsigned char si1133_i2c_address) {
+static unsigned char SI1133_WaitUntilSleep(unsigned char si1133_i2c_address) {
 	unsigned char response0 = 0;
 	unsigned char i2c_access = 0;
 	unsigned int loop_start_time = TIM22_GetSeconds();
@@ -83,27 +81,24 @@ unsigned char SI1133_WaitUntilSleep(unsigned char si1133_i2c_address) {
 		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return 0;
 	}
 	while ((response0 & (0b1 << 5)) == 0);
-
 	return 1;
 }
 
 // Function declaration for next function.
-unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char command);
+static unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char command);
 
 /* GET CURRENT COMMAND COUNTER.
  * @param si1133_i2c_address:	Sensor address.
  * @param command_counter:		Pointer to byte that will contain current command counter.
  * @return:						1 in case of success, 0 in case of failure.
  */
-unsigned char SI1133_GetCommandCounter(unsigned char si1133_i2c_address, unsigned char* command_counter) {
-
-	/* Get counter */
+static unsigned char SI1133_GetCommandCounter(unsigned char si1133_i2c_address, unsigned char* command_counter) {
+	// Get counter.
 	unsigned char response0 = 0;
 	unsigned char i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_RESPONSE0, &response0);
 	if (i2c_access == 0) return 0;
 	(*command_counter) = response0 & 0x0F;
-
-	/* Reset counter when overflow */
+	// Reset counter when overflow.
 	if ((*command_counter) >= 0x0F) {
 		i2c_access = SI1133_SendCommand(si1133_i2c_address, SI1133_CMD_RESET_CMD_CTR);
 		if (i2c_access == 0) return 0;
@@ -115,9 +110,8 @@ unsigned char SI1133_GetCommandCounter(unsigned char si1133_i2c_address, unsigne
  * @param command:	Command to send.
  * @return:			1 in case of success, 0 in case of failure.
  */
-unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char command) {
-
-	/* Get current value of counter in RESPONSE0 register */
+static unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char command) {
+	// Get current value of counter in RESPONSE0 register.
 	unsigned char current_counter = 0;
 	unsigned char previous_counter = 0;
 	unsigned char i2c_access = 0;
@@ -125,20 +119,16 @@ unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char
 		i2c_access = SI1133_GetCommandCounter(si1133_i2c_address, &previous_counter);
 		if (i2c_access == 0) return 0;
 	}
-
-	/* Check CMD_ERR flag */
+	// Check CMD_ERR flag.
 	unsigned char response0 = 0;
 	i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_RESPONSE0, &response0);
 	if (i2c_access == 0) return 0;
-
 	if ((response0 & 0x10) == 0) {
-
-		/* Send command */
+		// Send command.
 		i2c_access = SI1133_WriteRegisters(si1133_i2c_address, SI1133_REG_COMMAND, &command, 1);
 		if (i2c_access == 0) return 0;
 	}
-
-	/* Expect a change in counter */
+	// Expect a change in counter.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
 		unsigned int loop_start_time = TIM22_GetSeconds();
 		do {
@@ -150,7 +140,6 @@ unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char
 		}
 		while ((current_counter == previous_counter) && ((response0 & 0x10) == 0));
 	}
-
 	return 1;
 }
 
@@ -159,29 +148,24 @@ unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsigned char
  * @param value:	Value to write in parameter.
  * @return:			1 in case of success, 0 in case of failure.
  */
-unsigned char SI1133_SetParameter(unsigned char si1133_i2c_address, unsigned char param, unsigned char value) {
-
-	/* Build command */
+static unsigned char SI1133_SetParameter(unsigned char si1133_i2c_address, unsigned char param, unsigned char value) {
+	// Build command.
 	unsigned char parameter_write_command[2] = {0, 0};
 	parameter_write_command[0] = value;
 	parameter_write_command[1] = 0x80 + (param & 0x3F);
-
-	/* Wait for sensor to be ready */
+	// Wait for sensor to be ready.
 	unsigned char i2c_access = SI1133_WaitUntilSleep(si1133_i2c_address);
 	if (i2c_access == 0) return 0;
-
-	/* Get current value of counter in RESPONSE0 register */
+	// Get current value of counter in RESPONSE0 register.
 	unsigned char response0 = 0;
 	unsigned char previous_counter = 0;
 	i2c_access = SI1133_GetCommandCounter(si1133_i2c_address, &previous_counter);
 	if (i2c_access == 0) return 0;
 	unsigned char current_counter = previous_counter;
-
-	/* Send command */
+	// Send command.
 	i2c_access = SI1133_WriteRegisters(si1133_i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
 	if (i2c_access == 0) return 0;
-
-	/* Expect a change in counter */
+	// Expect a change in counter.
 	unsigned int loop_start_time = TIM22_GetSeconds();
 	do {
 		i2c_access = SI1133_GetCommandCounter(si1133_i2c_address, &current_counter);
@@ -191,7 +175,6 @@ unsigned char SI1133_SetParameter(unsigned char si1133_i2c_address, unsigned cha
 		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return 0;
 	}
 	while ((current_counter == previous_counter) && ((response0 & 0x10) == 0));
-
 	return 1;
 }
 
@@ -199,9 +182,8 @@ unsigned char SI1133_SetParameter(unsigned char si1133_i2c_address, unsigned cha
  * @param:	None.
  * @return:	1 in case of success, 0 in case of failure.
  */
-unsigned char SI1133_Configure(unsigned char si1133_i2c_address) {
-
-	/* Configure channel 0 to compute UV index */
+static unsigned char SI1133_Configure(unsigned char si1133_i2c_address) {
+	// Configure channel 0 to compute UV index.
 	// Parameter settings.
 	unsigned char i2c_access = SI1133_SetParameter(si1133_i2c_address, SI1133_PARAM_CH_LIST, 0x01); // Enable channel 0.
 	if (i2c_access == 0) return 0;
@@ -224,8 +206,7 @@ unsigned char SI1133_Configure(unsigned char si1133_i2c_address) {
  * @return:	None.
  */
 void SI1133_Init(void) {
-
-	/* Init context */
+	// Init context.
 	si1133_ctx.si1133_uv_index = SI1133_UV_INDEX_ERROR_VALUE;
 }
 
@@ -234,16 +215,13 @@ void SI1133_Init(void) {
  * @return:	None.
  */
 void SI1133_PerformMeasurements(unsigned char si1133_i2c_address) {
-
-	/* Confiure sensor */
+	// Configure sensor.
 	unsigned char i2c_access = SI1133_Configure(si1133_i2c_address);
 	if (i2c_access == 0) return;
-
-	/* Start conversion */
+	// Start conversion.
 	i2c_access = SI1133_SendCommand(si1133_i2c_address, SI1133_CMD_FORCE_CH);
 	if (i2c_access == 0) return;
-
-	/* Wait for conversion to complete */
+	// Wait for conversion to complete.
 	unsigned char response0 = 0;
 	unsigned int loop_start_time = TIM22_GetSeconds();
 	do {
@@ -252,8 +230,7 @@ void SI1133_PerformMeasurements(unsigned char si1133_i2c_address) {
 		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return;
 	}
 	while ((response0 & 0x01) == 0); // Wait for IRQ0='1'.
-
-	/* Get result */
+	// Get result.
 	unsigned short raw_uv = 0;
 	i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_HOSTOUT0, &response0);
 	if (i2c_access == 0) return;
@@ -261,8 +238,7 @@ void SI1133_PerformMeasurements(unsigned char si1133_i2c_address) {
 	i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_HOSTOUT1, &response0);
 	if (i2c_access == 0) return;
 	raw_uv |= response0;
-
-	/* Convert to UV index */
+	// Convert to UV index.
 	// UV index = k * ((m * raw^2) + raw) where k = 0.008284 = 1 / 121 and m = -0.000231 = -1 / 4329.
 	si1133_ctx.si1133_uv_index = ((((-1) * raw_uv * raw_uv) / 4329) + raw_uv) / (121);
 }
@@ -272,11 +248,9 @@ void SI1133_PerformMeasurements(unsigned char si1133_i2c_address) {
  * @return:			None.
  */
 void SI1133_GetUvIndex(unsigned char* uv_index) {
-
-	/* Get result */
+	// Get result.
 	(*uv_index) = si1133_ctx.si1133_uv_index;
-
-	/* Reset results for next conversion */
+	// Reset results for next conversion.
 	si1133_ctx.si1133_uv_index = SI1133_UV_INDEX_ERROR_VALUE;
 }
 

@@ -216,20 +216,16 @@ void SPSWS_UpdatePwut(void) {
  * @return: 0.
  */
 int main (void) {
-
-	/* Init memory */
+	// Init memory.
 	NVIC_Init();
-	FLASH_Init();
+	FLASH_SetLatency(1);
 	NVM_Enable();
-
-	/* Init GPIOs */
+	// Init GPIOs.
 	GPIO_Init(); // Required for clock tree configuration.
 	EXTI_Init(); // Required to clear RTC flags (EXTI 17).
-
-	/* Init clock module */
+	// Init clock module.
 	RCC_Init();
-
-	/* Init context */
+	// Init context.
 	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 	spsws_ctx.spsws_por_flag = 0;
 	spsws_ctx.spsws_hour_changed_flag = 0;
@@ -243,8 +239,7 @@ int main (void) {
 #else
 	spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // CM = 0b1.
 #endif
-
-	/* Local variables */
+	// Local variables.
 	unsigned char rtc_use_lse = 0;
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
@@ -252,14 +247,11 @@ int main (void) {
 	unsigned int geoloc_fix_start_time_seconds = 0;
 	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) RC1;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
-
-	/* Main loop */
+	// Main loop.
 	while (1) {
-
-		/* Perform state machine */
+		// Perform state machine.
 		switch (spsws_ctx.spsws_state) {
-
-		/* RESET */
+		// RESET.
 		case SPSWS_STATE_RESET:
 			IWDG_Reload();
 #ifdef DEBUG
@@ -281,8 +273,7 @@ int main (void) {
 			// Clear reset flags.
 			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
 			break;
-
-		/* HOUR CHECK */
+		// HOUR CHECK.
 		case SPSWS_STATE_HOUR_CHECK:
 			// Update flags.
 			SPSWS_UpdateTimestampFlags();
@@ -297,8 +288,7 @@ int main (void) {
 				spsws_ctx.spsws_hour_changed_flag = 0; // Reset flag.
 			}
 			break;
-
-		/* NVM WAKE UP UPDATE */
+		// NVM WAKE UP UPDATE.
 		case SPSWS_STATE_NVM_WAKE_UP_UPDATE:
 			// Update previous wake-up timestamp.
 			SPSWS_UpdatePwut();
@@ -316,8 +306,7 @@ int main (void) {
 			// Go to INIT state.
 			spsws_ctx.spsws_state = SPSWS_STATE_INIT;
 			break;
-
-		/* INIT */
+		// INIT.
 		case SPSWS_STATE_INIT:
 			// Low speed oscillators and watchdog (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
@@ -376,8 +365,6 @@ int main (void) {
 #endif
 			// DMA.
 			DMA1_Init();
-			// Hardware AES.
-			AES_Init();
 			// Init components.
 			SX1232_Init();
 			SX1232_Tcxo(1);
@@ -399,8 +386,7 @@ int main (void) {
 				spsws_ctx.spsws_state = SPSWS_STATE_POR;
 			}
 			break;
-
-		/* STATIC MEASURE */
+		// STATIC MEASURE.
 		case SPSWS_STATE_MEASURE:
 			IWDG_Reload();
 			// Retrieve internal ADC data.
@@ -475,8 +461,7 @@ int main (void) {
 			// Compute next state.
 			spsws_ctx.spsws_state = SPSWS_STATE_MONITORING;
 			break;
-
-		/* MONITORING */
+		// MONITORING.
 		case SPSWS_STATE_MONITORING:
 			IWDG_Reload();
 			// Build Sigfox frame.
@@ -490,8 +475,7 @@ int main (void) {
 			// Compute next state.
 			spsws_ctx.spsws_state = SPSWS_STATE_WEATHER_DATA;
 			break;
-
-		/* WEATHER DATA */
+		// WEATHER DATA.
 		case SPSWS_STATE_WEATHER_DATA:
 			IWDG_Reload();
 			// Build Sigfox frame.
@@ -518,8 +502,7 @@ int main (void) {
 				}
 			}
 			break;
-
-		/* POR */
+		// POR.
 		case SPSWS_STATE_POR:
 			IWDG_Reload();
 			// Send OOB frame.
@@ -536,8 +519,7 @@ int main (void) {
 			// Perform first RTC calibration.
 			spsws_ctx.spsws_state = SPSWS_STATE_RTC_CALIBRATION;
 			break;
-
-		/* GEOLOC */
+		// GEOLOC.
 		case SPSWS_STATE_GEOLOC:
 			IWDG_Reload();
 			// Get position from GPS.
@@ -575,8 +557,7 @@ int main (void) {
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;
-
-		/* RTC CALIBRATION */
+		// RTC CALIBRATION.
 		case SPSWS_STATE_RTC_CALIBRATION:
 			IWDG_Reload();
 			// Turn radio TCXO off since Sigfox is not required anymore.
@@ -600,8 +581,7 @@ int main (void) {
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
 			break;
-
-		/* OFF */
+		// OFF.
 		case SPSWS_STATE_OFF:
 			IWDG_Reload();
 			// Clear POR flag.
@@ -640,7 +620,7 @@ int main (void) {
 			// Clear RTC flags.
 			RTC_ClearAlarmAFlag();
 			RTC_ClearAlarmBFlag();
-			NVIC_EnableInterrupt(IT_RTC);
+			NVIC_EnableInterrupt(NVIC_IT_RTC);
 #ifdef DEBUG
 			// Turn LED off.
 			GPIO_Write(&GPIO_LED, 0);
@@ -648,8 +628,7 @@ int main (void) {
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
-
-		/* SLEEP */
+		// SLEEP.
 		case SPSWS_STATE_SLEEP:
 			IWDG_Reload();
 			// Enter sleep mode.
@@ -663,10 +642,9 @@ int main (void) {
 				// Clear RTC flags.
 				RTC_ClearAlarmBFlag();
 			}
-
 			if (RTC_GetAlarmAFlag() != 0) {
 				// Disable RTC interrupt.
-				NVIC_DisableInterrupt(IT_RTC);
+				NVIC_DisableInterrupt(NVIC_IT_RTC);
 #ifdef CM
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();
@@ -678,8 +656,7 @@ int main (void) {
 				spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 			}
 			break;
-
-		/* UNKNOWN STATE */
+		// UNKNOWN STATE.
 		default:
 			IWDG_Reload();
 			// Enter standby mode.
@@ -697,19 +674,16 @@ int main (void) {
  * @return: 0.
  */
 int main (void) {
-
-	/* Init memory */
+	// Init memory.
 	NVIC_Init();
-	FLASH_Init();
+	FLASH_SetLatency(1);
 	NVM_Enable();
-
-	/* Init GPIO (required for clock tree configuration) */
+	// Init GPIO (required for clock tree configuration).
 	GPIO_Init();
 #ifdef DEBUG
 	SPSWS_BlinkLed(10);
 #endif
-
-	/* Init clocks */
+	// Init clocks.
 	RCC_Init();
 	RCC_EnableGpio();
 	RTC_Reset();
@@ -718,8 +692,7 @@ int main (void) {
 	if (RCC_SwitchToHse() == 0) {
 		RCC_SwitchToHsi();
 	}
-
-	/* Init peripherals */
+	// Init peripherals.
 	unsigned int lsi_frequency_hz = RCC_GetLsiFrequency();
 	// Timers.
 	TIM21_Init();
@@ -748,10 +721,7 @@ int main (void) {
 #ifdef HW2_0
 	SPI2_Init();
 #endif
-	// Hardware AES.
-	AES_Init();
-
-	/* Init components */
+	// Init components.
 	SX1232_Init();
 	SX1232_Tcxo(1);
 	SKY13317_Init();
@@ -766,11 +736,9 @@ int main (void) {
 	DPS310_Init();
 	SI1133_Init();
 #endif
-
-	/* Init applicative layers */
+	// Init applicative layers.
 	AT_Init();
-
-	/* Main loop */
+	// Main loop.
 	while (1) {
 		// Perform AT commands parsing.
 		AT_Task();
@@ -781,7 +749,6 @@ int main (void) {
 			RTC_ClearAlarmBFlag();
 		}
 	}
-
 	return 0;
 }
 #endif
