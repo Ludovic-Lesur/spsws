@@ -241,8 +241,8 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN+1]));
 	// Sequence number.
-	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_SEQ_NUM]));
-	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_SEQ_NUM+1]));
+	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_MSG_COUNTER]));
+	NVM_ReadByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_MSG_COUNTER+1]));
 	// FH.
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_FH]));
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH+1]));
@@ -281,8 +281,8 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN+1]);
 	// Sequence number.
-	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_SEQ_NUM]);
-	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_SEQ_NUM+1]);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_MSG_COUNTER]);
+	NVM_WriteByte(NVM_SIGFOX_SEQ_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_MSG_COUNTER+1]);
 	// FH.
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_FH]);
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH+1]);
@@ -436,6 +436,21 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
 	}
 	// No payload encryption.
 	(*payload_encryption_enabled) = SFX_FALSE;
+	return SFX_ERR_NONE;
+}
+
+/*!******************************************************************
+ * \fn sfx_u8 MCU_API_get_msg_counter_rollover(e_sfx_msg_counter_rollover* msgCounterRollover)
+ * \brief This function copies the msg counter rollover value in msgCounterRollover.
+ *
+ * \param[in]  none
+ * \param[out] e_sfx_msg_counter_rollover* msgCounterRollover   Pointer on the msg counter rollover
+ *
+ * \retval SFX_ERR_NONE:                         No error
+ * \retval MCU_ERR_API_GET_MSG_COUNTER_ROLLOVER: Error when getting msg counter rollover
+ *******************************************************************/
+sfx_u8 MCU_API_get_msg_counter_rollover(e_sfx_msg_counter_rollover* msgCounterRollover) {
+	(*msgCounterRollover) = SFX_MSG_COUNTER_ROLLOVER_4096;
 	return SFX_ERR_NONE;
 }
 

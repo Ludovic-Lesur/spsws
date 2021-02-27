@@ -39,7 +39,6 @@
 #include "wind.h"
 // Applicative.
 #include "at.h"
-#include "dlk.h"
 #include "geoloc.h"
 #include "mode.h"
 #include "monitoring.h"
@@ -49,14 +48,19 @@
 
 /*** SPSWS macros ***/
 
-#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS	180
-#define SPSWS_LOCAL_UTC_OFFSET_WINTER			1
-#define SPSWS_LOCAL_UTC_OFFSET_SUMMER			2
-#define SPSWS_WINTER_TIME_LAST_MONTH			3
-#define SPSWS_WINTER_TIME_FIRST_MONTH			11
-#define SPSWS_NUMBER_OF_HOURS_PER_DAY			24
-#define SPSWS_AFTERNOON_HOUR_THRESHOLD			12
-#define SPSWS_GEOLOC_TIMEOUT_SECONDS			120
+// Time management.
+#define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS		180
+#define SPSWS_LOCAL_UTC_OFFSET_WINTER				1
+#define SPSWS_LOCAL_UTC_OFFSET_SUMMER				2
+#define SPSWS_WINTER_TIME_LAST_MONTH				3
+#define SPSWS_WINTER_TIME_FIRST_MONTH				11
+#define SPSWS_NUMBER_OF_HOURS_PER_DAY				24
+#define SPSWS_AFTERNOON_HOUR_THRESHOLD				12
+// Geoloc.
+#define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
+// Sigfox.
+#define SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES	12
+#define SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES		8
 
 /*** SPSWS structures ***/
 
@@ -108,8 +112,8 @@ typedef struct {
 	unsigned char spsws_geoloc_fix_duration_seconds;
 	unsigned char spsws_geoloc_timeout;
 	// Sigfox.
-	unsigned char spsws_sfx_uplink_data[SFX_UPLINK_DATA_MAX_SIZE_BYTES];
-	unsigned char spsws_sfx_downlink_data[SFX_DOWNLINK_DATA_SIZE_BYTES];
+	unsigned char spsws_sfx_uplink_data[SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES];
+	unsigned char spsws_sfx_downlink_data[SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_Context;
 
 /*** SPSWS global variables ***/
@@ -246,7 +250,7 @@ int main (void) {
 	unsigned int max11136_channel_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	unsigned int geoloc_fix_start_time_seconds = 0;
-	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) SPSWS_SIGFOX_RC;
+	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) RC1;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 
 	/* Main loop */

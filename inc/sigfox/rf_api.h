@@ -28,13 +28,19 @@
  * for library usage.
  */
 
+#ifndef RF_API_H
+#define RF_API_H
+
+#include "sigfox_api.h"
+#include "sigfox_types.h"
+
 /********************************************************
- * External API dependencies to link with this library.
- *
- * Error codes of the RF API functions are described below.
- * The Manufacturer can add more error code taking care of the limits defined.
- * 
- ********************************************************/
+* External API dependencies to link with this library.
+*
+* Error codes of the RF API functions are described below.
+* The Manufacturer can add more error code taking care of the limits defined.
+*
+********************************************************/
 
 /*!
  * \defgroup RF_ERR_API_xx codes Return Error codes definition for RF API
@@ -47,19 +53,17 @@
  *  @{
  */
 
-#ifndef RF_API_H
-#define RF_API_H
+/*
+ * ----------------------------------------------------------------
+ * Bytes reserved for MCU API ERROR CODES : From 0x10 to 0x2F
+ * ----------------------------------------------------------------
+ */
 
-#include "sigfox_api.h"
-#include "sigfox_types.h"
-
-/* ---------------------------------------------------------------- */
-/* Bytes reserved for MCU API ERROR CODES : From 0x10 to 0x2F       */
-/* ---------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------- */
-/* Bytes reserved for RF API ERROR CODES : From 0x30 to 0x3F        */
-/* ---------------------------------------------------------------- */
+/*
+ * ----------------------------------------------------------------
+ * Bytes reserved for RF API ERROR CODES : From 0x30 to 0x3F
+ * ----------------------------------------------------------------
+ */
 #define RF_ERR_API_INIT                          (sfx_u8)(0x30) /*!< Error on RF_API_init */
 #define RF_ERR_API_SEND                          (sfx_u8)(0x31) /*!< Error on RF_API_send */
 #define RF_ERR_API_CHANGE_FREQ                   (sfx_u8)(0x32) /*!< Error on RF_API_change_frequency */
@@ -69,21 +73,23 @@
 #define RF_ERR_API_START_CONTINUOUS_TRANSMISSION (sfx_u8)(0x36) /*!< Error on RF_API_start_continuous_transmission */
 #define RF_ERR_API_STOP_CONTINUOUS_TRANSMISSION  (sfx_u8)(0x37) /*!< Error on RF_API_stop_continuous_transmission */
 #define RF_ERR_API_GET_VERSION                   (sfx_u8)(0x38) /*!< Error on RF_API_get_version */
-/* ---------------------------------------------------------------- */
-/* Bytes reserved for SE API ERROR CODES : From 0x40 to 0x5F        */
-/* ---------------------------------------------------------------- */
+/*
+ * ----------------------------------------------------------------
+ * Bytes reserved for SE API ERROR CODES : From 0x40 to 0x5F
+ * ----------------------------------------------------------------
+ */
 
-/* ---------------------------------------------------------------- */
-/* Bytes reserved for REPEATER API ERROR CODES : From 0x60 to 0x7F  */
-/* ---------------------------------------------------------------- */
+/*
+ * ----------------------------------------------------------------
+ * Bytes reserved for REPEATER API ERROR CODES : From 0x60 to 0x7F
+ * ----------------------------------------------------------------
+ */
 
-/* ---------------------------------------------------------------- */
-/* Bytes reserved for MONARCH API ERROR CODES : From 0x80 to 0x8F   */
-/* ---------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------- */
-/* Bytes reserved for DEVICE CONFIG API ERROR CODES : From 0x90 to 0x9A   */
-/* ---------------------------------------------------------------------- */
+/*
+ * ----------------------------------------------------------------
+ * Bytes reserved for MONARCH API ERROR CODES : From 0x80 to 0x8F
+ * ----------------------------------------------------------------
+ */
 
 /** @}*/
 
@@ -123,7 +129,7 @@ sfx_u8 RF_API_stop(void);
  * \brief BPSK Modulation of data stream
  * (from synchro bit field to CRC)
  *
- * NOTE : during this function, the voltage_tx needs to be retrieved and stored in 
+ * NOTE : during this function, the voltage_tx needs to be retrieved and stored in
  *        a variable to be returned into the MCU_API_get_voltage_and_temperature or
  *        MCU_API_get_voltage functions.
  *
@@ -145,18 +151,18 @@ sfx_u8 RF_API_send(sfx_u8* stream, sfx_modulation_type_t type, sfx_u8 size);
  * \param[in] sfx_modulation_type_t         Type of the modulation ( enum with baudrate and modulation information is contained in sigfox_api.h)
  *
  * \retval SFX_ERR_NONE:                                 No error
- * \retval RF_ERR_API_START_CONTINUOUS_TRANSMISSION:     Continuous Transmission Start error 
+ * \retval RF_ERR_API_START_CONTINUOUS_TRANSMISSION:     Continuous Transmission Start error
  *******************************************************************/
-sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type);
+sfx_u8 RF_API_start_continuous_transmission(sfx_modulation_type_t type);
 
 /*!******************************************************************
  * \fn sfx_u8 RF_API_stop_continuous_transmission (void)
- * \brief Stop the current continuous transmisssion 
+ * \brief Stop the current continuous transmisssion
  *
  * \retval SFX_ERR_NONE:                                 No error
- * \retval RF_ERR_API_STOP_CONTINUOUS_TRANSMISSION:      Continuous Transmission Stop error 
+ * \retval RF_ERR_API_STOP_CONTINUOUS_TRANSMISSION:      Continuous Transmission Stop error
  *******************************************************************/
-sfx_u8 RF_API_stop_continuous_transmission (void);
+sfx_u8 RF_API_stop_continuous_transmission(void);
 
 /*!******************************************************************
  * \fn sfx_u8 RF_API_change_frequency(sfx_u32 frequency)
@@ -205,12 +211,11 @@ sfx_u8 RF_API_wait_frame(sfx_u8* frame, sfx_s16* rssi, sfx_rx_state_enum_t* stat
  *        If the channel is clear during the minimum carrier sense
  *        value (cs_min), under the limit of the cs_threshold,
  *        the functions returns with SFX_ERR_NONE (transmission
- *        allowed). Otherwise it continues to listen to the channel till the expiration of the 
+ *        allowed). Otherwise it continues to listen to the channel till the expiration of the
  *        carrier sense maximum window and then updates the state ( with timeout enum ).
- *      
- * \param[in] none
- * \param[out] sfx_u8 cs_min                  Minimum Carrier Sense time in ms.
- * \param[out] sfx_s8 cs_threshold            Power threshold limit to declare the channel clear.
+ *
+ * \param[in] sfx_u8 cs_min                   Minimum Carrier Sense time in ms.
+ * \param[in] sfx_s8 cs_threshold             Power threshold limit to declare the channel clear.
  *                                            i.e : cs_threshold value -80dBm in Japan / -65dBm in Korea
  * \param[out] sfx_rx_state_enum_t state      Indicate the final state of the carrier sense. Value can be DL_TIMEOUT or PASSED
  *                                            as per defined in sigfox_api.h file.
@@ -227,8 +232,19 @@ sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_
  * \param[out] sfx_u8 *size                     Size of the byte array pointed by *version
  *
  * \retval SFX_ERR_NONE:                No error
- * \retval RF_ERR_API_GET_VERSION:      Get Version error 
+ * \retval RF_ERR_API_GET_VERSION:      Get Version error
  *******************************************************************/
 sfx_u8 RF_API_get_version(sfx_u8** version, sfx_u8* size);
+
+/*!******************************************************************
+ * \fn sfx_u8 RF_API_SetIrqFlag(void)
+ * \brief Set S2LP IRQ flag.
+ *
+ * \param[in] none
+ * \param[out] none
+ *
+ * \retval none
+ *******************************************************************/
+void RF_API_SetIrqFlag(void);
 
 #endif /* RF_API_H */

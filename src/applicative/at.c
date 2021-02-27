@@ -8,7 +8,7 @@
 #include "at.h"
 
 #include "adc.h"
-#include "addon_sigfox_verified_api.h"
+#include "addon_sigfox_rf_protocol_api.h"
 #include "aes.h"
 #include "dps310.h"
 #include "flash_reg.h"
@@ -647,7 +647,7 @@ void AT_DecodeRxBuffer(void) {
 	sfx_u8 sfx_uplink_data[12] = {0x00};
 	sfx_u8 sfx_downlink_data[8] = {0x00};
 	sfx_error_t sfx_error = 0;
-	sfx_rc_t rc1 = SPSWS_SIGFOX_RC;
+	sfx_rc_t rc1 = (sfx_rc_t) RC1;
 
 	/* Empty or too short command */
 	if (at_ctx.at_rx_buf_idx < AT_COMMAND_MIN_SIZE) {
@@ -1421,9 +1421,9 @@ void AT_DecodeRxBuffer(void) {
 						get_param_result =  AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &test_mode);
 						if (get_param_result == AT_NO_ERROR) {
 							// Check parameters.
-							if (test_mode < SFX_TEST_MODE_LIST_MAX_SIZE) {
+							if (test_mode <= SFX_TEST_MODE_NVM) {
 								// Call test mode function wth public key.
-								sfx_error = ADDON_SIGFOX_VERIFIED_API_test_mode(rc, test_mode);
+								sfx_error = ADDON_SIGFOX_RF_PROTOCOL_API_test_mode(rc, test_mode);
 								if (sfx_error == SFX_ERR_NONE) {
 									AT_ReplyOk();
 								}

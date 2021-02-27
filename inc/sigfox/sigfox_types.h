@@ -38,18 +38,20 @@
 /* Unsigned Type*/
 typedef unsigned char       sfx_u8;
 typedef unsigned short      sfx_u16;
-typedef unsigned long        sfx_u32;
+typedef unsigned long       sfx_u32;
 typedef unsigned char       sfx_bool;
 /* Signed Type */
 typedef signed char         sfx_s8;
 typedef signed short        sfx_s16;
-typedef signed long          sfx_s32;
+typedef signed long         sfx_s32;
 /* Custom Types */
 typedef unsigned short      sfx_error_t;
 
 #define SFX_NULL            (void*)0
-#define SFX_TRUE            1
-#define SFX_FALSE           0
+#define SFX_TRUE            (sfx_bool)(1)
+#define SFX_FALSE           (sfx_bool)(0)
+#define SFX_U8_1            (sfx_u8)(1)
+#define SFX_U8_0            (sfx_u8)(0)
 
 #define SFX_U8_MIN          0U
 #define SFX_U8_MAX          0xFFU
@@ -65,7 +67,9 @@ typedef unsigned short      sfx_error_t;
 #define SFX_S32_MIN         0x80000000L
 #define SFX_S32_MAX         0x7FFFFFFFL
 
-/** @}*/
-/****************************************************/
+/*
+ ** @}
+ ***************************************************
+ */
 
 #endif /* SIGFOX_TYPES_H */
