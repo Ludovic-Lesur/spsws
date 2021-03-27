@@ -64,6 +64,7 @@
 #define AT_IN_COMMAND_NVMR								"AT$NVMR"
 #define AT_IN_COMMAND_SF								"AT$SF"
 #define AT_IN_COMMAND_OOB								"AT$SO"
+#define AT_IN_COMMAND_RC								"AT$RC?"
 
 // Input commands with parameters (headers).
 #define AT_IN_HEADER_TIME								"AT$TIME="		// AT$TIME=<timeout_seconds><CR>.
@@ -78,6 +79,7 @@
 #define AT_IN_HEADER_CW									"AT$CW="		// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
 #define AT_IN_HEADER_RSSI								"AT$RSSI="		// AT$RSSI=<frequency_hz><CR>.
 #define AT_IN_HEADER_TM									"AT$TM="		// AT$TM=<rc>,<test_mode><CR>.
+#define AT_IN_HEADER_RC									"AT$RC="		// AT$RC=<rc><CR>
 
 // Output commands without data.
 #define AT_OUT_COMMAND_OK								"OK"
@@ -116,6 +118,9 @@
 // Duration of RSSI command.
 #define AT_RSSI_REPORT_DURATION_SECONDS					60
 
+// Sigfox RC standard config size.
+#define AT_SIGFOX_RC_STD_CONFIG_SIZE					3
+
 /*** AT local structures ***/
 
 typedef enum {
@@ -140,11 +145,22 @@ typedef struct {
 	unsigned int separator_idx;
 	// Wind measurement flag.
 	unsigned char wind_measurement_flag;
+	// Sigfox RC.
+	sfx_rc_t sigfox_rc;
+	sfx_u32 sigfox_rc_std_config[AT_SIGFOX_RC_STD_CONFIG_SIZE];
+	unsigned char sigfox_rc_idx;
 } AT_Context;
 
 /*** AT local global variables ***/
 
 static AT_Context at_ctx;
+#ifdef AT_COMMANDS_RC
+static const sfx_u32 rc2_sm_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC2_SM_CONFIG;
+static const sfx_u32 rc4_sm_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC4_SM_CONFIG;
+static const sfx_u32 rc3a_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC3A_CONFIG;
+static const sfx_u32 rc3c_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC3C_CONFIG;
+static const sfx_u32 rc5_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC5_CONFIG;
+#endif
 
 /*** AT local functions ***/
 
@@ -646,7 +662,6 @@ static void AT_DecodeRxBuffer(void) {
 	sfx_u8 sfx_uplink_data[12] = {0x00};
 	sfx_u8 sfx_downlink_data[8] = {0x00};
 	sfx_error_t sfx_error = 0;
-	sfx_rc_t rc1 = (sfx_rc_t) RC1;
 	// Empty or too short command.
 	if (at_ctx.at_rx_buf_idx < AT_COMMAND_MIN_SIZE) {
 		// Reply error.
@@ -1123,8 +1138,9 @@ static void AT_DecodeRxBuffer(void) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Send Sigfox OOB frame.
-				sfx_error = SIGFOX_API_open(&rc1);
+				sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 				if (sfx_error == SFX_ERR_NONE) {
+					sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 					sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
 				}
 				SIGFOX_API_close();
@@ -1153,8 +1169,9 @@ static void AT_DecodeRxBuffer(void) {
 					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
 					if (get_param_result == AT_NO_ERROR) {
 						// Send Sigfox bit with specified downlink request.
-						sfx_error = SIGFOX_API_open(&rc1);
+						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
 						}
 						SIGFOX_API_close();
@@ -1179,8 +1196,9 @@ static void AT_DecodeRxBuffer(void) {
 					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &data_bit);
 					if (get_param_result == AT_NO_ERROR) {
 						// Send Sigfox bit with no downlink request (by default).
-						sfx_error = SIGFOX_API_open(&rc1);
+						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
 						}
 						SIGFOX_API_close();
@@ -1207,8 +1225,9 @@ static void AT_DecodeRxBuffer(void) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Send Sigfox empty frame.
-				sfx_error = SIGFOX_API_open(&rc1);
+				sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 				if (sfx_error == SFX_ERR_NONE) {
+					sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
 				}
 				SIGFOX_API_close();
@@ -1236,11 +1255,11 @@ static void AT_DecodeRxBuffer(void) {
 					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
 					if (get_param_result == AT_NO_ERROR) {
 						// Send Sigfox frame with specified downlink request.
-						sfx_error = SIGFOX_API_open(&rc1);
+						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
 						}
-
 						SIGFOX_API_close();
 						if (sfx_error == SFX_ERR_NONE) {
 							if (downlink_request == 1) {
@@ -1263,8 +1282,9 @@ static void AT_DecodeRxBuffer(void) {
 					get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
 					if (get_param_result == AT_NO_ERROR) {
 						// Send Sigfox frame with no downlink request (by default).
-						sfx_error = SIGFOX_API_open(&rc1);
+						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
+							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
 						}
 						SIGFOX_API_close();
@@ -1437,6 +1457,111 @@ static void AT_DecodeRxBuffer(void) {
 			}
 		}
 #endif
+#ifdef AT_COMMANDS_RC
+		// Get Sigfox RC command AT$RC=<rc><CR>.
+		else if (AT_CompareCommand(AT_IN_COMMAND_RC) == AT_NO_ERROR) {
+			switch (at_ctx.sigfox_rc_idx) {
+			case SFX_RC1:
+				USARTx_SendString("RC1\n");
+				break;
+			case SFX_RC2:
+				USARTx_SendString("RC2\n");
+				break;
+			case SFX_RC3A:
+				USARTx_SendString("RC3A\n");
+				break;
+			case SFX_RC3C:
+				USARTx_SendString("RC3C\n");
+				break;
+			case SFX_RC4:
+				USARTx_SendString("RC4\n");
+				break;
+			case SFX_RC5:
+				USARTx_SendString("RC5\n");
+				break;
+			case SFX_RC6:
+				USARTx_SendString("RC6\n");
+				break;
+			case SFX_RC7:
+				USARTx_SendString("RC7\n");
+				break;
+			default:
+				USARTx_SendString("Unknown RC\n");
+				break;
+			}
+		}
+		// Set Sigfox RC command AT$RC=<rc><CR>.
+		else if (AT_CompareHeader(AT_IN_HEADER_RC) == AT_NO_ERROR) {
+			unsigned int rc = 0;
+			// Search RC parameter.
+			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &rc);
+			if (get_param_result == AT_NO_ERROR) {
+				// Check value.
+				if (rc < SFX_RC_LIST_MAX_SIZE) {
+					// Update radio configuration.
+					switch (rc) {
+					case SFX_RC1:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC1;
+						at_ctx.sigfox_rc_idx = SFX_RC1;
+						AT_ReplyOk();
+						break;
+					case SFX_RC2:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC1;
+						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc2_sm_config[byte_idx];
+						at_ctx.sigfox_rc_idx = SFX_RC2;
+						AT_ReplyOk();
+						break;
+					case SFX_RC3A:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC3A;
+						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc3a_config[byte_idx];
+						at_ctx.sigfox_rc_idx = SFX_RC3A;
+						AT_ReplyOk();
+						break;
+					case SFX_RC3C:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC3C;
+						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc3c_config[byte_idx];
+						at_ctx.sigfox_rc_idx = SFX_RC3C;
+						AT_ReplyOk();
+						break;
+					case SFX_RC4:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC4;
+						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc4_sm_config[byte_idx];
+						at_ctx.sigfox_rc_idx = SFX_RC4;
+						AT_ReplyOk();
+						break;
+					case SFX_RC5:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC5;
+						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc5_config[byte_idx];
+						at_ctx.sigfox_rc_idx = SFX_RC5;
+						AT_ReplyOk();
+						break;
+					case SFX_RC6:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC6;
+						at_ctx.sigfox_rc_idx = SFX_RC6;
+						AT_ReplyOk();
+						break;
+					case SFX_RC7:
+						at_ctx.sigfox_rc = (sfx_rc_t) RC7;
+						at_ctx.sigfox_rc_idx = SFX_RC7;
+						AT_ReplyOk();
+						break;
+					default:
+						// Invalid RC.
+						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+						break;
+					}
+				}
+				else {
+					// Invalid RC.
+					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+				}
+			}
+			else {
+				// Error in RC parameter.
+				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+			}
+		}
+#endif
 		// Unknown command.
 		else {
 			AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_COMMAND);
@@ -1444,13 +1569,11 @@ static void AT_DecodeRxBuffer(void) {
 	}
 }
 
-/*** AT functions ***/
-
-/* INIT AT MANAGER.
+/* RESET AT PARSER.
  * @param:	None.
  * @return:	None.
  */
-void AT_Init(void) {
+void AT_Reset(void) {
 	// Init context.
 	unsigned int idx = 0;
 	for (idx=0 ; idx<AT_BUFFER_SIZE ; idx++) at_ctx.at_rx_buf[idx] = 0;
@@ -1469,6 +1592,20 @@ void AT_Init(void) {
 #endif
 }
 
+/*** AT functions ***/
+
+/* INIT AT MANAGER.
+ * @param:	None.
+ * @return:	None.
+ */
+void AT_Init(void) {
+	// Reset parser.
+	AT_Reset();
+	// Default Sigfox RC set to RC1.
+	at_ctx.sigfox_rc = (sfx_rc_t) RC1;
+	at_ctx.sigfox_rc_idx = SFX_RC1;
+}
+
 /* MAIN TASK OF AT COMMAND MANAGER.
  * @param:	None.
  * @return:	None.
@@ -1477,7 +1614,7 @@ void AT_Task(void) {
 	// Trigger decoding function if line end found.
 	if (at_ctx.at_line_end_flag) {
 		AT_DecodeRxBuffer();
-		AT_Init();
+		AT_Reset();
 	}
 }
 

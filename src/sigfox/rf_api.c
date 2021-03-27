@@ -30,7 +30,7 @@
 #endif
 // Uplink parameters.
 #define RF_API_UPLINK_OUTPUT_POWER_ETSI		14
-#define RF_API_UPLINK_OUTPUT_POWER_FCC		22
+#define RF_API_UPLINK_OUTPUT_POWER_FCC		20
 // Downlink parameters.
 #define RF_API_DOWNLINK_FRAME_LENGTH_BYTES	15
 #define RF_API_DOWNLINK_TIMEOUT_SECONDS		25
@@ -132,23 +132,26 @@ static void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
 	// Init common parameters.
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	rf_api_ctx.rf_api_frequency_shift_direction = 0;
+	rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
 	// Init timings.
 	switch (modulation) {
 	case SFX_DBPSK_100BPS:
 		// 100 bps timings.
 		rf_api_ctx.rf_api_symbol_duration_us = 10000;
-		rf_api_ctx.rf_api_ramp_duration_us = 2500;
 		rf_api_ctx.rf_api_frequency_shift_hz = 400;
+		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
 		break;
 	case SFX_DBPSK_600BPS:
 		// 600 bps timings.
 		rf_api_ctx.rf_api_symbol_duration_us = 1667;
-		rf_api_ctx.rf_api_ramp_duration_us = 0; // TBD.
-		rf_api_ctx.rf_api_frequency_shift_hz = 0; // TBD.
+		rf_api_ctx.rf_api_frequency_shift_hz = 2000;
+		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_FCC;
 		break;
 	default:
 		break;
 	}
+	rf_api_ctx.rf_api_ramp_duration_us = (rf_api_ctx.rf_api_symbol_duration_us / 4);
+
 }
 
 /* SELECT RF PATH ACCORDING TO RF MODE AND SIGFOX RADIO CONFIGURAION.
@@ -167,8 +170,6 @@ static void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
 #ifdef HW2_0
 		SKY13317_SetChannel(SKY13317_CHANNEL_RF2);
 #endif
-		rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
-		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
 		break;
 	case SFX_RF_MODE_RX:
 		// Activate LNA path.

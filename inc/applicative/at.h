@@ -21,6 +21,7 @@
 #define AT_COMMANDS_SIGFOX
 #define AT_COMMANDS_CW_RSSI
 #define AT_COMMANDS_TEST_MODES
+#define AT_COMMANDS_RC
 
 /*** AT user functions ***/
 
