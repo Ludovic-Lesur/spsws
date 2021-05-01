@@ -10,7 +10,6 @@
 // Peripherals.
 #include "adc.h"
 #include "aes.h"
-#include "dma.h"
 #include "exti.h"
 #include "flash.h"
 #include "gpio.h"
@@ -110,8 +109,8 @@ typedef struct {
 	WEATHER_Data spsws_weather_data;
 	// Geoloc.
 	Position spsws_geoloc_position;
-	unsigned char spsws_geoloc_fix_duration_seconds;
-	unsigned char spsws_geoloc_timeout;
+	unsigned int spsws_geoloc_fix_duration_seconds;
+	unsigned char spsws_geoloc_timeout_flag;
 	// Sigfox.
 	sfx_rc_t spsws_sfx_rc;
 	sfx_u32 spsws_sfx_rc_std_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE];
@@ -122,13 +121,6 @@ typedef struct {
 /*** SPSWS global variables ***/
 
 static SPSWS_Context spsws_ctx;
-#ifndef ATM
-static const sfx_u32 spsws_rc2_sm_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC2_SM_CONFIG;
-static const sfx_u32 spsws_rc4_sm_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC4_SM_CONFIG;
-static const sfx_u32 spsws_rc3a_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC3A_CONFIG;
-static const sfx_u32 spsws_rc3c_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC3C_CONFIG;
-static const sfx_u32 spsws_rc5_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC5_CONFIG;
-#endif
 
 /*** SPSWS local functions ***/
 
@@ -241,7 +233,7 @@ int main (void) {
 	spsws_ctx.spsws_hour_changed_flag = 0;
 	spsws_ctx.spsws_day_changed_flag = 0;
 	spsws_ctx.spsws_is_afternoon_flag = 0;
-	spsws_ctx.spsws_geoloc_timeout = 0;
+	spsws_ctx.spsws_geoloc_timeout_flag = 0;
 	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
 #ifdef IM
@@ -257,7 +249,6 @@ int main (void) {
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
-	unsigned int geoloc_fix_start_time_seconds = 0;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	// Main loop.
 	while (1) {
@@ -369,14 +360,12 @@ int main (void) {
 #ifdef HW2_0
 			USART1_Init();
 #endif
-			LPUART1_Init();
+			LPUART1_Init(rtc_use_lse);
 			I2C1_Init();
 			SPI1_Init();
 #ifdef HW2_0
 			SPI2_Init();
 #endif
-			// DMA.
-			DMA1_Init();
 			// Init components.
 			SX1232_Init();
 			SX1232_Tcxo(1);
@@ -539,36 +528,26 @@ int main (void) {
 			IWDG_Reload();
 			// Get position from GPS.
 			LPUART1_PowerOn();
-			geoloc_fix_start_time_seconds = TIM22_GetSeconds();
-			neom8n_return_code = NEOM8N_GetPosition(&spsws_ctx.spsws_geoloc_position, SPSWS_GEOLOC_TIMEOUT_SECONDS);
+			neom8n_return_code = NEOM8N_GetPosition(&spsws_ctx.spsws_geoloc_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, 0, &spsws_ctx.spsws_geoloc_fix_duration_seconds);
 			LPUART1_PowerOff();
 			// Update flag whatever the result.
 			spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
 			// Parse result.
-			if (neom8n_return_code == NEOM8N_SUCCESS) {
-				// Get fix duration and update flag.
-				spsws_ctx.spsws_geoloc_fix_duration_seconds = TIM22_GetSeconds() - geoloc_fix_start_time_seconds;
-				if (spsws_ctx.spsws_geoloc_fix_duration_seconds > SPSWS_GEOLOC_TIMEOUT_SECONDS) {
-					spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
-				}
-			}
-			else {
-				// Set fix duration to timeout.
-				spsws_ctx.spsws_geoloc_fix_duration_seconds = SPSWS_GEOLOC_TIMEOUT_SECONDS;
-				spsws_ctx.spsws_geoloc_timeout = 1;
+			if (neom8n_return_code != NEOM8N_SUCCESS) {
+				spsws_ctx.spsws_geoloc_timeout_flag = 1;
 			}
 			IWDG_Reload();
 			// Build Sigfox frame.
-			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
+			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout_flag, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink geolocation frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (spsws_ctx.spsws_geoloc_timeout ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (spsws_ctx.spsws_geoloc_timeout_flag ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Reset geoloc variables.
-			spsws_ctx.spsws_geoloc_timeout = 0;
+			spsws_ctx.spsws_geoloc_timeout_flag = 0;
 			spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
 			// Enter standby mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_OFF;
@@ -580,7 +559,7 @@ int main (void) {
 			SX1232_Tcxo(0);
 			// Get current timestamp from GPS.{
 			LPUART1_PowerOn();
-			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
+			neom8n_return_code = NEOM8N_GetTimestamp(&spsws_ctx.spsws_current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, 0);
 			LPUART1_PowerOff();
 			// Calibrate RTC if timestamp is available.
 			if (neom8n_return_code == NEOM8N_SUCCESS) {
@@ -616,7 +595,6 @@ int main (void) {
 			TIM2_Disable();
 			LPTIM1_Disable();
 			SPI1_Disable();
-			DMA1_Disable();
 			LPUART1_Disable();
 			I2C1_Disable();
 			AES_Disable();

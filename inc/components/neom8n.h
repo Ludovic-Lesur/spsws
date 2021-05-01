@@ -49,9 +49,8 @@ typedef enum {
 /*** NEOM8N user functions ***/
 
 void NEOM8N_Init(void);
-NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned char timeout_seconds);
-unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp);
-NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned char timeout_seconds);
+NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
+NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv, unsigned int* fix_duration_seconds);
 
 /*** NEOM8N utility functions ***/
 

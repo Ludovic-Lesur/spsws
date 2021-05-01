@@ -139,12 +139,12 @@ unsigned char RCC_SwitchToMsi(void) {
 	// Init MSI.
 	RCC -> CR |= (0b1 << 8); // Enable MSI (MSION='1').
 	RCC -> ICSCR &= ~(0b111 << 13); // Set frequency to 65kHz (MSIRANGE='000').
-	// Wait for HSI to be stable.
+	// Wait for MSI to be stable.
 	unsigned char sysclk_on_msi = 0;
 	unsigned int count = 0;
 	while ((((RCC -> CR) & (0b1 << 9)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
 		RCC_Delay();
-		count++; // Wait for HSIRDYF='1' or timeout.
+		count++; // Wait for MSIRDYF='1' or timeout.
 	}
 	// Check timeout.
 	if (count < RCC_TIMEOUT_COUNT) {
