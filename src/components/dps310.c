@@ -52,7 +52,7 @@ static DPS310_Context dps310_ctx;
  */
 static unsigned char DPS310_WriteRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char value) {
 	unsigned char register_write_command[2] = {register_address, value};
-	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, register_write_command, 2);
+	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, register_write_command, 2, 1);
 	if (i2c_access == 0) return 0;
 	return 1;
 }
@@ -65,7 +65,7 @@ static unsigned char DPS310_WriteRegister(unsigned char dps310_i2c_address, unsi
  */
 static unsigned char DPS310_ReadRegister(unsigned char dps310_i2c_address, unsigned char register_address, unsigned char* value) {
 	unsigned char local_addr = register_address;
-	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, &local_addr, 1);
+	unsigned char i2c_access = I2C1_Write(dps310_i2c_address, &local_addr, 1, 1);
 	if (i2c_access == 0) return 0;
 	i2c_access = I2C1_Read(dps310_i2c_address, value, 1);
 	if (i2c_access == 0) return 0;

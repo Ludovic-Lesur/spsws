@@ -244,25 +244,7 @@ unsigned char RCC_EnableLsi(void) {
  * @return lsi_freq_hz:	LSI oscillator frequency in Hz.
  */
 unsigned int RCC_GetLsiFrequency(void) {
-	// Local variables.
-	unsigned int lsi_freq_hz = 0;
-	// Init and start timers.
-	LPTIM1_Init(LPTIM_MODE_LSI_CALIBRATION);
-	TIM21_Init();
-	LPTIM1_Start();
-	TIM21_Start();
-	// Wait 1 second.
-	while (((TIM21 -> SR) & (0b1 << 0)) == 0); // Wait for first overflow.
-	TIM21 -> SR &= ~(0b1 << 0); // Clear flag (UIF='0').
-	// Get LSI frequency and stop timers.
-	lsi_freq_hz = (LPTIM1 -> CNT);
-	LPTIM1_Stop();
-	TIM21_Stop();
-	// Check value.
-	if (lsi_freq_hz == 0) {
-		lsi_freq_hz = 38000;
-	}
-	return lsi_freq_hz;
+	return RCC_LSI_FREQUENCY_HZ;
 }
 
 /* CONFIGURE AND USE LSE AS LOW SPEED OSCILLATOR (32kHz EXTERNAL QUARTZ).

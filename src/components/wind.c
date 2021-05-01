@@ -8,8 +8,6 @@
 #include "wind.h"
 
 #include "exti.h"
-#include "lptim.h"
-#include "lptim_reg.h"
 #include "mapping.h"
 #include "math.h"
 #include "max11136.h"
@@ -17,7 +15,6 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 
 #if (defined CM || defined ATM)
@@ -200,15 +197,15 @@ void WIND_Init(void) {
 	// Init GPIOs and EXTI.
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	GPIO_Configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
+	EXTI_ConfigureGpio(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
 #endif
 #ifdef WIND_VANE_ULTIMETER
 	// Wind speed.
 	GPIO_Configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_ConfigureInterrupt(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
+	EXTI_ConfigureGpio(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
 	// Wind direction.
 	GPIO_Configure(&GPIO_WIND_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_ConfigureInterrupt(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
+	EXTI_ConfigureGpio(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
 #endif
 }
 
@@ -221,9 +218,7 @@ void WIND_StartContinuousMeasure(void) {
 	wind_ctx.wind_speed_seconds_count = 0;
 	wind_ctx.wind_direction_seconds_count = 0;
 #ifdef WIND_VANE_ULTIMETER
-	// Init LPTIM for phase shift operation.
-	LPTIM1_Init(LPTIM_MODE_ULTIMETER);
-	LPTIM1_Enable();
+	// Init phase shift timers: TBD.
 #endif
 	// Enable required interrupts.
 	EXTI_ClearAllFlags();
@@ -239,9 +234,7 @@ void WIND_StopContinuousMeasure(void) {
 	// Disable required interrupts.
 	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
 #ifdef WIND_VANE_ULTIMETER
-	// Stop LPTIM.
-	LPTIM1_Stop();
-	LPTIM1_Disable();
+	// Stop phase shift timers: TBD.
 #endif
 #ifdef ATM
 	LPTIM1_Init(LPTIM_MODE_DELAY);
@@ -303,14 +296,14 @@ void WIND_SpeedEdgeCallback(void) {
 	// Wind direction.
 #ifdef WIND_VANE_ULTIMETER
 	// Capture PWM period.
-	LPTIM1_Stop();
-	wind_ctx.wind_direction_pwm_period = LPTIM1_GetCounter();
+	// --- Stop phase shift timer.
+	// --- wind_ctx.wind_direction_pwm_period = Timer_GetCounter();
 	// Compute direction
 	if ((wind_ctx.wind_direction_pwm_period > 0) && (wind_ctx.wind_direction_pwm_duty_cycle <= wind_ctx.wind_direction_pwm_period)) {
 		wind_ctx.wind_direction_degrees = (wind_ctx.wind_direction_pwm_duty_cycle * 360) / (wind_ctx.wind_direction_pwm_period);
 	}
 	// Start new cycle.
-	LPTIM1_Start();
+	// --- Restart phase shift timer.
 #endif
 }
 
@@ -321,7 +314,7 @@ void WIND_SpeedEdgeCallback(void) {
  */
 void WIND_DirectionEdgeCallback(void) {
 	// Capture PWM duty cycle.
-	wind_ctx.wind_direction_pwm_duty_cycle = LPTIM1_GetCounter();
+	// wind_ctx.wind_direction_pwm_duty_cycle = Timer_GetCounter();
 }
 #endif
 
@@ -361,11 +354,7 @@ void WIND_MeasurementPeriodCallback(void) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 			// Internal 16MHz clock.
 			RCC_SwitchToHsi();
-			// Timers.
-			TIM21_Start();
-			TIM22_Start();
-			LPTIM1_Init(LPTIM_MODE_DELAY);
-			LPTIM1_Enable();
+			// --- Init Timers.
 			// SPI.
 #ifdef HW1_0
 			SPI1_Enable();
@@ -385,9 +374,7 @@ void WIND_MeasurementPeriodCallback(void) {
 			SPI2_Disable();
 #endif
 			// Turn timers off.
-			TIM21_Disable();
-			TIM22_Disable();
-			LPTIM1_Disable();
+			// --- Stop Timers.
 			// Get 12-bits result.
 			unsigned int wind_direction_12bits = 0;
 			MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);

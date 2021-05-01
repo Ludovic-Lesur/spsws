@@ -117,7 +117,7 @@ void SX1232_Tcxo(unsigned char tcxo_enable) {
 	else {
 		GPIO_Write(&GPIO_TCXO32_POWER_ENABLE, 1);
 		// Wait for TCXO to warm-up.
-		LPTIM1_DelayMilliseconds(100);
+		LPTIM1_DelayMilliseconds(100, 1);
 	}
 }
 
@@ -144,7 +144,7 @@ void SX1232_SetOscillator(SX1232_Oscillator oscillator) {
 		break;
 	}
 	// Wait TS_OSC = 250us typical.
-	LPTIM1_DelayMilliseconds(5);
+	LPTIM1_DelayMilliseconds(5, 1);
 	// Trigger RC oscillator calibration.
 	SX1232_WriteRegister(SX1232_REG_OSC, 0x0F);
 }
@@ -548,9 +548,9 @@ void SX1232_StartCw(void) {
 	GPIO_Write(&GPIO_SX1232_DIO2, 1);
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSTX);
-	LPTIM1_DelayMilliseconds(2); // Wait TS_FS=60us typical.
+	LPTIM1_DelayMilliseconds(2, 1); // Wait TS_FS=60us typical.
 	SX1232_SetMode(SX1232_MODE_TX);
-	LPTIM1_DelayMilliseconds(2); // Wait TS_TR=120us typical.
+	LPTIM1_DelayMilliseconds(2, 1); // Wait TS_TR=120us typical.
 }
 
 /* STOP CONTINUOUS WAVE OUTPUT.
@@ -560,7 +560,7 @@ void SX1232_StartCw(void) {
 void SX1232_StopCw(void) {
 	// Stop data signal and radio.
 	GPIO_Write(&GPIO_SX1232_DIO2, 0);
-	LPTIM1_DelayMilliseconds(2); // Wait ramp down.
+	LPTIM1_DelayMilliseconds(2, 1); // Wait ramp down.
 	SX1232_SetMode(SX1232_MODE_STANDBY);
 }
 

@@ -47,7 +47,7 @@ static unsigned char SI1133_WriteRegisters(unsigned char si1133_i2c_address, uns
 	for (byte_idx=1 ; byte_idx<tx_buf_length ; byte_idx++) {
 		register_write_command[byte_idx] = value_buf[byte_idx-1];
 	}
-	unsigned char i2c_access = I2C1_Write(si1133_i2c_address, register_write_command, tx_buf_length);
+	unsigned char i2c_access = I2C1_Write(si1133_i2c_address, register_write_command, tx_buf_length, 1);
 	if (i2c_access == 0) return 0;
 	return 1;
 }
@@ -59,7 +59,7 @@ static unsigned char SI1133_WriteRegisters(unsigned char si1133_i2c_address, uns
  */
 static unsigned char SI1133_ReadRegister(unsigned char si1133_i2c_address, unsigned char register_address, unsigned char* value) {
 	unsigned char local_addr = register_address;
-	unsigned char i2c_access = I2C1_Write(si1133_i2c_address, &local_addr, 1);
+	unsigned char i2c_access = I2C1_Write(si1133_i2c_address, &local_addr, 1, 1);
 	if (i2c_access == 0) return 0;
 	i2c_access = I2C1_Read(si1133_i2c_address, value, 1);
 	if (i2c_access == 0) return 0;

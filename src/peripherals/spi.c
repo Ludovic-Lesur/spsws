@@ -144,12 +144,12 @@ void SPI1_PowerOn(void) {
 	// Switch SX1232 on.
 	GPIO_Write(&GPIO_RF_POWER_ENABLE, 1);
 	GPIO_Write(&GPIO_SX1232_CS, 1); // CS high (idle state).
-	LPTIM1_DelayMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100, 1);
 #ifdef HW1_0
 	// Switch MAX11136 on.
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	GPIO_Write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
-	LPTIM1_DelayMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100, 1);
 #ifdef USE_HWT
 	// MAX5495.
 	GPIO_Write(&GPIO_MAX5495_CS, 1); // CS high (idle state).
@@ -179,7 +179,7 @@ void SPI1_PowerOff(void) {
 	GPIO_Configure(&GPIO_SPI1_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_SPI1_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Delay required if another cycle is requested by applicative layer.
-	LPTIM1_DelayMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100, 1);
 }
 
 /* SEND A BYTE THROUGH SPI1.
@@ -349,7 +349,7 @@ void SPI2_PowerOn(void) {
 	// Switch analog circuitry on.
 	GPIO_Write(&GPIO_ADC_POWER_ENABLE, 1);
 	GPIO_Write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
-	LPTIM1_DelayMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100, 1);
 }
 
 /* SWITCH ALL SPI2 SLAVES OFF.
@@ -365,7 +365,7 @@ void SPI2_PowerOff(void) {
 	GPIO_Configure(&GPIO_SPI2_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_SPI2_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Delay required if another cycle is requested by applicative layer.
-	LPTIM1_DelayMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100, 1);
 }
 
 /* SEND A SHORT THROUGH SPI2.

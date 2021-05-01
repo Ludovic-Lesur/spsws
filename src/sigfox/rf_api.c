@@ -464,9 +464,9 @@ sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
 sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * state) {
 	// Start radio.
 	SX1232_SetMode(SX1232_MODE_FSRX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60us typical.
+	LPTIM1_DelayMilliseconds(5, 1); // Wait TS_FS=60us typical.
 	SX1232_SetMode(SX1232_MODE_RX);
-	LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120us typical.
+	LPTIM1_DelayMilliseconds(5, 1); // Wait TS_TR=120us typical.
 	// Wait for external interrupt (payload ready on DIO0).
 	unsigned char rssi_retrieved = 0;
 	unsigned int rx_window_start_time_seconds = TIM22_GetSeconds();

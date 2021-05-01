@@ -125,19 +125,19 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 	switch (delay_type) {
 	case SFX_DLY_INTER_FRAME_TX:
 		// 0 to 2s in Uplink DC.
-		LPTIM1_DelayMilliseconds(500);
+		LPTIM1_DelayMilliseconds(500, 1);
 		break;
 	case SFX_DLY_INTER_FRAME_TRX:
 		// 500 ms in Uplink/Downlink FH & Downlink DC.
-		LPTIM1_DelayMilliseconds(500);
+		LPTIM1_DelayMilliseconds(500, 1);
 		break;
 	case SFX_DLY_OOB_ACK:
 		// 1.4s to 4s for Downlink OOB.
-		LPTIM1_DelayMilliseconds(2000);
+		LPTIM1_DelayMilliseconds(2000, 1);
 		break;
 	case SFX_DLY_CS_SLEEP:
 		// Delay between several trials of Carrier Sense (for the first frame only).
-		LPTIM1_DelayMilliseconds(1000);
+		LPTIM1_DelayMilliseconds(1000, 1);
 		break;
 	default:
 		break;

@@ -340,7 +340,7 @@ int main (void) {
 			TIM22_Init();
 			TIM21_Start();
 			TIM22_Start();
-			LPTIM1_Init(LPTIM_MODE_DELAY);
+			LPTIM1_Init();
 			// RTC (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
 				rtc_use_lse = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);

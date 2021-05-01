@@ -521,7 +521,7 @@ static void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
 			LPUART1_SendByte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 		}
-		LPTIM1_DelayMilliseconds(100);
+		LPTIM1_DelayMilliseconds(100, 1);
 	}
 }
 

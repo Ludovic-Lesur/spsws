@@ -7,90 +7,91 @@
 
 #include "lptim.h"
 
+#include "exti.h"
 #include "lptim_reg.h"
-#include "mode.h"
+#include "nvic.h"
+#include "pwr.h"
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "wind.h"
 
 /*** LPTIM local macros ***/
 
-#define LPTIM_TIMEOUT_COUNT		100
+#define LPTIM_TIMEOUT_COUNT		1000000
+#define LPTIM_DELAY_MS_MIN		4
+#define LPTIM_DELAY_MS_MAX		255000
 
-/*** LPTIM functions ***/
+/*** LPTIM local global variables ***/
 
-/* INIT LPTIM FOR DELAY OPERATION.
- * @param lptim1_mode:	Timer mode (use enumeration in lptim.h).
+static unsigned int lptim_clock_frequency_hz = 0;
+static volatile unsigned char lptim_wake_up = 0;
+
+/*** LPTIM local functions ***/
+
+/* LPTIM INTERRUPT HANDLER.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPTIM1_IRQHandler(void) {
+	// Check flag.
+	if (((LPTIM1 -> ISR) & (0b1 << 1)) != 0) {
+		// Set wake-up flag.
+		lptim_wake_up = 1;
+		// Clear all flags.
+		LPTIM1 -> ICR |= (0b1 << 1);
+	}
+}
+
+/* WRITE ARR REGISTER.
+ * @param arr_value:	ARR register value to write.
  * @return:				None.
  */
-void LPTIM1_Init(LPTIM_Mode lptim1_mode) {
-	// Disable peripheral.
-	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
-	// Select timer clock.
-	RCC -> CCIPR &= ~(0b11 << 18); // LPTIMSEL='00' (APB clock selected = 65kHz / 16MHz).
-	if (lptim1_mode == LPTIM_MODE_LSI_CALIBRATION) {
-		RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
-	}
-	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
-	// Configure peripheral.
-	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
-	LPTIM1 -> CFGR |= (0b1 << 19); // Enable timeout.
-	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
-	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1'), needed to write ARR.
-	// Set ARR and PSC according to mode.
-	switch (lptim1_mode) {
-	case LPTIM_MODE_DELAY:
-		// Overflow period = 1ms.
-		LPTIM1 -> ARR = RCC_GetSysclkKhz();
-		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Prescaler=1.
-		break;
-	case LPTIM_MODE_LSI_CALIBRATION:
-		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period to count LSI edges.
-		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Prescaler=1.
-		break;
-#if (defined CM || defined ATM)
-#ifdef WIND_VANE_ULTIMETER
-	case LPTIM_MODE_ULTIMETER:
-		LPTIM1 -> ARR = 0xFFFF; // Maximum overflow period to optimize dynamic (improve accuracy).
-		LPTIM1 -> CFGR &= 0xFFFFF1FF; // Reset bits 9-11.
-		// Ensure timer overflow period is greated than speed measurement period.
-		LPTIM1 -> CFGR |= (((WIND_SPEED_MEASUREMENT_PERIOD_SECONDS + 1) * (RCC_GetSysclkKhz() * 1000)) / (0xFFFF)) + 1;
-		break;
-#endif
-#endif
-	default:
-		// Unknwon mode.
-		break;
-	}
+static void LPTIM1_WriteArr(unsigned int arr_value) {
 	unsigned int loop_count = 0;
+	// Reset bits.
+	LPTIM1 -> ICR |= (0b1 << 4);
+	LPTIM1 -> ARR &= 0xFFFF0000;
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
 		// Wait for ARROK='1' or timeout.
 		loop_count++;
 		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
 	}
+	// Write new value.
+	LPTIM1 -> ICR |= (0b1 << 4);
+	LPTIM1 -> ARR |= arr_value;
+	loop_count = 0;
+	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
+		// Wait for ARROK='1' or timeout.
+		loop_count++;
+		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
+	}
+}
+
+/*** LPTIM functions ***/
+
+/* INIT LPTIM FOR DELAY OPERATION.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPTIM1_Init(void) {
+	// Disable peripheral.
+	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
+	// Enable peripheral clock.
+	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
+	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
+	lptim_clock_frequency_hz = (RCC_LSI_FREQUENCY_HZ >> 7);
+	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
+	// Configure peripheral.
+	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
+	LPTIM1 -> CFGR &= ~(0b1 << 0);
+	LPTIM1 -> CFGR |= (0b111 << 9); // Prescaler = 128.
+	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
+	// Enable LPTIM EXTI line.
+	LPTIM1 -> IER |= (0b1 << 1); // ARRMIE='1'.
+	EXTI_ConfigureLine(EXTI_LINE_LPTIM1, EXTI_TRIGGER_RISING_EDGE);
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_LPTIM1, 2);
 	// Clear all flags.
 	LPTIM1 -> ICR |= (0b1111111 << 0);
-	// Disable peripheral by default.
-	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-}
-
-/* START LPTIM1.
- * @param:	None.
- * @return:	None.
- */
-void LPTIM1_Start(void) {
-	// Enable timer.
-	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
-}
-
-/* STOP LPTIM1.
- * @param:	None.
- * @return:	None.
- */
-void LPTIM1_Stop(void) {
-	// Stop timer.
-	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 
 /* ENABLE LPTIM1 PERIPHERAL.
@@ -109,40 +110,45 @@ void LPTIM1_Enable(void) {
 void LPTIM1_Disable(void) {
 	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-	LPTIM1 -> CNT = 0;
+	LPTIM1 -> CNT &= 0xFFFF0000;
+	// Clear all flags.
+	LPTIM1 -> ICR |= (0b1111111 << 0);
+	// Disable peripheral clock.
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 }
 
 /* DELAY FUNCTION.
- * @param delay_ms:	Number of milliseconds to wait.
- * @return:			None.
+ * @param delay_ms:		Number of milliseconds to wait.
+ * @param stop_mode:	Enter stop mode during delay if non zero.
+ * @return:				None.
  */
-void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
+void LPTIM1_DelayMilliseconds(unsigned int delay_ms, unsigned char stop_mode) {
+	// Clamp value if required.
+	unsigned int local_delay_ms = delay_ms;
+	if (local_delay_ms > LPTIM_DELAY_MS_MAX) {
+		local_delay_ms = LPTIM_DELAY_MS_MAX;
+	}
+	if (local_delay_ms < LPTIM_DELAY_MS_MIN) {
+		local_delay_ms = LPTIM_DELAY_MS_MIN;
+	}
 	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-	// Make as many overflows as required.
-	unsigned int ms_count = 0;
-	unsigned char lptim_default = 0;
-	for (ms_count=0 ; ms_count<delay_ms ; ms_count++) {
-		// Start counter.
-		LPTIM1 -> CNT &= 0xFFFF0000;
-		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
-		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
-		// Clear flag.
-		LPTIM1 -> ICR |= (0b1 << 1);
-		// Exit in case of timeout.
-		if (lptim_default != 0) {
-			break;
+	// Reset counter.
+	LPTIM1 -> CNT &= 0xFFFF0000;
+	// Compute ARR value.
+	unsigned int arr = ((local_delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
+	LPTIM1_WriteArr(arr);
+	// Start timer.
+	NVIC_EnableInterrupt(NVIC_IT_LPTIM1);
+	lptim_wake_up = 0;
+	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
+	// Wait for interrupt.
+	while (lptim_wake_up == 0) {
+		if (stop_mode != 0) {
+			PWR_EnterStopMode();
 		}
 	}
 	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-}
-
-/* GET CURRENT LPTIM COUNTER VALUE.
- * @param:	None.
- * @return:	Current counter value.
- */
-volatile unsigned int LPTIM1_GetCounter(void) {
-	return (LPTIM1 -> CNT);
+	NVIC_DisableInterrupt(NVIC_IT_LPTIM1);
 }

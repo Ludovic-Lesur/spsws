@@ -47,10 +47,10 @@ void SHT3X_Init(void) {
 void SHT3X_PerformMeasurements(unsigned char sht3x_i2c_address) {
 	// Trigger high repeatability measurement with clock streching disabled.
 	unsigned char measurement_command[2] = {0x24, 0x00};
-	unsigned char i2c_access = I2C1_Write(sht3x_i2c_address, measurement_command, 2);
+	unsigned char i2c_access = I2C1_Write(sht3x_i2c_address, measurement_command, 2, 1);
 	if (i2c_access == 0) return;
 	// Wait for conversion to complete (at least 15ms).
-	LPTIM1_DelayMilliseconds(20);
+	LPTIM1_DelayMilliseconds(50, 1);
 	unsigned char measure_buf[6];
 	i2c_access = I2C1_Read(sht3x_i2c_address, measure_buf, 6);
 	if (i2c_access == 0) return;
