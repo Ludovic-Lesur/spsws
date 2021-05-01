@@ -12,8 +12,9 @@
 
 void ADC1_Init(void);
 void ADC1_Disable(void);
-void ADC1_PerformMeasurements(void);
-void ADC1_GetMcuSupplyVoltage(unsigned int* supply_voltage_mv);
-void ADC1_GetMcuTemperature(signed char* temperature_degrees);
+void ADC1_PerformAllMeasurements(void);
+void ADC1_GetMcuVoltage(unsigned int* supply_voltage_mv);
+void ADC1_GetMcuTemperatureComp2(signed char* mcu_temperature_degrees);
+void ADC1_GetMcuTemperatureComp1(unsigned char* mcu_temperature_degrees);
 
 #endif /* ADC_H */

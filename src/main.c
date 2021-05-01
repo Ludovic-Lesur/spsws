@@ -61,6 +61,7 @@
 // Sigfox.
 #define SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES	12
 #define SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES		8
+#define SPSWS_SIGFOX_RC_STD_CONFIG_SIZE				3
 
 /*** SPSWS structures ***/
 
@@ -112,6 +113,8 @@ typedef struct {
 	unsigned char spsws_geoloc_fix_duration_seconds;
 	unsigned char spsws_geoloc_timeout;
 	// Sigfox.
+	sfx_rc_t spsws_sfx_rc;
+	sfx_u32 spsws_sfx_rc_std_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE];
 	unsigned char spsws_sfx_uplink_data[SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES];
 	unsigned char spsws_sfx_downlink_data[SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_Context;
@@ -119,6 +122,13 @@ typedef struct {
 /*** SPSWS global variables ***/
 
 static SPSWS_Context spsws_ctx;
+#ifndef ATM
+static const sfx_u32 spsws_rc2_sm_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC2_SM_CONFIG;
+static const sfx_u32 spsws_rc4_sm_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC4_SM_CONFIG;
+static const sfx_u32 spsws_rc3a_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC3A_CONFIG;
+static const sfx_u32 spsws_rc3c_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC3C_CONFIG;
+static const sfx_u32 spsws_rc5_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE] = RC5_CONFIG;
+#endif
 
 /*** SPSWS local functions ***/
 
@@ -239,13 +249,15 @@ int main (void) {
 #else
 	spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // CM = 0b1.
 #endif
+	unsigned char idx = 0;
+	spsws_ctx.spsws_sfx_rc = (sfx_rc_t) RC1;
+	for (idx=0 ; idx<SPSWS_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.spsws_sfx_rc_std_config[idx] = 0;
 	// Local variables.
 	unsigned char rtc_use_lse = 0;
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	unsigned int geoloc_fix_start_time_seconds = 0;
-	sfx_rc_t spsws_sigfox_rc = (sfx_rc_t) RC1;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	// Main loop.
 	while (1) {
@@ -390,9 +402,9 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			IWDG_Reload();
 			// Retrieve internal ADC data.
-			ADC1_PerformMeasurements();
-			ADC1_GetMcuTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
-			ADC1_GetMcuSupplyVoltage(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv);
+			ADC1_PerformAllMeasurements();
+			ADC1_GetMcuTemperatureComp2(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
+			ADC1_GetMcuVoltage(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv);
 			// Retrieve external ADC data.
 #ifdef HW1_0
 			SPI1_PowerOn();
@@ -467,8 +479,9 @@ int main (void) {
 			// Build Sigfox frame.
 			MONITORING_BuildSigfoxData(&spsws_ctx.spsws_monitoring_data, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink monitoring frame.
-			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
 				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, MONITORING_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
@@ -481,8 +494,9 @@ int main (void) {
 			// Build Sigfox frame.
 			WEATHER_BuildSigfoxData(&spsws_ctx.spsws_weather_data, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink monitoring frame.
-			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
 				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, WEATHER_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
@@ -506,8 +520,9 @@ int main (void) {
 		case SPSWS_STATE_POR:
 			IWDG_Reload();
 			// Send OOB frame.
-			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
 				sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
 			}
 			SIGFOX_API_close();
@@ -546,8 +561,9 @@ int main (void) {
 			// Build Sigfox frame.
 			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink geolocation frame.
-			sfx_error = SIGFOX_API_open(&spsws_sigfox_rc);
+			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
+				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
 				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (spsws_ctx.spsws_geoloc_timeout ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
