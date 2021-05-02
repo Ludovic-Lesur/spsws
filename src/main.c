@@ -162,6 +162,7 @@ void SPSWS_UpdateTimestampFlags(void) {
 	RTC_GetTimestamp(&spsws_ctx.spsws_current_timestamp);
 	// Retrieve previous wake-up timestamp from NVM.
 	unsigned char nvm_byte = 0;
+	NVM_Enable();
 	NVM_ReadByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), &nvm_byte);
 	spsws_ctx.spsws_previous_wake_up_timestamp.year = (nvm_byte << 8);
 	NVM_ReadByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), &nvm_byte);
@@ -169,6 +170,7 @@ void SPSWS_UpdateTimestampFlags(void) {
 	NVM_ReadByte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, &spsws_ctx.spsws_previous_wake_up_timestamp.month);
 	NVM_ReadByte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, &spsws_ctx.spsws_previous_wake_up_timestamp.date);
 	NVM_ReadByte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, &spsws_ctx.spsws_previous_wake_up_timestamp.hours);
+	NVM_Disable();
 	// Check timestamp are differents (avoiding false wake-up due to RTC recalibration).
 	if ((spsws_ctx.spsws_current_timestamp.year != spsws_ctx.spsws_previous_wake_up_timestamp.year) ||
 		(spsws_ctx.spsws_current_timestamp.month != spsws_ctx.spsws_previous_wake_up_timestamp.month) ||
@@ -203,11 +205,13 @@ void SPSWS_UpdatePwut(void) {
 	// Retrieve current timestamp from RTC.
 	RTC_GetTimestamp(&spsws_ctx.spsws_current_timestamp);
 	// Update previous wake-up timestamp.
+	NVM_Enable();
 	NVM_WriteByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), ((spsws_ctx.spsws_current_timestamp.year & 0xFF00) >> 8));
 	NVM_WriteByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), ((spsws_ctx.spsws_current_timestamp.year & 0x00FF) >> 0));
 	NVM_WriteByte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.month);
 	NVM_WriteByte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.date);
 	NVM_WriteByte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, spsws_ctx.spsws_current_timestamp.hours);
+	NVM_Disable();
 }
 
 /*** SPSWS main function ***/
@@ -220,13 +224,12 @@ void SPSWS_UpdatePwut(void) {
 int main (void) {
 	// Init memory.
 	NVIC_Init();
-	FLASH_SetLatency(1);
-	NVM_Enable();
 	// Init GPIOs.
 	GPIO_Init(); // Required for clock tree configuration.
 	EXTI_Init(); // Required to clear RTC flags (EXTI 17).
-	// Init clock module.
+	// Init clock and power modules.
 	RCC_Init();
+	PWR_Init();
 	// Init context.
 	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
 	spsws_ctx.spsws_por_flag = 0;
@@ -235,7 +238,9 @@ int main (void) {
 	spsws_ctx.spsws_is_afternoon_flag = 0;
 	spsws_ctx.spsws_geoloc_timeout_flag = 0;
 	spsws_ctx.spsws_geoloc_fix_duration_seconds = 0;
+	NVM_Enable();
 	NVM_ReadByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.spsws_status_byte);
+	NVM_Disable();
 #ifdef IM
 	spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_STATION_MODE_BIT_IDX); // IM = 0b0.
 #else
@@ -261,8 +266,6 @@ int main (void) {
 			// Turn LED on.
 			GPIO_Write(&GPIO_LED, 1);
 #endif
-			// Enable NVM.
-			NVM_Enable();
 			// Check reset reason.
 			if (((RCC -> CSR) & (0b1111 << 26)) != 0) {
 				// IWDG, SW, NRST or POR reset: directly go to INIT state.
@@ -333,13 +336,9 @@ int main (void) {
 				RCC_SwitchToHsi();
 			}
 			// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
-			spsws_ctx.spsws_lsi_frequency_hz = RCC_GetLsiFrequency();
+			RCC_GetLsiFrequency(&spsws_ctx.spsws_lsi_frequency_hz);
 			IWDG_Reload();
-			// Timers (must be called before RTC inititialization to have timeout available).
-			TIM21_Init();
-			TIM22_Init();
-			TIM21_Start();
-			TIM22_Start();
+			// Timers.
 			LPTIM1_Init();
 			// RTC (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
@@ -351,8 +350,6 @@ int main (void) {
 				}
 			}
 			IWDG_Reload();
-			// Analog.
-			ADC1_Init();
 			// Communication interfaces.
 #ifdef HW1_0
 			USART2_Init();
@@ -589,9 +586,6 @@ int main (void) {
 #ifdef HW2_0
 			SPI2_Disable();
 #endif
-			ADC1_Disable();
-			TIM21_Disable();
-			TIM22_Disable();
 			TIM2_Disable();
 			LPTIM1_Disable();
 			SPI1_Disable();
@@ -599,6 +593,7 @@ int main (void) {
 			I2C1_Disable();
 			AES_Disable();
 			// Store status byte in NVM.
+			NVM_Enable();
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
 			NVM_Disable();
 			// Switch to internal MSI 65kHz (must be called before WIND functions to init LPTIM with right clock frequency).
@@ -619,7 +614,7 @@ int main (void) {
 			// Turn LED off.
 			GPIO_Write(&GPIO_LED, 0);
 #endif
-			// Enter standby mode.
+			// Enter sleep mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
 		// SLEEP.

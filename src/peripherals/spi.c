@@ -12,11 +12,10 @@
 #include "mapping.h"
 #include "rcc_reg.h"
 #include "spi_reg.h"
-#include "tim.h"
 
 /*** SPI local macros ***/
 
-#define SPI_ACCESS_TIMEOUT_SECONDS	3
+#define SPI_ACCESS_TIMEOUT_COUNT	1000000
 
 /*** SPI functions ***/
 
@@ -194,10 +193,11 @@ unsigned char SPI1_WriteByte(unsigned char tx_data) {
 	// Send data.
 	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
 	// Wait for transmission to complete.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)) {
 		// Wait for TXE='1' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }
@@ -216,17 +216,19 @@ unsigned char SPI1_ReadByte(unsigned char tx_data, unsigned char* rx_data) {
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
 	// Wait for incoming data.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
 	// Wait for reception to complete.
-	loop_start_time = TIM22_GetSeconds();
+	loop_count = 0;
 	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)) {
 		// Wait for RXNE='0' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }
@@ -242,10 +244,11 @@ unsigned char SPI1_WriteShort(unsigned short tx_data) {
 	// Send data.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
 	// Wait for transmission to complete.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((((SPI1 -> SR) & (0b1 << 1)) == 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)) {
 		// Wait for TXE='1' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }
@@ -262,17 +265,19 @@ unsigned char SPI1_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
 	// Wait for incoming data.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
 	// Wait for reception to complete.
-	loop_start_time = TIM22_GetSeconds();
+	loop_count = 0;
 	while ((((SPI1 -> SR) & (0b1 << 0)) != 0) || (((SPI1 -> SR) & (0b1 << 7)) != 0)){
 		// Wait for RXNE='0' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }
@@ -376,10 +381,11 @@ unsigned char SPI2_WriteShort(unsigned short tx_data) {
 	// Send data.
 	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
 	// Wait for transmission to complete.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((((SPI2 -> SR) & (0b1 << 1)) == 0) || (((SPI2 -> SR) & (0b1 << 7)) != 0)) {
 		// Wait for TXE='1' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }
@@ -394,17 +400,19 @@ unsigned char SPI2_ReadShort(unsigned short tx_data, unsigned short* rx_data) {
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
 	// Wait for incoming data.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (((SPI2 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	(*rx_data) = *((volatile unsigned short*) &(SPI2 -> DR));
 	// Wait for reception to complete.
-	loop_start_time = TIM22_GetSeconds();
+	loop_count = 0;
 	while ((((SPI2 -> SR) & (0b1 << 0)) != 0) || (((SPI2 -> SR) & (0b1 << 7)) != 0)) {
 		// Wait for RXNE='0' and BSY='0' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + SPI_ACCESS_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
 	}
 	return 1;
 }

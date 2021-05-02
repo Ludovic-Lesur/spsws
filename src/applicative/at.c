@@ -1022,7 +1022,9 @@ static void AT_DecodeRxBuffer(void) {
 		// NVM reset command AT$NVMR<CR>.
 		else if (AT_CompareCommand(AT_IN_COMMAND_NVMR) == AT_NO_ERROR) {
 			// Reset all NVM field to default value.
+			NVM_Enable();
 			NVM_ResetDefault();
+			NVM_Disable();
 			AT_ReplyOk();
 		}
 		// NVM read command AT$NVM=<address_offset><CR>.

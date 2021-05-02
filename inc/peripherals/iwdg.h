@@ -8,6 +8,10 @@
 #ifndef IWDG_H
 #define IWDG_H
 
+/*** IWDG macros ***/
+
+#define IWDG_REFRESH_PERIOD_SECONDS		10
+
 /*** IWDG functions ***/
 
 void IWDG_Init(void);

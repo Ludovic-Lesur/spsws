@@ -17,8 +17,8 @@
 /*** LPTIM local macros ***/
 
 #define LPTIM_TIMEOUT_COUNT		1000000
-#define LPTIM_DELAY_MS_MIN		4
-#define LPTIM_DELAY_MS_MAX		255000
+#define LPTIM_DELAY_MS_MIN		1
+#define LPTIM_DELAY_MS_MAX		55000
 
 /*** LPTIM local global variables ***/
 
@@ -78,12 +78,12 @@ void LPTIM1_Init(void) {
 	// Enable peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
 	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
-	lptim_clock_frequency_hz = (RCC_LSI_FREQUENCY_HZ >> 7);
+	lptim_clock_frequency_hz = (RCC_LSI_FREQUENCY_HZ >> 5);
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
 	// Configure peripheral.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
 	LPTIM1 -> CFGR &= ~(0b1 << 0);
-	LPTIM1 -> CFGR |= (0b111 << 9); // Prescaler = 128.
+	LPTIM1 -> CFGR |= (0b101 << 9); // Prescaler = 32.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
 	// Enable LPTIM EXTI line.
 	LPTIM1 -> IER |= (0b1 << 1); // ARRMIE='1'.

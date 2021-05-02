@@ -38,21 +38,22 @@ void RTC_IRQHandler(void) {
 		// Update flagS.
 		rtc_alarm_a_flag = 1;
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
+		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Alarm B interrupt.
 	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
 		// Update flagS.
 		rtc_alarm_b_flag = 1;
 		RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
+		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Wake-up timer interrupt.
 	if (((RTC -> ISR) & (0b1 << 10)) != 0) {
 		// Update flagS.
 		rtc_wakeup_timer_flag = 1;
 		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
+		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	}
-	// Clear EXTI flag.
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 }
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
@@ -163,6 +164,7 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	RTC -> CR |= (0b1 << 14); // Enable wake-up timer interrupt.
 	RTC_ExitInitializationMode();
 	// Enable wake-up timer interrupt.
+	EXTI_ConfigureLine(EXTI_LINE_RTC_ALARM, EXTI_TRIGGER_RISING_EDGE);
 	EXTI_ConfigureLine(EXTI_LINE_RTC_WAKEUP_TIMER, EXTI_TRIGGER_RISING_EDGE);
 	// Set interrupt priority.
 	NVIC_SetPriority(NVIC_IT_RTC, 1);
@@ -239,7 +241,9 @@ volatile unsigned char RTC_GetAlarmAFlag(void) {
  * @return:	None.
  */
 void RTC_ClearAlarmAFlag(void) {
-	// Clear local flag.
+	// Clear all flags.
+	RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	rtc_alarm_a_flag = 0;
 }
 
@@ -256,7 +260,9 @@ volatile unsigned char RTC_GetAlarmBFlag(void) {
  * @return:	None.
  */
 void RTC_ClearAlarmBFlag(void) {
-	// Clear local flag.
+	// Clear all flags.
+	RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	rtc_alarm_b_flag = 0;
 }
 
@@ -314,6 +320,8 @@ volatile unsigned char RTC_GetWakeUpTimerFlag(void) {
  * @return:	None.
  */
 void RTC_ClearWakeUpTimerFlag(void) {
-	// Clear local flag.
+	// Clear all flags.
+	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	rtc_wakeup_timer_flag = 0;
 }

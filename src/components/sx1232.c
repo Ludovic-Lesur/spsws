@@ -17,7 +17,6 @@
 /*** SX1232 local macros ***/
 
 // SX1232 oscillator frequency.
-#define SX1232_FXOSC_HZ							32000000
 #define SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES	8
 // SX1232 minimum and maximum bit rate.
 #define SX1232_BIT_RATE_BPS_MIN					(SX1232_FXOSC_HZ / ((1 << 16) - 1))

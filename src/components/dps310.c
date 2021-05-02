@@ -9,11 +9,10 @@
 
 #include "dps310_reg.h"
 #include "i2c.h"
-#include "tim.h"
 
 /*** DPS310 local macros ***/
 
-#define DPS310_TIMEOUT_SECONDS				3
+#define DPS310_TIMEOUT_COUNT				1000000
 #define DPS310_RAW_ERROR_VALUE				0X7FFFFFFF
 #define DPS310_TEMPERATURE_ERROR_VALUE		0x7F
 
@@ -118,11 +117,12 @@ static unsigned char DPS310_ReadCalibrationCoefficients(unsigned char dps310_i2c
 	// Wait for coefficients to be ready for reading.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((read_byte & (0b1 << 7)) == 0) { // Wait for COEF_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > DPS310_TIMEOUT_COUNT) return 0;
 	}
 	// Read all coefficients.
 	read_byte = 0;
@@ -194,11 +194,12 @@ static unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_addre
 	// Wait for sensor to be ready.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((read_byte & (0b1 << 6)) == 0) { // Wait for SENSOR_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > DPS310_TIMEOUT_COUNT) return 0;
 	}
 	// Trigger temperature measurement.
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
@@ -207,11 +208,12 @@ static unsigned char DPS310_ComputeRawTemperature(unsigned char dps310_i2c_addre
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 	if (i2c_access == 0) return 0;
 	// Wait for temperature to be ready.
-	loop_start_time = TIM22_GetSeconds();
+	loop_count = 0;
 	while ((read_byte & (0b1 << 5)) == 0) { // Wait for TMP_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > DPS310_TIMEOUT_COUNT) return 0;
 	}
 	// Read temperature.
 	unsigned int tmp_raw = 0;
@@ -240,11 +242,12 @@ static unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address)
 	// Wait for sensor to be ready.
 	unsigned char read_byte = 0;
 	unsigned char i2c_access = 0;
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while ((read_byte & (0b1 << 6)) == 0) { // Wait for SENSOR_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > DPS310_TIMEOUT_COUNT) return 0;
 	}
 	// Trigger pressure measurement.
 	i2c_access = DPS310_WriteRegister(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
@@ -254,11 +257,12 @@ static unsigned char DPS310_ComputeRawPressure(unsigned char dps310_i2c_address)
 	if (i2c_access == 0) return 0;
 	// Wait for pressure to be ready.
 	read_byte = 0;
-	loop_start_time = TIM22_GetSeconds();
+	loop_count = 0;
 	while ((read_byte & (0b1 << 4)) == 0) { // Wait for PRS_RDY='1'.
 		i2c_access = DPS310_ReadRegister(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + DPS310_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > DPS310_TIMEOUT_COUNT) return 0;
 	}
 	// Read pressure.
 	unsigned int prs_raw = 0;

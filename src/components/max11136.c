@@ -11,13 +11,12 @@
 #include "mapping.h"
 #include "max11136_reg.h"
 #include "spi.h"
-#include "tim.h"
 
 /*** MAX11136 local macros ***/
 
 #define MAX11136_NUMBER_OF_CHANNELS				8
 #define MAX11136_CONVERSION_LOOPS				3
-#define MAX11136_CONVERSION_TIMEOUT_SECONDS		3
+#define MAX11136_TIMEOUT_COUNT					1000000
 
 /*** MAX11136 local structures ***/
 
@@ -84,19 +83,21 @@ static void MAX11136_ConvertAllChannels12Bits(void) {
 	spi_access = MAX11136_WriteRegister(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 	if (spi_access == 0) return;
 	// Wait for conversions to complete.
-	unsigned int conversion_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 #ifdef HW1_0
 #ifdef USE_MAX11136_EOC
 	// Wait for EOC to be pulled low.
 	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
-		if (TIM22_GetSeconds() > (conversion_start_time + MAX11136_CONVERSION_TIMEOUT_SECONDS)) return;
+		loop_count++;
+		if (loop_count > MAX11136_TIMEOUT_COUNT) return;
 	}
 #endif
 #endif
 #ifdef HW2_0
 	// Wait for EOC to be pulled low.
 	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
-		if (TIM22_GetSeconds() > (conversion_start_time + MAX11136_CONVERSION_TIMEOUT_SECONDS)) return ;
+		loop_count++;
+		if (loop_count > MAX11136_TIMEOUT_COUNT) return;
 	}
 #endif
 	// Read results in FIFO.

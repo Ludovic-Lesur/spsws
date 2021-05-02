@@ -13,6 +13,7 @@
 #include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
+#include "rtc.h"
 #include "sigfox_api.h"
 #include "sigfox_types.h"
 #include "sky13317.h"
@@ -34,6 +35,7 @@
 // Downlink parameters.
 #define RF_API_DOWNLINK_FRAME_LENGTH_BYTES	15
 #define RF_API_DOWNLINK_TIMEOUT_SECONDS		25
+#define RF_API_WAIT_FRAME_CALLS_MAX			100
 
 /*** RF API local structures ***/
 
@@ -51,6 +53,8 @@ typedef struct {
 	// Output power range.
 	signed char rf_api_output_power_min;
 	signed char rf_api_output_power_max;
+	// Downlink.
+	unsigned int rf_api_wait_frame_calls_count;
 } RF_API_Context;
 
 /*** RF API local global variables ***/
@@ -225,6 +229,8 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		break;
 	// Downlink.
 	case SFX_RF_MODE_RX:
+		// Reset call counter.
+		rf_api_ctx.rf_api_wait_frame_calls_count = 0;
 		// Prepare transceiver for downlink operation (GFSK 800Hz 600bps).
 		SX1232_SetModulation(SX1232_MODULATION_FSK, SX1232_MODULATION_SHAPING_FSK_BT_1);
 		SX1232_SetFskDeviation(800);
@@ -462,34 +468,46 @@ sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
 sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * state) {
-	// Start radio.
-	SX1232_SetMode(SX1232_MODE_FSRX);
-	LPTIM1_DelayMilliseconds(5, 1); // Wait TS_FS=60us typical.
-	SX1232_SetMode(SX1232_MODE_RX);
-	LPTIM1_DelayMilliseconds(5, 1); // Wait TS_TR=120us typical.
-	// Wait for external interrupt (payload ready on DIO0).
-	unsigned char rssi_retrieved = 0;
-	unsigned int rx_window_start_time_seconds = TIM22_GetSeconds();
-	(*state) = DL_PASSED;
-	sfx_u8 sfx_err = SFX_ERR_NONE;
-	while (GPIO_Read(&GPIO_SX1232_DIO0) == 0) {
-		// Get RSSI when preamble is found.
-		if (((SX1232_GetIrqFlags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
-			(*rssi) = (sfx_s16) ((-1) * SX1232_GetRssi());
-			rssi_retrieved = 1;
+	// Init state.
+	(*state) = DL_TIMEOUT;
+	sfx_error_t sfx_err = RF_ERR_API_WAIT_FRAME;
+	// Manage call count.
+	rf_api_ctx.rf_api_wait_frame_calls_count++;
+	if (rf_api_ctx.rf_api_wait_frame_calls_count < RF_API_WAIT_FRAME_CALLS_MAX) {
+		// Go to TX state.
+		SX1232_SetMode(SX1232_MODE_FSRX);
+		LPTIM1_DelayMilliseconds(5, 1); // Wait TS_FS=60us typical.
+		SX1232_SetMode(SX1232_MODE_RX);
+		LPTIM1_DelayMilliseconds(5, 1); // Wait TS_TR=120us typical.
+		// Wait for external interrupt (payload ready on DIO0).
+		unsigned char rssi_retrieved = 0;
+		unsigned int remaining_delay = RF_API_DOWNLINK_TIMEOUT_SECONDS;
+		unsigned int sub_delay = 0;
+		while ((remaining_delay > 0) && (GPIO_Read(&GPIO_SX1232_DIO0) == 0)) {
+			// Compute sub-delay.
+			sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
+			remaining_delay -= sub_delay;
+			// Start wake-up timer.
+			RTC_StartWakeUpTimer(sub_delay);
+			while (RTC_GetWakeUpTimerFlag() == 0) {
+				// Get RSSI when preamble is found.
+				if (((SX1232_GetIrqFlags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
+					(*rssi) = (sfx_s16) ((-1) * SX1232_GetRssi());
+					rssi_retrieved = 1;
+				}
+			}
+			// Sub-delay reached: clear watchdog and flags.
+			IWDG_Reload();
+			RTC_ClearWakeUpTimerFlag();
 		}
-		// Exit if 25 seconds ellapsed.
-		if (TIM22_GetSeconds() > (rx_window_start_time_seconds + RF_API_DOWNLINK_TIMEOUT_SECONDS)) {
-			(*state) = DL_TIMEOUT;
-			sfx_err = RF_ERR_API_WAIT_FRAME;
-			break;
-		}
-		// Reload watchdog.
-		IWDG_Reload();
-	}
-	// Read FIFO if data was retrieved.
-	if ((*state) == DL_PASSED) {
-		SX1232_ReadFifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+		// Stop timer.
+		RTC_StopWakeUpTimer();
+		// Check GPIO.
+		if (GPIO_Read(&GPIO_SX1232_DIO0) != 0) {
+			// Downlink frame received.
+			(*state) = DL_PASSED;
+			sfx_err = SFX_ERR_NONE;
+			SX1232_ReadFifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
 #ifdef RF_API_LOG_FRAME
 		// Print frame on UART.
 		USARTx_SendString("Downlink frame = [");
@@ -502,7 +520,9 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 		}
 		USARTx_SendString("]\n");
 #endif
+		}
 	}
+	// Return.
 	return sfx_err;
 }
 

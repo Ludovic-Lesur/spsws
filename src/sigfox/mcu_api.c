@@ -9,11 +9,14 @@
 
 #include "adc.h"
 #include "aes.h"
+#include "exti.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "mode.h"
 #include "nvm.h"
+#include "pwr.h"
+#include "rtc.h"
 #include "sigfox_types.h"
-#include "tim.h"
 #include "usart.h"
 
 /*** MCU API local macros ***/
@@ -24,7 +27,6 @@
 
 typedef struct {
 	sfx_u8 mcu_api_malloc_buffer[MCU_API_MALLOC_BUFFER_SIZE];
-	sfx_u16 mcu_api_timer_start_time_seconds;
 	sfx_u32 mcu_api_timer_duration_seconds;
 } MCU_API_Context;
 
@@ -94,7 +96,9 @@ sfx_u8 MCU_API_free(sfx_u8* ptr) {
  *******************************************************************/
 sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature) {
 	// Perform measurements.
+	ADC1_Init();
 	ADC1_PerformAllMeasurements();
+	ADC1_Disable();
 	// Get MCU supply voltage.
 	unsigned int mcu_supply_voltage_mv = 0;
 	ADC1_GetMcuVoltage(&mcu_supply_voltage_mv);
@@ -176,7 +180,9 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 		case CREDENTIALS_PRIVATE_KEY:
 			// Retrieve device key from NVM.
 			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
+				NVM_Enable();
 				NVM_ReadByte(NVM_SIGFOX_KEY_ADDRESS_OFFSET+byte_idx, &key_byte);
+				NVM_Disable();
 				local_key[byte_idx] = key_byte;
 			}
 			break;
@@ -229,6 +235,7 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// |______|_______|______|______|
 
 	// PN.
+	NVM_Enable();
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_PN]));
 	NVM_ReadByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_PN + 1]));
 	// Sequence number.
@@ -239,6 +246,7 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_ReadByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, &(read_data[SFX_NVMEM_FH + 1]));
 	// RL.
 	NVM_ReadByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, &(read_data[SFX_NVMEM_RL]));
+	NVM_Disable();
 	return SFX_ERR_NONE;
 }
 
@@ -268,6 +276,7 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// |______|_______|______|______|
 
 	// PN.
+	NVM_Enable();
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_PN]);
 	NVM_WriteByte(NVM_SIGFOX_PN_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_PN + 1]);
 	// Sequence number.
@@ -278,6 +287,7 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	NVM_WriteByte(NVM_SIGFOX_FH_ADDRESS_OFFSET+1, data_to_write[SFX_NVMEM_FH + 1]);
 	// RL.
 	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, data_to_write[SFX_NVMEM_RL]);
+	NVM_Disable();
 	return SFX_ERR_NONE;
 }
 
@@ -307,9 +317,7 @@ sfx_u8 MCU_API_timer_start_carrier_sense(sfx_u16 time_duration_in_ms) {
  * \retval MCU_ERR_API_TIMER_START:              Start timer error
  *******************************************************************/
 sfx_u8 MCU_API_timer_start(sfx_u32 time_duration_in_s) {
-	// Get current number of seconds.
-	mcu_api_ctx.mcu_api_timer_start_time_seconds = TIM22_GetSeconds();
-	// Save required duration.
+	// Save duration.
 	mcu_api_ctx.mcu_api_timer_duration_seconds = time_duration_in_s;
 	return SFX_ERR_NONE;
 }
@@ -325,6 +333,8 @@ sfx_u8 MCU_API_timer_start(sfx_u32 time_duration_in_s) {
  * \retval MCU_ERR_API_TIMER_STOP:               Stop timer error
  *******************************************************************/
 sfx_u8 MCU_API_timer_stop(void) {
+	// Stop wake-up timer.
+	RTC_StopWakeUpTimer();
 	return SFX_ERR_NONE;
 }
 
@@ -355,9 +365,23 @@ sfx_u8 MCU_API_timer_stop_carrier_sense(void) {
  * \retval MCU_ERR_API_TIMER_END:                Wait end of timer error
  *******************************************************************/
 sfx_u8 MCU_API_timer_wait_for_end(void) {
-	// Wait for second counter to reach start time + duration.
-	while (TIM22_GetSeconds() < (mcu_api_ctx.mcu_api_timer_start_time_seconds + mcu_api_ctx.mcu_api_timer_duration_seconds));
-	// TBD : enter sleep mode and program timer to wake-up MCU.
+	// Clear watchdog.
+	IWDG_Reload();
+	// Enter stop mode until GPIO interrupt or RTC wake-up.
+	unsigned int remaining_delay = mcu_api_ctx.mcu_api_timer_duration_seconds;
+	unsigned int sub_delay = 0;
+	while (remaining_delay > 0) {
+		// Compute sub-delay.
+		sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
+		remaining_delay -= sub_delay;
+		// Start wake-up timer.
+		RTC_StartWakeUpTimer(sub_delay);
+		PWR_EnterStopMode();
+		// Wake-up: clear watchdog and flags.
+		IWDG_Reload();
+		RTC_ClearWakeUpTimerFlag();
+		EXTI_ClearAllFlags();
+	}
 	return SFX_ERR_NONE;
 }
 
@@ -422,7 +446,9 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
 	// Get device ID.
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
+		NVM_Enable();
 		NVM_ReadByte(NVM_SIGFOX_ID_ADDRESS_OFFSET+byte_idx, &(dev_id[byte_idx]));
+		NVM_Disable();
 	}
 	// No payload encryption.
 	(*payload_encryption_enabled) = SFX_FALSE;

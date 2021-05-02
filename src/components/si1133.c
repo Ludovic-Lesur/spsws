@@ -9,13 +9,12 @@
 
 #include "i2c.h"
 #include "si1133_reg.h"
-#include "tim.h"
 
 /*** SI1133 local macros ***/
 
 #define SI1133_BURST_WRITE_MAX_LENGTH	10
 #define SI1133_UV_INDEX_ERROR_VALUE		0xFF
-#define SI1133_TIMEOUT_SECONDS			3
+#define SI1133_TIMEOUT_COUNT			1000000
 
 /*** SI1133 local structures ***/
 
@@ -73,12 +72,13 @@ static unsigned char SI1133_ReadRegister(unsigned char si1133_i2c_address, unsig
 static unsigned char SI1133_WaitUntilSleep(unsigned char si1133_i2c_address) {
 	unsigned char response0 = 0;
 	unsigned char i2c_access = 0;
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	// Wait until SLEEP flag is set.
 	do {
 		i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_RESPONSE0, &response0);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SI1133_TIMEOUT_COUNT) return 0;
 	}
 	while ((response0 & (0b1 << 5)) == 0);
 	return 1;
@@ -130,13 +130,14 @@ static unsigned char SI1133_SendCommand(unsigned char si1133_i2c_address, unsign
 	}
 	// Expect a change in counter.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
-		unsigned int loop_start_time = TIM22_GetSeconds();
+		unsigned int loop_count = 0;
 		do {
 			i2c_access = SI1133_GetCommandCounter(si1133_i2c_address, &current_counter);
 			if (i2c_access == 0) return 0;
 			i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_RESPONSE0, &response0);
 			if (i2c_access == 0) return 0;
-			if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return 0;
+			loop_count++;
+			if (loop_count > SI1133_TIMEOUT_COUNT) return 0;
 		}
 		while ((current_counter == previous_counter) && ((response0 & 0x10) == 0));
 	}
@@ -166,13 +167,14 @@ static unsigned char SI1133_SetParameter(unsigned char si1133_i2c_address, unsig
 	i2c_access = SI1133_WriteRegisters(si1133_i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
 	if (i2c_access == 0) return 0;
 	// Expect a change in counter.
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	do {
 		i2c_access = SI1133_GetCommandCounter(si1133_i2c_address, &current_counter);
 		if (i2c_access == 0) return 0;
 		i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_RESPONSE0, &response0);
 		if (i2c_access == 0) return 0;
-		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return 0;
+		loop_count++;
+		if (loop_count > SI1133_TIMEOUT_COUNT) return 0;
 	}
 	while ((current_counter == previous_counter) && ((response0 & 0x10) == 0));
 	return 1;
@@ -223,11 +225,12 @@ void SI1133_PerformMeasurements(unsigned char si1133_i2c_address) {
 	if (i2c_access == 0) return;
 	// Wait for conversion to complete.
 	unsigned char response0 = 0;
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	do {
 		i2c_access = SI1133_ReadRegister(si1133_i2c_address, SI1133_REG_IRQ_STATUS, &response0);
 		if (i2c_access == 0) return;
-		if (TIM22_GetSeconds() > (loop_start_time + SI1133_TIMEOUT_SECONDS)) return;
+		loop_count++;
+		if (loop_count > SI1133_TIMEOUT_COUNT) return;
 	}
 	while ((response0 & 0x01) == 0); // Wait for IRQ0='1'.
 	// Get result.
