@@ -343,13 +343,13 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 					if ((idx - sep_idx) == (NMEA_GGA_NS_FIELD_LENGTH + 1)) {
 						switch (nmea_rx_buf[sep_idx+1]) {
 						case NMEA_GGA_NORTH:
-							(*gps_position).lat_north = 1;
+							(*gps_position).lat_north_flag = 1;
 							break;
 						case NMEA_GGA_SOUTH:
-							(*gps_position).lat_north = 0;
+							(*gps_position).lat_north_flag = 0;
 							break;
 						default:
-							(*gps_position).lat_north = 0;
+							(*gps_position).lat_north_flag = 0;
 							error_found = 1;
 							break;
 						}
@@ -380,13 +380,13 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 					if ((idx - sep_idx) == (NMEA_GGA_EO_FIELD_LENGTH + 1)) {
 						switch (nmea_rx_buf[sep_idx+1]) {
 						case NMEA_GGA_EAST:
-							(*gps_position).long_east = 1;
+							(*gps_position).long_east_flag = 1;
 							break;
 						case NMEA_GGA_WEST:
-							(*gps_position).long_east = 0;
+							(*gps_position).long_east_flag = 0;
 							break;
 						default:
-							(*gps_position).long_east = 0;
+							(*gps_position).long_east_flag = 0;
 							error_found = 1;
 							break;
 						}
@@ -692,11 +692,11 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeou
 					(*gps_position).lat_degrees = local_gps_position.lat_degrees;
 					(*gps_position).lat_minutes = local_gps_position.lat_minutes;
 					(*gps_position).lat_seconds = local_gps_position.lat_seconds;
-					(*gps_position).lat_north = local_gps_position.lat_north;
+					(*gps_position).lat_north_flag = local_gps_position.lat_north_flag;
 					(*gps_position).long_degrees = local_gps_position.long_degrees;
 					(*gps_position).long_minutes = local_gps_position.long_minutes;
 					(*gps_position).long_seconds = local_gps_position.long_seconds;
-					(*gps_position).long_east = local_gps_position.long_east;
+					(*gps_position).long_east_flag = local_gps_position.long_east_flag;
 					(*gps_position).altitude = local_gps_position.altitude;
 					// Manage altitude stability count.
 					if (local_gps_position.altitude == neom8n_ctx.nmea_gga_previous_altitude) {

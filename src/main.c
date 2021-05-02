@@ -38,12 +38,9 @@
 #include "wind.h"
 // Applicative.
 #include "at.h"
-#include "geoloc.h"
 #include "mode.h"
-#include "monitoring.h"
 #include "rain.h"
 #include "sigfox_api.h"
-#include "weather.h"
 
 /*** SPSWS macros ***/
 
@@ -61,6 +58,14 @@
 #define SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES	12
 #define SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES		8
 #define SPSWS_SIGFOX_RC_STD_CONFIG_SIZE				3
+#ifdef IM
+#define SPSWS_SIGFOX_WEATHER_DATA_LENGTH			6
+#else
+#define SPSWS_SIGFOX_WEATHER_DATA_LENGTH			10
+#endif
+#define SPSWS_SIGFOX_MONITORING_DATA_LENGTH			9
+#define SPSWS_SIGFOX_GEOLOC_DATA_LENGTH				11
+#define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH		1
 
 /*** SPSWS structures ***/
 
@@ -90,6 +95,55 @@ typedef enum {
 	SPSWS_STATUS_BYTE_DAILY_DOWNLINK_BIT_IDX,
 } SPSWS_StatusBitsIndex;
 
+// Sigfox weather frame data format.
+typedef union {
+	unsigned char raw_frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
+	struct {
+		unsigned temperature_degrees : 8;
+		unsigned humidity_percent : 8;
+		unsigned light_percent : 8;
+		unsigned uv_index : 8;
+		unsigned absolute_pressure_tenth_hpa : 16;
+#ifdef CM
+		unsigned average_wind_speed_kmh : 8;
+		unsigned peak_wind_speed_kmh : 8;
+		unsigned average_wind_direction_two_degrees : 8;
+		unsigned rain_mm : 8;
+#endif
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+} SPSWS_SigfoxWeatherData;
+
+// Sigfox monitoring frame data format.
+typedef union {
+	unsigned char raw_frame[SPSWS_SIGFOX_MONITORING_DATA_LENGTH];
+	struct {
+		unsigned mcu_temperature_degrees : 8;
+		unsigned pcb_temperature_degrees : 8;
+		unsigned pcb_humidity_percent : 8;
+		unsigned solar_cell_voltage_mv : 16;
+		unsigned supercap_voltage_mv : 12;
+		unsigned mcu_voltage_mv : 12;
+		unsigned status_byte : 8;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+} SPSWS_SigfoxMonitoringData;
+
+// Sigfox geolocation frame data format.
+typedef union {
+	unsigned char raw_frame[SPSWS_SIGFOX_GEOLOC_DATA_LENGTH];
+	struct {
+		unsigned latitude_degrees : 8;
+		unsigned latitude_minutes : 6;
+		unsigned latitude_seconds : 17;
+		unsigned latitude_north_flag : 1;
+		unsigned longitude_degrees : 8;
+		unsigned longitude_minutes : 6;
+		unsigned longitude_seconds : 17;
+		unsigned longitude_east_flag : 1;
+		unsigned altitude_meters : 16;
+		unsigned gps_fix_duration : 8;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+} SPSWS_SigfoxGeolocData;
+
 typedef struct {
 	// Global.
 	SPSWS_State spsws_state;
@@ -103,18 +157,18 @@ typedef struct {
 	Timestamp spsws_current_timestamp;
 	Timestamp spsws_previous_wake_up_timestamp;
 	// Monitoring.
-	MONITORING_Data spsws_monitoring_data;
 	unsigned char spsws_status_byte;
+	SPSWS_SigfoxMonitoringData spsws_sigfox_monitoring_data;
 	// Weather data.
-	WEATHER_Data spsws_weather_data;
+	SPSWS_SigfoxWeatherData spsws_sigfox_weather_data;
 	// Geoloc.
 	Position spsws_geoloc_position;
 	unsigned int spsws_geoloc_fix_duration_seconds;
 	unsigned char spsws_geoloc_timeout_flag;
+	SPSWS_SigfoxGeolocData spsws_sigfox_geoloc_data;
 	// Sigfox.
 	sfx_rc_t spsws_sfx_rc;
 	sfx_u32 spsws_sfx_rc_std_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE];
-	unsigned char spsws_sfx_uplink_data[SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES];
 	unsigned char spsws_sfx_downlink_data[SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_Context;
 
@@ -253,6 +307,9 @@ int main (void) {
 	unsigned char rtc_use_lse = 0;
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
+	unsigned char generic_data_u8 = 0;
+	unsigned int generic_data_u32_1 = 0;
+	unsigned int generic_data_u32_2 = 0;
 	NEOM8N_ReturnCode neom8n_return_code = NEOM8N_TIMEOUT;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	// Main loop.
@@ -388,9 +445,13 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			IWDG_Reload();
 			// Retrieve internal ADC data.
+			ADC1_Init();
 			ADC1_PerformAllMeasurements();
-			ADC1_GetMcuTemperatureComp2(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_temperature_degrees);
-			ADC1_GetMcuVoltage(&spsws_ctx.spsws_monitoring_data.monitoring_data_mcu_voltage_mv);
+			ADC1_Disable();
+			ADC1_GetMcuTemperatureComp1(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.mcu_temperature_degrees = generic_data_u8;
+			ADC1_GetMcuVoltage(&generic_data_u32_1);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.mcu_voltage_mv = generic_data_u32_1;
 			// Retrieve external ADC data.
 #ifdef HW1_0
 			SPI1_PowerOn();
@@ -411,11 +472,11 @@ int main (void) {
 			// Convert channel results to mV.
 			MAX11136_GetChannel(MAX11136_CHANNEL_BANDGAP, &max11136_bandgap_12bits);
 			MAX11136_GetChannel(MAX11136_CHANNEL_SOLAR_CELL, &max11136_channel_12bits);
-			spsws_ctx.spsws_monitoring_data.monitoring_data_solar_cell_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.solar_cell_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
 			MAX11136_GetChannel(MAX11136_CHANNEL_SUPERCAP, &max11136_channel_12bits);
-			spsws_ctx.spsws_monitoring_data.monitoring_data_supercap_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.supercap_voltage_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
 			MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &max11136_channel_12bits);
-			spsws_ctx.spsws_weather_data.weather_data_light_percent = (max11136_channel_12bits * 100) / MAX11136_FULL_SCALE;
+			spsws_ctx.spsws_sigfox_weather_data.field.light_percent = (max11136_channel_12bits * 100) / MAX11136_FULL_SCALE;
 			// Retrieve weather sensors data.
 #ifdef HW1_0
 			I2C1_PowerOn();
@@ -423,52 +484,60 @@ int main (void) {
 			// Internal temperature/humidity sensor.
 			IWDG_Reload();
 			SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
-			SHT3X_GetTemperature(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees);
-			SHT3X_GetHumidity(&spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent);
+			SHT3X_GetTemperatureComp1(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.pcb_temperature_degrees = generic_data_u8;
+			SHT3X_GetHumidity(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_monitoring_data.field.pcb_humidity_percent = generic_data_u8;
 			// External temperature/humidity sensor.
 #ifdef HW1_0
-			spsws_ctx.spsws_weather_data.weather_data_temperature_degrees = spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_temperature_degrees;
-			spsws_ctx.spsws_weather_data.weather_data_humidity_percent = spsws_ctx.spsws_monitoring_data.monitoring_data_pcb_humidity_percent;
+			spsws_ctx.spsws_sigfox_weather_data.field.temperature_degrees = spsws_ctx.spsws_sigfox_monitoring_data.field.pcb_temperature_degrees;
+			spsws_ctx.spsws_sigfox_weather_data.field.humidity_percent = spsws_ctx.spsws_sigfox_monitoring_data.field.pcb_humidity_percent;
 #endif
 #ifdef HW2_0
 			IWDG_Reload();
 			SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
-			SHT3X_GetTemperature(&spsws_ctx.spsws_weather_data.weather_data_temperature_degrees);
-			SHT3X_GetHumidity(&spsws_ctx.spsws_weather_data.weather_data_humidity_percent);
+			SHT3X_GetTemperatureComp1(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_weather_data.field.temperature_degrees = generic_data_u8;
+			SHT3X_GetHumidity(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_weather_data.field.humidity_percent = generic_data_u8;
 #endif
 			// External pressure/temperature sensor.
 			IWDG_Reload();
 			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
-			DPS310_GetPressure(&spsws_ctx.spsws_weather_data.weather_data_pressure_pa);
+			DPS310_GetPressure(&generic_data_u32_1);
+			spsws_ctx.spsws_sigfox_weather_data.field.absolute_pressure_tenth_hpa = (generic_data_u32_1 / 10);
 			// External UV index sensor.
 			IWDG_Reload();
 			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
-			SI1133_GetUvIndex(&spsws_ctx.spsws_weather_data.weather_data_uv_index);
+			SI1133_GetUvIndex(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_weather_data.field.uv_index = generic_data_u8;
 			// Turn sensors off.
 			I2C1_PowerOff();
 #ifdef CM
 			IWDG_Reload();
 			// Retrieve wind measurements.
-			WIND_GetSpeed(&spsws_ctx.spsws_weather_data.weather_data_average_wind_speed_mh, &spsws_ctx.spsws_weather_data.weather_data_peak_wind_speed_mh);
-			WIND_GetDirection(&spsws_ctx.spsws_weather_data.weather_data_average_wind_direction_degrees);
+			WIND_GetSpeed(&generic_data_u32_1, &generic_data_u32_2);
+			spsws_ctx.spsws_sigfox_weather_data.field.average_wind_speed_kmh = (generic_data_u32_1 / 1000);
+			spsws_ctx.spsws_sigfox_weather_data.field.peak_wind_speed_kmh = (generic_data_u32_2 / 1000);
+			WIND_GetDirection(&generic_data_u32_1);
+			spsws_ctx.spsws_sigfox_weather_data.field.average_wind_direction_two_degrees = (generic_data_u32_1 / 2);
 			// Retrieve rain measurements.
-			RAIN_GetPluviometry(&spsws_ctx.spsws_weather_data.weather_data_rain_mm);
+			RAIN_GetPluviometry(&generic_data_u8);
+			spsws_ctx.spsws_sigfox_weather_data.field.rain_mm = generic_data_u8;
 #endif
 			// Read status byte.
-			spsws_ctx.spsws_monitoring_data.monitoring_data_status_byte = spsws_ctx.spsws_status_byte;
+			spsws_ctx.spsws_sigfox_monitoring_data.field.status_byte = spsws_ctx.spsws_status_byte;
 			// Compute next state.
 			spsws_ctx.spsws_state = SPSWS_STATE_MONITORING;
 			break;
 		// MONITORING.
 		case SPSWS_STATE_MONITORING:
 			IWDG_Reload();
-			// Build Sigfox frame.
-			MONITORING_BuildSigfoxData(&spsws_ctx.spsws_monitoring_data, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink monitoring frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, MONITORING_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sigfox_monitoring_data.raw_frame, SPSWS_SIGFOX_MONITORING_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Compute next state.
@@ -477,13 +546,11 @@ int main (void) {
 		// WEATHER DATA.
 		case SPSWS_STATE_WEATHER_DATA:
 			IWDG_Reload();
-			// Build Sigfox frame.
-			WEATHER_BuildSigfoxData(&spsws_ctx.spsws_weather_data, spsws_ctx.spsws_sfx_uplink_data);
-			// Send uplink monitoring frame.
+			// Send uplink weather frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, WEATHER_SIGFOX_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sigfox_weather_data.raw_frame, SPSWS_SIGFOX_WEATHER_DATA_LENGTH, spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Compute next state.
@@ -530,17 +597,29 @@ int main (void) {
 			// Update flag whatever the result.
 			spsws_ctx.spsws_status_byte |= (0b1 << SPSWS_STATUS_BYTE_DAILY_GEOLOC_BIT_IDX);
 			// Parse result.
-			if (neom8n_return_code != NEOM8N_SUCCESS) {
+			if (neom8n_return_code == NEOM8N_SUCCESS) {
+				// Build frame.
+				spsws_ctx.spsws_sigfox_geoloc_data.field.latitude_degrees = spsws_ctx.spsws_geoloc_position.lat_degrees;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.latitude_minutes = spsws_ctx.spsws_geoloc_position.lat_minutes;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.latitude_seconds = spsws_ctx.spsws_geoloc_position.lat_seconds;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.latitude_north_flag = spsws_ctx.spsws_geoloc_position.lat_north_flag;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.longitude_degrees = spsws_ctx.spsws_geoloc_position.long_degrees;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.longitude_minutes = spsws_ctx.spsws_geoloc_position.long_minutes;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.longitude_seconds = spsws_ctx.spsws_geoloc_position.long_seconds;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.longitude_east_flag = spsws_ctx.spsws_geoloc_position.long_east_flag;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.altitude_meters = spsws_ctx.spsws_geoloc_position.altitude;
+				spsws_ctx.spsws_sigfox_geoloc_data.field.gps_fix_duration = spsws_ctx.spsws_geoloc_fix_duration_seconds;
+			}
+			else {
+				spsws_ctx.spsws_sigfox_geoloc_data.raw_frame[0] = spsws_ctx.spsws_geoloc_fix_duration_seconds;
 				spsws_ctx.spsws_geoloc_timeout_flag = 1;
 			}
 			IWDG_Reload();
-			// Build Sigfox frame.
-			GEOLOC_BuildSigfoxData(&spsws_ctx.spsws_geoloc_position, spsws_ctx.spsws_geoloc_fix_duration_seconds, spsws_ctx.spsws_geoloc_timeout_flag, spsws_ctx.spsws_sfx_uplink_data);
 			// Send uplink geolocation frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sfx_uplink_data, (spsws_ctx.spsws_geoloc_timeout_flag ? GEOLOC_TIMEOUT_SIGFOX_DATA_LENGTH : GEOLOC_SIGFOX_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sigfox_geoloc_data.raw_frame, (spsws_ctx.spsws_geoloc_timeout_flag ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Reset geoloc variables.
@@ -591,7 +670,6 @@ int main (void) {
 			SPI1_Disable();
 			LPUART1_Disable();
 			I2C1_Disable();
-			AES_Disable();
 			// Store status byte in NVM.
 			NVM_Enable();
 			NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.spsws_status_byte);
@@ -621,7 +699,11 @@ int main (void) {
 		case SPSWS_STATE_SLEEP:
 			IWDG_Reload();
 			// Enter sleep mode.
+#ifdef IM
+			PWR_EnterStopMode();
+#else
 			PWR_EnterLowPowerSleepMode();
+#endif
 			// Check RTC flags.
 			if (RTC_GetAlarmBFlag() != 0) {
 #ifdef CM

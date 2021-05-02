@@ -31,12 +31,12 @@ typedef struct {
 	unsigned char lat_degrees;
 	unsigned char lat_minutes;
 	unsigned int lat_seconds; // = (fractionnal part of minutes * 100000).
-	unsigned char lat_north; // 0='S', 1='N'.
+	unsigned char lat_north_flag; // 0='S', 1='N'.
 	// Longitude.
 	unsigned char long_degrees;
 	unsigned char long_minutes;
 	unsigned int long_seconds; // = (fractionnal part of minutes * 100000).
-	unsigned char long_east; // 0='O', 1='E'.
+	unsigned char long_east_flag; // 0='O', 1='E'.
 	// Altitude.
 	unsigned int altitude;
 } Position;

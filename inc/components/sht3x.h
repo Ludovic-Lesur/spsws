@@ -17,7 +17,8 @@
 
 void SHT3X_Init(void);
 void SHT3X_PerformMeasurements(unsigned char sht3x_i2c_address);
-void SHT3X_GetTemperature(signed char* temperature_degrees);
+void SHT3X_GetTemperatureComp1(unsigned char* temperature_degrees);
+void SHT3X_GetTemperatureComp2(signed char* temperature_degrees);
 void SHT3X_GetHumidity(unsigned char* humidity_percent);
 
 #endif /* SHT3X_H */
