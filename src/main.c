@@ -319,10 +319,6 @@ int main (void) {
 		// RESET.
 		case SPSWS_STATE_RESET:
 			IWDG_Reload();
-#ifdef DEBUG
-			// Turn LED on.
-			GPIO_Write(&GPIO_LED, 1);
-#endif
 			// Check reset reason.
 			if (((RCC -> CSR) & (0b1111 << 26)) != 0) {
 				// IWDG, SW, NRST or POR reset: directly go to INIT state.
@@ -505,7 +501,7 @@ int main (void) {
 			IWDG_Reload();
 			DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			DPS310_GetPressure(&generic_data_u32_1);
-			spsws_ctx.spsws_sigfox_weather_data.field.absolute_pressure_tenth_hpa = (generic_data_u32_1 / 10);
+			spsws_ctx.spsws_sigfox_weather_data.field.absolute_pressure_tenth_hpa = (generic_data_u32_1 == DPS310_PRESSURE_ERROR_VALUE) ? 0xFFFF : (generic_data_u32_1 / 10);
 			// External UV index sensor.
 			IWDG_Reload();
 			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
@@ -520,7 +516,7 @@ int main (void) {
 			spsws_ctx.spsws_sigfox_weather_data.field.average_wind_speed_kmh = (generic_data_u32_1 / 1000);
 			spsws_ctx.spsws_sigfox_weather_data.field.peak_wind_speed_kmh = (generic_data_u32_2 / 1000);
 			WIND_GetDirection(&generic_data_u32_1);
-			spsws_ctx.spsws_sigfox_weather_data.field.average_wind_direction_two_degrees = (generic_data_u32_1 / 2);
+			spsws_ctx.spsws_sigfox_weather_data.field.average_wind_direction_two_degrees = (generic_data_u32_1 == WIND_DIRECTION_ERROR_VALUE) ? 0xFF : (generic_data_u32_1 / 2);
 			// Retrieve rain measurements.
 			RAIN_GetPluviometry(&generic_data_u8);
 			spsws_ctx.spsws_sigfox_weather_data.field.rain_mm = generic_data_u8;
@@ -619,7 +615,7 @@ int main (void) {
 			sfx_error = SIGFOX_API_open(&spsws_ctx.spsws_sfx_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.spsws_sfx_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sigfox_geoloc_data.raw_frame, (spsws_ctx.spsws_geoloc_timeout_flag ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.spsws_sigfox_geoloc_data.raw_frame, ((spsws_ctx.spsws_geoloc_timeout_flag) ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.spsws_sfx_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Reset geoloc variables.
@@ -688,10 +684,6 @@ int main (void) {
 			RTC_ClearAlarmAFlag();
 			RTC_ClearAlarmBFlag();
 			NVIC_EnableInterrupt(NVIC_IT_RTC);
-#ifdef DEBUG
-			// Turn LED off.
-			GPIO_Write(&GPIO_LED, 0);
-#endif
 			// Enter sleep mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
