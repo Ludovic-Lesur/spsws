@@ -67,7 +67,7 @@ static RF_API_Context rf_api_ctx;
  * @param:	None.
  * @return:	None.
  */
- void TIM2_IRQHandler(void) {
+ void __attribute__((optimize("-O0"))) TIM2_IRQHandler(void) {
 	// ARR = symbol rate.
 	if (((TIM2 -> SR) & (0b1 << TIM2_TIMINGS_ARRAY_ARR_IDX)) != 0) {
 		// Update ARR flag.

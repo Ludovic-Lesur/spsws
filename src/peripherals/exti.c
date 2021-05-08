@@ -25,7 +25,7 @@
  * @param:	None.
  * @return:	None.
  */
-void EXTI0_1_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) EXTI0_1_IRQHandler(void) {
 	// Unused.
 }
 
@@ -33,7 +33,7 @@ void EXTI0_1_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void EXTI2_3_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) EXTI2_3_IRQHandler(void) {
 	// Unused.
 }
 
@@ -41,7 +41,7 @@ void EXTI2_3_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void EXTI4_15_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 #if (defined CM || defined ATM)
 	// Speed edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.gpio_num))) != 0) {

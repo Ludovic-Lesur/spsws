@@ -51,7 +51,7 @@ static volatile USART_Context usart_ctx;
  * @param:	None.
  * @return:	None.
  */
-void USART2_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 
 #ifdef USE_TXE_INTERRUPT
 	// TXE interrupt.
@@ -89,7 +89,7 @@ void USART2_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void USART1_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) USART1_IRQHandler(void) {
 
 #ifdef USE_TXE_INTERRUPT
 	// TXE interrupt.

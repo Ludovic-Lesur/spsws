@@ -26,7 +26,7 @@ static volatile unsigned char tim21_flag = 0;
  * @param:	None.
  * @return:	None.
  */
-void TIM21_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
 	// Update interrupt.
 	if (((TIM21 -> SR) & (0b1 << 1)) != 0) {
 		// Update flags.

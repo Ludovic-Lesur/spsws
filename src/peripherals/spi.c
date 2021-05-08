@@ -40,9 +40,6 @@ void SPI1_Init(void) {
 	GPIO_Configure(&GPIO_SX1232_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 #ifdef HW1_0
 	GPIO_Configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#ifdef USE_HWT
-	GPIO_Configure(&GPIO_MAX5495_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#endif
 #endif
 	// Configure peripheral.
 	SPI1 -> CR1 &= 0xFFFF0000; // Disable peripheral before configuration (SPE='0').
@@ -129,10 +126,8 @@ void SPI1_PowerOn(void) {
 #ifdef HW1_0
 	GPIO_Write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
 	GPIO_Configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-#ifdef USE_HWT
-	GPIO_Write(&GPIO_MAX5495_CS, 1); // CS high (idle state).
-	GPIO_Configure(&GPIO_MAX5495_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-#endif
+	// Add pull-up to EOC.
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 #endif
 	// Wait for power-on.
 	LPTIM1_DelayMilliseconds(50, 1);
@@ -149,9 +144,6 @@ void SPI1_PowerOff(void) {
 #ifdef HW1_0
 	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	GPIO_Write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
-#ifdef USE_HWT
-	GPIO_Write(&GPIO_MAX5495_CS, 0); // CS low (to avoid powering slaves via SPI bus).
-#endif
 #endif
 	// Disable SPI alternate function.
 	GPIO_Configure(&GPIO_SPI1_SCK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
@@ -160,9 +152,8 @@ void SPI1_PowerOff(void) {
 	GPIO_Configure(&GPIO_SX1232_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 #ifdef HW1_0
 	GPIO_Configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#ifdef USE_HWT
-	GPIO_Configure(&GPIO_MAX5495_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#endif
+	// Remove pull-up to EOC.
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Wait for power-off.
 	LPTIM1_DelayMilliseconds(100, 1);

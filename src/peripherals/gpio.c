@@ -201,14 +201,11 @@ void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_typ
 void GPIO_Init(void) {
 	// Enable GPIOA, GPIOB and GPIOC clocks.
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
-	// Configure standalone GPIOs.
-	// LED.
-#ifndef USE_HWT
+	// Configure debug LED pin.
 #ifdef DEBUG
 	GPIO_Configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #else
 	GPIO_Configure(&GPIO_LED, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 #endif
 	// Programming pins.
 #ifdef HW2_0
@@ -217,26 +214,6 @@ void GPIO_Init(void) {
 	GPIO_Configure(&GPIO_SWCLK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 #endif
-	// Digital I/O.
-#ifdef HW1_0
-#ifndef USE_HWT
-	GPIO_Configure(&GPIO_DIO0, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-#ifndef USE_MAX11136_EOC
-	GPIO_Configure(&GPIO_DIO1, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-	GPIO_Configure(&GPIO_DIO2, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#ifndef USE_SX1232_DIOX
-	GPIO_Configure(&GPIO_DIO3, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-#endif
-#ifdef HW2_0
-	GPIO_Configure(&GPIO_DIO0, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_DIO1, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_DIO2, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_DIO3, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_DIO4, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 }
 
 /* SET THE STATE OF A GPIO.
@@ -244,7 +221,7 @@ void GPIO_Init(void) {
  * @param state: 	GPIO output state ('0' or '1').
  * @return: 		None.
  */
-void GPIO_Write(const GPIO* gpio, unsigned char state) {
+void __attribute__((optimize("-O0"))) GPIO_Write(const GPIO* gpio, unsigned char state) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		if (state == 0) {
@@ -260,7 +237,7 @@ void GPIO_Write(const GPIO* gpio, unsigned char state) {
  * @param gpio:		GPIO structure.
  * @return state: 	Current GPIO input state ('0' or '1').
  */
-unsigned char GPIO_Read(const GPIO* gpio) {
+unsigned char __attribute__((optimize("-O0"))) GPIO_Read(const GPIO* gpio) {
 	unsigned char state = 0;
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		switch (GPIO_GetMode(gpio)) {
@@ -287,7 +264,7 @@ unsigned char GPIO_Read(const GPIO* gpio) {
  * @param gpio:	GPIO structure.
  * @return: 	None.
  */
-void GPIO_Toggle(const GPIO* gpio) {
+void __attribute__((optimize("-O0"))) GPIO_Toggle(const GPIO* gpio) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 		// Toggle ODR bit.

@@ -12,13 +12,6 @@
 #include "gpio_reg.h"
 #include "mode.h"
 
-// PCB internal configuration.
-#ifdef HW1_0
-#define USE_SX1232_DIOX 	// To be defined if SX1232_DIOx pin is connected to MCU, otherwise DIO3 available.
-#define USE_MAX11136_EOC 	// To be defined is EOC pin connected to MCU, otherwise DIO1 available.
-//#define USE_HWT			// Use HWT I/O if defined, LSE crytal otherwise.
-#endif
-
 // DIO0.
 #ifdef HW1_0
 static const GPIO GPIO_DIO0 = 					(GPIO) {GPIOA, 0, 1, 0};

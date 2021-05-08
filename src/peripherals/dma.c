@@ -19,7 +19,7 @@
  * @param:	None.
  * @return:	None.
  */
-void DMA1_Channel4_5_6_7_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) DMA1_Channel4_5_6_7_IRQHandler(void) {
 	// Transfer complete interrupt (TCIF6='1').
 	if (((DMA1 -> ISR) & (0b1 << 21)) != 0) {
 		// Switch DMA buffer without decoding.

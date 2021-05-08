@@ -84,22 +84,11 @@ static void MAX11136_ConvertAllChannels12Bits(void) {
 	if (spi_access == 0) return;
 	// Wait for conversions to complete.
 	unsigned int loop_count = 0;
-#ifdef HW1_0
-#ifdef USE_MAX11136_EOC
 	// Wait for EOC to be pulled low.
 	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
 		loop_count++;
 		if (loop_count > MAX11136_TIMEOUT_COUNT) return;
 	}
-#endif
-#endif
-#ifdef HW2_0
-	// Wait for EOC to be pulled low.
-	while (GPIO_Read(&GPIO_MAX11136_EOC) != 0) {
-		loop_count++;
-		if (loop_count > MAX11136_TIMEOUT_COUNT) return;
-	}
-#endif
 	// Read results in FIFO.
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
@@ -114,8 +103,8 @@ static void MAX11136_ConvertAllChannels12Bits(void) {
 #ifdef HW2_0
 		spi_access = SPI2_ReadShort(0x0000, &max11136_dout);
 #endif
-		if (spi_access == 0) return;
 		GPIO_Write(&GPIO_MAX11136_CS, 1); // Set CS pin.
+		if (spi_access == 0) return;
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;
 		if (channel < MAX11136_NUMBER_OF_CHANNELS) {
@@ -139,14 +128,7 @@ void MAX11136_Init(void) {
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
 	max11136_ctx.max11136_status = 0;
 	// Configure EOC GPIO.
-#ifdef HW1_0
-#ifdef USE_MAX11136_EOC
-	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
-#endif
-#endif
-#ifdef HW2_0
-	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
-#endif
+	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* DISABLE MAX11136 GPIO.
@@ -154,14 +136,8 @@ void MAX11136_Init(void) {
  * @return:	None.
  */
 void MAX11136_DisableGpio(void) {
-#ifdef HW1_0
-#ifdef USE_MAX11136_EOC
+	// Disable EOC GPIO.
 	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-#endif
-#ifdef HW2_0
-	GPIO_Configure(&GPIO_MAX11136_EOC, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 }
 
 /* PERFORM ADC CONVERSION ON ALL CHANNELS.
@@ -170,14 +146,14 @@ void MAX11136_DisableGpio(void) {
  */
 void MAX11136_PerformMeasurements(void) {
 	// Reset results.
-	unsigned char idx = 0;
-	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.max11136_result_12bits[idx] = 0;
+	unsigned char conversion_count = 0;
+	for (conversion_count=0 ; conversion_count<MAX11136_NUMBER_OF_CHANNELS ; conversion_count++) max11136_ctx.max11136_result_12bits[conversion_count] = 0;
 	max11136_ctx.max11136_status = 0;
 	// Perform conversion until all channels are successfully retrieved or maximum number of loops is reached.
-	idx = 0;
-	while ((max11136_ctx.max11136_status != 0xFF) && (idx < MAX11136_CONVERSION_LOOPS)) {
+	conversion_count = 0;
+	while ((max11136_ctx.max11136_status != 0xFF) && (conversion_count < MAX11136_CONVERSION_LOOPS)) {
 		MAX11136_ConvertAllChannels12Bits();
-		idx++;
+		conversion_count++;
 	}
 }
 

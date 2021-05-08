@@ -27,7 +27,7 @@
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 	// Character match interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
 		// Switch DMA buffer and decode buffer.
@@ -65,9 +65,11 @@ void LPUART1_Init(unsigned char lpuart_use_lse) {
 	// Configure power enable pin.
 	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
+#if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Configure TX and RX GPIOs (first as high impedance).
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 	// Configure peripheral.
 	LPUART1 -> CR1 &= 0xEC008000; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	LPUART1 -> CR2 &= 0x00F04FEF; // 1 stop bit (STOP='00').
@@ -149,9 +151,11 @@ void LPUART1_Disable(void) {
  * @return:	None.
  */
 void LPUART1_PowerOn(void) {
+#if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Enable GPIOs.
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 	// Turn NEOM8N on.
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 1);
 	LPTIM1_DelayMilliseconds(100, 1);
@@ -164,9 +168,11 @@ void LPUART1_PowerOn(void) {
 void LPUART1_PowerOff(void) {
 	// Turn NEOM8N off.
 	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
+#if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Disable LPUART alternate function.
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 	// Delay required if another cycle is requested by applicative layer.
 	LPTIM1_DelayMilliseconds(100, 1);
 }
