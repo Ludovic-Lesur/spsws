@@ -22,7 +22,10 @@
 
 #define RCC_TIMEOUT_COUNT				10
 #define RCC_MSI_RESET_FREQUENCY_KHZ		2100
+
 #define RCC_LSI_AVERAGING_COUNT			5
+#define RCC_LSI_FREQUENCY_MIN_HZ		26000
+#define RCC_LSI_FREQUENCY_MAX_HZ		56000
 
 /*** RCC local global variables ***/
 
@@ -263,7 +266,7 @@ void RCC_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 	}
 	TIM21_Disable();
 	// Return default value in case of error.
-	if ((*lsi_frequency_hz) == 0) {
+	if (((*lsi_frequency_hz) < RCC_LSI_FREQUENCY_MIN_HZ) || ((*lsi_frequency_hz) > RCC_LSI_FREQUENCY_MAX_HZ)) {
 		(*lsi_frequency_hz) = RCC_LSI_FREQUENCY_HZ;
 	}
 }

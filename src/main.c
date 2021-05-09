@@ -395,7 +395,7 @@ int main (void) {
 			RCC_GetLsiFrequency(&spsws_ctx.spsws_lsi_frequency_hz);
 			IWDG_Reload();
 			// Timers.
-			LPTIM1_Init();
+			LPTIM1_Init(spsws_ctx.spsws_lsi_frequency_hz);
 			// RTC (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
 				spsws_ctx.spsws_lse_running = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
@@ -695,11 +695,7 @@ int main (void) {
 		case SPSWS_STATE_SLEEP:
 			IWDG_Reload();
 			// Enter sleep mode.
-#ifdef IM
 			PWR_EnterStopMode();
-#else
-			PWR_EnterLowPowerSleepMode();
-#endif
 			// Check RTC flags.
 			if (RTC_GetAlarmBFlag() != 0) {
 #ifdef CM
@@ -710,15 +706,14 @@ int main (void) {
 				RTC_ClearAlarmBFlag();
 			}
 			if (RTC_GetAlarmAFlag() != 0) {
-
-				// Disable RTC alarm interrupts.
-				RTC_DisableAlarmAInterrupt();
-				RTC_DisableAlarmBInterrupt();
 #ifdef CM
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();
 				RAIN_StopContinuousMeasure();
 #endif
+				// Disable RTC alarm interrupts.
+				RTC_DisableAlarmAInterrupt();
+				RTC_DisableAlarmBInterrupt();
 				// Clear RTC flags.
 				RTC_ClearAlarmAFlag();
 				// Wake-up.
@@ -765,7 +760,7 @@ int main (void) {
 	RCC_GetLsiFrequency(&spsws_ctx.spsws_lsi_frequency_hz);
 	RTC_Init(&spsws_ctx.spsws_lse_running, spsws_ctx.spsws_lsi_frequency_hz);
 	// Timers.
-	LPTIM1_Init();
+	LPTIM1_Init(spsws_ctx.spsws_lsi_frequency_hz);
 	// Analog.
 	ADC1_Init();
 	// Communication interfaces.

@@ -8,6 +8,7 @@
 #include "wind.h"
 
 #include "exti.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "math.h"
 #include "max11136.h"
@@ -207,6 +208,8 @@ void WIND_Init(void) {
 	GPIO_Configure(&GPIO_WIND_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureGpio(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
 #endif
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 0);
 }
 
 /* START CONTINUOUS WIND MEASUREMENTS.
@@ -219,10 +222,10 @@ void WIND_StartContinuousMeasure(void) {
 	wind_ctx.wind_direction_seconds_count = 0;
 #ifdef WIND_VANE_ULTIMETER
 	// Init phase shift timers: TBD.
+	LPTIM1_Enable();
 #endif
 	// Enable required interrupts.
 	EXTI_ClearAllFlags();
-	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 0);
 	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
 
@@ -234,7 +237,8 @@ void WIND_StopContinuousMeasure(void) {
 	// Disable required interrupts.
 	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
 #ifdef WIND_VANE_ULTIMETER
-	// Stop phase shift timers: TBD.
+	// Stop phase shift timer.
+	LPTIM1_Disable();
 #endif
 }
 
@@ -293,14 +297,14 @@ void WIND_SpeedEdgeCallback(void) {
 	// Wind direction.
 #ifdef WIND_VANE_ULTIMETER
 	// Capture PWM period.
-	// --- Stop phase shift timer.
-	// --- wind_ctx.wind_direction_pwm_period = Timer_GetCounter();
+	LPTIM1_Stop();
+	wind_ctx.wind_direction_pwm_period = LPTIM1_GetCounter();
 	// Compute direction
 	if ((wind_ctx.wind_direction_pwm_period > 0) && (wind_ctx.wind_direction_pwm_duty_cycle <= wind_ctx.wind_direction_pwm_period)) {
 		wind_ctx.wind_direction_degrees = (wind_ctx.wind_direction_pwm_duty_cycle * 360) / (wind_ctx.wind_direction_pwm_period);
 	}
 	// Start new cycle.
-	// --- Restart phase shift timer.
+	LPTIM1_Start();
 #endif
 }
 
@@ -311,7 +315,7 @@ void WIND_SpeedEdgeCallback(void) {
  */
 void WIND_DirectionEdgeCallback(void) {
 	// Capture PWM duty cycle.
-	// wind_ctx.wind_direction_pwm_duty_cycle = Timer_GetCounter();
+	wind_ctx.wind_direction_pwm_duty_cycle = LPTIM1_GetCounter();
 }
 #endif
 
@@ -349,10 +353,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		// Compute direction only if there is wind.
 		if ((wind_ctx.wind_speed_mh / 1000) > 0) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-			// Internal 16MHz clock.
-			RCC_SwitchToHsi();
-			// --- Init Timers.
-			// SPI.
+			// Get direction from ADC.
 #ifdef HW1_0
 			SPI1_Enable();
 			SPI1_PowerOn();
@@ -370,8 +371,6 @@ void WIND_MeasurementPeriodCallback(void) {
 			SPI2_PowerOff();
 			SPI2_Disable();
 #endif
-			// Turn timers off.
-			// --- Stop Timers.
 			// Get 12-bits result.
 			unsigned int wind_direction_12bits = 0;
 			MAX11136_GetChannel(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);

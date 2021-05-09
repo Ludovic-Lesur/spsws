@@ -13,6 +13,7 @@
 #include "pwr.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "wind.h"
 
 /*** LPTIM local macros ***/
 
@@ -70,16 +71,16 @@ static void LPTIM1_WriteArr(unsigned int arr_value) {
 /*** LPTIM functions ***/
 
 /* INIT LPTIM FOR DELAY OPERATION.
- * @param:	None.
- * @return:	None.
+ * @param lsi_freq_hz:	Effective LSI oscillator frequency.
+ * @return:				None.
  */
-void LPTIM1_Init(void) {
+void LPTIM1_Init(unsigned int lsi_freq_hz) {
 	// Disable peripheral.
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 	// Enable peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
 	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
-	lptim_clock_frequency_hz = (RCC_LSI_FREQUENCY_HZ >> 5);
+	lptim_clock_frequency_hz = (lsi_freq_hz >> 5);
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
 	// Configure peripheral.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
@@ -153,3 +154,37 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms, unsigned char stop_mode) {
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 	NVIC_DisableInterrupt(NVIC_IT_LPTIM1);
 }
+
+#ifdef WIND_VANE_ULTIMETER
+/* START LPTIM COUNTER.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPTIM1_Start(void) {
+	// Enable timer.
+	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
+	// Reset counter.
+	LPTIM1 -> CNT &= 0xFFFF0000;
+	// Set ARR to maximum value (unused).
+	LPTIM1_WriteArr(0xFFFF);
+	// Start timer.
+	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
+}
+
+/* START LPTIM COUNTER.
+ * @param:	None.
+ * @return:	None.
+ */
+void LPTIM1_Stop(void) {
+	// Disable timer.
+	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
+}
+
+/* START LPTIM COUNTER.
+ * @param:	None.
+ * @return:	LPTIM1 counter value.
+ */
+unsigned int LPTIM1_GetCounter(void) {
+	return (LPTIM1 -> CNT);
+}
+#endif
