@@ -116,7 +116,8 @@
 #define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
 
 // Duration of RSSI command.
-#define AT_RSSI_REPORT_DURATION_SECONDS					60
+#define AT_RSSI_REPORT_PERIOD_MS						500
+#define AT_RSSI_REPORT_DURATION_MS						60000
 
 // Sigfox RC standard config size.
 #define AT_SIGFOX_RC_STD_CONFIG_SIZE					3
@@ -610,7 +611,7 @@ static void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
  * @param gps_position:	Pointer to GPS position to print.
  * @return:				None.
  */
-static void AT_PrintPosition(Position* gps_position) {
+static void AT_PrintPosition(Position* gps_position, unsigned int gps_fix_duration) {
 	// Header.
 	// Latitude.
 	USARTx_SendString("Lat=");
@@ -620,7 +621,7 @@ static void AT_PrintPosition(Position* gps_position) {
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> lat_north) == 1) ? "N" : "S");
+	USARTx_SendString(((gps_position -> lat_north_flag) == 1) ? "N" : "S");
 	// Longitude.
 	USARTx_SendString(" Long=");
 	USARTx_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
@@ -629,11 +630,13 @@ static void AT_PrintPosition(Position* gps_position) {
 	USARTx_SendString("'");
 	USARTx_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
 	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> long_east) == 1) ? "E" : "W");
+	USARTx_SendString(((gps_position -> long_east_flag) == 1) ? "E" : "W");
 	// Altitude.
 	USARTx_SendString(" Alt=");
 	USARTx_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("m\n");
+	USARTx_SendString("m Fix=");
+	USARTx_SendValue(gps_fix_duration, USART_FORMAT_DECIMAL, 0);
+	USARTx_SendString("s\r\n");
 }
 
 /* PRINT SIGFOX DOWNLINK DATA ON USART.
@@ -685,7 +688,7 @@ static void AT_DecodeRxBuffer(void) {
 					// Start GPS fix.
 					Timestamp gps_timestamp;
 					LPUART1_PowerOn();
-					NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds);
+					NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds, 0);
 					LPUART1_PowerOff();
 					switch (get_timestamp_result) {
 					case NEOM8N_SUCCESS:
@@ -717,12 +720,13 @@ static void AT_DecodeRxBuffer(void) {
 				if (get_param_result == AT_NO_ERROR) {
 					// Start GPS fix.
 					Position gps_position;
+					unsigned int gps_fix_duration = 0;
 					LPUART1_PowerOn();
-					NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds);
+					NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds, 0, &gps_fix_duration);
 					LPUART1_PowerOff();
 					switch (get_position_result) {
 					case NEOM8N_SUCCESS:
-						AT_PrintPosition(&gps_position);
+						AT_PrintPosition(&gps_position, gps_fix_duration);
 						break;
 					case NEOM8N_TIMEOUT:
 						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
@@ -775,9 +779,9 @@ static void AT_DecodeRxBuffer(void) {
 				unsigned int mcu_supply_voltage_mv = 0;
 				signed char mcu_temperature_degrees = 0;
 				// Trigger internal ADC conversions.
-				ADC1_PerformMeasurements();
-				ADC1_GetMcuTemperature(&mcu_temperature_degrees);
-				ADC1_GetMcuSupplyVoltage(&mcu_supply_voltage_mv);
+				ADC1_PerformAllMeasurements();
+				ADC1_GetMcuTemperatureComp2(&mcu_temperature_degrees);
+				ADC1_GetMcuVoltage(&mcu_supply_voltage_mv);
 				// Print results.
 				USARTx_SendString("Vcc=");
 				USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
@@ -807,7 +811,7 @@ static void AT_DecodeRxBuffer(void) {
 				I2C1_PowerOn();
 				SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				SHT3X_GetTemperature(&sht3x_temperature_degrees);
+				SHT3X_GetTemperatureComp2(&sht3x_temperature_degrees);
 				SHT3X_GetHumidity(&sht3x_humidity_percent);
 				// Print results.
 				USARTx_SendString("T=");
@@ -838,7 +842,7 @@ static void AT_DecodeRxBuffer(void) {
 				I2C1_PowerOn();
 				SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				SHT3X_GetTemperature(&sht3x_temperature_degrees);
+				SHT3X_GetTemperatureComp2(&sht3x_temperature_degrees);
 				SHT3X_GetHumidity(&sht3x_humidity_percent);
 				// Print results.
 				USARTx_SendString("T=");
@@ -909,12 +913,12 @@ static void AT_DecodeRxBuffer(void) {
 				SPI2_PowerOff();
 #endif
 				I2C1_PowerOff();
-				ADC1_PerformMeasurements();
+				ADC1_PerformAllMeasurements();
 				// Get LDR and supply voltage.
 				unsigned int ldr_output_mv = 0;
 				unsigned int ldr_supply_voltage_mv = 0;
 				MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
-				ADC1_GetMcuSupplyVoltage(&ldr_supply_voltage_mv);
+				ADC1_GetMcuVoltage(&ldr_supply_voltage_mv);
 				// Convert to percent.
 				unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
 				// Print result.
@@ -1381,17 +1385,18 @@ static void AT_DecodeRxBuffer(void) {
 					RF_API_change_frequency(frequency_hz);
 					// Start continuous listening.
 					SX1232_SetMode(SX1232_MODE_FSRX);
-					LPTIM1_DelayMilliseconds(5); // Wait TS_FS=60us typical.
+					LPTIM1_DelayMilliseconds(5, 0); // Wait TS_FS=60us typical.
 					SX1232_SetMode(SX1232_MODE_RX);
-					LPTIM1_DelayMilliseconds(5); // Wait TS_TR=120us typical.
-					unsigned int rssi_print_start_time = TIM22_GetSeconds();
+					LPTIM1_DelayMilliseconds(5, 0); // Wait TS_TR=120us typical.
+					unsigned int rssi_print_count = 0;
 					unsigned char rssi = 0;
-					while (TIM22_GetSeconds() < (rssi_print_start_time + AT_RSSI_REPORT_DURATION_SECONDS)) {
+					while (rssi_print_count < (AT_RSSI_REPORT_DURATION_MS / AT_RSSI_REPORT_PERIOD_MS)) {
 						rssi = SX1232_GetRssi();
 						USARTx_SendString("RSSI = -");
 						USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
-						USARTx_SendString("\n");
-						LPTIM1_DelayMilliseconds(500);
+						USARTx_SendString("dBm\n");
+						LPTIM1_DelayMilliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
+						rssi_print_count++;
 					}
 					// Stop radio.
 					RF_API_stop();

@@ -15,7 +15,6 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "tim.h"
 #include "usart_reg.h"
 
 #ifdef ATM
@@ -26,7 +25,8 @@
 // Baud rate.
 #define USART_BAUD_RATE 		9600
 // TX buffer size.
-#define USART_TX_BUFFER_SIZE	512
+#define USART_TX_BUFFER_SIZE	128
+#define USART_TIMEOUT_COUNT		100000
 
 /*** USART local structures ***/
 
@@ -137,14 +137,22 @@ static void USARTx_FillTxBuffer(unsigned char tx_byte) {
 	// Fill transmit register.
 #ifdef HW1_0
 	USART2 -> TDR = tx_byte;
-	// Wait for transmission to complete.
-	while (((USART2 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
 #endif
 #ifdef HW2_0
 	USART1 -> TDR = tx_byte;
-	// Wait for transmission to complete.
-	while (((USART1 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
 #endif
+	// Wait for transmission to complete.
+	unsigned int loop_count = 0;
+#ifdef HW1_0
+	while (((USART2 -> ISR) & (0b1 << 7)) == 0) {
+#endif
+#ifdef HW2_0
+	while (((USART1 -> ISR) & (0b1 << 7)) == 0) {
+#endif
+		// Wait for TXE='1' or timeout.
+		loop_count++;
+		if (loop_count > USART_TIMEOUT_COUNT) break;
+	}
 #endif
 }
 
@@ -191,29 +199,27 @@ void USART2_Init(void) {
 	usart_ctx.tx_buf_read_idx = 0;
 #endif
 	// Enable peripheral clock.
+	RCC -> CR |= (0b1 << 1); // Enable HSI in stop mode (HSI16KERON='1').
+	RCC -> CCIPR |= (0b10 << 2); // Select HSI as USART clock.
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
+	RCC -> APB1SMENR |= (0b1 << 17); // Enable clock in sleep mode.
 	// Configure TX and RX GPIOs.
-	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Configure peripheral.
-	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
-	USART2 -> CR2 = 0; // 1 stop bit (STOP='00').
-	USART2 -> CR3 = 0;
-	USART2 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART2 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
-	USART2 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
+	USART2 -> CR3 |= (0b1 << 12) | (0b1 << 23); // No overrun detection (OVRDIS='1') and clock enable in stop mode (UCESM='1').
+	USART2 -> BRR = ((RCC_HSI_FREQUENCY_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Enable transmitter and receiver.
-	USART2 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
-	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
+	USART2 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_USART2, 3);
 	// Enable peripheral.
-	USART2 -> CR1 |= (0b1 << 0);
+	USART2 -> CR1 |= (0b11 << 0);
 #else
 	// Configure TX and RX GPIOs.
 	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
-	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_USART2, 3);
 }
 #endif
 
@@ -232,29 +238,27 @@ void USART1_Init(void) {
 	usart_ctx.tx_buf_read_idx = 0;
 #endif
 	// Enable peripheral clock.
+	RCC -> CR |= (0b1 << 1); // Enable HSI in stop mode (HSI16KERON='1').
+	RCC -> CCIPR |= (0b10 << 0); // Select HSI as USART clock.
 	RCC -> APB2ENR |= (0b1 << 14); // USART1EN='1'.
+	RCC -> APB2SMENR |= (0b1 << 14); // Enable clock in sleep mode.
 	// Configure TX and RX GPIOs.
-	GPIO_Configure(&GPIO_USART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_USART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Configure peripheral.
-	USART1 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
-	USART1 -> CR2 = 0; // 1 stop bit (STOP='00').
-	USART1 -> CR3 = 0;
-	USART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
-	USART1 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
-	USART1 -> CR1 &= ~(0b11 << 2); // Disable transmitter (TE='0') and receiver (RE='0') by default.
+	USART1 -> CR3 |= (0b1 << 12) | (0b1 << 23); // No overrun detection (OVRDIS='1') and clock enable in stop mode (UCESM='1').
+	USART1 -> BRR = ((RCC_HSI_FREQUENCY_KHZ * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Enable transmitter and receiver.
-	USART1 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
-	USART1 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
+	USART1 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_USART1, 3);
 	// Enable peripheral.
-	USART1 -> CR1 |= (0b1 << 0);
+	USART1 -> CR1 |= (0b11 << 0);
 #else
 	// Configure TX and RX GPIOs.
 	GPIO_Configure(&GPIO_USART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_USART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
-	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_USART1, 3);
 }
 #endif
 

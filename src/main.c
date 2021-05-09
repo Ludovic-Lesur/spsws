@@ -147,12 +147,14 @@ typedef union {
 typedef struct {
 	// Global.
 	SPSWS_State spsws_state;
+	// Clocks.
+	unsigned int spsws_lsi_frequency_hz;
+	unsigned char spsws_lse_running;
 	// Time management.
 	unsigned char spsws_por_flag;
 	unsigned char spsws_hour_changed_flag;
 	unsigned char spsws_day_changed_flag;
 	unsigned char spsws_is_afternoon_flag;
-	unsigned int spsws_lsi_frequency_hz;
 	// Wake-up management.
 	Timestamp spsws_current_timestamp;
 	Timestamp spsws_previous_wake_up_timestamp;
@@ -286,6 +288,8 @@ int main (void) {
 	PWR_Init();
 	// Init context.
 	spsws_ctx.spsws_state = SPSWS_STATE_RESET;
+	spsws_ctx.spsws_lsi_frequency_hz = 0;
+	spsws_ctx.spsws_lse_running = 0;
 	spsws_ctx.spsws_por_flag = 0;
 	spsws_ctx.spsws_hour_changed_flag = 0;
 	spsws_ctx.spsws_day_changed_flag = 0;
@@ -304,7 +308,6 @@ int main (void) {
 	spsws_ctx.spsws_sfx_rc = (sfx_rc_t) RC1;
 	for (idx=0 ; idx<SPSWS_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.spsws_sfx_rc_std_config[idx] = 0;
 	// Local variables.
-	unsigned char rtc_use_lse = 0;
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
 	unsigned char generic_data_u8 = 0;
@@ -395,10 +398,10 @@ int main (void) {
 			LPTIM1_Init();
 			// RTC (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
-				rtc_use_lse = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
-				RTC_Init(&rtc_use_lse, spsws_ctx.spsws_lsi_frequency_hz);
+				spsws_ctx.spsws_lse_running = spsws_ctx.spsws_status_byte & (0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
+				RTC_Init(&spsws_ctx.spsws_lse_running, spsws_ctx.spsws_lsi_frequency_hz);
 				// Update LSE status if RTC failed to start on it.
-				if (rtc_use_lse == 0) {
+				if (spsws_ctx.spsws_lse_running == 0) {
 					spsws_ctx.spsws_status_byte &= ~(0b1 << SPSWS_STATUS_BYTE_LSE_STATUS_BIT_IDX);
 				}
 			}
@@ -410,7 +413,7 @@ int main (void) {
 #ifdef HW2_0
 			USART1_Init();
 #endif
-			LPUART1_Init(rtc_use_lse);
+			LPUART1_Init(spsws_ctx.spsws_lse_running);
 			I2C1_Init();
 			SPI1_Init();
 #ifdef HW2_0
@@ -739,50 +742,41 @@ int main (void) {
 int main (void) {
 	// Init memory.
 	NVIC_Init();
-	FLASH_SetLatency(1);
-	NVM_Enable();
-	// Init GPIO (required for clock tree configuration).
-	GPIO_Init();
-#ifdef DEBUG
-	SPSWS_BlinkLed(10);
-#endif
+	// Init GPIOs.
+	GPIO_Init(); // Required for clock tree configuration.
+	EXTI_Init(); // Required to clear RTC flags (EXTI 17).
+	// Init clock and power modules.
+	RCC_Init();
+	PWR_Init();
 	// Init clocks.
 	RCC_Init();
 	RCC_EnableGpio();
 	RTC_Reset();
+	// Low speed oscillators.
 	RCC_EnableLsi();
+	spsws_ctx.spsws_lse_running = RCC_EnableLse();
 	// High speed oscillator.
 	if (RCC_SwitchToHse() == 0) {
 		RCC_SwitchToHsi();
 	}
-	// Init peripherals.
-	unsigned int lsi_frequency_hz = RCC_GetLsiFrequency();
+	RCC_GetLsiFrequency(&spsws_ctx.spsws_lsi_frequency_hz);
+	RTC_Init(&spsws_ctx.spsws_lse_running, spsws_ctx.spsws_lsi_frequency_hz);
 	// Timers.
-	TIM21_Init();
-	TIM22_Init();
-	TIM21_Start();
-	TIM22_Start();
-	LPTIM1_Init(LPTIM_MODE_DELAY);
-	// RTC.
-	RTC_Init(0, lsi_frequency_hz);
-	// DMA.
-	DMA1_Init();
+	LPTIM1_Init();
 	// Analog.
 	ADC1_Init();
-	// External interrupts.
-	EXTI_Init();
 	// Communication interfaces.
-	LPUART1_Init();
+	LPUART1_Init(spsws_ctx.spsws_lse_running);
+	I2C1_Init();
+	SPI1_Init();
+#ifdef HW2_0
+	SPI2_Init();
+#endif
 #ifdef HW1_0
 	USART2_Init();
 #endif
 #ifdef HW2_0
 	USART1_Init();
-#endif
-	I2C1_Init();
-	SPI1_Init();
-#ifdef HW2_0
-	SPI2_Init();
 #endif
 	// Init components.
 	SX1232_Init();

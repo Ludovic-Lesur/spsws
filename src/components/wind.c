@@ -236,9 +236,6 @@ void WIND_StopContinuousMeasure(void) {
 #ifdef WIND_VANE_ULTIMETER
 	// Stop phase shift timers: TBD.
 #endif
-#ifdef ATM
-	LPTIM1_Init(LPTIM_MODE_DELAY);
-#endif
 }
 
 /* GET AVERAGE AND PEAK WIND SPEED VALUES SINCE LAST MEASUREMENT START.
