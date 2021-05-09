@@ -288,13 +288,18 @@ sfx_u8 RF_API_stop(void) {
  *******************************************************************/
 sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Disable all interrupts.
-	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
+#ifdef ATM
 #ifdef HW1_0
 	NVIC_DisableInterrupt(NVIC_IT_USART2);
 #endif
 #ifdef HW2_0
 	NVIC_DisableInterrupt(NVIC_IT_USART1);
 #endif
+#endif
+	NVIC_DisableInterrupt(NVIC_IT_LPTIM1);
+	NVIC_DisableInterrupt(NVIC_IT_RTC);
+	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
 	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
 	// Set modulation parameters.
 	RF_API_SetTxModulationParameters(type);
@@ -373,6 +378,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	TIM2_Stop();
 	TIM2_Disable();
 	// Re-enable all interrupts.
+	NVIC_EnableInterrupt(NVIC_IT_RTC);
 #ifdef ATM
 #ifdef HW1_0
 	NVIC_EnableInterrupt(NVIC_IT_USART2);

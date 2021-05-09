@@ -686,7 +686,8 @@ int main (void) {
 			// Clear RTC flags.
 			RTC_ClearAlarmAFlag();
 			RTC_ClearAlarmBFlag();
-			NVIC_EnableInterrupt(NVIC_IT_RTC);
+			RTC_EnableAlarmAInterrupt();
+			RTC_EnableAlarmBInterrupt();
 			// Enter sleep mode.
 			spsws_ctx.spsws_state = SPSWS_STATE_SLEEP;
 			break;
@@ -709,8 +710,10 @@ int main (void) {
 				RTC_ClearAlarmBFlag();
 			}
 			if (RTC_GetAlarmAFlag() != 0) {
-				// Disable RTC interrupt.
-				NVIC_DisableInterrupt(NVIC_IT_RTC);
+
+				// Disable RTC alarm interrupts.
+				RTC_DisableAlarmAInterrupt();
+				RTC_DisableAlarmBInterrupt();
 #ifdef CM
 				// Stop continuous measurements.
 				WIND_StopContinuousMeasure();

@@ -23,6 +23,7 @@
 #include "nvm.h"
 #include "rain.h"
 #include "rf_api.h"
+#include "rtc.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_api.h"
@@ -956,7 +957,8 @@ static void AT_DecodeRxBuffer(void) {
 			if (get_param_result == AT_NO_ERROR) {
 				// Start or stop wind continuous measurements.
 				if (enable == 0) {
-					NVIC_DisableInterrupt(NVIC_IT_RTC);
+					RTC_DisableAlarmBInterrupt();
+					RTC_ClearAlarmBFlag();
 					WIND_StopContinuousMeasure();
 					// Get results.
 					unsigned int wind_average_direction = 0;
@@ -965,12 +967,12 @@ static void AT_DecodeRxBuffer(void) {
 					unsigned int wind_peak_speed = 0;
 					WIND_GetSpeed(&wind_average_speed, &wind_peak_speed);
 					// Print data.
-					USARTx_SendString("WindAverageSpeed=");
+					USARTx_SendString("AverageSpeed=");
 					USARTx_SendValue(wind_average_speed, USART_FORMAT_DECIMAL, 0);
-					USARTx_SendString("m/h WindPeakSpeed=");
+					USARTx_SendString("m/h PeakSpeed=");
 					USARTx_SendValue(wind_peak_speed, USART_FORMAT_DECIMAL, 0);
 					if (wind_average_direction != WIND_DIRECTION_ERROR_VALUE) {
-						USARTx_SendString("m/h WindAverageDirection=");
+						USARTx_SendString("m/h AverageDirection=");
 						USARTx_SendValue(wind_average_direction, USART_FORMAT_DECIMAL, 0);
 						USARTx_SendString("d");
 					}
@@ -982,7 +984,7 @@ static void AT_DecodeRxBuffer(void) {
 				}
 				else {
 					WIND_StartContinuousMeasure();
-					NVIC_EnableInterrupt(NVIC_IT_RTC);
+					RTC_EnableAlarmBInterrupt();
 					// Update flag.
 					at_ctx.wind_measurement_flag = 1;
 				}

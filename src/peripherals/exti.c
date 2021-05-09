@@ -45,26 +45,32 @@ void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 #if (defined CM || defined ATM)
 	// Speed edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.gpio_num))) != 0) {
+		// Manage callback.
+		if (((EXTI -> IMR) & (0b1 << (GPIO_WIND_SPEED.gpio_num))) != 0) {
+			WIND_SpeedEdgeCallback();
+		}
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_WIND_SPEED.gpio_num)); // PIFx='1' (writing '1' clears the bit).
-		// Call WIND callback.
-		WIND_SpeedEdgeCallback();
 	}
 #ifdef WIND_VANE_ULTIMETER
 	// Direction edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.gpio_num))) != 0) {
+		// Manage callback.
+		if (((EXTI -> IMR) & (0b1 << (GPIO_WIND_DIRECTION.gpio_num))) != 0) {
+			WIND_DirectionEdgeCallback();
+		}
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_WIND_DIRECTION.gpio_num)); // PIFx='1' (writing '1' clears the bit).
-		// Call WIND callback.
-		WIND_DirectionEdgeCallback();
 	}
 #endif
 	// Rain edge interrupt.
 	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.gpio_num))) != 0) {
+		// Manage callback.
+		if (((EXTI -> IMR) & (0b1 << (GPIO_RAIN.gpio_num))) != 0) {
+			RAIN_EdgeCallback();
+		}
 		// Clear flag.
 		EXTI -> PR |= (0b1 << (GPIO_RAIN.gpio_num)); // PIFx='1' (writing '1' clears the bit).
-		// Call RAIN callback.
-		RAIN_EdgeCallback();
 	}
 #endif
 }

@@ -339,7 +339,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		wind_ctx.wind_speed_seconds_count = 0;
 #ifdef ATM
 		// Print data.
-		USARTx_SendString("speed=");
+		USARTx_SendString("Speed=");
 		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
 		USARTx_SendString("m/h\n");
 #endif
@@ -385,7 +385,7 @@ void WIND_MeasurementPeriodCallback(void) {
 				wind_ctx.wind_direction_y += (wind_ctx.wind_speed_mh / 1000) * MATH_SIN_TABLE[wind_ctx.wind_direction_degrees];
 #ifdef ATM
 				// Print data.
-				USARTx_SendString("direction=");
+				USARTx_SendString("Direction=");
 				USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
 				USARTx_SendString("d x=");
 				if (wind_ctx.wind_direction_x < 0) {

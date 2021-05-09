@@ -30,7 +30,9 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
 	// Update interrupt.
 	if (((TIM21 -> SR) & (0b1 << 1)) != 0) {
 		// Update flags.
-		tim21_flag = 1;
+		if (((TIM21 -> DIER) & (0b1 << 1)) != 0) {
+			tim21_flag = 1;
+		}
 		TIM21 -> SR &= ~(0b1 << 1);
 	}
 }

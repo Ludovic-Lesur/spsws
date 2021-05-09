@@ -52,7 +52,6 @@ static volatile USART_Context usart_ctx;
  * @return:	None.
  */
 void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
-
 #ifdef USE_TXE_INTERRUPT
 	// TXE interrupt.
 	if (((USART2 -> ISR) & (0b1 << 7)) != 0) {
@@ -90,7 +89,6 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
  * @return:	None.
  */
 void __attribute__((optimize("-O0"))) USART1_IRQHandler(void) {
-
 #ifdef USE_TXE_INTERRUPT
 	// TXE interrupt.
 	if (((USART1 -> ISR) & (0b1 << 7)) != 0) {

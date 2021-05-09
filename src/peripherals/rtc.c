@@ -35,22 +35,28 @@ static volatile unsigned char rtc_wakeup_timer_flag = 0;
 void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 	// Alarm A interrupt.
 	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
-		// Update flagS.
-		rtc_alarm_a_flag = 1;
+		// Update flags.
+		if (((RTC -> CR) & (0b1 << 12)) != 0) {
+			rtc_alarm_a_flag = 1;
+		}
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Alarm B interrupt.
 	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
-		// Update flagS.
-		rtc_alarm_b_flag = 1;
+		// Update flags.
+		if (((RTC -> CR) & (0b1 << 13)) != 0) {
+			rtc_alarm_b_flag = 1;
+		}
 		RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Wake-up timer interrupt.
 	if (((RTC -> ISR) & (0b1 << 10)) != 0) {
-		// Update flagS.
-		rtc_wakeup_timer_flag = 1;
+		// Update flags.
+		if (((RTC -> CR) & (0b1 << 14)) != 0) {
+			rtc_wakeup_timer_flag = 1;
+		}
 		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	}
@@ -149,25 +155,26 @@ void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
 	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
-	RTC -> CR |= (0b1 << 12); // Enable interrupt (ALRAIE='1').
-	RTC -> ISR &= ~(0b1 << 8); // Clear flag.
 	// Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM).
 	RTC -> ALRMBR = 0;
 	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.
 	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
-	RTC -> CR |= (0b1 << 13); // Enable interrupt (ALRBIE='1').
-	RTC -> ISR &= ~(0b1 << 9); // Clear flag.
 	// Configure wake-up timer.
 	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
 	RTC -> CR &= ~(0b111 << 0);
 	RTC -> CR |= (0b100 << 0); // Wake-up timer clocked by RTC clock (1Hz).
-	RTC -> CR |= (0b1 << 14); // Enable wake-up timer interrupt.
 	RTC_ExitInitializationMode();
-	// Enable wake-up timer interrupt.
+	// Configure EXTI lines.
 	EXTI_ConfigureLine(EXTI_LINE_RTC_ALARM, EXTI_TRIGGER_RISING_EDGE);
 	EXTI_ConfigureLine(EXTI_LINE_RTC_WAKEUP_TIMER, EXTI_TRIGGER_RISING_EDGE);
+	// Disable interrupts and clear all flags.
+	RTC -> CR &= ~(0b111 << 12);
+	RTC -> ISR &= 0xFFFE0000;
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	// Set interrupt priority.
 	NVIC_SetPriority(NVIC_IT_RTC, 1);
+	NVIC_EnableInterrupt(NVIC_IT_RTC);
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
@@ -228,6 +235,24 @@ void RTC_GetTimestamp(Timestamp* rtc_timestamp) {
 	rtc_timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
 }
 
+/* ENABLE RTC ALARM A INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_EnableAlarmAInterrupt(void) {
+	// Enable interrupt.
+	RTC -> CR |= (0b1 << 12); // ALRAIE='1'.
+}
+
+/* DISABLE RTC ALARM A INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_DisableAlarmAInterrupt(void) {
+	// Disable interrupt.
+	RTC -> CR &= ~(0b1 << 12); // ALRAIE='0'.
+}
+
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
@@ -245,6 +270,24 @@ void RTC_ClearAlarmAFlag(void) {
 	RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	rtc_alarm_a_flag = 0;
+}
+
+/* ENABLE RTC ALARM B INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_EnableAlarmBInterrupt(void) {
+	// Enable interrupt.
+	RTC -> CR |= (0b1 << 13); // ALRBIE='1'.
+}
+
+/* DISABLE RTC ALARM A INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void RTC_DisableAlarmBInterrupt(void) {
+	// Disable interrupt.
+	RTC -> CR &= ~(0b1 << 13); // ALRBIE='0'.
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
@@ -286,11 +329,11 @@ void RTC_StartWakeUpTimer(unsigned int delay_seconds) {
 		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+		// Enable interrupt.
+		RTC -> CR |= (0b1 << 14); // WUTE='1'.
 		// Start timer.
 		RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
 		RTC_ExitInitializationMode();
-		// Enable interrupt.
-		NVIC_EnableInterrupt(NVIC_IT_RTC);
 	}
 }
 
@@ -304,7 +347,7 @@ void RTC_StopWakeUpTimer(void) {
 	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
 	RTC_ExitInitializationMode();
 	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_RTC);
+	RTC -> CR &= ~(0b1 << 14); // WUTE='0'.
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.

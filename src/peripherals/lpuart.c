@@ -31,7 +31,9 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 	// Character match interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
 		// Switch DMA buffer and decode buffer.
-		NEOM8N_SwitchDmaBuffer(1);
+		if (((LPUART1 -> CR1) & (0b1 << 14)) != 0) {
+			NEOM8N_SwitchDmaBuffer(1);
+		}
 		// Clear CM flag.
 		LPUART1 -> ICR |= (0b1 << 17);
 	}
