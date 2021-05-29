@@ -36,7 +36,7 @@ static MAX11136_Context max11136_ctx;
  * @param valie:	Value to write in register.
  * @return:			1 in case of success, 0 in case of failure.
  */
-static unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
+static unsigned char __attribute__((optimize("-O0"))) MAX11136_WriteRegister(unsigned char addr, unsigned short value) {
 	unsigned short spi_command = 0;
 	// Build SPI command.
 	if (addr == MAX11136_REG_ADC_MODE_CONTROL) {
@@ -65,7 +65,7 @@ static unsigned char MAX11136_WriteRegister(unsigned char addr, unsigned short v
  * @param:	None.
  * @return:	None.
  */
-static void MAX11136_ConvertAllChannels12Bits(void) {
+static void __attribute__((optimize("-O0"))) MAX11136_ConvertAllChannels12Bits(void) {
 #ifdef HW1_0
 	// Configure SPI.
 	SPI1_SetClockPolarity(1);
