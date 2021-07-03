@@ -14,7 +14,7 @@
  * @param:	None.
  * @return:	None.
  */
-void NMI_Handler(void) {
+void __attribute__((optimize("-O0"))) NMI_Handler(void) {
 #ifdef DEBUG
 	// Blink LED.
 	unsigned int k = 0;
@@ -34,7 +34,7 @@ void NMI_Handler(void) {
  * @param:	None.
  * @return:	None.
  */
-void HardFault_Handler(void) {
+void __attribute__((optimize("-O0"))) HardFault_Handler(void) {
 #ifdef DEBUG
 	// Blink LED.
 	unsigned int k = 0;
@@ -54,7 +54,7 @@ void HardFault_Handler(void) {
  * @param:	None.
  * @return:	None.
  */
-void SVC_Handler(void) {
+void __attribute__((optimize("-O0"))) SVC_Handler(void) {
 	// TBD.
 }
 
@@ -62,7 +62,7 @@ void SVC_Handler(void) {
  * @param:	None.
  * @return:	None.
  */
-void PendSV_Handler(void) {
+void __attribute__((optimize("-O0"))) PendSV_Handler(void) {
 	// TBD.
 }
 
@@ -70,6 +70,6 @@ void PendSV_Handler(void) {
  * @param:	None.
  * @return:	None.
  */
-void SysTick_Handler(void) {
+void __attribute__((optimize("-O0"))) SysTick_Handler(void) {
 	// TBD.
 }
