@@ -12,8 +12,8 @@
 
 /*** Wheather station mode ***/
 
-#define ATM 		// AT command mode.
-//#define IM 			// Intermittent mode.
+//#define ATM 		// AT command mode.
+#define IM 			// Intermittent mode.
 //#define CM 		// Continuous mode.
 
 /*** Debug mode ***/

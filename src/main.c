@@ -373,7 +373,9 @@ int main (void) {
 			// Low speed oscillators and watchdog (only at POR).
 			if (spsws_ctx.spsws_por_flag != 0) {
 				// Start independant watchdog.
+#ifndef DEBUG
 				IWDG_Init();
+#endif
 				// Reset RTC before starting oscillators.
 				RTC_Reset();
 				// LSI.
