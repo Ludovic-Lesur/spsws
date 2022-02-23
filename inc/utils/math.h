@@ -1,8 +1,8 @@
 /*
  * math.h
  *
- *  Created on: 15 sept. 2019
- *      Author: Ludovic
+ *  Created on: 28 aug. 2020
+ *      Author: Ludo
  */
 
 #ifndef MATH_H
@@ -10,9 +10,12 @@
 
 #include "mode.h"
 
+/*** MATH macros ***/
+
 #if (defined CM || defined ATM)
 
-// Cosinus table.
+#define MATH_ERROR_VALUE	0xFFFFFFFF
+
 static const signed int MATH_COS_TABLE[360] = {
 	1000, 1000, 999, 999, 998, 996, 995, 993, 990, 988,
 	985, 982, 978, 974, 970, 966, 961, 956, 951, 946,
@@ -52,7 +55,6 @@ static const signed int MATH_COS_TABLE[360] = {
 	985, 988, 990, 993, 995, 996, 998, 999, 999, 1000
 };
 
-// Sinus table.
 static const signed int MATH_SIN_TABLE[360] = {
 	0, 17, 35, 52, 70, 87, 105, 122, 139, 156,
 	174, 191, 208, 225, 242, 259, 276, 292, 309, 326,
@@ -91,7 +93,16 @@ static const signed int MATH_SIN_TABLE[360] = {
 	-342, -326, -309, -292, -276, -259, -242, -225, -208, -191,
 	-174, -156, -139, -122, -105, -87, -70, -52, -35, -17
 };
+#endif
 
+/*** MATH functions ***/
+
+unsigned int MATH_Pow10(unsigned char power);
+unsigned int MATH_ComputeAverage(unsigned int* data, unsigned char data_length);
+unsigned int MATH_ComputeMedianFilter(unsigned int* data, unsigned char median_length, unsigned char average_length);
+#if (defined CM || defined ATM)
+unsigned int MATH_Abs(signed int x);
+unsigned int MATH_Atan2(signed int x, signed int y);
 #endif
 
 #endif /* MATH_H */

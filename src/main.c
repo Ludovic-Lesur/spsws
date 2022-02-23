@@ -445,11 +445,11 @@ int main (void) {
 			IWDG_Reload();
 			// Retrieve internal ADC data.
 			ADC1_Init();
-			ADC1_PerformAllMeasurements();
+			ADC1_PerformMeasurements();
 			ADC1_Disable();
-			ADC1_GetMcuTemperatureComp1(&generic_data_u8);
+			ADC1_GetTmcuComp1(&generic_data_u8);
 			spsws_ctx.spsws_sigfox_monitoring_data.field.mcu_temperature_degrees = generic_data_u8;
-			ADC1_GetMcuVoltage(&generic_data_u32_1);
+			ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &generic_data_u32_1);
 			spsws_ctx.spsws_sigfox_monitoring_data.field.mcu_voltage_mv = generic_data_u32_1;
 			// Retrieve external ADC data.
 #ifdef HW1_0

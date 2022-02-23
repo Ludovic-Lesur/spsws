@@ -27,7 +27,7 @@ static volatile unsigned char tim21_flag = 0;
  * @return:	None.
  */
 void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
-	// Update interrupt.
+	// TI1 interrupt.
 	if (((TIM21 -> SR) & (0b1 << 1)) != 0) {
 		// Update flags.
 		if (((TIM21 -> DIER) & (0b1 << 1)) != 0) {
@@ -84,9 +84,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 	while (tim21_interrupt_count < 2) {
 		// Wait for interrupt.
 		tim21_flag = 0;
-		while (tim21_flag == 0) {
-			//PWR_EnterLowPowerSleepMode
-		}
+		while (tim21_flag == 0);
 		tim21_interrupt_count++;
 		if (tim21_interrupt_count == 1) {
 			tim21_ccr1_edge1 = (TIM21 -> CCR1);

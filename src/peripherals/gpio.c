@@ -54,8 +54,8 @@ static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
  */
 static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
 	// Get mode.
-	GPIO_Mode gpioMode = (((gpio -> gpio_port_address) -> MODER) & (0b11 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
-	return gpioMode;
+	GPIO_Mode gpio_mode = (((gpio -> gpio_port_address) -> MODER) & (0b11 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
+	return gpio_mode;
 }
 
 /* SET THE OUTPUT TYPE OF A GPIO PIN.

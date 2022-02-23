@@ -58,6 +58,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/components}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/sigfox}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/applicative}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/utils}&quot;"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.881377417" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
@@ -75,6 +76,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/components}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/sigfox}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/applicative}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/utils}&quot;"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.560986041" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
@@ -190,6 +192,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/components}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/sigfox}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/applicative}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/utils}&quot;"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.312021790" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
@@ -207,6 +210,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/components}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/sigfox}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/applicative}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/SPSWS/inc/utils}&quot;"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.2092772708" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>

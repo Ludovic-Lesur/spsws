@@ -97,16 +97,16 @@ sfx_u8 MCU_API_free(sfx_u8* ptr) {
 sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature) {
 	// Perform measurements.
 	ADC1_Init();
-	ADC1_PerformAllMeasurements();
+	ADC1_PerformMeasurements();
 	ADC1_Disable();
 	// Get MCU supply voltage.
 	unsigned int mcu_supply_voltage_mv = 0;
-	ADC1_GetMcuVoltage(&mcu_supply_voltage_mv);
+	ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &mcu_supply_voltage_mv);
 	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
 	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.
 	signed char mcu_temperature_degrees = 0;
-	ADC1_GetMcuTemperatureComp2(&mcu_temperature_degrees);
+	ADC1_GetTmcuComp2(&mcu_temperature_degrees);
 	(*temperature) = ((sfx_s16) mcu_temperature_degrees) * 10; // Unit = 1/10 of degrees.
 	return SFX_ERR_NONE;
 }

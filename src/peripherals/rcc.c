@@ -271,9 +271,9 @@ void RCC_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 	}
 }
 
-/* CONFIGURE AND USE LSE AS LOW SPEED OSCILLATOR (32kHz EXTERNAL QUARTZ).
+/* ENABLE LSE OSCILLATOR (32kHz EXTERNAL QUARTZ).
  * @param:					None.
- * @return lsi_available:	'1' if LSE was successfully started, 0 otherwise.
+ * @return lse_available:	'1' if LSE was successfully started, 0 otherwise.
  */
 unsigned char RCC_EnableLse(void) {
 	// Configure drive level.

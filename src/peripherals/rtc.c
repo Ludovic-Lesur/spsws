@@ -35,28 +35,31 @@ static volatile unsigned char rtc_wakeup_timer_flag = 0;
 void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 	// Alarm A interrupt.
 	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
-		// Update flags.
+		// Set local flag.
 		if (((RTC -> CR) & (0b1 << 12)) != 0) {
 			rtc_alarm_a_flag = 1;
 		}
+		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Alarm B interrupt.
 	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
-		// Update flags.
+		// Set local flag.
 		if (((RTC -> CR) & (0b1 << 13)) != 0) {
 			rtc_alarm_b_flag = 1;
 		}
+		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	}
 	// Wake-up timer interrupt.
 	if (((RTC -> ISR) & (0b1 << 10)) != 0) {
-		// Update flags.
+		// Set local flag.
 		if (((RTC -> CR) & (0b1 << 14)) != 0) {
 			rtc_wakeup_timer_flag = 1;
 		}
+		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
 		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	}

@@ -780,9 +780,9 @@ static void AT_DecodeRxBuffer(void) {
 				unsigned int mcu_supply_voltage_mv = 0;
 				signed char mcu_temperature_degrees = 0;
 				// Trigger internal ADC conversions.
-				ADC1_PerformAllMeasurements();
-				ADC1_GetMcuTemperatureComp2(&mcu_temperature_degrees);
-				ADC1_GetMcuVoltage(&mcu_supply_voltage_mv);
+				ADC1_PerformMeasurements();
+				ADC1_GetTmcuComp2(&mcu_temperature_degrees);
+				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &mcu_supply_voltage_mv);
 				// Print results.
 				USARTx_SendString("Vcc=");
 				USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
@@ -914,12 +914,12 @@ static void AT_DecodeRxBuffer(void) {
 				SPI2_PowerOff();
 #endif
 				I2C1_PowerOff();
-				ADC1_PerformAllMeasurements();
+				ADC1_PerformMeasurements();
 				// Get LDR and supply voltage.
 				unsigned int ldr_output_mv = 0;
 				unsigned int ldr_supply_voltage_mv = 0;
 				MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
-				ADC1_GetMcuVoltage(&ldr_supply_voltage_mv);
+				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &ldr_supply_voltage_mv);
 				// Convert to percent.
 				unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
 				// Print result.

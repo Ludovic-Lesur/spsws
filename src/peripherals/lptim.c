@@ -35,10 +35,11 @@ static volatile unsigned char lptim_wake_up = 0;
 void __attribute__((optimize("-O0"))) LPTIM1_IRQHandler(void) {
 	// Check flag.
 	if (((LPTIM1 -> ISR) & (0b1 << 1)) != 0) {
-		// Update flags.
+		// Set local flag.
 		if (((LPTIM1 -> IER) & (0b1 << 1)) != 0) {
 			lptim_wake_up = 1;
 		}
+		// Clear flag.
 		LPTIM1 -> ICR |= (0b1 << 1);
 	}
 }
