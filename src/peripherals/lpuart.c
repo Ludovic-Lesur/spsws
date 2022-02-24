@@ -13,6 +13,7 @@
 #include "mapping.h"
 #include "neom8n.h"
 #include "nvic.h"
+#include "string.h"
 #include "rcc.h"
 #include "rcc_reg.h"
 
@@ -81,7 +82,7 @@ void LPUART1_Init(unsigned char lpuart_use_lse) {
 	brr /= LPUART_BAUD_RATE;
 	LPUART1 -> BRR = (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Configure character match interrupt and DMA.
-	LPUART1 -> CR2 |= (NMEA_LF << 24); // LF character used to trigger CM interrupt.
+	LPUART1 -> CR2 |= (STRING_CHAR_LF << 24); // LF character used to trigger CM interrupt.
 	LPUART1 -> CR3 |= (0b1 << 6); // Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 	// Set interrupt priority.

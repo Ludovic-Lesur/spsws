@@ -8,11 +8,6 @@
 #ifndef NEOM8N_H
 #define NEOM8N_H
 
-/*** NEOM8N macros ***/
-
-#define NMEA_CR		'\r'
-#define NMEA_LF		'\n'
-
 /*** NEOM8N structures ***/
 
 typedef struct {
