@@ -8,6 +8,7 @@
 #include "mcu_api.h"
 
 #include "adc.h"
+#include "at.h"
 #include "aes.h"
 #include "exti.h"
 #include "iwdg.h"
@@ -17,7 +18,6 @@
 #include "pwr.h"
 #include "rtc.h"
 #include "sigfox_types.h"
-#include "usart.h"
 
 /*** MCU API local macros ***/
 
@@ -402,16 +402,7 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
  *******************************************************************/
 sfx_u8 MCU_API_report_test_result(sfx_bool status, sfx_s16 rssi) {
 #ifdef ATM
-	// Print test result on UART.
-	if (status == SFX_TRUE) {
-		USARTx_SendString("Test passed. RSSI=-");
-		USARTx_SendValue(((unsigned int) ((-1) * rssi)), USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("dBm");
-	}
-	else {
-		USARTx_SendString("Test failed. ");
-	}
-	USARTx_SendString("\r\n");
+	AT_PrintTestResult(status, rssi);
 #endif
 	return SFX_ERR_NONE;
 }

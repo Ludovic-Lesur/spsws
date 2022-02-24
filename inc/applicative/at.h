@@ -12,25 +12,15 @@
 
 #ifdef ATM
 
-/*** AT macros ***/
-
-// Enabled commands.
-#define AT_COMMANDS_GPS
-#define AT_COMMANDS_SENSORS
-#define AT_COMMANDS_NVM
-#define AT_COMMANDS_SIGFOX
-#define AT_COMMANDS_CW_RSSI
-#define AT_COMMANDS_TEST_MODES
-#define AT_COMMANDS_RC
-
-/*** AT user functions ***/
+/*** AT functions ***/
 
 void AT_Init(void);
 void AT_Task(void);
-
-/*** AT utility functions ***/
-
 void AT_FillRxBuffer(unsigned char rx_byte);
+void AT_PrintTestResult(unsigned char status, int rssi);
+void AT_PrintRain(unsigned char rain_edge_count);
+void AT_PrintWindSpeed(unsigned int wind_speed_mh);
+void AT_PrintWindDirection(unsigned int wind_direction_degrees, int wind_direction_x, int wind_direction_y);
 
 #endif
 

@@ -7,12 +7,12 @@
 
 #include "rain.h"
 
+#include "at.h"
 #include "exti.h"
 #include "gpio.h"
 #include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
-#include "usart.h"
 
 #if (defined CM || defined ATM)
 
@@ -33,11 +33,9 @@ volatile unsigned int rain_edge_count;
  * @return:	None.
  */
 void RAIN_Init(void) {
-
-	/* GPIO mapping selection */
+	// GPIO mapping selection.
 	GPIO_RAIN = GPIO_DIO2;
-
-	/* Init GPIOs and EXTI */
+	// Init GPIOs and EXTI.
 	GPIO_Configure(&GPIO_RAIN, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureGpio(&GPIO_RAIN, EXTI_TRIGGER_FALLING_EDGE);
 }
@@ -47,8 +45,7 @@ void RAIN_Init(void) {
  * @return:	None.
  */
 void RAIN_StartContinuousMeasure(void) {
-
-	/* Enable required interrupt */
+	// Enable required interrupt.
 	EXTI_ClearAllFlags();
 	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
@@ -58,8 +55,7 @@ void RAIN_StartContinuousMeasure(void) {
  * @return:	None.
  */
 void RAIN_StopContinuousMeasure(void) {
-
-	/* Disable required interrupt */
+	// Disable required interrupt.
 	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
 }
 
@@ -99,15 +95,10 @@ void RAIN_ResetData(void) {
  * @return:	None.
  */
 void RAIN_EdgeCallback(void) {
-
-	/* Increment edge count */
+	// Increment edge count.
 	rain_edge_count++;
-
-	/* Print data */
 #ifdef ATM
-	USARTx_SendString("rain_edge_count=");
-	USARTx_SendValue(rain_edge_count, USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("\n");
+	AT_PrintRain(rain_edge_count);
 #endif
 }
 

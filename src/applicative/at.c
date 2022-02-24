@@ -15,12 +15,13 @@
 #include "i2c.h"
 #include "lpuart.h"
 #include "lptim.h"
-#include "mapping.h"
+#include "math.h"
 #include "max11136.h"
 #include "mode.h"
 #include "neom8n.h"
 #include "nvic.h"
 #include "nvm.h"
+#include "parser.h"
 #include "rain.h"
 #include "rf_api.h"
 #include "rtc.h"
@@ -29,6 +30,7 @@
 #include "sigfox_api.h"
 #include "sky13317.h"
 #include "spi.h"
+#include "string.h"
 #include "sx1232.h"
 #include "tim.h"
 #include "usart.h"
@@ -38,113 +40,91 @@
 
 /*** AT local macros ***/
 
-#define AT_BUFFER_SIZE									64
-
-#define AT_NULL_CHAR									'\0'
-#define AT_SEPARATOR_CHAR								','
-#define AT_CR_CHAR										'\r'
-#define AT_LF_CHAR										'\n'
-
-#define AT_COMMAND_MIN_SIZE								2
-#define AT_HEXA_MAX_DIGITS								8
-#define AT_DECIMAL_MAX_DIGITS							9
-
+// Enabled commands.
+#define AT_COMMANDS_GPS
+#define AT_COMMANDS_SENSORS
+#define AT_COMMANDS_NVM
+#define AT_COMMANDS_SIGFOX
+#define AT_COMMANDS_CW_RSSI
+#define AT_COMMANDS_TEST_MODES
+#define AT_COMMANDS_RC
+// Common macros.
+#define AT_COMMAND_LENGTH_MIN			2
+#define AT_COMMAND_BUFFER_LENGTH		128
+#define AT_RESPONSE_BUFFER_LENGTH		128
+#define AT_STRING_VALUE_BUFFER_LENGTH	16
 // Input commands without parameter.
-#define AT_IN_COMMAND_TEST								"AT"
-#define AT_IN_COMMAND_ADC								"AT$ADC?"
-#define AT_IN_COMMAND_MCU								"AT$MCU?"
+#define AT_COMMAND_TEST					"AT"
+#define AT_COMMAND_ADC					"AT$ADC?"
+#define AT_COMMAND_MCU					"AT$MCU?"
 #ifdef HW2_0
-#define AT_IN_COMMAND_ITHS								"AT$ITHS?"
+#define AT_COMMAND_ITHS					"AT$ITHS?"
 #endif
-#define AT_IN_COMMAND_ETHS								"AT$ETHS?"
-#define AT_IN_COMMAND_EPTS								"AT$EPTS?"
-#define AT_IN_COMMAND_ELDR								"AT$ELDR?"
-#define AT_IN_COMMAND_EUVS								"AT$EUVS?"
-#define AT_IN_COMMAND_ID								"AT$ID?"
-#define AT_IN_COMMAND_KEY								"AT$KEY?"
-#define AT_IN_COMMAND_NVMR								"AT$NVMR"
-#define AT_IN_COMMAND_SF								"AT$SF"
-#define AT_IN_COMMAND_OOB								"AT$SO"
-#define AT_IN_COMMAND_RC								"AT$RC?"
-
+#define AT_COMMAND_ETHS					"AT$ETHS?"
+#define AT_COMMAND_EPTS					"AT$EPTS?"
+#define AT_COMMAND_ELDR					"AT$ELDR?"
+#define AT_COMMAND_EUVS					"AT$EUVS?"
+#define AT_COMMAND_ID					"AT$ID?"
+#define AT_COMMAND_KEY					"AT$KEY?"
+#define AT_COMMAND_NVMR					"AT$NVMR"
+#define AT_COMMAND_OOB					"AT$SO"
+#define AT_COMMAND_RC					"AT$RC?"
 // Input commands with parameters (headers).
-#define AT_IN_HEADER_TIME								"AT$TIME="		// AT$TIME=<timeout_seconds><CR>.
-#define AT_IN_HEADER_GPS								"AT$GPS=" 		// AT$GPS=<timeout_seconds><CR>.
-#define AT_IN_HEADER_WIND								"AT$WIND="		// AT$WIND=<enable><CR>.
-#define AT_IN_HEADER_RAIN								"AT$RAIN="		// AT$RAIN=<enable><CR>.
-#define AT_IN_HEADER_NVM								"AT$NVM="		// AT$NVM=<address_offset><CR>
-#define AT_IN_HEADER_ID									"AT$ID="		// AT$ID=<id><CR>.
-#define AT_IN_HEADER_KEY								"AT$KEY="		// AT$KEY=<key><CR>.
-#define AT_IN_HEADER_SF									"AT$SF="		// AT$SF=<uplink_data>,<downlink_request><CR>.
-#define AT_IN_HEADER_SB									"AT$SB="		// AT$SB=<bit><CR>.
-#define AT_IN_HEADER_CW									"AT$CW="		// AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
-#define AT_IN_HEADER_RSSI								"AT$RSSI="		// AT$RSSI=<frequency_hz><CR>.
-#define AT_IN_HEADER_TM									"AT$TM="		// AT$TM=<rc>,<test_mode><CR>.
-#define AT_IN_HEADER_RC									"AT$RC="		// AT$RC=<rc><CR>
-
-// Output commands without data.
-#define AT_OUT_COMMAND_OK								"OK"
-
-// Output commands with data (headers).
-#define AT_OUT_HEADER_AT_ERROR							"AT_ERROR "		// AT_ERROR <error_code><CR>
-#define AT_OUT_HEADER_SFX_ERROR							"SFX_ERROR "	// SFX_ERROR <error_code><CR>
-
-// Syntax errors.
-#define AT_NO_ERROR						  				0x00 			// For internal processing ("OK" is returned in this case).
-#define AT_OUT_ERROR_UNKNOWN_COMMAND					0x01 			// Unknown command or header.
-#define AT_OUT_ERROR_NO_PARAM_FOUND						0x02 			// No parameter found after header.
-#define AT_OUT_ERROR_NO_SEP_FOUND						0x03 			// No separator found.
-#define AT_OUT_ERROR_PARAM_BIT_INVALID_CHAR				0x04 			// Parameter is not a bit (0/1).
-#define AT_OUT_ERROR_PARAM_BIT_OVERFLOW	  				0x05 			// Parameter length overflow (> 1 digit).
-#define AT_OUT_ERROR_PARAM_HEXA_ODD_SIZE	  			0x06 			// Odd number of character(s) to code an hexadecimal parameter.
-#define AT_OUT_ERROR_PARAM_HEXA_INVALID_CHAR			0x07 			// Invalid character found in hexadecimal parameter.
-#define AT_OUT_ERROR_PARAM_HEXA_OVERFLOW				0x08 			// Parameter value overflow (> 32 bits).
-#define AT_OUT_ERROR_PARAM_DEC_INVALID_CHAR				0x09 			// Invalid character found in decimal parameter.
-#define AT_OUT_ERROR_PARAM_DEC_OVERFLOW					0x0A 			// Invalid length when parsing byte array.
-#define AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH	0x0B
-
-// Parameters errors
-#define AT_OUT_ERROR_TIMEOUT_OVERFLOW					0x80			// Timeout is too large.
-#define AT_OUT_ERROR_NVM_ADDRESS_OVERFLOW				0x81			// Address offset exceeds NVM size.
-#define AT_OUT_ERROR_RF_FREQUENCY_UNDERFLOW				0x82			// RF frequency is too low.
-#define AT_OUT_ERROR_RF_FREQUENCY_OVERFLOW				0x83			// RF frequency is too high.
-#define AT_OUT_ERROR_RF_OUTPUT_POWER_OVERFLOW			0x84			// RF output power is too high.
-#define AT_OUT_ERROR_UNKNOWN_RC							0x85			// Unknown RC.
-#define AT_OUT_ERROR_UNKNOWN_TEST_MODE					0x86			// Unknown test mode.
-#define AT_OUT_ERROR_FORBIDDEN_COMMAND					0x87			// Forbidden command.
-
-// Components errors
-#define AT_OUT_ERROR_NEOM8N_TIMEOUT						0x87			// GPS timeout.
-
+#define AT_HEADER_TIME					"AT$TIME="
+#define AT_HEADER_GPS					"AT$GPS="
+#define AT_HEADER_WIND					"AT$WIND="
+#define AT_HEADER_RAIN					"AT$RAIN="
+#define AT_HEADER_NVM					"AT$NVM="
+#define AT_HEADER_ID					"AT$ID="
+#define AT_HEADER_KEY					"AT$KEY="
+#define AT_HEADER_SF					"AT$SF="
+#define AT_HEADER_SB					"AT$SB="
+#define AT_HEADER_CW					"AT$CW="
+#define AT_HEADER_RSSI					"AT$RSSI="
+#define AT_HEADER_TM					"AT$TM="
+#define AT_HEADER_RC					"AT$RC="
+// Parameters separator.
+#define AT_CHAR_SEPARATOR				','
+// Responses.
+#define AT_RESPONSE_OK					"OK"
+#define AT_RESPONSE_END					"\r\n"
+#define AT_RESPONSE_ERROR_PSR			"PSR_ERROR_"
+#define AT_RESPONSE_ERROR_SFX			"SFX_ERROR_"
+#define AT_RESPONSE_ERROR_APP			"APP_ERROR_"
 // Duration of RSSI command.
-#define AT_RSSI_REPORT_PERIOD_MS						500
-#define AT_RSSI_REPORT_DURATION_MS						60000
-
+#define AT_RSSI_REPORT_PERIOD_MS		500
+#define AT_RSSI_REPORT_DURATION_MS		60000
 // Sigfox RC standard config size.
-#define AT_SIGFOX_RC_STD_CONFIG_SIZE					3
+#define AT_SIGFOX_RC_STD_CONFIG_SIZE	3
 
 /*** AT local structures ***/
 
 typedef enum {
-	AT_ERROR_SOURCE_AT,
-	AT_ERROR_SOURCE_SFX
+	AT_ERROR_SOURCE_PSR,
+	AT_ERROR_SOURCE_SFX,
+	AT_ERROR_SOURCE_APP
 } AT_ErrorSource;
 
-typedef enum at_param_type {
-	AT_PARAM_TYPE_BOOLEAN,
-	AT_PARAM_TYPE_HEXADECIMAL,
-	AT_PARAM_TYPE_DECIMAL
-} AT_ParameterType;
+typedef enum {
+	APP_ERROR_NVM_ADDRESS_OVERFLOW,
+	APP_ERROR_RF_FREQUENCY_UNDERFLOW,
+	APP_ERROR_RF_FREQUENCY_OVERFLOW,
+	APP_ERROR_RF_OUTPUT_POWER_OVERFLOW,
+	APP_ERROR_INVALID_RC,
+	APP_ERROR_INVALID_TEST_MODE,
+	APP_ERROR_GPS_INVALID_TIMEOUT,
+	APP_ERROR_GPS_TIMEOUT,
+	APP_ERROR_FORBIDDEN_COMMAND
+} AT_ApplicativeError;
 
 typedef struct {
 	// AT command buffer.
-	volatile unsigned char at_rx_buf[AT_BUFFER_SIZE];
-	volatile unsigned int at_rx_buf_idx;
-	volatile unsigned char at_line_end_flag; // Set to '1' as soon as a <CR> or <LF> is received.
-	// Parsing variables.
-	unsigned int start_idx;
-	unsigned int end_idx;
-	unsigned int separator_idx;
+	volatile unsigned char at_command_buf[AT_COMMAND_BUFFER_LENGTH];
+	volatile unsigned int at_command_buf_idx;
+	volatile unsigned char at_line_end_flag;
+	PARSER_Context at_parser;
+	char at_response_buf[AT_RESPONSE_BUFFER_LENGTH];
+	unsigned int at_response_buf_idx;
 	// Wind measurement flag.
 	unsigned char wind_measurement_flag;
 	// Sigfox RC.
@@ -166,336 +146,37 @@ static const sfx_u32 rc5_config[AT_SIGFOX_RC_STD_CONFIG_SIZE] = RC5_CONFIG;
 
 /*** AT local functions ***/
 
-/* CONVERTS THE ASCII CODE OF AN HEXADECIMAL CHARACTER TO THE CORRESPONDING A 4-BIT WORD.
- * @param c:	The hexadecimal character to convert.
- * @return:		The results of conversion.
+/* APPEND A STRING TO THE REPONSE BUFFER.
+ * @param tx_string:	String to add.
+ * @return:				None.
  */
-static unsigned char AT_AsciiToHexa(char c) {
-	unsigned char hexa_value = 0;
-	if ((c >= 'A') && (c <= 'F')) {
-		hexa_value = c - 'A' + 10;
-	}
-	if ((c >= '0') && (c <= '9')) {
-		hexa_value = c - '0';
-	}
-	return hexa_value;
-}
-
-/* CONVERTS A 4-BITS VARIABLE TO THE ASCII CODE OF THE CORRESPONDING HEXADECIMAL CHARACTER IN ASCII.
- * @param n:	The char to converts.
- * @return:		The results of conversion.
- */
-static char AT_HexaToAscii(unsigned char n) {
-	char hexa_char = 0;
-	if (n <= 15) {
-		hexa_char = (n <= 9 ? (char) (n + '0') : (char) (n + ('A' - 10)));
-	}
-	return hexa_char;
-}
-
-/* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO AN HEXADECIMAL CHARACTER.
- * @param ascii_code:	The byte to analyse.
- * @return:				1 if the byte is the ASCII code of an hexadecimal character, 0 otherwise.
- */
-static unsigned char AT_IsHexaChar(unsigned char ascii_code) {
-	return (((ascii_code >= '0') && (ascii_code <= '9')) || ((ascii_code >= 'A') && (ascii_code <= 'F')));
-}
-
-/* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO A DECIMAL CHARACTER.
- * @param ascii_code:	The byte to analyse.
- * @return:				1 if the byte is the ASCII code of a decimal character, 0 otherwise.
- */
-static unsigned char AT_IsDecimalChar(unsigned char ascii_code) {
-	return ((ascii_code >= '0') && (ascii_code <= '9'));
-}
-
-/* COMPUTE A POWER A 10.
- * @param power:	The desired power.
- * @return result:	Result of computation.
- */
-static unsigned int AT_Pow10(unsigned char power) {
-	unsigned int result = 0;
-	unsigned int pow10_buf[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
-	if (power <= 9) {
-		result = pow10_buf[power];
-	}
-	return result;
-}
-
-/* CHECK EQUALITY BETWEEN A GIVEN COMMAND AND THE CURRENT AT COMMAND BUFFER.
- * @param command:			String to compare.
- * @return return_code:		'AT_NO_ERROR' if strings are identical.
- * 							'AT_OUT_ERROR_UNKNOWN_COMMAND' otherwise.
- */
-static unsigned short AT_CompareCommand(char* command) {
-	unsigned short return_code = AT_OUT_ERROR_UNKNOWN_COMMAND;
-	unsigned int idx = 0;
-	// 'command' ends with a NULL character (standard in C).
-	// 'at_rx_buf' ends at 'at_rx_buf_idx'.
-	while ((command[idx] != AT_NULL_CHAR) && (idx < at_ctx.at_rx_buf_idx)) {
-		if (command[idx] != at_ctx.at_rx_buf[idx]) {
-			// Difference found, exit loop.
-			break;
-		}
-		else {
-			// Increment index to check next character.
-			idx++;
+static void AT_ResponseAddString(char* tx_string) {
+	// Fill TX buffer with new bytes.
+	while (*tx_string) {
+		at_ctx.at_response_buf[at_ctx.at_response_buf_idx++] = *(tx_string++);
+		// Manage rollover.
+		if (at_ctx.at_response_buf_idx >= AT_RESPONSE_BUFFER_LENGTH) {
+			at_ctx.at_response_buf_idx = 0;
 		}
 	}
-	// Strings are identical if 'idx' reached 'at_rx_buf_idx'-1 (to ignore the single <CR> or <LF>) and 'command[idx]' = NULL.
-	if ((idx == (at_ctx.at_rx_buf_idx-1)) && (command[idx] == AT_NULL_CHAR)) {
-		return_code = AT_NO_ERROR;
-	}
-	return return_code;
 }
 
-/* CHECK EQUALITY BETWEEN A GIVEN HEADER AND THE BEGINNING OF THE CURRENT AT COMMAND BUFFER.
- * @param header:			String to compare.
- * @return return_code:		'AT_NO_ERROR' if headers are identical.
- * 							'AT_OUT_ERROR_UNKNOWN_COMMAND' otherwise.
+/* APPEND A VALUE TO THE REPONSE BUFFER.
+ * @param tx_value:		Value to add.
+ * @param format:       Printing format.
+ * @param print_prefix: Print base prefix is non zero.
+ * @return:				None.
  */
-static unsigned short AT_CompareHeader(char* header) {
-	unsigned short return_code = AT_OUT_ERROR_UNKNOWN_COMMAND;
-	unsigned int idx = 0;
-	// 'header' ends with a NULL character (standard in C).
-	// 'at_rx_buf' ends at 'at_buf_idx'.
-	while ((header[idx] != AT_NULL_CHAR) && (idx < at_ctx.at_rx_buf_idx)) {
-		if (header[idx] != at_ctx.at_rx_buf[idx]) {
-			// Difference found, exit loop.
-			break;
-		}
-		else {
-			// Increment index to check next character.
-			idx++;
-		}
-	}
-	// Header are identical if 'header[idx]' = NULL.
-	if (header[idx] == AT_NULL_CHAR) {
-		at_ctx.start_idx = idx; // At this step, idx is on the NULL character (after the header).
-		return_code = AT_NO_ERROR;
-	}
-	else {
-		at_ctx.start_idx = 0;
-	}
-	return return_code;
-}
-
-/* SEARCH SEPARATOR IN THE CURRENT AT COMMAND BUFFER.
- * @param:					None.
- * @return separator_found:	Boolean indicating if separator was found.
- */
-static unsigned char AT_SearchSeparator(void) {
-	unsigned char separator_found = 0;
-	unsigned int i = 0;
-	// Starting from char following the current separator (which is the start of buffer in case of first call).
-	for (i=(at_ctx.separator_idx+1) ; i<at_ctx.at_rx_buf_idx ; i++) {
-		if (at_ctx.at_rx_buf[i] == AT_SEPARATOR_CHAR) {
-			at_ctx.separator_idx = i;
-			separator_found = 1;
-			break;
-		}
-	}
-	return separator_found;
-}
-
-/* RETRIEVE A PARAMETER IN THE CURRENT AT BUFFER.
- * @param param-type:	Format of parameter to get.
- * @param last_param:	Indicates if the parameter to scan is the last in AT command.
- * @param param_value:	Pointer to the parameter value.
- * @return return_code:	AT error code.
- */
-static unsigned short AT_GetParameter(AT_ParameterType param_type, unsigned char last_param, unsigned int* param_value) {
-	unsigned short return_code = AT_OUT_ERROR_UNKNOWN_COMMAND;
+static void AT_ResponseAddValue(int tx_value, STRING_Format format, unsigned char print_prefix) {
 	// Local variables.
-	unsigned int i = 0; // Generic index used in for loops.
-	// Bit parsing.
-	unsigned char bit_digit = 0;
-	// Hexadecimal parsing.
-	unsigned char hexa_number_of_bytes = 0;
-	unsigned char hexa_byte_buf[AT_HEXA_MAX_DIGITS/2] = {0};
-	unsigned char hexa_digit_idx = 0; // Used instead of i to ignore offset.
-	// Decimal parsing.
-	unsigned char dec_number_of_digits = 0;
-	unsigned char dec_digit_buf[AT_DECIMAL_MAX_DIGITS] = {0};
-	unsigned char dec_digit_idx = 0; // Used instead of i to ignore offset.
-	// Search separator if required.
-	if (last_param == 1) {
-		at_ctx.end_idx = at_ctx.at_rx_buf_idx - 2; // -2 to ignore current position + <CR>/<LF>.
-	}
-	else {
-		if (AT_SearchSeparator() == 1) {
-			at_ctx.end_idx = at_ctx.separator_idx - 1; // -2 to separator.
-		}
-		else {
-			// Error -> none separator found.
-			return AT_OUT_ERROR_NO_SEP_FOUND;
-		}
-	}
-	// Check if parameter is not empty.
-	if (at_ctx.end_idx < at_ctx.start_idx) {
-		// Error in parameter -> none parameter found.
-		return AT_OUT_ERROR_NO_PARAM_FOUND;
-	}
-	switch (param_type) {
-	case AT_PARAM_TYPE_BOOLEAN:
-		// Check if there is only 1 digit (start and end index are equal).
-		if ((at_ctx.end_idx-at_ctx.start_idx) == 0) {
-			// Get digit and check if it is a bit.
-			bit_digit = at_ctx.at_rx_buf[at_ctx.start_idx];
-			if ((bit_digit == AT_HexaToAscii(0)) || (bit_digit == AT_HexaToAscii(1))) {
-				(*param_value) = AT_AsciiToHexa(bit_digit);
-				return_code = AT_NO_ERROR;
-			}
-			else {
-				// Error in parameter -> the parameter is not a bit.
-				return_code = AT_OUT_ERROR_PARAM_BIT_INVALID_CHAR;
-			}
-		}
-		else {
-			// Error in parameter -> more than 1 digit for a boolean parameter.
-			return_code = AT_OUT_ERROR_PARAM_BIT_OVERFLOW;
-		}
-		break;
-	case AT_PARAM_TYPE_HEXADECIMAL:
-		// Check if parameter has an even number of digits (two hexadecimal characters are required to code a byte).
-		// Warning: in this case index delta is an odd number !
-		if (((at_ctx.end_idx-at_ctx.start_idx) % 2) != 0) {
-			// Get the number of byte (= number of digits / 2).
-			hexa_number_of_bytes = ((at_ctx.end_idx - at_ctx.start_idx) + 1) / 2;
-			// Check if parameter can be binary coded on 32 bits = 4 bytes.
-			if (hexa_number_of_bytes > 4) {
-				// Error in parameter -> value is too large.
-				return AT_OUT_ERROR_PARAM_HEXA_OVERFLOW;
-			}
-			// Scan parameter.
-			for (i=at_ctx.start_idx ; i<=at_ctx.end_idx ; i++) {
-				// Increment digit_idx.
-				hexa_digit_idx++;
-				// Check if buffer content are hexadecimal characters.
-				if (AT_IsHexaChar(at_ctx.at_rx_buf[i]) == 0) {
-					return AT_OUT_ERROR_PARAM_HEXA_INVALID_CHAR;
-				}
-				// Get byte every two digits.
-				if ((hexa_digit_idx % 2) == 0) {
-					// Current byte = (previous digit << 4) + (current digit).
-					hexa_byte_buf[(hexa_digit_idx/2)-1] = ((AT_AsciiToHexa(at_ctx.at_rx_buf[i-1])) << 4) + AT_AsciiToHexa(at_ctx.at_rx_buf[i]);
-				}
-			}
-			// The loop didn't return, parameter is valid -> retrieve the number.
-			(*param_value) = 0;
-			for (i=0 ; i<hexa_number_of_bytes ; i++) {
-				(*param_value) |= hexa_byte_buf[i] << (8 * (hexa_number_of_bytes-i-1)); // MSB is first in 'byte_buf'.
-			}
-			return_code = AT_NO_ERROR;
-		}
-		else {
-			// Error in parameter -> odd number of digits while using hexadecimal format.
-			return_code = AT_OUT_ERROR_PARAM_HEXA_ODD_SIZE;
-		}
-		break;
-	case AT_PARAM_TYPE_DECIMAL:
-		// Get number of digits.
-		dec_number_of_digits = (at_ctx.end_idx - at_ctx.start_idx) + 1;
-		// Check if parameter exists and can be binary coded on 32 bits = 9 digits max.
-		if ((dec_number_of_digits) > 9) {
-			return AT_OUT_ERROR_PARAM_DEC_OVERFLOW;
-		}
-		// Scan parameter.
-		for (i=at_ctx.start_idx ; i<=at_ctx.end_idx ; i++) {
-			// Check if buffer content are decimal characters.
-			if (AT_IsDecimalChar(at_ctx.at_rx_buf[i]) == 0) {
-				return AT_OUT_ERROR_PARAM_DEC_INVALID_CHAR;
-			}
-			// Store digit and increment index.
-			dec_digit_buf[dec_digit_idx] = AT_AsciiToHexa(at_ctx.at_rx_buf[i]);
-			dec_digit_idx++;
-		}
-		// The loop didn't return, parameter is valid -> retrieve the number.
-		(*param_value) = 0;
-		for (i=0 ; i<dec_number_of_digits ; i++) {
-			(*param_value) = (*param_value) + dec_digit_buf[i] * (AT_Pow10((dec_number_of_digits-i-1))); // Most significant digit is first in 'digit_buf'.
-		}
-		return_code = AT_NO_ERROR;
-		break;
-	default:
-		// Unknown parameter format.
-		break;
-	}
-	// Update start index after decoding parameter.
-	if (at_ctx.separator_idx > 0) {
-		at_ctx.start_idx = at_ctx.separator_idx+1;
-	}
-	return return_code;
-}
-
-/* RETRIEVE A HEXADECIMAL BYTE ARRAY IN THE CURRENT AT BUFFER.
- * @param last_param:		Indicates if the parameter to scan is the last in AT command.
- * @param byte_array:		Pointer to the extracted byte array.
- * @param expected_length:	Length of buffer to extract.
- * @return return_code:		AT error code.
- */
-static unsigned short AT_GetByteArray(unsigned char last_param, unsigned char* byte_array, unsigned char max_length, unsigned char* extracted_length) {
-	unsigned short return_code = AT_OUT_ERROR_UNKNOWN_COMMAND;
-	// Local variables.
-	unsigned int i = 0; // Generic index used in for loops.
-	unsigned char hexa_number_of_bytes = 0;
-	unsigned char hexa_digit_idx = 0; // Used instead of i to ignore offset.
-	(*extracted_length) = 0;
-	// Search separator if required.
-	if (last_param == 1) {
-		at_ctx.end_idx = at_ctx.at_rx_buf_idx - 2; // -2 to ignore current position + <CR>/<LF>.
-	}
-	else {
-		if (AT_SearchSeparator() != 0) {
-			at_ctx.end_idx = at_ctx.separator_idx - 1; // -1 to ignore separator.
-		}
-		else {
-			// Error -> none separator found.
-			return AT_OUT_ERROR_NO_SEP_FOUND;
-		}
-	}
-	// Check if parameter is not empty.
-	if (at_ctx.end_idx < at_ctx.start_idx) {
-		// Error in parameter -> none parameter found.
-		return AT_OUT_ERROR_NO_PARAM_FOUND;
-	}
-	// Check if parameter has an even number of digits (two hexadecimal characters are required to code a byte).
-	// Warning: in this case index delta is an odd number !
-	if (((at_ctx.end_idx - at_ctx.start_idx) % 2) != 0) {
-		// Get the number of byte (= number of digits / 2).
-		hexa_number_of_bytes = ((at_ctx.end_idx - at_ctx.start_idx) + 1) / 2;
-		// Check if byte array does not exceed given length.
-		if (hexa_number_of_bytes > max_length) {
-			// Error in parameter -> array is too large.
-			return AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH;
-		}
-		// Scan each byte.
-		for (i=at_ctx.start_idx ; i<=at_ctx.end_idx ; i++) {
-			// Increment digit_idx.
-			hexa_digit_idx++;
-			// Check if buffer content are hexadecimal characters.
-			if (AT_IsHexaChar(at_ctx.at_rx_buf[i]) == 0) {
-				return AT_OUT_ERROR_PARAM_HEXA_INVALID_CHAR;
-			}
-			// Get byte every two digits.
-			if ((hexa_digit_idx % 2) == 0) {
-				// Current byte = (previous digit << 4) + (current digit).
-				byte_array[(hexa_digit_idx/2)-1] = ((AT_AsciiToHexa(at_ctx.at_rx_buf[i-1])) << 4) + AT_AsciiToHexa(at_ctx.at_rx_buf[i]);
-				(*extracted_length)++;
-			}
-		}
-		// The loop didn't return, byte array is valid
-		return_code = AT_NO_ERROR;
-	}
-	else {
-		// Error in parameter -> odd number of digits while using hexadecimal format.
-		return_code = AT_OUT_ERROR_PARAM_HEXA_ODD_SIZE;
-	}
-	// Update start index after decoding parameter.
-	if (at_ctx.separator_idx > 0) {
-		at_ctx.start_idx = at_ctx.separator_idx+1;
-	}
-	return return_code;
+	char str_value[AT_STRING_VALUE_BUFFER_LENGTH];
+	unsigned char idx = 0;
+	// Reset string.
+	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = '\0';
+	// Convert value to string.
+	STRING_ConvertValue(tx_value, format, print_prefix, str_value);
+	// Add string.
+	AT_ResponseAddString(str_value);
 }
 
 /* PRINT OK THROUGH AT INTERFACE.
@@ -503,69 +184,84 @@ static unsigned short AT_GetByteArray(unsigned char last_param, unsigned char* b
  * @return:	None.
  */
 static void AT_ReplyOk(void) {
-	USARTx_SendString(AT_OUT_COMMAND_OK);
-	USARTx_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
-	USARTx_SendValue(AT_LF_CHAR, USART_FORMAT_ASCII, 0);
+	AT_ResponseAddString(AT_RESPONSE_OK);
+	AT_ResponseAddString(AT_RESPONSE_END);
 }
 
 /* PRINT AN ERROR THROUGH AT INTERFACE.
  * @param error_code:	Error code to display.
  * @return:				None.
  */
-static void AT_ReplyError(AT_ErrorSource error_source, unsigned short error_code) {
+static void AT_ReplyError(AT_ErrorSource error_source, unsigned int error_code) {
 	switch (error_source) {
-	case AT_ERROR_SOURCE_AT:
-		USARTx_SendString(AT_OUT_HEADER_AT_ERROR);
+	case AT_ERROR_SOURCE_PSR:
+		AT_ResponseAddString(AT_RESPONSE_ERROR_PSR);
 		break;
 	case AT_ERROR_SOURCE_SFX:
-		USARTx_SendString(AT_OUT_HEADER_SFX_ERROR);
+		AT_ResponseAddString(AT_RESPONSE_ERROR_SFX);
+		break;
+	case AT_ERROR_SOURCE_APP:
+		AT_ResponseAddString(AT_RESPONSE_ERROR_APP);
 		break;
 	default:
 		break;
 	}
-	USARTx_SendValue(error_code, USART_FORMAT_HEXADECIMAL, 1);
-	USARTx_SendValue(AT_CR_CHAR, USART_FORMAT_ASCII, 0);
+	AT_ResponseAddValue(error_code, STRING_FORMAT_HEXADECIMAL, 1);
+	AT_ResponseAddString(AT_RESPONSE_END);
 }
 
 /* PRINT ADC RESULTS.
  * @param:	None.
  * @return:	None.
  */
-static void AT_PrintAdcResults(void) {
+static void AT_PrintAdcData(void) {
 	unsigned int result_12bits = 0;
 	// AIN0.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN0, &result_12bits);
-	USARTx_SendString("AIN0=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString("AIN0=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN1.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN1, &result_12bits);
-	USARTx_SendString(" AIN1=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN1=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN2.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN2, &result_12bits);
-	USARTx_SendString(" AIN2=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN2=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN3.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN3, &result_12bits);
-	USARTx_SendString(" AIN3=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN3=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN4 (resistor divider with 6.8M and 1M -> Vin = 7.8 * Vout).
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN4, &result_12bits);
-	USARTx_SendString(" AIN4=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN4=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN5.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN5, &result_12bits);
-	USARTx_SendString(" AIN5=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN5=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN6.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN6, &result_12bits);
-	USARTx_SendString(" AIN6=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(" AIN6=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
 	// AIN7.
 	MAX11136_GetChannel(MAX11136_CHANNEL_AIN7, &result_12bits);
-	USARTx_SendString(" AIN7=");
-	USARTx_SendValue(result_12bits, USART_FORMAT_HEXADECIMAL, 0);
-	USARTx_SendString("\n");
+	AT_ResponseAddString(" AIN7=");
+	AT_ResponseAddValue(result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
+	AT_ResponseAddString(AT_RESPONSE_END);
+}
+
+/* PRINT SIGFOX DOWNLINK DATA ON AT INTERFACE.
+ * @param sfx_downlink_data:	Downlink data to print.
+ * @return:						None.
+ */
+static void AT_PrintDownlinkData(sfx_u8* sfx_downlink_data) {
+	AT_ResponseAddString("+RX=");
+	unsigned char idx = 0;
+	for (idx=0 ; idx<8 ; idx++) {
+		AT_ResponseAddValue(sfx_downlink_data[idx], STRING_FORMAT_HEXADECIMAL, 0);
+	}
+	AT_ResponseAddString(AT_RESPONSE_END);
 }
 
 /* PRINT A TIMESTAMP ON USART.
@@ -574,38 +270,38 @@ static void AT_PrintAdcResults(void) {
  */
 static void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
 	// Year.
-	USARTx_SendValue((timestamp_to_print -> year), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("-");
+	AT_ResponseAddValue((timestamp_to_print -> year), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("-");
 	// Month.
 	if ((timestamp_to_print -> month) < 10) {
-		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		AT_ResponseAddValue(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	USARTx_SendValue((timestamp_to_print -> month), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("-");
+	AT_ResponseAddValue((timestamp_to_print -> month), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("-");
 	// Day.
 	if ((timestamp_to_print -> date) < 10) {
-		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		AT_ResponseAddValue(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	USARTx_SendValue((timestamp_to_print -> date), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString(" ");
+	AT_ResponseAddValue((timestamp_to_print -> date), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(" ");
 	// Hours.
 	if ((timestamp_to_print -> hours) < 10) {
-		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		AT_ResponseAddValue(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	USARTx_SendValue((timestamp_to_print -> hours), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString(":");
+	AT_ResponseAddValue((timestamp_to_print -> hours), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(":");
 	// Minutes.
 	if ((timestamp_to_print -> minutes) < 10) {
-		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		AT_ResponseAddValue(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	USARTx_SendValue((timestamp_to_print -> minutes), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString(":");
+	AT_ResponseAddValue((timestamp_to_print -> minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(":");
 	// Seconds.
 	if ((timestamp_to_print -> seconds) < 10) {
-		USARTx_SendValue(0, USART_FORMAT_DECIMAL, 0);
+		AT_ResponseAddValue(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	USARTx_SendValue((timestamp_to_print -> seconds), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("\n");
+	AT_ResponseAddValue((timestamp_to_print -> seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(AT_RESPONSE_END);
 }
 
 /* PRINT GPS POSITION ON USART.
@@ -613,45 +309,31 @@ static void AT_PrintTimestamp(Timestamp* timestamp_to_print) {
  * @return:				None.
  */
 static void AT_PrintPosition(Position* gps_position, unsigned int gps_fix_duration) {
-	// Header.
 	// Latitude.
-	USARTx_SendString("Lat=");
-	USARTx_SendValue((gps_position -> lat_degrees), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("d");
-	USARTx_SendValue((gps_position -> lat_minutes), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("'");
-	USARTx_SendValue((gps_position -> lat_seconds), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> lat_north_flag) == 1) ? "N" : "S");
+	AT_ResponseAddString("Lat=");
+	AT_ResponseAddValue((gps_position -> lat_degrees), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("d");
+	AT_ResponseAddValue((gps_position -> lat_minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("'");
+	AT_ResponseAddValue((gps_position -> lat_seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("''-");
+	AT_ResponseAddString(((gps_position -> lat_north_flag) == 0) ? "S" : "N");
 	// Longitude.
-	USARTx_SendString(" Long=");
-	USARTx_SendValue((gps_position -> long_degrees), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("d");
-	USARTx_SendValue((gps_position -> long_minutes), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("'");
-	USARTx_SendValue((gps_position -> long_seconds), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("''-");
-	USARTx_SendString(((gps_position -> long_east_flag) == 1) ? "E" : "W");
+	AT_ResponseAddString(" Long=");
+	AT_ResponseAddValue((gps_position -> long_degrees), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("d");
+	AT_ResponseAddValue((gps_position -> long_minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("'");
+	AT_ResponseAddValue((gps_position -> long_seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("''-");
+	AT_ResponseAddString(((gps_position -> long_east_flag) == 0) ? "W" : "E");
 	// Altitude.
-	USARTx_SendString(" Alt=");
-	USARTx_SendValue((gps_position -> altitude), USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("m Fix=");
-	USARTx_SendValue(gps_fix_duration, USART_FORMAT_DECIMAL, 0);
-	USARTx_SendString("s\r\n");
-}
-
-/* PRINT SIGFOX DOWNLINK DATA ON USART.
- * @param sfx_downlink_data:	Downlink data to print.
- * @return:						None.
- */
-static void AT_PrintDownlinkData(sfx_u8* sfx_downlink_data) {
-	USARTx_SendString("+RX=");
-	unsigned char byte_idx = 0;
-	for (byte_idx=0 ; byte_idx<8 ; byte_idx++) {
-		USARTx_SendValue(sfx_downlink_data[byte_idx], USART_FORMAT_HEXADECIMAL, 0);
-		USARTx_SendString(" ");
-	}
-	USARTx_SendString("\n");
+	AT_ResponseAddString(" Alt=");
+	AT_ResponseAddValue((gps_position -> altitude), STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("m Fix=");
+	AT_ResponseAddValue(gps_fix_duration, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("s");
+	AT_ResponseAddString(AT_RESPONSE_END);
 }
 
 /* PARSE THE CURRENT AT COMMAND BUFFER.
@@ -659,44 +341,59 @@ static void AT_PrintDownlinkData(sfx_u8* sfx_downlink_data) {
  * @return:	None.
  */
 static void AT_DecodeRxBuffer(void) {
-	// At this step, 'at_buf_idx' is 1 character after the first line end character (<CR> or <LF>).
-	unsigned short get_param_result = 0;
-	unsigned char byte_idx = 0;
+	// Local variables.
+	PARSER_Status parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	int generic_int_1 = 0;
+	int generic_int_2 = 0;
+	int generic_int_3 = 0;
+	unsigned int generic_uint_1 = 0;
+	unsigned int generic_uint_2 = 0;
+	unsigned char generic_uchar = 0;
+	unsigned char generic_byte_array_1[AES_BLOCK_SIZE];
+	unsigned char idx = 0;
 	unsigned char extracted_length = 0;
-	sfx_u8 sfx_uplink_data[12] = {0x00};
-	sfx_u8 sfx_downlink_data[8] = {0x00};
+#ifdef AT_COMMANDS_GPS
+	Position gps_position;
+	Timestamp gps_timestamp;
+	NEOM8N_ReturnCode gps_status;
+#endif
+#ifdef AT_COMMANDS_SENSORS
+	signed char generic_signed_byte = 0;
+#endif
+#ifdef AT_COMMANDS_SIGFOX
 	sfx_error_t sfx_error = 0;
+	unsigned char generic_byte_array_2[AES_BLOCK_SIZE];
+#endif
 	// Empty or too short command.
-	if (at_ctx.at_rx_buf_idx < AT_COMMAND_MIN_SIZE) {
-		// Reply error.
-		AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_COMMAND);
+	if (at_ctx.at_command_buf_idx < AT_COMMAND_LENGTH_MIN) {
+		AT_ReplyError(AT_ERROR_SOURCE_PSR, PARSER_ERROR_UNKNOWN_COMMAND);
 	}
 	else {
+		// Update parser length.
+		at_ctx.at_parser.rx_buf_length = (at_ctx.at_command_buf_idx - 1); // To ignore line end.
 		// Test command AT<CR>.
-		if (AT_CompareCommand(AT_IN_COMMAND_TEST) == AT_NO_ERROR) {
+		if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_TEST) == PARSER_SUCCESS) {
 			// Nothing to do, only reply OK to acknowledge serial link.
 			AT_ReplyOk();
 		}
 #ifdef AT_COMMANDS_GPS
 		// TIME command AT$TIME=<timeout_seconds><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_TIME) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_TIME) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int timeout_seconds = 0;
 				// Search timeout parameter.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					// Start GPS fix.
-					Timestamp gps_timestamp;
 					LPUART1_PowerOn();
-					NEOM8N_ReturnCode get_timestamp_result = NEOM8N_GetTimestamp(&gps_timestamp, timeout_seconds, 0);
+					gps_status = NEOM8N_GetTimestamp(&gps_timestamp, generic_int_1, 0);
 					LPUART1_PowerOff();
-					switch (get_timestamp_result) {
+					switch (gps_status) {
 					case NEOM8N_SUCCESS:
 						AT_PrintTimestamp(&gps_timestamp);
 						break;
 					case NEOM8N_TIMEOUT:
-						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+						AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
 						break;
 					default:
 						break;
@@ -704,33 +401,30 @@ static void AT_DecodeRxBuffer(void) {
 				}
 				else {
 					// Error in timeout parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// GPS command AT$GPS=<timeout_seconds><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_GPS) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_GPS) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int timeout_seconds = 0;
 				// Search timeout parameter.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &timeout_seconds);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					// Start GPS fix.
-					Position gps_position;
-					unsigned int gps_fix_duration = 0;
 					LPUART1_PowerOn();
-					NEOM8N_ReturnCode get_position_result = NEOM8N_GetPosition(&gps_position, timeout_seconds, 0, &gps_fix_duration);
+					gps_status = NEOM8N_GetPosition(&gps_position, generic_int_1, 0, &generic_int_2);
 					LPUART1_PowerOff();
-					switch (get_position_result) {
+					switch (gps_status) {
 					case NEOM8N_SUCCESS:
-						AT_PrintPosition(&gps_position, gps_fix_duration);
+						AT_PrintPosition(&gps_position, generic_int_2);
 						break;
 					case NEOM8N_TIMEOUT:
-						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NEOM8N_TIMEOUT);
+						AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
 						break;
 					default:
 						break;
@@ -738,17 +432,17 @@ static void AT_DecodeRxBuffer(void) {
 				}
 				else {
 					// Error in timeout parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_SENSORS
 		// ADC command AT$ADC?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_ADC) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_ADC) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Trigger external ADC convertions.
@@ -767,134 +461,102 @@ static void AT_DecodeRxBuffer(void) {
 				SPI2_PowerOff();
 #endif
 				// Print results.
-				AT_PrintAdcResults();
+				AT_PrintAdcData();
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// MCU command AT$MCU?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_MCU) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_MCU) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int mcu_supply_voltage_mv = 0;
-				signed char mcu_temperature_degrees = 0;
 				// Trigger internal ADC conversions.
 				ADC1_PerformMeasurements();
-				ADC1_GetTmcuComp2(&mcu_temperature_degrees);
-				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &mcu_supply_voltage_mv);
+				ADC1_GetTmcuComp2(&generic_signed_byte);
+				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &generic_int_1);
 				// Print results.
-				USARTx_SendString("Vcc=");
-				USARTx_SendValue(mcu_supply_voltage_mv, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("mV T=");
-				if (mcu_temperature_degrees < 0) {
-					unsigned char mcu_temperature_abs_degrees = (-1) * mcu_temperature_degrees;
-					USARTx_SendString("-");
-					USARTx_SendValue(mcu_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				else {
-					USARTx_SendValue(mcu_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				USARTx_SendString("dC\n");
+				AT_ResponseAddString("Vcc=");
+				AT_ResponseAddValue(generic_int_1, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("mV T=");
+				AT_ResponseAddValue((int) generic_signed_byte, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("dC");
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #ifdef HW2_0
 		// Internal temperature and humidity sensor command AT$ITHS?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_ITHS) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_ITHS) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				signed char sht3x_temperature_degrees = 0;
-				unsigned char sht3x_humidity_percent = 0;
 				// Perform measurements.
 				I2C1_PowerOn();
 				SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				SHT3X_GetTemperatureComp2(&sht3x_temperature_degrees);
-				SHT3X_GetHumidity(&sht3x_humidity_percent);
+				SHT3X_GetTemperatureComp2(&generic_signed_byte);
+				SHT3X_GetHumidity(&generic_uchar);
 				// Print results.
-				USARTx_SendString("T=");
-				if (sht3x_temperature_degrees < 0) {
-					unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
-					USARTx_SendString("-");
-					USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				else {
-					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				USARTx_SendString("dC H=");
-				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("%\n");
+				AT_ResponseAddString("T=");
+				AT_ResponseAddValue((int) generic_signed_byte, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("dC H=");
+				AT_ResponseAddValue(generic_uchar, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("%");
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 		// External temperature and humidity sensor command AT$ETHS?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_ETHS) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_ETHS) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				signed char sht3x_temperature_degrees = 0;
-				unsigned char sht3x_humidity_percent = 0;
 				// Perform measurements.
 				I2C1_PowerOn();
 				SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				SHT3X_GetTemperatureComp2(&sht3x_temperature_degrees);
-				SHT3X_GetHumidity(&sht3x_humidity_percent);
+				SHT3X_GetTemperatureComp2(&generic_signed_byte);
+				SHT3X_GetHumidity(&generic_uchar);
 				// Print results.
-				USARTx_SendString("T=");
-				if (sht3x_temperature_degrees < 0) {
-					unsigned char sht3x_temperature_abs_degrees = (-1) * sht3x_temperature_degrees;
-					USARTx_SendString("-");
-					USARTx_SendValue(sht3x_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				else {
-					USARTx_SendValue(sht3x_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				USARTx_SendString("dC H=");
-				USARTx_SendValue(sht3x_humidity_percent, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("%\n");
+				AT_ResponseAddString("T=");
+				AT_ResponseAddValue((int) generic_signed_byte, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("dC H=");
+				AT_ResponseAddValue(generic_uchar, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("%");
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// External pressure and temperature sensor command AT$PTS?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_EPTS) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_EPTS) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int dps310_pressure_pa = 0;
-				signed char dps310_temperature_degrees = 0;
 				// Perform measurements.
 				I2C1_PowerOn();
 				DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				DPS310_GetPressure(&dps310_pressure_pa);
-				DPS310_GetTemperature(&dps310_temperature_degrees);
+				DPS310_GetPressure(&generic_int_1);
+				DPS310_GetTemperature(&generic_signed_byte);
 				// Print results.
-				USARTx_SendString("P=");
-				USARTx_SendValue(dps310_pressure_pa, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("Pa T=");
-				if (dps310_temperature_degrees < 0) {
-					unsigned char dps310_temperature_abs_degrees = (-1) * dps310_temperature_degrees;
-					USARTx_SendString("-");
-					USARTx_SendValue(dps310_temperature_abs_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				else {
-					USARTx_SendValue(dps310_temperature_degrees, USART_FORMAT_DECIMAL, 0);
-				}
-				USARTx_SendString("dC\n");
+				AT_ResponseAddString("P=");
+				AT_ResponseAddValue(generic_int_1, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("Pa T=");
+				AT_ResponseAddValue((int) generic_signed_byte, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("dC");
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// External LDR command AT$LDR?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_ELDR) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_ELDR) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Perform measurements.
@@ -916,67 +578,58 @@ static void AT_DecodeRxBuffer(void) {
 				I2C1_PowerOff();
 				ADC1_PerformMeasurements();
 				// Get LDR and supply voltage.
-				unsigned int ldr_output_mv = 0;
-				unsigned int ldr_supply_voltage_mv = 0;
-				MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &ldr_output_mv);
-				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &ldr_supply_voltage_mv);
-				// Convert to percent.
-				unsigned char light_percent = (100 * ldr_output_mv) / (ldr_supply_voltage_mv);
+				MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &generic_int_1);
+				ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &generic_int_2);
 				// Print result.
-				USARTx_SendString("Light=");
-				USARTx_SendValue(light_percent, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("%\n");
+				AT_ResponseAddString("Light=");
+				AT_ResponseAddValue((100 * generic_int_1) / (generic_int_2), STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString("%");
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// Externam UV index sensor command AT$UVS?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_EUVS) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_EUVS) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned char si1133_uv_index = 0;
 				// Perform measurements.
 				I2C1_PowerOn();
 				SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
 				I2C1_PowerOff();
-				SI1133_GetUvIndex(&si1133_uv_index);
+				SI1133_GetUvIndex(&generic_uchar);
 				// Print result.
-				USARTx_SendString("UVI=");
-				USARTx_SendValue(si1133_uv_index, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("\n");
+				AT_ResponseAddString("UVI=");
+				AT_ResponseAddValue(generic_uchar, STRING_FORMAT_DECIMAL, 0);
+				AT_ResponseAddString(AT_RESPONSE_END);
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// Wind measurements command AT$WIND=<enable><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_WIND) == AT_NO_ERROR) {
-			unsigned int enable = 0;
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-			if (get_param_result == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_WIND) == PARSER_SUCCESS) {
+			parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+			if (parser_status == PARSER_SUCCESS) {
 				// Start or stop wind continuous measurements.
-				if (enable == 0) {
+				if (generic_int_1 == 0) {
 					RTC_DisableAlarmBInterrupt();
 					RTC_ClearAlarmBFlag();
 					WIND_StopContinuousMeasure();
-					// Get results.
-					unsigned int wind_average_direction = 0;
-					WIND_GetDirection(&wind_average_direction);
-					unsigned int wind_average_speed = 0;
-					unsigned int wind_peak_speed = 0;
-					WIND_GetSpeed(&wind_average_speed, &wind_peak_speed);
-					// Print data.
-					USARTx_SendString("AverageSpeed=");
-					USARTx_SendValue(wind_average_speed, USART_FORMAT_DECIMAL, 0);
-					USARTx_SendString("m/h PeakSpeed=");
-					USARTx_SendValue(wind_peak_speed, USART_FORMAT_DECIMAL, 0);
-					if (wind_average_direction != WIND_DIRECTION_ERROR_VALUE) {
-						USARTx_SendString("m/h AverageDirection=");
-						USARTx_SendValue(wind_average_direction, USART_FORMAT_DECIMAL, 0);
-						USARTx_SendString("d");
+					// Print results.
+					WIND_GetSpeed(&generic_uint_1, &generic_uint_2);
+					AT_ResponseAddString("AverageSpeed=");
+					AT_ResponseAddValue(generic_uint_1, STRING_FORMAT_DECIMAL, 0);
+					AT_ResponseAddString("m/h PeakSpeed=");
+					AT_ResponseAddValue(generic_uint_2, STRING_FORMAT_DECIMAL, 0);
+					WIND_GetDirection(&generic_uint_1);
+					if (generic_uint_1 != WIND_DIRECTION_ERROR_VALUE) {
+						AT_ResponseAddString("m/h AverageDirection=");
+						AT_ResponseAddValue(generic_uint_1, STRING_FORMAT_DECIMAL, 0);
+						AT_ResponseAddString("d");
 					}
-					USARTx_SendString("\n");
+					AT_ResponseAddString(AT_RESPONSE_END);
 					// Reset data.
 					WIND_ResetData();
 					// Update flag.
@@ -992,24 +645,23 @@ static void AT_DecodeRxBuffer(void) {
 			}
 			else {
 				// Error in enable parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 		// Rain measurements command AT$RAIN=<enable><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_RAIN) == AT_NO_ERROR) {
-			unsigned int enable = 0;
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-			if (get_param_result == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_RAIN) == PARSER_SUCCESS) {
+			parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+			if (parser_status == PARSER_SUCCESS) {
 				// Start or stop rain continuous measurements.
-				if (enable == 0) {
+				if (generic_int_1 == 0) {
 					RAIN_StopContinuousMeasure();
 					// Get result.
-					unsigned char rain_mm = 0;
-					RAIN_GetPluviometry(&rain_mm);
+					RAIN_GetPluviometry(&generic_uchar);
 					// Print data.
-					USARTx_SendString("Rain=");
-					USARTx_SendValue(rain_mm, USART_FORMAT_DECIMAL,0);
-					USARTx_SendString("mm\n");
+					AT_ResponseAddString("Rain=");
+					AT_ResponseAddValue(generic_uchar, STRING_FORMAT_DECIMAL,0);
+					AT_ResponseAddString("mm");
+					AT_ResponseAddString(AT_RESPONSE_END);
 					// Reset data.
 					RAIN_ResetData();
 				}
@@ -1020,13 +672,13 @@ static void AT_DecodeRxBuffer(void) {
 			}
 			else {
 				// Error in enable parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_NVM
 		// NVM reset command AT$NVMR<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_NVMR) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_NVMR) == PARSER_SUCCESS) {
 			// Reset all NVM field to default value.
 			NVM_Enable();
 			NVM_ResetDefault();
@@ -1034,115 +686,100 @@ static void AT_DecodeRxBuffer(void) {
 			AT_ReplyOk();
 		}
 		// NVM read command AT$NVM=<address_offset><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_NVM) == AT_NO_ERROR) {
-			unsigned int address_offset = 0;
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &address_offset);
-			if (get_param_result == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_NVM) == PARSER_SUCCESS) {
+			parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+			if (parser_status == PARSER_SUCCESS) {
 				// Check if address is reachable.
-				if (address_offset < EEPROM_SIZE) {
+				if (((unsigned short) generic_int_1) < EEPROM_SIZE) {
 					// Read byte at requested address.
-					unsigned char nvm_byte = 0;
 					NVM_Enable();
-					NVM_ReadByte(address_offset, &nvm_byte);
+					NVM_ReadByte((unsigned short) generic_int_1, &generic_uchar);
 					NVM_Disable();
 					// Print byte.
-					USARTx_SendValue(nvm_byte, USART_FORMAT_HEXADECIMAL, 1);
-					USARTx_SendString("\n");
+					AT_ResponseAddValue(generic_uchar, STRING_FORMAT_HEXADECIMAL, 1);
+					AT_ResponseAddString(AT_RESPONSE_END);
 				}
 				else {
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_NVM_ADDRESS_OVERFLOW);
+					AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_NVM_ADDRESS_OVERFLOW);
 				}
 			}
 			else {
 				// Error in address parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 		// Get ID command AT$ID?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_ID) == AT_NO_ERROR) {
-			// Enable NVM interface.
-			NVM_Enable();
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_ID) == PARSER_SUCCESS) {
 			// Retrieve device ID in NVM.
-			unsigned char id_byte = 0;
-			for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
-				NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), &id_byte);
-				USARTx_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+			NVM_Enable();
+			for (idx=0 ; idx<ID_LENGTH ; idx++) {
+				NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), &generic_uchar);
+				AT_ResponseAddValue(generic_uchar, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 			}
-			USARTx_SendString("\n");
-			// Disable NVM interface.
 			NVM_Disable();
+			AT_ResponseAddString(AT_RESPONSE_END);
 		}
 		// Set ID command AT$ID=<id><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_ID) == AT_NO_ERROR) {
-			unsigned char param_id[ID_LENGTH] = {0};
-			get_param_result = AT_GetByteArray(1, param_id, ID_LENGTH, &extracted_length);
-			if (get_param_result == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_ID) == PARSER_SUCCESS) {
+			parser_status = PARSER_GetByteArray(&at_ctx.at_parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, generic_byte_array_1, &extracted_length);
+			if (parser_status == PARSER_SUCCESS) {
 				// Check length.
 				if (extracted_length == ID_LENGTH) {
-					// Enable NVM interface.
-					NVM_Enable();
 					// Write device ID in NVM.
-					for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
-						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - byte_idx - 1), param_id[byte_idx]);
+					NVM_Enable();
+					for (idx=0 ; idx<ID_LENGTH ; idx++) {
+						NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), generic_byte_array_1[idx]);
 					}
-					AT_ReplyOk();
-					// Disable NVM interface.
 					NVM_Disable();
+					AT_ReplyOk();
 				}
 				else {
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
 				}
 			}
 			else {
 				// Error in ID parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 		// Get key command AT$KEY?<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_KEY) == AT_NO_ERROR) {
-			// Enable NVM interface.
-			NVM_Enable();
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_KEY) == PARSER_SUCCESS) {
 			// Retrieve device key in NVM.
-			unsigned char id_byte = 0;
-			unsigned char byte_idx = 0;
-			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-				NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), &id_byte);
-				USARTx_SendValue(id_byte, USART_FORMAT_HEXADECIMAL, (byte_idx==0 ? 1 : 0));
+			NVM_Enable();
+			for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
+				NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), &generic_uchar);
+				AT_ResponseAddValue(generic_uchar, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 			}
-			USARTx_SendString("\n");
-			// Disable NVM interface.
 			NVM_Disable();
+			AT_ResponseAddString(AT_RESPONSE_END);
 		}
 		// Set key command AT$KEY=<id><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_KEY) == AT_NO_ERROR) {
-			unsigned char param_key[AES_BLOCK_SIZE] = {0};
-			get_param_result = AT_GetByteArray(1, param_key, AES_BLOCK_SIZE, &extracted_length);
-			if (get_param_result == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_KEY) == PARSER_SUCCESS) {
+			parser_status = PARSER_GetByteArray(&at_ctx.at_parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, generic_byte_array_1, &extracted_length);
+			if (parser_status == PARSER_SUCCESS) {
 				// Check length.
 				if (extracted_length == AES_BLOCK_SIZE) {
-					// Enable NVM interface.
-					NVM_Enable();
 					// Write device ID in NVM.
-					for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-						NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + byte_idx), param_key[byte_idx]);
+					NVM_Enable();
+					for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
+						NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), generic_byte_array_1[idx]);
 					}
-					AT_ReplyOk();
-					// Disable NVM interface.
 					NVM_Disable();
+					AT_ReplyOk();
 				}
 				else {
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_PARAM_BYTE_ARRAY_INVALID_LENGTH);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
 				}
 			}
 			else {
 				// Error in ID parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_SIGFOX
 		// Sigfox send OOB command AT$SO<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_OOB) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_OOB) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Send Sigfox OOB frame.
@@ -1161,31 +798,29 @@ static void AT_DecodeRxBuffer(void) {
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// Sigfox send bit command AT$SB=<bit>,<downlink_request><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_SB) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_SB) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int data_bit = 0;
 				// First try with 2 parameters.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &data_bit);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					// Try parsing downlink request parameter.
-					unsigned int downlink_request = 0;
-					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
-					if (get_param_result == AT_NO_ERROR) {
+					parser_status =  PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_2);
+					if (parser_status == PARSER_SUCCESS) {
 						// Send Sigfox bit with specified downlink request.
 						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
 							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, downlink_request);
+							sfx_error = SIGFOX_API_send_bit((sfx_bool) generic_int_1, generic_byte_array_2, 2, (sfx_bool) generic_int_2);
 						}
 						SIGFOX_API_close();
 						if (sfx_error == SFX_ERR_NONE) {
-							if (downlink_request == 1) {
-								AT_PrintDownlinkData(sfx_downlink_data);
+							if (generic_int_2 != 0) {
+								AT_PrintDownlinkData(generic_byte_array_2);
 							}
 							AT_ReplyOk();
 						}
@@ -1196,18 +831,18 @@ static void AT_DecodeRxBuffer(void) {
 					}
 					else {
 						// Error in downlink request parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 					}
 				}
 				else {
 					// Try with 1 parameter.
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &data_bit);
-					if (get_param_result == AT_NO_ERROR) {
+					parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+					if (parser_status == PARSER_SUCCESS) {
 						// Send Sigfox bit with no downlink request (by default).
 						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
 							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-							sfx_error = SIGFOX_API_send_bit(data_bit, sfx_downlink_data, 2, 0);
+							sfx_error = SIGFOX_API_send_bit((sfx_bool) generic_int_1, generic_byte_array_2, 2, 0);
 						}
 						SIGFOX_API_close();
 						if (sfx_error == SFX_ERR_NONE) {
@@ -1220,58 +855,34 @@ static void AT_DecodeRxBuffer(void) {
 					}
 					else {
 						// Error in data parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 					}
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
-			}
-		}
-		// Sigfox send empty frame command AT$SF<CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_SF) == AT_NO_ERROR) {
-			// Check if wind measurement is not running.
-			if (at_ctx.wind_measurement_flag == 0) {
-				// Send Sigfox empty frame.
-				sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
-				if (sfx_error == SFX_ERR_NONE) {
-					sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-					sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, 0, sfx_downlink_data, 2, 0);
-				}
-				SIGFOX_API_close();
-				if (sfx_error == SFX_ERR_NONE) {
-					AT_ReplyOk();
-				}
-				else {
-					// Error from Sigfox library.
-					AT_ReplyError(AT_ERROR_SOURCE_SFX, sfx_error);
-				}
-			}
-			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// Sigfox send frame command AT$SF=<data>,<downlink_request><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_SF) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_SF) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// First try with 2 parameters.
-				get_param_result = AT_GetByteArray(0, sfx_uplink_data, 12, &extracted_length);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetByteArray(&at_ctx.at_parser, AT_CHAR_SEPARATOR, 0, 12, generic_byte_array_1, &extracted_length);
+				if (parser_status == PARSER_SUCCESS) {
 					// Try parsing downlink request parameter.
-					unsigned int downlink_request = 0;
-					get_param_result =  AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &downlink_request);
-					if (get_param_result == AT_NO_ERROR) {
+					parser_status =  PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_2);
+					if (parser_status == PARSER_SUCCESS) {
 						// Send Sigfox frame with specified downlink request.
 						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
 							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, downlink_request);
+							sfx_error = SIGFOX_API_send_frame(generic_byte_array_1, extracted_length, generic_byte_array_2, 2, generic_int_2);
 						}
 						SIGFOX_API_close();
 						if (sfx_error == SFX_ERR_NONE) {
-							if (downlink_request == 1) {
-								AT_PrintDownlinkData(sfx_downlink_data);
+							if (generic_int_2 != 0) {
+								AT_PrintDownlinkData(generic_byte_array_2);
 							}
 							AT_ReplyOk();
 						}
@@ -1282,18 +893,18 @@ static void AT_DecodeRxBuffer(void) {
 					}
 					else {
 						// Error in downlink request parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 					}
 				}
 				else {
 					// Try with 1 parameter.
-					get_param_result = AT_GetByteArray(1, sfx_uplink_data, 12, &extracted_length);
-					if (get_param_result == AT_NO_ERROR) {
+					parser_status = PARSER_GetByteArray(&at_ctx.at_parser, AT_CHAR_SEPARATOR, 1, 12, generic_byte_array_1, &extracted_length);
+					if (parser_status == PARSER_SUCCESS) {
 						// Send Sigfox frame with no downlink request (by default).
 						sfx_error = SIGFOX_API_open(&at_ctx.sigfox_rc);
 						if (sfx_error == SFX_ERR_NONE) {
 							sfx_error = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-							sfx_error = SIGFOX_API_send_frame(sfx_uplink_data, extracted_length, sfx_downlink_data, 2, 0);
+							sfx_error = SIGFOX_API_send_frame(generic_byte_array_1, extracted_length, generic_byte_array_2, 2, 0);
 						}
 						SIGFOX_API_close();
 						if (sfx_error == SFX_ERR_NONE) {
@@ -1306,99 +917,94 @@ static void AT_DecodeRxBuffer(void) {
 					}
 					else {
 						// Error in data parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 					}
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_CW_RSSI
 		// CW command AT$CW=<frequency_hz>,<enable>,<output_power_dbm><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_CW) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_CW) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int frequency_hz = 0;
 				// Search frequency parameter.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &frequency_hz);
-				if (get_param_result == AT_NO_ERROR) {
-					unsigned int enable = 0;
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					// First try with 3 parameters.
-					get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 0, &enable);
-					if (get_param_result == AT_OUT_ERROR_NO_SEP_FOUND) {
+					parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &generic_int_2);
+					if (parser_status != PARSER_SUCCESS) {
 						// Power is not given, try to parse enable as last parameter.
-						get_param_result = AT_GetParameter(AT_PARAM_TYPE_BOOLEAN, 1, &enable);
-						if (get_param_result == AT_NO_ERROR) {
+						parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &generic_int_2);
+						if (parser_status == PARSER_SUCCESS) {
 							// CW with default output power.
 							SIGFOX_API_stop_continuous_transmission();
-							if (enable != 0) {
-								SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
+							if (generic_int_2 != 0) {
+								SIGFOX_API_start_continuous_transmission((sfx_u32) generic_int_1, SFX_NO_MODULATION);
 							}
 							AT_ReplyOk();
 						}
 						else {
 							// Error in enable parameter.
-							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+							AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 						}
 					}
-					else if (get_param_result == AT_NO_ERROR) {
+					else if (parser_status == PARSER_SUCCESS) {
 						// There is a third parameter, try to parse power.
-						unsigned int output_power_dbm = 0;
-						get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &output_power_dbm);
-						if (get_param_result == AT_NO_ERROR) {
+						parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_3);
+						if (parser_status == PARSER_SUCCESS) {
 							// CW with given output power.
 							SIGFOX_API_stop_continuous_transmission();
-							if (enable != 0) {
-								SIGFOX_API_start_continuous_transmission(frequency_hz, SFX_NO_MODULATION);
-								SX1232_SetRfOutputPower(output_power_dbm);
+							if (generic_int_2 != 0) {
+								SIGFOX_API_start_continuous_transmission((sfx_u32) generic_int_1, SFX_NO_MODULATION);
+								SX1232_SetRfOutputPower((unsigned char) generic_int_3);
 							}
 							AT_ReplyOk();
 						}
 						else {
 							// Error in power parameter.
-							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+							AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 						}
 					}
 					else {
 						// Error in enable parameter.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+						AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 					}
 				}
 				else {
 					// Error in frequency parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 		// RSSI report command AT$RSSI=<frequency_hz><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_RSSI) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_RSSI) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
 				// Parse frequency parameter.
-				unsigned int frequency_hz = 0;
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &frequency_hz);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					RF_API_init(SFX_RF_MODE_RX);
-					RF_API_change_frequency(frequency_hz);
+					RF_API_change_frequency((sfx_u32) generic_int_1);
 					// Start continuous listening.
 					SX1232_SetMode(SX1232_MODE_FSRX);
 					LPTIM1_DelayMilliseconds(5, 0); // Wait TS_FS=60us typical.
 					SX1232_SetMode(SX1232_MODE_RX);
 					LPTIM1_DelayMilliseconds(5, 0); // Wait TS_TR=120us typical.
-					unsigned int rssi_print_count = 0;
-					unsigned char rssi = 0;
-					while (rssi_print_count < (AT_RSSI_REPORT_DURATION_MS / AT_RSSI_REPORT_PERIOD_MS)) {
-						rssi = SX1232_GetRssi();
-						USARTx_SendString("RSSI = -");
-						USARTx_SendValue(rssi, USART_FORMAT_DECIMAL, 0);
-						USARTx_SendString("dBm\n");
+					generic_uint_1 = 0;
+					while (generic_uint_1 < (AT_RSSI_REPORT_DURATION_MS / AT_RSSI_REPORT_PERIOD_MS)) {
+						generic_uchar = SX1232_GetRssi();
+						AT_ResponseAddString("RSSI = -");
+						AT_ResponseAddValue(generic_uchar, STRING_FORMAT_DECIMAL, 0);
+						AT_ResponseAddString("dBm\n");
 						LPTIM1_DelayMilliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
-						rssi_print_count++;
+						generic_uint_1++;
 					}
 					// Stop radio.
 					RF_API_stop();
@@ -1406,33 +1012,31 @@ static void AT_DecodeRxBuffer(void) {
 				}
 				else {
 					// Error in frequency parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_TEST_MODES
 		// Sigfox test mode command AT$TM=<rc>,<test_mode><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_TM) == AT_NO_ERROR) {
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_TM) == PARSER_SUCCESS) {
 			// Check if wind measurement is not running.
 			if (at_ctx.wind_measurement_flag == 0) {
-				unsigned int rc = 0;
 				// Search RC parameter.
-				get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 0, &rc);
-				if (get_param_result == AT_NO_ERROR) {
+				parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &generic_int_1);
+				if (parser_status == PARSER_SUCCESS) {
 					// Check value.
-					if (rc < SFX_RC_LIST_MAX_SIZE) {
+					if (((sfx_rc_enum_t) generic_int_1) < SFX_RC_LIST_MAX_SIZE) {
 						// Search test mode number.
-						unsigned int test_mode = 0;
-						get_param_result =  AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &test_mode);
-						if (get_param_result == AT_NO_ERROR) {
+						parser_status =  PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_2);
+						if (parser_status == PARSER_SUCCESS) {
 							// Check parameters.
-							if (test_mode <= SFX_TEST_MODE_NVM) {
+							if (((sfx_test_mode_t) generic_int_2) <= SFX_TEST_MODE_NVM) {
 								// Call test mode function wth public key.
-								sfx_error = ADDON_SIGFOX_RF_PROTOCOL_API_test_mode(rc, test_mode);
+								sfx_error = ADDON_SIGFOX_RF_PROTOCOL_API_test_mode((sfx_rc_enum_t) generic_int_1, (sfx_test_mode_t) generic_int_2);
 								if (sfx_error == SFX_ERR_NONE) {
 									AT_ReplyOk();
 								}
@@ -1443,72 +1047,72 @@ static void AT_DecodeRxBuffer(void) {
 							}
 							else {
 								// Invalid test mode.
-								AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_TEST_MODE);
+								AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_TEST_MODE);
 							}
 						}
 						else {
 							// Error in test_mode parameter.
-							AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+							AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 						}
 					}
 					else {
 						// Invalid RC.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+						AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC);
 					}
 				}
 				else {
 					// Error in RC parameter.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+					AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 				}
 			}
 			else {
-				AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_FORBIDDEN_COMMAND);
+				AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
 			}
 		}
 #endif
 #ifdef AT_COMMANDS_RC
 		// Get Sigfox RC command AT$RC=<rc><CR>.
-		else if (AT_CompareCommand(AT_IN_COMMAND_RC) == AT_NO_ERROR) {
+		else if (PARSER_CompareCommand(&at_ctx.at_parser, AT_COMMAND_RC) == PARSER_SUCCESS) {
 			switch (at_ctx.sigfox_rc_idx) {
 			case SFX_RC1:
-				USARTx_SendString("RC1\n");
+				AT_ResponseAddString("RC1");
 				break;
 			case SFX_RC2:
-				USARTx_SendString("RC2\n");
+				AT_ResponseAddString("RC2");
 				break;
 			case SFX_RC3A:
-				USARTx_SendString("RC3A\n");
+				AT_ResponseAddString("RC3A");
 				break;
 			case SFX_RC3C:
-				USARTx_SendString("RC3C\n");
+				AT_ResponseAddString("RC3C");
 				break;
 			case SFX_RC4:
-				USARTx_SendString("RC4\n");
+				AT_ResponseAddString("RC4");
 				break;
 			case SFX_RC5:
-				USARTx_SendString("RC5\n");
+				AT_ResponseAddString("RC5");
 				break;
 			case SFX_RC6:
-				USARTx_SendString("RC6\n");
+				AT_ResponseAddString("RC6");
 				break;
 			case SFX_RC7:
-				USARTx_SendString("RC7\n");
+				AT_ResponseAddString("RC7");
 				break;
 			default:
-				USARTx_SendString("Unknown RC\n");
+				AT_ResponseAddString("Unknown RC");
 				break;
 			}
+			AT_ResponseAddString(AT_RESPONSE_END);
 		}
 		// Set Sigfox RC command AT$RC=<rc><CR>.
-		else if (AT_CompareHeader(AT_IN_HEADER_RC) == AT_NO_ERROR) {
-			unsigned int rc = 0;
+		else if (PARSER_CompareHeader(&at_ctx.at_parser, AT_HEADER_RC) == PARSER_SUCCESS) {
 			// Search RC parameter.
-			get_param_result = AT_GetParameter(AT_PARAM_TYPE_DECIMAL, 1, &rc);
-			if (get_param_result == AT_NO_ERROR) {
+			parser_status = PARSER_GetParameter(&at_ctx.at_parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &generic_int_1);
+			if (parser_status == PARSER_SUCCESS) {
 				// Check value.
-				if (rc < SFX_RC_LIST_MAX_SIZE) {
+				if (((sfx_rc_enum_t) generic_int_1) < SFX_RC_LIST_MAX_SIZE) {
 					// Update radio configuration.
-					switch (rc) {
+					switch ((sfx_rc_enum_t) generic_int_1) {
 					case SFX_RC1:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC1;
 						at_ctx.sigfox_rc_idx = SFX_RC1;
@@ -1516,31 +1120,31 @@ static void AT_DecodeRxBuffer(void) {
 						break;
 					case SFX_RC2:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC1;
-						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc2_sm_config[byte_idx];
+						for (idx=0 ; idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc2_sm_config[idx];
 						at_ctx.sigfox_rc_idx = SFX_RC2;
 						AT_ReplyOk();
 						break;
 					case SFX_RC3A:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC3A;
-						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc3a_config[byte_idx];
+						for (idx=0 ; idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc3a_config[idx];
 						at_ctx.sigfox_rc_idx = SFX_RC3A;
 						AT_ReplyOk();
 						break;
 					case SFX_RC3C:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC3C;
-						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc3c_config[byte_idx];
+						for (idx=0 ; idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc3c_config[idx];
 						at_ctx.sigfox_rc_idx = SFX_RC3C;
 						AT_ReplyOk();
 						break;
 					case SFX_RC4:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC4;
-						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc4_sm_config[byte_idx];
+						for (idx=0 ; idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc4_sm_config[idx];
 						at_ctx.sigfox_rc_idx = SFX_RC4;
 						AT_ReplyOk();
 						break;
 					case SFX_RC5:
 						at_ctx.sigfox_rc = (sfx_rc_t) RC5;
-						for (byte_idx=0 ; byte_idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; byte_idx++) at_ctx.sigfox_rc_std_config[byte_idx] = rc5_config[byte_idx];
+						for (idx=0 ; idx<AT_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc5_config[idx];
 						at_ctx.sigfox_rc_idx = SFX_RC5;
 						AT_ReplyOk();
 						break;
@@ -1556,42 +1160,53 @@ static void AT_DecodeRxBuffer(void) {
 						break;
 					default:
 						// Invalid RC.
-						AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+						AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC);
 						break;
 					}
 				}
 				else {
 					// Invalid RC.
-					AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_RC);
+					AT_ReplyError(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC);
 				}
 			}
 			else {
 				// Error in RC parameter.
-				AT_ReplyError(AT_ERROR_SOURCE_AT, get_param_result);
+				AT_ReplyError(AT_ERROR_SOURCE_PSR, parser_status);
 			}
 		}
 #endif
 		// Unknown command.
 		else {
-			AT_ReplyError(AT_ERROR_SOURCE_AT, AT_OUT_ERROR_UNKNOWN_COMMAND);
+			AT_ReplyError(AT_ERROR_SOURCE_PSR, PARSER_ERROR_UNKNOWN_COMMAND);
 		}
 	}
+	// Send response.
+	USARTx_SendString(at_ctx.at_response_buf);
+	// Reset AT parser.
+	AT_Init();
 }
 
-/* RESET AT PARSER.
+/* INIT AT MANAGER.
  * @param:	None.
  * @return:	None.
  */
-void AT_Reset(void) {
+void AT_Init(void) {
 	// Init context.
 	unsigned int idx = 0;
-	for (idx=0 ; idx<AT_BUFFER_SIZE ; idx++) at_ctx.at_rx_buf[idx] = 0;
-	at_ctx.at_rx_buf_idx = 0;
+	for (idx=0 ; idx<AT_COMMAND_BUFFER_LENGTH ; idx++) at_ctx.at_command_buf[idx] = '\0';
+	at_ctx.at_command_buf_idx = 0;
 	at_ctx.at_line_end_flag = 0;
+	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.at_response_buf[idx] = '\0';
+	at_ctx.at_response_buf_idx = 0;
+	at_ctx.wind_measurement_flag = 0;
+	// Default Sigfox RC set to RC1.
+	at_ctx.sigfox_rc = (sfx_rc_t) RC1;
+	at_ctx.sigfox_rc_idx = SFX_RC1;
 	// Parsing variables.
-	at_ctx.start_idx = 0;
-	at_ctx.end_idx = 0;
-	at_ctx.separator_idx = 0;
+	at_ctx.at_parser.rx_buf = (unsigned char*) at_ctx.at_command_buf;
+	at_ctx.at_parser.rx_buf_length = 0;
+	at_ctx.at_parser.separator_idx = 0;
+	at_ctx.at_parser.start_idx = 0;
 	// Enable USART interrupt.
 #ifdef HW1_0
 	NVIC_EnableInterrupt(NVIC_IT_USART2);
@@ -1599,20 +1214,6 @@ void AT_Reset(void) {
 #ifdef HW2_0
 	NVIC_EnableInterrupt(NVIC_IT_USART1);
 #endif
-}
-
-/*** AT functions ***/
-
-/* INIT AT MANAGER.
- * @param:	None.
- * @return:	None.
- */
-void AT_Init(void) {
-	// Reset parser.
-	AT_Reset();
-	// Default Sigfox RC set to RC1.
-	at_ctx.sigfox_rc = (sfx_rc_t) RC1;
-	at_ctx.sigfox_rc_idx = SFX_RC1;
 }
 
 /* MAIN TASK OF AT COMMAND MANAGER.
@@ -1623,40 +1224,107 @@ void AT_Task(void) {
 	// Trigger decoding function if line end found.
 	if (at_ctx.at_line_end_flag) {
 		AT_DecodeRxBuffer();
-		AT_Reset();
+	}
+	// Check RTC flag for wind measurements.
+	if (RTC_GetAlarmBFlag() != 0) {
+		// Call WIND callback.
+		WIND_MeasurementPeriodCallback();
+		RTC_ClearAlarmBFlag();
 	}
 }
 
-/* FILL AT COMMAND BUFFER WITH A NEW BYTE FROM USART.
- * @param rx_byte:	New byte to store.
+/* FILL AT COMMAND BUFFER WITH A NEW BYTE (CALLED BY USART INTERRUPT).
+ * @param rx_byte:	Incoming byte.
  * @return:			None.
  */
 void AT_FillRxBuffer(unsigned char rx_byte) {
-	unsigned char increment_idx = 1;
-	// Append incoming byte to buffer.
-	if ((rx_byte == AT_CR_CHAR) || (rx_byte == AT_LF_CHAR)) {
-		// Append line end only if the previous byte was not allready a line end and if other characters are allready presents.
-		if (((at_ctx.at_rx_buf[at_ctx.at_rx_buf_idx-1] != AT_LF_CHAR) && (at_ctx.at_rx_buf[at_ctx.at_rx_buf_idx-1] != AT_CR_CHAR)) && (at_ctx.at_rx_buf_idx > 0)) {
-			at_ctx.at_rx_buf[at_ctx.at_rx_buf_idx] = rx_byte;
-			// Set line end flag to trigger decoding.
-			at_ctx.at_line_end_flag = 1;
+	// Append byte if LF flag is not allready set.
+	if (at_ctx.at_line_end_flag == 0) {
+		// Store new byte.
+		at_ctx.at_command_buf[at_ctx.at_command_buf_idx] = rx_byte;
+		// Manage index.
+		at_ctx.at_command_buf_idx++;
+		if (at_ctx.at_command_buf_idx >= AT_COMMAND_BUFFER_LENGTH) {
+			at_ctx.at_command_buf_idx = 0;
 		}
-		else {
-			// No byte stored, do not increment buffer index.
-			increment_idx = 0;
-		}
+	}
+	// Set LF flag to trigger decoding.
+	if ((rx_byte == STRING_CHAR_CR) || (rx_byte == STRING_CHAR_LF)) {
+		at_ctx.at_line_end_flag = 1;
+	}
+}
+
+/* PRINT SIGFOX LIBRARY RESULT.
+ * @param test_result:	Test result.
+ * @param rssi:			Downlink signal rssi in dBm.
+ */
+void AT_PrintTestResult(unsigned char test_result, int rssi_dbm) {
+	// Check result.
+	if (test_result == 0) {
+		AT_ResponseAddString("Test failed.");
 	}
 	else {
-		// Append byte in all cases.
-		at_ctx.at_rx_buf[at_ctx.at_rx_buf_idx] = rx_byte;
+		AT_ResponseAddString("Test passed. RSSI=");
+		AT_ResponseAddValue(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+		AT_ResponseAddString("dBm");
 	}
-	// Increment index and manage rollover.
-	if (increment_idx != 0) {
-		at_ctx.at_rx_buf_idx++;
-		if (at_ctx.at_rx_buf_idx >= AT_BUFFER_SIZE) {
-			at_ctx.at_rx_buf_idx = 0;
-		}
-	}
+	AT_ResponseAddString(AT_RESPONSE_END);
+	// Send response.
+	USARTx_SendString(at_ctx.at_response_buf);
+	// Reset AT parser.
+	AT_Init();
+}
+
+/* PRINT PLUVIOMETRY DATA.
+ * @param rain_edge_count:	Rain gauge edge counter.
+ * @return:					None.
+ */
+void AT_PrintRain(unsigned char rain_edge_count) {
+	// Print data.
+	AT_ResponseAddString("RainEdgeCount=");
+	AT_ResponseAddValue((int) rain_edge_count, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(AT_RESPONSE_END);
+	// Send response.
+	USARTx_SendString(at_ctx.at_response_buf);
+	// Reset AT parser.
+	AT_Init();
+}
+
+/* PRINT WIND SPEED.
+ * @param wind_speed_mh:	Wind speed in m/h.
+ * @return:					None.
+ */
+void AT_PrintWindSpeed(unsigned int wind_speed_mh) {
+	// Print data.
+	AT_ResponseAddString("Speed=");
+	AT_ResponseAddValue((int) wind_speed_mh, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("m/h");
+	AT_ResponseAddString(AT_RESPONSE_END);
+	// Send response.
+	USARTx_SendString(at_ctx.at_response_buf);
+	// Reset AT parser.
+	AT_Init();
+}
+
+/* PRINT WIND DIRECTION.
+ * @param wind_direction_degrees:	Wind direction in degrees.
+ * @param wind_direction_x:			Current direction vector x value.
+ * @param wind_direction_y:			Current direction vector y value.
+ * @return:							None.
+ */
+void AT_PrintWindDirection(unsigned int wind_direction_degrees, int wind_direction_x, int wind_direction_y) {
+	// Print data.
+	AT_ResponseAddString("Direction=");
+	AT_ResponseAddValue((int) wind_direction_degrees, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString("d x=");
+	AT_ResponseAddValue(wind_direction_x, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(" y=");
+	AT_ResponseAddValue(wind_direction_y, STRING_FORMAT_DECIMAL, 0);
+	AT_ResponseAddString(AT_RESPONSE_END);
+	// Send response.
+	USARTx_SendString(at_ctx.at_response_buf);
+	// Reset AT parser.
+	AT_Init();
 }
 
 #endif

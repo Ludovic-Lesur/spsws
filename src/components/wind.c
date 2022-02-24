@@ -7,6 +7,7 @@
 
 #include "wind.h"
 
+#include "at.h"
 #include "exti.h"
 #include "lptim.h"
 #include "mapping.h"
@@ -16,7 +17,6 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "spi.h"
-#include "usart.h"
 
 #if (defined CM || defined ATM)
 
@@ -260,10 +260,7 @@ void WIND_MeasurementPeriodCallback(void) {
 		// Reset seconds counter.
 		wind_ctx.wind_speed_seconds_count = 0;
 #ifdef ATM
-		// Print data.
-		USARTx_SendString("Speed=");
-		USARTx_SendValue(wind_ctx.wind_speed_mh, USART_FORMAT_DECIMAL, 0);
-		USARTx_SendString("m/h\n");
+		AT_PrintWindSpeed(wind_ctx.wind_speed_mh);
 #endif
 	}
 	// Update wind direction if period is reached.
@@ -301,20 +298,7 @@ void WIND_MeasurementPeriodCallback(void) {
 				wind_ctx.wind_direction_x += (wind_ctx.wind_speed_mh / 1000) * MATH_COS_TABLE[wind_ctx.wind_direction_degrees];
 				wind_ctx.wind_direction_y += (wind_ctx.wind_speed_mh / 1000) * MATH_SIN_TABLE[wind_ctx.wind_direction_degrees];
 #ifdef ATM
-				// Print data.
-				USARTx_SendString("Direction=");
-				USARTx_SendValue(wind_ctx.wind_direction_degrees, USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("d x=");
-				if (wind_ctx.wind_direction_x < 0) {
-					USARTx_SendString("-");
-				}
-				USARTx_SendValue(MATH_Abs(wind_ctx.wind_direction_x), USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString(" y=");
-				if (wind_ctx.wind_direction_y < 0) {
-					USARTx_SendString("-");
-				}
-				USARTx_SendValue(MATH_Abs(wind_ctx.wind_direction_y), USART_FORMAT_DECIMAL, 0);
-				USARTx_SendString("\n");
+				AT_PrintWindDirection(wind_ctx.wind_direction_degrees, wind_ctx.wind_direction_x, wind_ctx.wind_direction_y);
 #endif
 			}
 		}

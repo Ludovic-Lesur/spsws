@@ -799,12 +799,6 @@ int main (void) {
 	while (1) {
 		// Perform AT commands parsing.
 		AT_Task();
-		// Check RTC flag for wind measurements.
-		if (RTC_GetAlarmBFlag() != 0) {
-			// Call WIND callback.
-			WIND_MeasurementPeriodCallback();
-			RTC_ClearAlarmBFlag();
-		}
 	}
 	return 0;
 }
