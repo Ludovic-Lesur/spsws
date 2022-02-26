@@ -54,10 +54,6 @@
 #define SPSWS_AFTERNOON_HOUR_THRESHOLD				12
 // Geoloc.
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
-// Sigfox.
-#define SPSWS_SIGFOX_UPLINK_DATA_MAX_LENGTH_BYTES	12
-#define SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES		8
-#define SPSWS_SIGFOX_RC_STD_CONFIG_SIZE				3
 #ifdef IM
 #define SPSWS_SIGFOX_WEATHER_DATA_LENGTH			6
 #else
@@ -170,8 +166,8 @@ typedef struct {
 	SPSWS_SigfoxGeolocData spsws_sigfox_geoloc_data;
 	// Sigfox.
 	sfx_rc_t spsws_sfx_rc;
-	sfx_u32 spsws_sfx_rc_std_config[SPSWS_SIGFOX_RC_STD_CONFIG_SIZE];
-	unsigned char spsws_sfx_downlink_data[SPSWS_SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
+	sfx_u32 spsws_sfx_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
+	unsigned char spsws_sfx_downlink_data[SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_Context;
 
 /*** SPSWS global variables ***/
@@ -306,7 +302,7 @@ int main (void) {
 #endif
 	unsigned char idx = 0;
 	spsws_ctx.spsws_sfx_rc = (sfx_rc_t) RC1;
-	for (idx=0 ; idx<SPSWS_SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.spsws_sfx_rc_std_config[idx] = 0;
+	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.spsws_sfx_rc_std_config[idx] = 0;
 	// Local variables.
 	unsigned int max11136_bandgap_12bits = 0;
 	unsigned int max11136_channel_12bits = 0;
@@ -782,17 +778,13 @@ int main (void) {
 	SX1232_Init();
 	SX1232_Tcxo(1);
 	SKY13317_Init();
-#ifdef AT_COMMANDS_GPS
 	NEOM8N_Init();
-#endif
-#ifdef AT_COMMANDS_SENSORS
 	MAX11136_Init();
 	WIND_Init();
 	RAIN_Init();
 	SHT3X_Init();
 	DPS310_Init();
 	SI1133_Init();
-#endif
 	// Init applicative layers.
 	AT_Init();
 	// Main loop.

@@ -31,7 +31,7 @@
 
 typedef struct {
 	SX1232_RfOutputPin sx1232_rf_output_pin;
-	signed char sx1232_rssi_offset;
+	signed short sx1232_rssi_offset;
 } SX1232_Context;
 
 /*** SX1232 local global variables ***/
@@ -713,16 +713,16 @@ void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_samp
  * @param:	None.
  * @return:	Absolute RSSI value in dBm.
  */
-unsigned char SX1232_GetRssi(void) {
+signed short SX1232_GetRssi(void) {
 #ifdef HW1_0
 	// Configure SPI.
 	SPI1_SetClockPolarity(0);
 #endif
 	// Read RSSI register and add offset.
-	signed char rssi = 0;
+	signed short rssi = 0;
 	unsigned char rssi_reg_value = 0;
 	SX1232_ReadRegister(SX1232_REG_RSSIVALUE, &rssi_reg_value);
-	rssi = (rssi_reg_value / 2) + sx1232_ctx.sx1232_rssi_offset;
+	rssi = (-1) * (((signed short) rssi_reg_value / 2) + sx1232_ctx.sx1232_rssi_offset);
 	return rssi;
 }
 

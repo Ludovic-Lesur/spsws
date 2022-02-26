@@ -317,8 +317,11 @@
 #define RC5_CONFIG     {0x00000003,0x00001388,0x00000000} /*!< Config word default value: 3 retries before 1st frame , 0x1288=5000ms max time between each frame>*/
 
 
-#define ID_LENGTH      (sfx_u8)(4) /* Size of device identifier */
-#define PAC_LENGTH     (sfx_u8)(8) /* Size of device initial PAC */
+#define ID_LENGTH      						(sfx_u8)(4) 	/* Size of device identifier */
+#define PAC_LENGTH     						(sfx_u8)(8) 	/* Size of device initial PAC */
+#define SIGFOX_DOWNLINK_DATA_SIZE_BYTES		(sfx_u8)(8) 	/* Size of downlink payload */
+#define SIGFOX_UPLINK_DATA_MAX_SIZE_BYTES	(sfx_u8)(12)	/* Maximum size of uplink payload */
+#define SIGFOX_RC_STD_CONFIG_SIZE			(sfx_u8)(3)		/* Size of RC config word */
 
 /********************************
  * \enum

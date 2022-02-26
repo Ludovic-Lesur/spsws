@@ -129,7 +129,7 @@ void SX1232_SetPreambleDetector(unsigned char preamble_length_bytes, unsigned ch
 void SX1232_SetSyncWord(unsigned char* sync_word, unsigned char sync_word_length_bytes);
 void SX1232_SetDataLength(unsigned char data_length_bytes);
 void SX1232_ConfigureRssi(signed char rssi_offset, SX1232_RssiSampling rssi_sampling);
-unsigned char SX1232_GetRssi(void);
+signed short SX1232_GetRssi(void);
 void SX1232_ReadFifo(unsigned char* rx_data, unsigned char rx_data_length);
 
 #endif /* SX1232_H */

@@ -23,9 +23,9 @@
  * @param separator:    Reference separator.
  * @return status:      Comparison result.
  */
-static PARSER_Status PARSER_SearchSeparator(PARSER_Context* parser_ctx, char separator) {
+static PARSER_status_t PARSER_SearchSeparator(PARSER_context_t* parser_ctx, char separator) {
 	// Local variables.
-	PARSER_Status status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
+	PARSER_status_t status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
 	unsigned char idx = 0;
 	// Starting from char following the current separator (which is the start of buffer in case of first call).
 	for (idx=(parser_ctx -> start_idx) ; idx<(parser_ctx -> rx_buf_length) ; idx++) {
@@ -40,14 +40,15 @@ static PARSER_Status PARSER_SearchSeparator(PARSER_Context* parser_ctx, char sep
 
 /*** PARSER functions ***/
 
-/* CHECK EQUALITY BETWEEN A GIVEN COMMAND AND THE CURRENT AT COMMAND BUFFER.
+/* CHECK EQUALITY BETWEEN A GIVEN COMMAND OR HEADER AND THE CURRENT AT COMMAND BUFFER.
  * @param parser_ctx:   Parser structure.
- * @param command:      Reference command.
+ * @param mode:			Comparison mode.
+ * @param str:			Input string.
  * @return status:      Comparison result.
  */
-PARSER_Status PARSER_CompareCommand(PARSER_Context* parser_ctx, char* command) {
+PARSER_status_t PARSER_Compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* command) {
 	// Local variables.
-	PARSER_Status status = PARSER_SUCCESS;
+	PARSER_status_t status = PARSER_SUCCESS;
 	unsigned int idx = 0;
 	// Compare all characters.
 	while (command[idx] != STRING_CHAR_NULL) {
@@ -58,35 +59,24 @@ PARSER_Status PARSER_CompareCommand(PARSER_Context* parser_ctx, char* command) {
 		}
 		idx++;
 	}
-	// Check length equality.
-	if ((parser_ctx -> rx_buf_length) != idx) {
-		status = PARSER_ERROR_UNKNOWN_COMMAND;
-		goto errors;
-	}
-errors:
-	return status;
-}
-
-/* CHECK EQUALITY BETWEEN A GIVEN HEADER AND THE BEGINNING OF THE CURRENT AT COMMAND BUFFER.
- * @param parser_ctx:   Parser structure.
- * @param header:       Reference header.
- * @return status:      Comparison result.
- */
-PARSER_Status PARSER_CompareHeader(PARSER_Context* parser_ctx, char* header) {
-	// Local variables.
-	PARSER_Status status = PARSER_SUCCESS;
-	unsigned int idx = 0;
-	// Compare all characters.
-	while (header[idx] != STRING_CHAR_NULL) {
-		if ((parser_ctx -> rx_buf)[(parser_ctx -> start_idx) + idx] != header[idx]) {
-			// Difference found or end of command, exit loop.
+	switch (mode) {
+	case PARSER_MODE_COMMAND:
+		// Check length equality.
+		if ((parser_ctx -> rx_buf_length) != idx) {
 			status = PARSER_ERROR_UNKNOWN_COMMAND;
 			goto errors;
 		}
-		idx++;
+		break;
+	case PARSER_MODE_HEADER:
+		// Update start index.
+		(parser_ctx -> start_idx) = idx;
+		break;
+	default:
+		// Unknown mode.
+		status = PARSER_ERROR_MODE;
+		goto errors;
+		break;
 	}
-	// Update start index in case of success.
-	(parser_ctx -> start_idx) = idx;
 errors:
 	return status;
 }
@@ -99,9 +89,9 @@ errors:
  * @param param_value:  Pointer hat will contain extracted parameter value.
  * @return status:      Searching result.
  */
-PARSER_Status PARSER_GetParameter(PARSER_Context* parser_ctx, PARSER_ParameterType param_type, char separator, unsigned char last_param, int* param) {
+PARSER_status_t PARSER_GetParameter(PARSER_context_t* parser_ctx, PARSER_parameter_t param_type, char separator, unsigned char last_param, int* param) {
     // Local variables.
-	PARSER_Status status = PARSER_ERROR_UNKNOWN_COMMAND;
+	PARSER_status_t status = PARSER_ERROR_UNKNOWN_COMMAND;
 	unsigned char param_length_char = 0;
 	unsigned char param_negative_flag = 0;
 	unsigned char idx = 0; // Generic index used in for loops.
@@ -250,9 +240,9 @@ errors:
  * @param extracted_length:	Length of the extracted buffer.
  * @return status:          Searching result.
  */
-PARSER_Status PARSER_GetByteArray(PARSER_Context* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char* param, unsigned char* extracted_length) {
+PARSER_status_t PARSER_GetByteArray(PARSER_context_t* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char* param, unsigned char* extracted_length) {
     // Local variables.
-	PARSER_Status status = PARSER_ERROR_UNKNOWN_COMMAND;
+	PARSER_status_t status = PARSER_ERROR_UNKNOWN_COMMAND;
 	unsigned char param_length_char = 0;
 	unsigned char idx = 0; // Generic index used in for loops.
     unsigned char end_idx = 0;

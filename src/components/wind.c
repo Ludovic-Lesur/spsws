@@ -123,6 +123,8 @@ void WIND_Init(void) {
 	GPIO_Configure(&GPIO_WIND_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_ConfigureGpio(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
 #endif
+	// Reset data.
+	WIND_ResetData();
 	// Set interrupt priority.
 	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 0);
 }

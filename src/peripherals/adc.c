@@ -23,7 +23,7 @@
 #define ADC_FULL_SCALE_12BITS		4095
 
 #define ADC_VREFINT_VOLTAGE_MV		((VREFINT_CAL * VREFINT_VCC_CALIB_MV) / (ADC_FULL_SCALE_12BITS))
-#define ADC_VMCU_DEFAULT_MV			3000
+#define ADC_VMCU_DEFAULT_MV			3300
 
 #define ADC_TIMEOUT_COUNT			1000000
 
@@ -76,6 +76,23 @@ static void ADC1_FilteredConversion(unsigned char adc_channel, unsigned int* adc
 	}
 	// Apply median filter.
 	(*adc_result_12bits) = MATH_ComputeMedianFilter(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
+}
+
+/* PERFORM INTERNAL REFERENCE VOLTAGE CONVERSION.
+ * @param:	None.
+ * @return:	None.
+ */
+static void ADC1_ComputeVrefInt(void) {
+	// Set sampling time (see p.89 of STM32L031x4/6 datasheet).
+	ADC1 -> SMPR &= ~(0b111 << 0); // Reset bits 0-2.
+	ADC1 -> SMPR |= (0b110 << 0); // Sampling time for internal voltage reference is 10us typical, 79.5*(1/ADCCLK) = 9.94us for ADCCLK = SYSCLK/2 = 8MHz;
+	// Wake-up internal voltage reference.
+	ADC1 -> CCR |= (0b1 << 22); // VREFEN='1'.
+	LPTIM1_DelayMilliseconds(10, 0); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
+	// Read raw supply voltage.
+	ADC1_FilteredConversion(ADC_CHANNEL_VREFINT, &adc_ctx.vrefint_12bits);
+	// Switch internal voltage reference off.
+	ADC1 -> CCR &= ~(0b1 << 22); // VREFEN='0'.
 }
 
 /* COMPUTE MCU SUPPLY VOLTAGE.
@@ -190,7 +207,7 @@ void ADC1_PerformMeasurements(void) {
 		if (loop_count > ADC_TIMEOUT_COUNT) return;
 	}
 	// Perform measurements.
-	ADC1_FilteredConversion(ADC_CHANNEL_VREFINT, &adc_ctx.vrefint_12bits);
+	ADC1_ComputeVrefInt();
 	ADC1_ComputeVmcu();
 	ADC1_ComputeTmcu();
 	// Clear all flags.

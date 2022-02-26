@@ -14,7 +14,6 @@
 
 /*** MAX11136 local macros ***/
 
-#define MAX11136_NUMBER_OF_CHANNELS				8
 #define MAX11136_CONVERSION_LOOPS				3
 #define MAX11136_TIMEOUT_COUNT					1000000
 

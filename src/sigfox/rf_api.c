@@ -494,17 +494,17 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 			sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
 			remaining_delay -= sub_delay;
 			// Start wake-up timer.
+			RTC_ClearWakeUpTimerFlag();
 			RTC_StartWakeUpTimer(sub_delay);
 			while (RTC_GetWakeUpTimerFlag() == 0) {
 				// Get RSSI when preamble is found.
 				if (((SX1232_GetIrqFlags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
-					(*rssi) = (sfx_s16) ((-1) * SX1232_GetRssi());
+					(*rssi) = SX1232_GetRssi();
 					rssi_retrieved = 1;
 				}
 			}
 			// Sub-delay reached: clear watchdog and flags.
 			IWDG_Reload();
-			RTC_ClearWakeUpTimerFlag();
 		}
 		// Stop timer.
 		RTC_StopWakeUpTimer();
