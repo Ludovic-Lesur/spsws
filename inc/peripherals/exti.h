@@ -25,19 +25,19 @@ typedef enum {
 	EXTI_LINE_USART2 = 26,
 	EXTI_LINE_LPUART1 = 28,
 	EXTI_LINE_LPTIM1 = 29
-} EXTI_Line;
+} EXTI_line_t;
 
 typedef enum {
 	EXTI_TRIGGER_RISING_EDGE,
 	EXTI_TRIGGER_FALLING_EDGE,
 	EXTI_TRIGGER_ANY_EDGE
-} EXTI_Trigger;
+} EXTI_trigger_t;
 
 /*** EXTI functions ***/
 
-void EXTI_Init(void);
-void EXTI_ConfigureGpio(const GPIO* gpio, EXTI_Trigger edge_trigger);
-void EXTI_ConfigureLine(EXTI_Line line, EXTI_Trigger edge_trigger);
-void EXTI_ClearAllFlags(void);
+void EXTI_init(void);
+void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t edge_trigger);
+void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t edge_trigger);
+void EXTI_clear_all_flags(void);
 
 #endif /* EXTI_H */

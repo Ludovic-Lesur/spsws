@@ -15,7 +15,7 @@
  * @param:	None.
  * @return:	None.
  */
-void IWDG_Init(void) {
+void IWDG_init(void) {
 	// Configure peripheral.
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.
@@ -31,7 +31,7 @@ void IWDG_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void IWDG_Reload(void) {
+void IWDG_reload(void) {
 	// Reload counter.
 	IWDG -> KR = 0x0000AAAA;
 }

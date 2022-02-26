@@ -22,7 +22,7 @@
  * @param:	None.
  * @return:	None.
  */
-void PWR_Init(void) {
+void PWR_init(void) {
 	// Enable power interface clock.
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	// Unlock back-up registers (DBP bit).
@@ -43,7 +43,7 @@ void PWR_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void PWR_EnterLowPowerSleepMode(void) {
+void PWR_enter_low_power_sleep_mode(void) {
 	// Regulator in low power mode.
 	PWR -> CR |= (0b1 << 0); // LPSDSR='1'.
 	// Enter low power sleep mode.
@@ -55,7 +55,7 @@ void PWR_EnterLowPowerSleepMode(void) {
  * @param:	None.
  * @return:	None.
  */
-void PWR_EnterStopMode(void) {
+void PWR_enter_stop_mode(void) {
 	// Regulator in low power mode.
 	PWR -> CR |= (0b1 << 0); // LPSDSR='1'.
 	// Clear WUF flag.

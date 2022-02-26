@@ -28,11 +28,11 @@ typedef struct {
 	volatile unsigned int CALFACT;  // ADC calibration factor register.
 	unsigned int RESERVED5[148];	// Reserved 0xB8.
 	volatile unsigned int CCR;    	// ADC common configuration register.
-} ADC_BaseAddress;
+} ADC_base_address_t;
 
 /*** ADC base address ***/
 
-#define ADC1	((ADC_BaseAddress*) ((unsigned int) 0x40012400))
+#define ADC1	((ADC_base_address_t*) ((unsigned int) 0x40012400))
 
 /*** Temperature sensor calibration values address */
 

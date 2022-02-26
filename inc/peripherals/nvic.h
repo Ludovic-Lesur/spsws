@@ -41,18 +41,18 @@ typedef enum {
 	NVIC_IT_USART1 = 27,
 	NVIC_IT_USART2 = 28,
 	NVIC_IT_LPUART1 = 29
-} NVIC_InterruptVector;
+} NVIC_interrupt_t;
 
 typedef enum {
 	NVIC_PRIORITY_MAX = 0,
 	NVIC_PRIORITY_MIN = 3
-} NVIC_Priority;
+} NVIC_priority_t;
 
 /*** NVIC functions ***/
 
-void NVIC_Init(void);
-void NVIC_EnableInterrupt(NVIC_InterruptVector it_num);
-void NVIC_DisableInterrupt(NVIC_InterruptVector it_num);
-void NVIC_SetPriority(NVIC_InterruptVector it_num, unsigned char priority);
+void NVIC_init(void);
+void NVIC_enable_interrupt(NVIC_interrupt_t it_num);
+void NVIC_disable_interrupt(NVIC_interrupt_t it_num);
+void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority);
 
 #endif /* NVIC_H */

@@ -10,13 +10,13 @@
 
 /*** LPUART functions ***/
 
-void LPUART1_Init(unsigned char lpuart_use_lse);
-void LPUART1_UpdateBrr(void);
-void LPUART1_EnableTx(void);
-void LPUART1_EnableRx(void);
-void LPUART1_Disable(void);
-void LPUART1_PowerOn(void);
-void LPUART1_PowerOff(void);
-void LPUART1_SendByte(unsigned char tx_byte);
+void LPUART1_init(unsigned char lpuart_use_lse);
+void LPUART1_update_brr(void);
+void LPUART1_enable_tx(void);
+void LPUART1_enable_rx(void);
+void LPUART1_disable(void);
+void LPUART1_power_on(void);
+void LPUART1_power_off(void);
+void LPUART1_send_byte(unsigned char tx_byte);
 
 #endif /* LPUART_H */

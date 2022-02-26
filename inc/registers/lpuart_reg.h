@@ -21,10 +21,10 @@ typedef struct {
 	volatile unsigned int ICR;    	// LPUART interrupt flag clear register.
 	volatile unsigned int RDR;     	// LPUART receive data register.
 	volatile unsigned int TDR;   	// LPUART transmit data register.
-} LPUART_BaseAddress;
+} LPUART_base_address_t;
 
 /*** LPUART base address ***/
 
-#define LPUART1	((LPUART_BaseAddress*) ((unsigned int) 0x40004800))
+#define LPUART1	((LPUART_base_address_t*) ((unsigned int) 0x40004800))
 
 #endif /* LPUART_REG_H */

@@ -22,12 +22,12 @@ typedef struct {
 	volatile unsigned int PECR;    		// I2C PEC register.
 	volatile unsigned int RXDR;    		// I2C receive data register.
 	volatile unsigned int TXDR;    		// I2C transmit data register.
-} I2C_BaseAddress;
+} I2C_base_address_t;
 
 /*** I2C base addresses ***/
 
-#define I2C1	((I2C_BaseAddress*) ((unsigned int) 0x40005400))
-//#define I2C2	((I2C_BaseAddress*) ((unsigned int) 0x40005800))
-//#define I2C3	((I2C_BaseAddress*) ((unsigned int) 0x40007800))
+#define I2C1	((I2C_base_address_t*) ((unsigned int) 0x40005400))
+//#define I2C2	((I2C_base_address_t*) ((unsigned int) 0x40005800))
+//#define I2C3	((I2C_base_address_t*) ((unsigned int) 0x40007800))
 
 #endif /* I2C_REG_H */

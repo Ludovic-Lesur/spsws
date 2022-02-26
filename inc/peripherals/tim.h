@@ -19,15 +19,15 @@
 
 /*** TIM functions ***/
 
-void TIM21_Init(void);
-void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz);
-void TIM21_Disable(void);
+void TIM21_init(void);
+void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+void TIM21_disable(void);
 
-void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
-void TIM2_Enable(void);
-void TIM2_Disable(void);
-void TIM2_Start(void);
-void TIM2_Stop(void);
-volatile unsigned int TIM2_GetCounter(void);
+void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
+void TIM2_enable(void);
+void TIM2_disable(void);
+void TIM2_start(void);
+void TIM2_stop(void);
+volatile unsigned int TIM2_get_counter(void);
 
 #endif /* TIM_H */

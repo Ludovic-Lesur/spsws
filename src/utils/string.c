@@ -25,7 +25,7 @@
  * @param ascii_code:	Hexadecimal ASCII code to convert.
  * @return value:		Corresponding value.
  */
-unsigned char STRING_AsciiToHexa(char ascii_code) {
+unsigned char STRING_ascii_to_hexa(char ascii_code) {
 	unsigned char value = 0;
 	if ((ascii_code >= 'A') && (ascii_code <= 'F')) {
 		value = ascii_code - 'A' + 10;
@@ -40,7 +40,7 @@ unsigned char STRING_AsciiToHexa(char ascii_code) {
  * @param value:		Decimal digit.
  * @return ascii_code:	Corresponding ASCII code.
  */
-char STRING_DecimalToAscii(unsigned char decimal_digit) {
+char STRING_decimal_to_ascii(unsigned char decimal_digit) {
 	char ascii_code = 0;
 	if (decimal_digit <= STRING_DIGIT_DECIMAL_MAX) {
 		ascii_code = decimal_digit + '0';
@@ -52,7 +52,7 @@ char STRING_DecimalToAscii(unsigned char decimal_digit) {
  * @param n:			Hexadecimal digit.
  * @return ascii_code:	Corresponding ASCII code.
  */
-char STRING_HexaToAscii(unsigned char hexa_digit) {
+char STRING_hexa_to_ascii(unsigned char hexa_digit) {
 	char ascii_code = 0;
 	if (hexa_digit <= STRING_DIGIT_HEXADECIMAL_MAX) {
 		ascii_code = (hexa_digit <= 9 ? (char) (hexa_digit + '0') : (char) (hexa_digit + ('A' - 10)));
@@ -64,7 +64,7 @@ char STRING_HexaToAscii(unsigned char hexa_digit) {
  * @param ascii_code:	The byte to analyse.
  * @return:				1 if the byte is the ASCII code of an hexadecimal character, 0 otherwise.
  */
-unsigned char STRING_IsHexaChar(char ascii_code) {
+unsigned char STRING_is_hexa_char(char ascii_code) {
 	return (((ascii_code >= '0') && (ascii_code <= '9')) || ((ascii_code >= 'A') && (ascii_code <= 'F')));
 }
 
@@ -72,7 +72,7 @@ unsigned char STRING_IsHexaChar(char ascii_code) {
  * @param ascii_code:	The byte to analyse.
  * @return:				1 if the byte is the ASCII code of a decimal character, 0 otherwise.
  */
-unsigned char STRING_IsDecimalChar(char ascii_code) {
+unsigned char STRING_is_decimal_char(char ascii_code) {
 	return ((ascii_code >= '0') && (ascii_code <= '9'));
 }
 
@@ -82,7 +82,7 @@ unsigned char STRING_IsDecimalChar(char ascii_code) {
  * @param print_prefix: Print base prefix is non zero.
  * @param string:       Output string.
  */
-void STRING_ConvertValue(int value, STRING_Format format, unsigned char print_prefix, char* string) {
+void STRING_convert_value(int value, STRING_format_t format, unsigned char print_prefix, char* string) {
     // Local variables.
 	unsigned int value_abs;
 	unsigned char first_non_zero_found = 0;
@@ -134,8 +134,8 @@ void STRING_ConvertValue(int value, STRING_Format format, unsigned char print_pr
 				first_non_zero_found = 1;
 			}
 			if ((first_non_zero_found != 0) || (idx == 0)) {
-				string[string_idx++] = STRING_HexaToAscii((generic_byte & 0xF0) >> 4);
-				string[string_idx++] = STRING_HexaToAscii(generic_byte & 0x0F);
+				string[string_idx++] = STRING_hexa_to_ascii((generic_byte & 0xF0) >> 4);
+				string[string_idx++] = STRING_hexa_to_ascii(generic_byte & 0x0F);
 			}
 			if (idx == 0) {
 				break;
@@ -149,7 +149,7 @@ void STRING_ConvertValue(int value, STRING_Format format, unsigned char print_pr
 			string[string_idx++] = 'd';
 		}
 		for (idx=(STRING_FORMAT_DECIMAL_MAX_DIGITS - 1) ; idx>=0 ; idx--) {
-			current_power = MATH_Pow10(idx);
+			current_power = MATH_pow_10(idx);
 			generic_byte = (value_abs - previous_decade) / current_power;
 			previous_decade += generic_byte * current_power;
 			if (generic_byte != 0) {

@@ -23,10 +23,10 @@ typedef struct {
 	volatile unsigned int IVR1;    	// AES initialization vector register 1.
 	volatile unsigned int IVR2;    	// AES initialization vector register 2.
 	volatile unsigned int IVR3;    	// AES initialization vector register 3.
-} AES_BaseAddress;
+} AES_base_address_t;
 
 /*** AES base address ***/
 
-#define AES		((AES_BaseAddress*) ((unsigned int) 0x40026000))
+#define AES		((AES_base_address_t*) ((unsigned int) 0x40026000))
 
 #endif /* AES_REG_H */

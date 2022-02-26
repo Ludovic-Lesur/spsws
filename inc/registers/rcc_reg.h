@@ -32,10 +32,10 @@ typedef struct {
 	volatile unsigned int APB1SMENR;	// RCC APB1 peripheral clock enable in sleep mode register.
 	volatile unsigned int CCIPR;		// RCC clock configuration register.
 	volatile unsigned int CSR;			// RCC control and status register.
-} RCC_BaseAddress;
+} RCC_base_address_t;
 
 /*** RCC base address ***/
 
-#define RCC		((RCC_BaseAddress*) ((unsigned int) 0x40021000))
+#define RCC		((RCC_base_address_t*) ((unsigned int) 0x40021000))
 
 #endif /* RCC_REG_H */

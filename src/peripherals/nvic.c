@@ -20,7 +20,7 @@ extern unsigned int __Vectors;
  * @param:	None.
  * @return:	None.
  */
-void NVIC_Init(void) {
+void NVIC_init(void) {
 	SCB -> VTOR = (unsigned int) &__Vectors;
 }
 
@@ -28,7 +28,7 @@ void NVIC_Init(void) {
  * @param it_num: 	Interrupt number (use enum defined in 'nvic.h').
  * @return: 		None.
  */
-void NVIC_EnableInterrupt(NVIC_InterruptVector it_num) {
+void NVIC_enable_interrupt(NVIC_interrupt_t it_num) {
 	NVIC -> ISER = (0b1 << (it_num & 0x1F));
 }
 
@@ -36,7 +36,7 @@ void NVIC_EnableInterrupt(NVIC_InterruptVector it_num) {
  * @param it_num: 	Interrupt number (use enum defined in 'nvic.h').
  * @return:			None.
  */
-void NVIC_DisableInterrupt(NVIC_InterruptVector it_num) {
+void NVIC_disable_interrupt(NVIC_interrupt_t it_num) {
 	NVIC -> ICER = (0b1 << (it_num & 0x1F));
 }
 
@@ -44,7 +44,7 @@ void NVIC_DisableInterrupt(NVIC_InterruptVector it_num) {
  * @param it_num:	Interrupt number (use enum defined in 'nvic.h').
  * @param priority:	Interrupt priority (0 to 3).
  */
-void NVIC_SetPriority(NVIC_InterruptVector it_num, unsigned char priority) {
+void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority) {
 	// Check parameter.
 	if ((priority >= NVIC_PRIORITY_MAX) && (priority <= NVIC_PRIORITY_MIN)) {
 		// Reset bits.

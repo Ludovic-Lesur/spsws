@@ -22,15 +22,15 @@ typedef struct {
 	volatile unsigned int AFRL;   		// GPIO alternate function low register.
 	volatile unsigned int AFRH;   		// GPIO alternate function high register.
 	volatile unsigned int BRR;   		// GPIO port bir reset register.
-} GPIO_BaseAddress;
+} GPIO_base_address_t;
 
 /*** GPIO base addresses ***/
 
-#define GPIOA	((GPIO_BaseAddress*) ((unsigned int) 0x50000000))
-#define GPIOB	((GPIO_BaseAddress*) ((unsigned int) 0x50000400))
-#define GPIOC	((GPIO_BaseAddress*) ((unsigned int) 0x50000800))
-#define GPIOD	((GPIO_BaseAddress*) ((unsigned int) 0x50000C00))
-#define GPIOE	((GPIO_BaseAddress*) ((unsigned int) 0x50001000))
-#define GPIOH	((GPIO_BaseAddress*) ((unsigned int) 0x50001C00))
+#define GPIOA	((GPIO_base_address_t*) ((unsigned int) 0x50000000))
+#define GPIOB	((GPIO_base_address_t*) ((unsigned int) 0x50000400))
+#define GPIOC	((GPIO_base_address_t*) ((unsigned int) 0x50000800))
+#define GPIOD	((GPIO_base_address_t*) ((unsigned int) 0x50000C00))
+#define GPIOE	((GPIO_base_address_t*) ((unsigned int) 0x50001000))
+#define GPIOH	((GPIO_base_address_t*) ((unsigned int) 0x50001C00))
 
 #endif /* GPIO_REG_H */

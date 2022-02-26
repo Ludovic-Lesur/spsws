@@ -26,27 +26,24 @@
 
 /*** WIND global variables ***/
 
-GPIO GPIO_WIND_SPEED;
+GPIO_pin_t GPIO_WIND_SPEED;
 #ifdef WIND_VANE_ULTIMETER
-GPIO GPIO_WIND_DIRECTION;
+GPIO_pin_t GPIO_WIND_DIRECTION;
 #endif
 
 /*** WIND functions ***/
 
-void WIND_Init(void);
-void WIND_StartContinuousMeasure(void);
-void WIND_StopContinuousMeasure(void);
-void WIND_GetSpeed(unsigned int* average_wind_speed_mh, unsigned int* peak_wind_speed_mh);
-void WIND_GetDirection(unsigned int* average_wind_direction_degrees);
-void WIND_ResetData(void);
-
-/*** WIND utility functions ***/
-
-void WIND_SpeedEdgeCallback(void);
+void WIND_init(void);
+void WIND_start_continuous_measure(void);
+void WIND_stop_continuous_measure(void);
+void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh);
+void WIND_get_direction(unsigned int* average_direction_degrees);
+void WIND_reset_data(void);
+void WIND_speed_edge_callback(void);
 #ifdef WIND_VANE_ULTIMETER
-void WIND_DirectionEdgeCallback(void);
+void WIND_direction_edge_callback(void);
 #endif
-void WIND_MeasurementPeriodCallback(void);
+void WIND_measurement_period_callback(void);
 
 /*** Errors management ***/
 

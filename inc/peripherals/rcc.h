@@ -18,15 +18,15 @@
 
 /*** RCC functions ***/
 
-void RCC_Init(void);
-void RCC_EnableGpio(void);
-void RCC_DisableGpio(void);
-unsigned int RCC_GetSysclkKhz(void);
-unsigned char RCC_SwitchToMsi(void);
-unsigned char RCC_SwitchToHsi(void);
-unsigned char RCC_SwitchToHse(void);
-unsigned char RCC_EnableLsi(void);
-void RCC_GetLsiFrequency(unsigned int* lsi_frequency_hz);
-unsigned char RCC_EnableLse(void);
+void RCC_init(void);
+void RCC_enable_gpio(void);
+void RCC_disable_gpio(void);
+unsigned int RCC_get_sysclk_khz(void);
+unsigned char RCC_switch_to_msi(void);
+unsigned char RCC_switch_to_hsi(void);
+unsigned char RCC_switch_to_hse(void);
+unsigned char RCC_enable_lsi(void);
+void RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+unsigned char RCC_enable_lse(void);
 
 #endif /* RCC_H */

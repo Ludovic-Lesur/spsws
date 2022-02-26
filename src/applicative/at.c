@@ -123,8 +123,9 @@ typedef struct {
 typedef enum {
 	AT_ERROR_SOURCE_PSR,
 	AT_ERROR_SOURCE_SFX,
-	AT_ERROR_SOURCE_APP
-} AT_ErrorSource;
+	AT_ERROR_SOURCE_APP,
+	AT_ERROR_SOURCE_LAST
+} AT_error_source_t;
 
 typedef enum {
 	APP_ERROR_NVM_ADDRESS_OVERFLOW,
@@ -135,8 +136,9 @@ typedef enum {
 	APP_ERROR_INVALID_TEST_MODE,
 	APP_ERROR_GPS_INVALID_TIMEOUT,
 	APP_ERROR_GPS_TIMEOUT,
-	APP_ERROR_FORBIDDEN_COMMAND
-} AT_ApplicativeError;
+	APP_ERROR_FORBIDDEN_COMMAND,
+	APP_ERROR_LAST
+} AT_applicative_error_t;
 
 typedef struct {
 	// AT command buffer.
@@ -152,7 +154,7 @@ typedef struct {
 	sfx_rc_t sigfox_rc;
 	sfx_u32 sigfox_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
 	unsigned char sigfox_rc_idx;
-} AT_Context;
+} AT_context_t;
 
 /*** AT local global variables ***/
 
@@ -201,7 +203,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$TM=", "test_mode[dec]", "Execute Sigfox test mode", AT_tm_callback},
 #endif
 };
-static AT_Context at_ctx = {
+static AT_context_t at_ctx = {
 	.sigfox_rc = (sfx_rc_t) RC1,
 	.sigfox_rc_idx = SFX_RC1
 };
@@ -236,14 +238,14 @@ static void AT_response_add_string(char* tx_string) {
  * @param print_prefix: Print base prefix is non zero.
  * @return:				None.
  */
-static void AT_response_add_value(int tx_value, STRING_Format format, unsigned char print_prefix) {
+static void AT_response_add_value(int tx_value, STRING_format_t format, unsigned char print_prefix) {
 	// Local variables.
 	char str_value[AT_STRING_VALUE_BUFFER_LENGTH];
 	unsigned char idx = 0;
 	// Reset string.
 	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = '\0';
 	// Convert value to string.
-	STRING_ConvertValue(tx_value, format, print_prefix, str_value);
+	STRING_convert_value(tx_value, format, print_prefix, str_value);
 	// Add string.
 	AT_response_add_string(str_value);
 }
@@ -256,7 +258,7 @@ static void AT_response_send(void) {
 	// Local variables.
 	unsigned int idx = 0;
 	// Send response over UART.
-	USARTx_SendString(at_ctx.response_buf);
+	USARTx_send_string(at_ctx.response_buf);
 	// Flush response buffer.
 	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.response_buf[idx] = '\0';
 	at_ctx.response_buf_idx = 0;
@@ -276,7 +278,7 @@ static void AT_print_ok(void) {
  * @param error_code:	Error code to display.
  * @return:				None.
  */
-static void AT_print_error(AT_ErrorSource error_source, unsigned int error_code) {
+static void AT_print_error(AT_error_source_t error_source, unsigned int error_code) {
 	switch (error_source) {
 	case AT_ERROR_SOURCE_PSR:
 		AT_response_add_string(AT_RESPONSE_ERROR_PSR);
@@ -329,11 +331,11 @@ static void AT_mcu_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Trigger internal ADC conversions.
-		ADC1_Init();
-		ADC1_PerformMeasurements();
-		ADC1_Disable();
-		ADC1_GetTmcuComp2(&tmcu_degrees);
-		ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
+		ADC1_init();
+		ADC1_perform_measurements();
+		ADC1_disable();
+		ADC1_get_tmcu_comp2(&tmcu_degrees);
+		ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
 		// Print results.
 		AT_response_add_string("Vcc=");
 		AT_response_add_value((int) vmcu_mv, STRING_FORMAT_DECIMAL, 0);
@@ -360,22 +362,22 @@ static void AT_adc_callback(void) {
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Trigger external ADC convertions.
 #ifdef HW1_0
-		SPI1_PowerOn();
+		SPI1_power_on();
 #endif
 #ifdef HW2_0
-		SPI2_PowerOn();
+		SPI2_power_on();
 #endif
 		// Run external ADC conversions.
-		MAX11136_PerformMeasurements();
+		MAX11136_perform_measurements();
 #ifdef HW1_0
-		SPI1_PowerOff();
+		SPI1_power_off();
 #endif
 #ifdef HW2_0
-		SPI2_PowerOff();
+		SPI2_power_off();
 #endif
 		// Print results.
 		for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) {
-			MAX11136_GetChannel(idx, &result_12bits);
+			MAX11136_get_data(idx, &result_12bits);
 			AT_response_add_string("AIN");
 			AT_response_add_value((int) idx, STRING_FORMAT_DECIMAL, 0);
 			AT_response_add_string("=");
@@ -402,11 +404,11 @@ static void AT_iths_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
-		I2C1_PowerOn();
-		SHT3X_PerformMeasurements(SHT3X_INTERNAL_I2C_ADDRESS);
-		I2C1_PowerOff();
-		SHT3X_GetTemperatureComp2(&tamb_degrees);
-		SHT3X_GetHumidity(&hamb_percent);
+		I2C1_power_on();
+		SHT3X_perform_measurements(SHT3X_INTERNAL_I2C_ADDRESS);
+		I2C1_power_off();
+		SHT3X_get_temperature_comp2(&tamb_degrees);
+		SHT3X_get_humidity(&hamb_percent);
 		// Print results.
 		AT_response_add_string("T=");
 		AT_response_add_value((int) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
@@ -432,11 +434,11 @@ static void AT_eths_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
-		I2C1_PowerOn();
-		SHT3X_PerformMeasurements(SHT3X_EXTERNAL_I2C_ADDRESS);
-		I2C1_PowerOff();
-		SHT3X_GetTemperatureComp2(&tamb_degrees);
-		SHT3X_GetHumidity(&hamb_percent);
+		I2C1_power_on();
+		SHT3X_perform_measurements(SHT3X_EXTERNAL_I2C_ADDRESS);
+		I2C1_power_off();
+		SHT3X_get_temperature_comp2(&tamb_degrees);
+		SHT3X_get_humidity(&hamb_percent);
 		// Print results.
 		AT_response_add_string("T=");
 		AT_response_add_value((int) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
@@ -462,11 +464,11 @@ static void AT_epts_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
-		I2C1_PowerOn();
-		DPS310_PerformMeasurements(DPS310_EXTERNAL_I2C_ADDRESS);
-		I2C1_PowerOff();
-		DPS310_GetPressure(&pressure_pa);
-		DPS310_GetTemperature(&tamb_degrees);
+		I2C1_power_on();
+		DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
+		I2C1_power_off();
+		DPS310_get_pressure(&pressure_pa);
+		DPS310_get_temperature(&tamb_degrees);
 		// Print results.
 		AT_response_add_string("P=");
 		AT_response_add_value((int) pressure_pa, STRING_FORMAT_DECIMAL, 0);
@@ -493,26 +495,26 @@ static void AT_eldr_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
-		I2C1_PowerOn();
+		I2C1_power_on();
 #ifdef HW1_0
-		SPI1_PowerOn();
+		SPI1_power_on();
 #endif
 #ifdef HW2_0
-		SPI2_PowerOn();
+		SPI2_power_on();
 #endif
 		// Run external ADC conversions.
-		MAX11136_PerformMeasurements();
+		MAX11136_perform_measurements();
 #ifdef HW1_0
-		SPI1_PowerOff();
+		SPI1_power_off();
 #endif
 #ifdef HW2_0
-		SPI2_PowerOff();
+		SPI2_power_off();
 #endif
-		I2C1_PowerOff();
-		ADC1_PerformMeasurements();
+		I2C1_power_off();
+		ADC1_perform_measurements();
 		// Get LDR and supply voltage.
-		MAX11136_GetChannel(MAX11136_CHANNEL_LDR, &result_12_bits);
-		ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
+		MAX11136_get_data(MAX11136_CHANNEL_LDR, &result_12_bits);
+		ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
 		light_percent = (100 * result_12_bits) / (vmcu_mv);
 		// Print result.
 		AT_response_add_string("Light=");
@@ -536,9 +538,9 @@ static void AT_euvs_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
-		I2C1_PowerOn();
+		I2C1_power_on();
 		SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
-		I2C1_PowerOff();
+		I2C1_power_off();
 		SI1133_GetUvIndex(&uv_index);
 		// Print result.
 		AT_response_add_string("UVI=");
@@ -563,16 +565,16 @@ static void AT_wind_callback(void) {
 	unsigned int wind_speed_peak = 0;
 	unsigned int wind_direction = 0;
 	// Read enable parameter.
-	parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 	if (parser_status == PARSER_SUCCESS) {
 		// Start or stop wind continuous measurements.
 		if (enable == 0) {
-			RTC_DisableAlarmBInterrupt();
-			RTC_ClearAlarmBFlag();
-			WIND_StopContinuousMeasure();
+			RTC_disable_alarm_b_interrupt();
+			RTC_clear_alarm_b_flag();
+			WIND_stop_continuous_measure();
 			// Get results.
-			WIND_GetSpeed(&wind_speed_average, &wind_speed_peak);
-			WIND_GetDirection(&wind_direction);
+			WIND_get_speed(&wind_speed_average, &wind_speed_peak);
+			WIND_get_direction(&wind_direction);
 			// Print results.
 			AT_response_add_string("AverageSpeed=");
 			AT_response_add_value((int) wind_speed_average, STRING_FORMAT_DECIMAL, 0);
@@ -586,13 +588,13 @@ static void AT_wind_callback(void) {
 			AT_response_add_string(AT_RESPONSE_END);
 			AT_response_send();
 			// Reset data.
-			WIND_ResetData();
+			WIND_reset_data();
 			// Update flag.
 			at_ctx.wind_measurement_flag = 0;
 		}
 		else {
-			WIND_StartContinuousMeasure();
-			RTC_EnableAlarmBInterrupt();
+			WIND_start_continuous_measure();
+			RTC_enable_alarm_b_interrupt();
 			// Update flag.
 			at_ctx.wind_measurement_flag = 1;
 			AT_print_ok();
@@ -613,13 +615,13 @@ static void AT_rain_callback(void) {
 	int enable = 0;
 	unsigned char rain_mm = 0;
 	// Read enable parameter.
-	parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 	if (parser_status == PARSER_SUCCESS) {
 		// Start or stop rain continuous measurements.
 		if (enable == 0) {
-			RAIN_StopContinuousMeasure();
+			RAIN_stop_continuous_measure();
 			// Get result.
-			RAIN_GetPluviometry(&rain_mm);
+			RAIN_get_pluviometry(&rain_mm);
 			// Print data.
 			AT_response_add_string("Rain=");
 			AT_response_add_value((int) rain_mm, STRING_FORMAT_DECIMAL,0);
@@ -627,10 +629,10 @@ static void AT_rain_callback(void) {
 			AT_response_add_string(AT_RESPONSE_END);
 			AT_response_send();
 			// Reset data.
-			RAIN_ResetData();
+			RAIN_reset_data();
 		}
 		else {
-			RAIN_StartContinuousMeasure();
+			RAIN_start_continuous_measure();
 			AT_print_ok();
 		}
 	}
@@ -649,17 +651,17 @@ static void AT_time_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	int timeout_seconds = 0;
-	Timestamp gps_timestamp;
-	NEOM8N_ReturnCode gps_status;
+	NEOM8N_time_t gps_timestamp;
+	NEOM8N_status_t gps_status;
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Read timeout parameter.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
 		if (parser_status == PARSER_SUCCESS) {
 			// Start GPS fix.
-			LPUART1_PowerOn();
-			gps_status = NEOM8N_GetTimestamp(&gps_timestamp, (unsigned int) timeout_seconds, 0);
-			LPUART1_PowerOff();
+			LPUART1_power_on();
+			gps_status = NEOM8N_get_time(&gps_timestamp, (unsigned int) timeout_seconds, 0);
+			LPUART1_power_off();
 			switch (gps_status) {
 			case NEOM8N_SUCCESS:
 				// Year.
@@ -697,7 +699,7 @@ static void AT_time_callback(void) {
 				AT_response_add_string(AT_RESPONSE_END);
 				AT_response_send();
 				break;
-			case NEOM8N_TIMEOUT:
+			case NEOM8N_ERROR_TIMEOUT:
 				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
 				break;
 			default:
@@ -722,17 +724,17 @@ static void AT_gps_callback(void) {
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	int timeout_seconds = 0;
 	unsigned int fix_duration_seconds = 0;
-	Position gps_position;
-	NEOM8N_ReturnCode gps_status;
+	NEOM8N_position_t gps_position;
+	NEOM8N_status_t gps_status;
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Read timeout parameter.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
 		if (parser_status == PARSER_SUCCESS) {
 			// Start GPS fix.
-			LPUART1_PowerOn();
-			gps_status = NEOM8N_GetPosition(&gps_position, (unsigned int) timeout_seconds, 0, &fix_duration_seconds);
-			LPUART1_PowerOff();
+			LPUART1_power_on();
+			gps_status = NEOM8N_get_position(&gps_position, (unsigned int) timeout_seconds, 0, &fix_duration_seconds);
+			LPUART1_power_off();
 			switch (gps_status) {
 			case NEOM8N_SUCCESS:
 				// Latitude.
@@ -762,7 +764,7 @@ static void AT_gps_callback(void) {
 				AT_response_add_string(AT_RESPONSE_END);
 				AT_response_send();
 				break;
-			case NEOM8N_TIMEOUT:
+			case NEOM8N_ERROR_TIMEOUT:
 				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
 				break;
 			default:
@@ -786,9 +788,9 @@ static void AT_gps_callback(void) {
  */
 static void AT_nvmr_callback(void) {
 	// Reset all NVM field to default value.
-	NVM_Enable();
-	NVM_ResetDefault();
-	NVM_Disable();
+	NVM_enable();
+	NVM_reset_default();
+	NVM_disable();
 	AT_print_ok();
 }
 
@@ -802,14 +804,14 @@ static void AT_nvm_callback(void) {
 	int address = 0;
 	unsigned char nvm_data = 0;
 	// Read address parameters.
-	parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
 	if (parser_status == PARSER_SUCCESS) {
 		// Check if address is reachable.
 		if (((unsigned short) address) < EEPROM_SIZE) {
 			// Read byte at requested address.
-			NVM_Enable();
-			NVM_ReadByte((unsigned short) address, &nvm_data);
-			NVM_Disable();
+			NVM_enable();
+			NVM_read_byte((unsigned short) address, &nvm_data);
+			NVM_disable();
 			// Print byte.
 			AT_response_add_value(nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
 			AT_response_add_string(AT_RESPONSE_END);
@@ -833,12 +835,12 @@ static void AT_get_id_callback(void) {
 	unsigned char idx = 0;
 	unsigned char id_byte = 0;
 	// Retrieve device ID in NVM.
-	NVM_Enable();
+	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
-		NVM_ReadByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), &id_byte);
+		NVM_read_byte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), &id_byte);
 		AT_response_add_value(id_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
-	NVM_Disable();
+	NVM_disable();
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }
@@ -854,16 +856,16 @@ static void AT_set_id_callback(void) {
 	unsigned char extracted_length = 0;
 	unsigned char idx = 0;
 	// Read ID parameter.
-	parser_status = PARSER_GetByteArray(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, device_id, &extracted_length);
+	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, device_id, &extracted_length);
 	if (parser_status == PARSER_SUCCESS) {
 		// Check length.
 		if (extracted_length == ID_LENGTH) {
 			// Write device ID in NVM.
-			NVM_Enable();
+			NVM_enable();
 			for (idx=0 ; idx<ID_LENGTH ; idx++) {
-				NVM_WriteByte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), device_id[idx]);
+				NVM_write_byte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), device_id[idx]);
 			}
-			NVM_Disable();
+			NVM_disable();
 			AT_print_ok();
 		}
 		else {
@@ -884,12 +886,12 @@ static void AT_get_key_callback(void) {
 	unsigned char idx = 0;
 	unsigned char key_byte = 0;
 	// Retrieve device key in NVM.
-	NVM_Enable();
+	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
-		NVM_ReadByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), &key_byte);
+		NVM_read_byte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), &key_byte);
 		AT_response_add_value(key_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
-	NVM_Disable();
+	NVM_disable();
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }
@@ -905,16 +907,16 @@ static void AT_set_key_callback(void) {
 	unsigned char extracted_length = 0;
 	unsigned char idx = 0;
 	// Read key parameter.
-	parser_status = PARSER_GetByteArray(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, device_key, &extracted_length);
+	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, device_key, &extracted_length);
 	if (parser_status == PARSER_SUCCESS) {
 		// Check length.
 		if (extracted_length == AES_BLOCK_SIZE) {
 			// Write device ID in NVM.
-			NVM_Enable();
+			NVM_enable();
 			for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
-				NVM_WriteByte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), device_key[idx]);
+				NVM_write_byte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), device_key[idx]);
 			}
-			NVM_Disable();
+			NVM_disable();
 			AT_print_ok();
 		}
 		else {
@@ -984,10 +986,10 @@ static void AT_sb_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// First try with 2 parameters.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &data);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &data);
 		if (parser_status == PARSER_SUCCESS) {
 			// Try parsing downlink request parameter.
-			parser_status =  PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
+			parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
 			if (parser_status == PARSER_SUCCESS) {
 				// Send Sigfox bit with specified downlink request.
 				sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1012,7 +1014,7 @@ static void AT_sb_callback(void) {
 		}
 		else {
 			// Try with 1 parameter.
-			parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &data);
+			parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &data);
 			if (parser_status == PARSER_SUCCESS) {
 				// Send Sigfox bit with no downlink request (by default).
 				sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1053,10 +1055,10 @@ static void AT_sf_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// First try with 2 parameters.
-		parser_status = PARSER_GetByteArray(&at_ctx.parser, AT_CHAR_SEPARATOR, 0, 12, data, &extracted_length);
+		parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 0, 12, data, &extracted_length);
 		if (parser_status == PARSER_SUCCESS) {
 			// Try parsing downlink request parameter.
-			parser_status =  PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
+			parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
 			if (parser_status == PARSER_SUCCESS) {
 				// Send Sigfox frame with specified downlink request.
 				sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1081,7 +1083,7 @@ static void AT_sf_callback(void) {
 		}
 		else {
 			// Try with 1 parameter.
-			parser_status = PARSER_GetByteArray(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, 12, data, &extracted_length);
+			parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, 12, data, &extracted_length);
 			if (parser_status == PARSER_SUCCESS) {
 				// Send Sigfox frame with no downlink request (by default).
 				sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1123,13 +1125,13 @@ static void AT_cw_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Read frequency parameter.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
 		if (parser_status == PARSER_SUCCESS) {
 			// First try with 3 parameters.
-			parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
+			parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
 			if (parser_status != PARSER_SUCCESS) {
 				// Power is not given, try to parse enable as last parameter.
-				parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+				parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 				if (parser_status == PARSER_SUCCESS) {
 					// CW with default output power.
 					SIGFOX_API_stop_continuous_transmission();
@@ -1150,13 +1152,13 @@ static void AT_cw_callback(void) {
 			}
 			else if (parser_status == PARSER_SUCCESS) {
 				// There is a third parameter, try to parse power.
-				parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
+				parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
 				if (parser_status == PARSER_SUCCESS) {
 					// CW with given output power.
 					SIGFOX_API_stop_continuous_transmission();
 					if (enable != 0) {
 						SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
-						SX1232_SetRfOutputPower((unsigned char) power_dbm);
+						SX1232_set_rf_output_power((unsigned char) power_dbm);
 					}
 					AT_print_ok();
 				}
@@ -1191,25 +1193,25 @@ static void AT_rssi_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Read frequency parameter.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
 		if (parser_status == PARSER_SUCCESS) {
 			// Read duration parameters.
-			parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
+			parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
 			if (parser_status == PARSER_SUCCESS) {
 				RF_API_init(SFX_RF_MODE_RX);
 				RF_API_change_frequency((sfx_u32) frequency_hz);
 				// Start continuous listening.
-				SX1232_SetMode(SX1232_MODE_FSRX);
-				LPTIM1_DelayMilliseconds(5, 0); // Wait TS_FS=60us typical.
-				SX1232_SetMode(SX1232_MODE_RX);
-				LPTIM1_DelayMilliseconds(5, 0); // Wait TS_TR=120us typical.
+				SX1232_set_mode(SX1232_MODE_FSRX);
+				LPTIM1_delay_milliseconds(5, 0); // Wait TS_FS=60us typical.
+				SX1232_set_mode(SX1232_MODE_RX);
+				LPTIM1_delay_milliseconds(5, 0); // Wait TS_TR=120us typical.
 				while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
-					rssi_dbm = SX1232_GetRssi();
+					rssi_dbm = SX1232_get_rssi();
 					AT_response_add_string("RSSI=");
 					AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
 					AT_response_add_string("dBm\n");
 					AT_response_send();
-					LPTIM1_DelayMilliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
+					LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
 					report_loop++;
 				}
 				// Stop radio.
@@ -1280,7 +1282,7 @@ static void AT_set_rc_callback(void) {
 	int rc_index = 0;
 	unsigned char idx = 0;
 	// Read RC parameter.
-	parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
 	if (parser_status == PARSER_SUCCESS) {
 		// Check value.
 		if (((sfx_rc_enum_t) rc_index) < SFX_RC_LIST_MAX_SIZE) {
@@ -1360,12 +1362,12 @@ static void AT_tm_callback(void) {
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Search RC parameter.
-		parser_status = PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &rc_index);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &rc_index);
 		if (parser_status == PARSER_SUCCESS) {
 			// Check value.
 			if (((sfx_rc_enum_t) rc_index) < SFX_RC_LIST_MAX_SIZE) {
 				// Search test mode number.
-				parser_status =  PARSER_GetParameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &test_mode);
+				parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &test_mode);
 				if (parser_status == PARSER_SUCCESS) {
 					// Check parameters.
 					if (((sfx_test_mode_t) test_mode) <= SFX_TEST_MODE_NVM) {
@@ -1419,7 +1421,7 @@ static void AT_DecodeRxBuffer(void) {
 		// Loop on available commands.
 		for (idx=0 ; idx<(sizeof(AT_COMMAND_LIST) / sizeof(AT_command_t)) ; idx++) {
 			// Check type.
-			if (PARSER_Compare(&at_ctx.parser, AT_COMMAND_LIST[idx].mode, AT_COMMAND_LIST[idx].syntax) == PARSER_SUCCESS) {
+			if (PARSER_compare(&at_ctx.parser, AT_COMMAND_LIST[idx].mode, AT_COMMAND_LIST[idx].syntax) == PARSER_SUCCESS) {
 				// Execute callback and exit.
 				AT_COMMAND_LIST[idx].callback();
 				decode_success = 1;
@@ -1431,7 +1433,7 @@ static void AT_DecodeRxBuffer(void) {
 		}
 	}
 	// Reset AT parser.
-	AT_Init();
+	AT_init();
 }
 
 /*** AT functions ***/
@@ -1440,7 +1442,7 @@ static void AT_DecodeRxBuffer(void) {
  * @param:	None.
  * @return:	None.
  */
-void AT_Init(void) {
+void AT_init(void) {
 	// Init context.
 	unsigned int idx = 0;
 	for (idx=0 ; idx<AT_COMMAND_BUFFER_LENGTH ; idx++) at_ctx.command_buf[idx] = '\0';
@@ -1456,10 +1458,10 @@ void AT_Init(void) {
 	at_ctx.parser.start_idx = 0;
 	// Enable USART interrupt.
 #ifdef HW1_0
-	NVIC_EnableInterrupt(NVIC_IT_USART2);
+	NVIC_enable_interrupt(NVIC_IT_USART2);
 #endif
 #ifdef HW2_0
-	NVIC_EnableInterrupt(NVIC_IT_USART1);
+	NVIC_enable_interrupt(NVIC_IT_USART1);
 #endif
 }
 
@@ -1467,16 +1469,16 @@ void AT_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void AT_Task(void) {
+void AT_task(void) {
 	// Trigger decoding function if line end found.
 	if (at_ctx.line_end_flag) {
 		AT_DecodeRxBuffer();
 	}
 	// Check RTC flag for wind measurements.
-	if (RTC_GetAlarmBFlag() != 0) {
+	if (RTC_get_alarm_b_flag() != 0) {
 		// Call WIND callback.
-		WIND_MeasurementPeriodCallback();
-		RTC_ClearAlarmBFlag();
+		WIND_measurement_period_callback();
+		RTC_clear_alarm_b_flag();
 	}
 }
 
@@ -1484,7 +1486,7 @@ void AT_Task(void) {
  * @param rx_byte:	Incoming byte.
  * @return:			None.
  */
-void AT_FillRxBuffer(unsigned char rx_byte) {
+void AT_fill_rx_buffer(unsigned char rx_byte) {
 	// Append byte if LF flag is not allready set.
 	if (at_ctx.line_end_flag == 0) {
 		// Store new byte.
@@ -1505,7 +1507,7 @@ void AT_FillRxBuffer(unsigned char rx_byte) {
  * @param test_result:	Test result.
  * @param rssi:			Downlink signal rssi in dBm.
  */
-void AT_PrintTestResult(unsigned char test_result, int rssi_dbm) {
+void AT_print_test_result(unsigned char test_result, int rssi_dbm) {
 	// Check result.
 	if (test_result == 0) {
 		AT_response_add_string("Test failed.");
@@ -1523,7 +1525,7 @@ void AT_PrintTestResult(unsigned char test_result, int rssi_dbm) {
  * @param rain_edge_count:	Rain gauge edge counter.
  * @return:					None.
  */
-void AT_PrintRain(unsigned char rain_edge_count) {
+void AT_print_rain(unsigned char rain_edge_count) {
 	// Print data.
 	AT_response_add_string("RainEdgeCount=");
 	AT_response_add_value((int) rain_edge_count, STRING_FORMAT_DECIMAL, 0);
@@ -1532,32 +1534,32 @@ void AT_PrintRain(unsigned char rain_edge_count) {
 }
 
 /* PRINT WIND SPEED.
- * @param wind_speed_mh:	Wind speed in m/h.
+ * @param speed_mh:	Wind speed in m/h.
  * @return:					None.
  */
-void AT_PrintWindSpeed(unsigned int wind_speed_mh) {
+void AT_print_wind_speed(unsigned int speed_mh) {
 	// Print data.
 	AT_response_add_string("Speed=");
-	AT_response_add_value((int) wind_speed_mh, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((int) speed_mh, STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("m/h");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }
 
 /* PRINT WIND DIRECTION.
- * @param wind_direction_degrees:	Wind direction in degrees.
- * @param wind_direction_x:			Current direction vector x value.
- * @param wind_direction_y:			Current direction vector y value.
+ * @param direction_degrees:	Wind direction in degrees.
+ * @param direction_x:			Current direction vector x value.
+ * @param direction_y:			Current direction vector y value.
  * @return:							None.
  */
-void AT_PrintWindDirection(unsigned int wind_direction_degrees, int wind_direction_x, int wind_direction_y) {
+void AT_print_wind_direction(unsigned int direction_degrees, int direction_x, int direction_y) {
 	// Print data.
 	AT_response_add_string("Direction=");
-	AT_response_add_value((int) wind_direction_degrees, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((int) direction_degrees, STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("d x=");
-	AT_response_add_value(wind_direction_x, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value(direction_x, STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(" y=");
-	AT_response_add_value(wind_direction_y, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value(direction_y, STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }

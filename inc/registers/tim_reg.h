@@ -32,15 +32,19 @@ typedef struct {
 	volatile unsigned int DCR;    	// DMA control register (!).
 	volatile unsigned int DMAR;    	// DMA address for full transfer register (!).
 	volatile unsigned int OR;    	// Option register (!).
-} TIM_BaseAddress;
+} TIM_base_address_t;
 
 /*** TIMx base addresses ***/
 
-#define TIM2	((TIM_BaseAddress*) ((unsigned int) 0x40000000))
-//#define TIM3	((TIM_BaseAddress*) ((unsigned int) 0x40000400)) // Not present on STM32L031G6xx.
-#define TIM21	((TIM_BaseAddress*) ((unsigned int) 0x40010800))
-#define TIM22	((TIM_BaseAddress*) ((unsigned int) 0x40011400))
-//#define TIM6	((TIM_BaseAddress*) ((unsigned int) 0x40001000)) // Not present on STM32L031G6xx.
-//#define TIM7	((TIM_BaseAddress*) ((unsigned int) 0x40001400)) // Not present on STM32L031G6xx.
+#define TIM2	((TIM_base_address_t*) ((unsigned int) 0x40000000))
+#ifdef HW2_0
+#define TIM3	((TIM_base_address_t*) ((unsigned int) 0x40000400)) // Not present on STM32L041K6xx.
+#endif
+#define TIM21	((TIM_base_address_t*) ((unsigned int) 0x40010800))
+#define TIM22	((TIM_base_address_t*) ((unsigned int) 0x40011400))
+#ifdef HW2_0
+#define TIM6	((TIM_base_address_t*) ((unsigned int) 0x40001000)) // Not present on STM32L041K6xx.
+#define TIM7	((TIM_base_address_t*) ((unsigned int) 0x40001400)) // Not present on STM32L041K6xx.
+#endif
 
 #endif /* TIM_REG_H */

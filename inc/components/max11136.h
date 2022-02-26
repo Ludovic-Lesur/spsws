@@ -43,9 +43,9 @@
 
 /*** MAX11136 functions ***/
 
-void MAX11136_Init(void);
-void MAX11136_DisableGpio(void);
-void MAX11136_PerformMeasurements(void);
-void MAX11136_GetChannel(unsigned char channel, unsigned int* channel_result_12bits);
+void MAX11136_init(void);
+void MAX11136_disable_gpio(void);
+void MAX11136_perform_measurements(void);
+void MAX11136_get_data(unsigned char channel, unsigned int* channel_result_12bits);
 
 #endif /* MAX11136_H */

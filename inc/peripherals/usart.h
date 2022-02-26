@@ -13,13 +13,13 @@
 /*** USART functions ***/
 
 #ifdef HW1_0
-void USART2_Init(void);
+void USART2_init(void);
 #endif
 #ifdef HW2_0
-void USART1_Init(void);
+void USART1_init(void);
 #endif
 #ifdef ATM
-void USARTx_SendString(char* tx_string);
+void USARTx_send_string(char* tx_string);
 #endif
 
 #endif /* USART_H */

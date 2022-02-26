@@ -43,7 +43,7 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Init(void) {
+void TIM21_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
 	// Reset timer before configuration.
@@ -66,7 +66,7 @@ void TIM21_Init(void) {
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
  * @return:						None.
  */
-void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
+void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	// Local variables.
 	unsigned char tim21_interrupt_count = 0;
 	unsigned int tim21_ccr1_edge1 = 0;
@@ -76,7 +76,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 	TIM21 -> CCR1 &= 0xFFFF0000;
 	// Enable interrupt.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
-	NVIC_EnableInterrupt(NVIC_IT_TIM21);
+	NVIC_enable_interrupt(NVIC_IT_TIM21);
 	// Enable TIM21 peripheral.
 	TIM21 -> CR1 |= (0b1 << 0); // CEN='1'.
 	TIM21 -> CCER |= (0b1 << 0); // CC1E='1'.
@@ -94,7 +94,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 		}
 	}
 	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_TIM21);
+	NVIC_disable_interrupt(NVIC_IT_TIM21);
 	// Stop counter.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
@@ -106,7 +106,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Disable(void) {
+void TIM21_disable(void) {
 	// Disable TIM21 peripheral.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
@@ -116,7 +116,7 @@ void TIM21_Disable(void) {
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
  * @return:			None.
  */
-void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
+void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Reset timer before configuration.
@@ -124,7 +124,7 @@ void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	TIM2 -> CNT &= 0xFFFF0000; // Reset counter.
 	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 	// Configure TIM2 to overflow every timing[0] microseconds.
-	TIM2 -> PSC = (RCC_GetSysclkKhz() / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
+	TIM2 -> PSC = (RCC_get_sysclk_khz() / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
 	TIM2 -> ARR = timings[TIM2_TIMINGS_ARRAY_ARR_IDX];
 	// Configure events timestamps.
 	TIM2 -> CCR1 = timings[TIM2_TIMINGS_ARRAY_CCR1_IDX];
@@ -139,15 +139,15 @@ void TIM2_Init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable update and CCRx interrupts.
 	TIM2 -> DIER |= (0b11111 << 0);
 	// Disable interrupt by default.
-	NVIC_SetPriority(NVIC_IT_TIM2, 0);
-	NVIC_DisableInterrupt(NVIC_IT_TIM2);
+	NVIC_set_priority(NVIC_IT_TIM2, 0);
+	NVIC_disable_interrupt(NVIC_IT_TIM2);
 }
 
 /* ENABLE TIM2 PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Enable(void) {
+void TIM2_enable(void) {
 	// Enable TIM2 peripheral.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 }
@@ -156,9 +156,9 @@ void TIM2_Enable(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Disable(void) {
+void TIM2_disable(void) {
 	// Disable TIM2 peripheral.
-	NVIC_DisableInterrupt(NVIC_IT_TIM2);
+	NVIC_disable_interrupt(NVIC_IT_TIM2);
 	TIM2 -> SR &= 0xFFFFFFE0;
 	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM2 -> CNT = 0;
@@ -169,7 +169,7 @@ void TIM2_Disable(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Start(void) {
+void TIM2_start(void) {
 	// Reset and start counter.
 	TIM2 -> CNT &= 0xFFFF0000;
 	TIM2 -> SR &= 0xFFFFFFE0;
@@ -180,7 +180,7 @@ void TIM2_Start(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Stop(void) {
+void TIM2_stop(void) {
 	// Stop counter.
 	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 }
@@ -189,6 +189,6 @@ void TIM2_Stop(void) {
  * @param:	None.
  * @return:	Current TIM2 counter value.
  */
-volatile unsigned int TIM2_GetCounter(void) {
+volatile unsigned int TIM2_get_counter(void) {
 	return (TIM2 -> CNT);
 }

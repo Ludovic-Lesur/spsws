@@ -19,7 +19,7 @@ typedef struct {
 	unsigned char hours;
 	unsigned char minutes;
 	unsigned char seconds;
-} Timestamp;
+} NEOM8N_time_t;
 
 typedef struct {
 	// Latitude.
@@ -34,21 +34,19 @@ typedef struct {
 	unsigned char long_east_flag; // 0='O', 1='E'.
 	// Altitude.
 	unsigned int altitude;
-} Position;
+} NEOM8N_position_t;
 
 typedef enum {
-	NEOM8N_SUCCESS,			// Parsing successful and data valid.
-	NEOM8N_TIMEOUT			// Parsing failure (= timeout).
-} NEOM8N_ReturnCode;
+	NEOM8N_SUCCESS,
+	NEOM8N_ERROR_TIMEOUT,
+	NEOM8N_ERROR_LAST
+} NEOM8N_status_t;
 
 /*** NEOM8N user functions ***/
 
-void NEOM8N_Init(void);
-NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
-NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv, unsigned int* fix_duration_seconds);
-
-/*** NEOM8N utility functions ***/
-
-void NEOM8N_SwitchDmaBuffer(unsigned char lf_flag);
+void NEOM8N_init(void);
+void NEOM8N_switch_dma_buffer(unsigned char lf_flag);
+NEOM8N_status_t NEOM8N_get_time(NEOM8N_time_t* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
+NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv, unsigned int* fix_duration_seconds);
 
 #endif /* NEOM8N_H */

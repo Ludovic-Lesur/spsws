@@ -13,10 +13,10 @@
 typedef struct {
 	volatile unsigned int CR;	// Power control register.
 	volatile unsigned int CSR;	// Power control and status register.
-} PWR_BaseAddress;
+} PWR_base_address_t;
 
 /*** PWR base address ***/
 
-#define PWR		((PWR_BaseAddress*) ((unsigned int) 0x40007000))
+#define PWR		((PWR_base_address_t*) ((unsigned int) 0x40007000))
 
 #endif /* PWR_REG_H */

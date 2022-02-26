@@ -16,7 +16,7 @@
  * @param:	None.
  * @return:	None.
  */
-void AES_Init(void) {
+void AES_init(void) {
 	// Enable peripheral clock.
 	RCC -> AHBENR |= (0b1 << 24); // CRYPTOEN='1'.
 	// Configure peripheral.
@@ -29,7 +29,7 @@ void AES_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void AES_Disable(void) {
+void AES_disable(void) {
 	// Clear all flags.
 	AES -> CR |= 0x00000180;
 	// Disable peripheral clock.
@@ -41,7 +41,7 @@ void AES_Disable(void) {
  * @param init_vector:	Initialisation vector (128-bits value).
  * @param key			AES key (128-bits value).
  */
-void AES_EncodeCbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]) {
+void AES_encode_cbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]) {
 	// Configure operation.
 	AES -> CR &= ~(0b11 << 3); // MODE='00'.
 	// Fill key.

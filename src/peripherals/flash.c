@@ -19,7 +19,7 @@
  * @param wait_states:	Number of wait states.
  * @return:				None.
  */
-void FLASH_SetLatency(unsigned char wait_states) {
+void FLASH_set_latency(unsigned char wait_states) {
 	// Configure number of wait states.
 	FLASH -> ACR &= ~(0b1 << 0); // Reset bit.
 	FLASH -> ACR |= ((wait_states & 0b1) << 0); // Set latency.

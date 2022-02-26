@@ -23,7 +23,7 @@
  * @param mode: Mode (see enum defined in gpio.h).
  * @return: 	None.
  */
-static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
+static void GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
 	// Set analog mode during transition.
 	(gpio -> gpio_port_address) -> MODER |= (0b11 << (2 * (gpio -> gpio_num))); // MODERy = '11'.
 	// Set required bits.
@@ -52,9 +52,9 @@ static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
  * @param gpio:			GPIO structure.
  * @return gpioMode: 	Current mode (see enum defined in gpio.h).
  */
-static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
+static GPIO_mode_t GPIO_get_mode(const GPIO_pin_t* gpio) {
 	// Get mode.
-	GPIO_Mode gpio_mode = (((gpio -> gpio_port_address) -> MODER) & (0b11 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
+	GPIO_mode_t gpio_mode = (((gpio -> gpio_port_address) -> MODER) & (0b11 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
 	return gpio_mode;
 }
 
@@ -63,7 +63,7 @@ static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
  * @param output_type: 	Output type (see enum defined in gpio.h).
  * @return: 			None.
  */
-static void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
+static void GPIO_set_output_type(const GPIO_pin_t* gpio, GPIO_output_type_t output_type) {
 	// Set bit.
 	switch(output_type) {
 	case GPIO_TYPE_PUSH_PULL:
@@ -84,7 +84,7 @@ static void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
  * @param output_speed: Output speed (see enum defined in gpio.h).
  * @return: 			None.
  */
-static void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed) {
+static void GPIO_set_output_speed(const GPIO_pin_t* gpio, GPIO_output_speed_t output_speed) {
 	// Set low speed during transition.
 	(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b11 << (2 * (gpio -> gpio_num)));
 	// Set required bits.
@@ -114,7 +114,7 @@ static void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed)
  * @param pull_resistor: 	Resistor configuration (see enum defined in gpio.h).
  * @return: 				None.
  */
-static void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resistor) {
+static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t pull_resistor) {
 	// Disable resistors during transition.
 	(gpio -> gpio_port_address) -> PUPDR &= ~(0b11 << (2 * (gpio -> gpio_num)));
 	// Set required bits.
@@ -140,7 +140,7 @@ static void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resi
  * @param gpio_af_num: 	Alternate function number (0 to 15).
  * @return: 			None.
  */
-static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
+static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, unsigned int gpio_af_num) {
 	// Clamp AF number.
 	gpio_af_num &= 0x0F;
 	// Select proper register to set.
@@ -166,32 +166,32 @@ static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num
  * @param pull_resistor:	Resistor configuration (see enum defined in gpio.h).
  * @param gpio_af_num: 		Alternate function number (0 to 15) if 'GPIO_MODE_ALTERNATE_FUNCTION' mode is selected.
  */
-void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO_OutputSpeed output_speed, GPIO_PullResistor pull_resistor) {
-	GPIO_SetMode(gpio, mode);
-	GPIO_SetAlternateFunction(gpio, (gpio -> gpio_af_num));
-	GPIO_SetOutputType(gpio, output_type);
-	GPIO_SetOutputSpeed(gpio, output_speed);
-	GPIO_SetPullUpPullDown(gpio, pull_resistor);
+void GPIO_configure(const GPIO_pin_t* gpio, GPIO_mode_t mode, GPIO_output_type_t output_type, GPIO_output_speed_t output_speed, GPIO_pull_resistor_t pull_resistor) {
+	GPIO_set_mode(gpio, mode);
+	GPIO_set_alternate_function(gpio, (gpio -> gpio_af_num));
+	GPIO_set_output_type(gpio, output_type);
+	GPIO_set_output_speed(gpio, output_speed);
+	GPIO_set_pull_resistor(gpio, pull_resistor);
 }
 
 /* CONFIGURE MCU GPIOs.
  * @param: 	None.
  * @return: None.
  */
-void GPIO_Init(void) {
+void GPIO_init(void) {
 	// Enable GPIOA, GPIOB and GPIOC clocks.
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
 	// Configure debug LED pin.
 #ifdef DEBUG
-	GPIO_Configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #else
-	GPIO_Configure(&GPIO_LED, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LED, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Programming pins.
 #ifdef HW2_0
 #ifndef DEBUG
-	GPIO_Configure(&GPIO_SWDIO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_SWCLK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SWDIO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SWCLK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 #endif
 }
@@ -201,7 +201,7 @@ void GPIO_Init(void) {
  * @param state: 	GPIO output state ('0' or '1').
  * @return: 		None.
  */
-void __attribute__((optimize("-O0"))) GPIO_Write(const GPIO* gpio, unsigned char state) {
+void __attribute__((optimize("-O0"))) GPIO_write(const GPIO_pin_t* gpio, unsigned char state) {
 	// Set bit.
 	if (state == 0) {
 		(gpio -> gpio_port_address) -> ODR &= ~(0b1 << (gpio -> gpio_num));
@@ -215,10 +215,10 @@ void __attribute__((optimize("-O0"))) GPIO_Write(const GPIO* gpio, unsigned char
  * @param gpio:		GPIO structure.
  * @return state: 	Current GPIO input state ('0' or '1').
  */
-unsigned char __attribute__((optimize("-O0"))) GPIO_Read(const GPIO* gpio) {
+unsigned char __attribute__((optimize("-O0"))) GPIO_read(const GPIO_pin_t* gpio) {
 	// Check mode.
 	unsigned char state = 0;
-	switch (GPIO_GetMode(gpio)) {
+	switch (GPIO_get_mode(gpio)) {
 	case GPIO_MODE_INPUT:
 		// GPIO configured as input -> read IDR register.
 		if ((((gpio -> gpio_port_address) -> IDR) & (0b1 << (gpio -> gpio_num))) != 0) {
@@ -241,7 +241,7 @@ unsigned char __attribute__((optimize("-O0"))) GPIO_Read(const GPIO* gpio) {
  * @param gpio:	GPIO structure.
  * @return: 	None.
  */
-void __attribute__((optimize("-O0"))) GPIO_Toggle(const GPIO* gpio) {
+void __attribute__((optimize("-O0"))) GPIO_toggle(const GPIO_pin_t* gpio) {
 	// Toggle ODR bit.
 	(gpio -> gpio_port_address) -> ODR ^= (0b1 << (gpio -> gpio_num));
 }

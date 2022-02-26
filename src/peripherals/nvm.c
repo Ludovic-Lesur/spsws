@@ -16,7 +16,7 @@
  * @param:	None.
  * @return:	None.
  */
-static void NVM_Unlock(void) {
+static void NVM_unlock(void) {
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Check the NVM is not allready unlocked.
@@ -31,7 +31,7 @@ static void NVM_Unlock(void) {
  * @param:	None.
  * @return:	None.
  */
-static void NVM_Lock(void) {
+static void NVM_lock(void) {
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Lock PECR register.
@@ -44,7 +44,7 @@ static void NVM_Lock(void) {
  * @param:	None.
  * @return:	None.
  */
-void NVM_Enable(void) {
+void NVM_enable(void) {
 	// Enable NVM peripheral.
 	RCC -> AHBENR |= (0b1 << 8); // MIFEN='1'.
 }
@@ -53,7 +53,7 @@ void NVM_Enable(void) {
  * @param:	None.
  * @return:	None.
  */
-void NVM_Disable(void) {
+void NVM_disable(void) {
 	// Disable NVM peripheral.
 	RCC -> AHBENR &= ~(0b1 << 8); // MIFEN='1'.
 }
@@ -63,15 +63,15 @@ void NVM_Disable(void) {
  * @param byte_to_read:		Pointer to byte that will contain the value to read.
  * @return:					None.
  */
-void NVM_ReadByte(unsigned short address_offset, unsigned char* byte_to_read) {
+void NVM_read_byte(unsigned short address_offset, unsigned char* byte_to_read) {
 	// Unlock NVM.
-	NVM_Unlock();
+	NVM_unlock();
 	// Check if address is in EEPROM range.
 	if (address_offset < EEPROM_SIZE) {
 		(*byte_to_read) = *((unsigned char*) (EEPROM_START_ADDRESS+address_offset)); // Read byte at requested address.
 	}
 	// Lock NVM.
-	NVM_Lock();
+	NVM_lock();
 }
 
 /* WRITE A BYTE TO NVM.
@@ -79,9 +79,9 @@ void NVM_ReadByte(unsigned short address_offset, unsigned char* byte_to_read) {
  * @param byte_to_store:	Byte to store in NVM.
  * @return:					None.
  */
-void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store) {
+void NVM_write_byte(unsigned short address_offset, unsigned char byte_to_store) {
 	// Unlock NVM.
-	NVM_Unlock();
+	NVM_unlock();
 	// Check if address is in EEPROM range.
 	if (address_offset < EEPROM_SIZE) {
 		(*((unsigned char*) (EEPROM_START_ADDRESS+address_offset))) = byte_to_store; // Write byte to requested address.
@@ -89,34 +89,34 @@ void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store) {
 	// Wait end of operation.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
 	// Lock NVM.
-	NVM_Lock();
+	NVM_lock();
 }
 
 /* RESET ALL NVM FIELDS TO DEFAULT VALUE.
  * @param:	None.
  * @return:	None.
  */
-void NVM_ResetDefault(void) {
+void NVM_reset_default(void) {
 	// Sigfox parameters.
-	NVM_WriteByte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 0), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 1), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 0), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 1), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 0), 0x00);
-	NVM_WriteByte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 1), 0x00);
-	NVM_WriteByte(NVM_SIGFOX_RL_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 0), 0x00);
+	NVM_write_byte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 1), 0x00);
+	NVM_write_byte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 0), 0x00);
+	NVM_write_byte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 1), 0x00);
+	NVM_write_byte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 0), 0x00);
+	NVM_write_byte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 1), 0x00);
+	NVM_write_byte(NVM_SIGFOX_RL_ADDRESS_OFFSET, 0x00);
 	// Device configuration (mapped on downlink frame).
-	NVM_WriteByte(NVM_CONFIG_LOCAL_UTC_OFFSET_ADDRESS_OFFSET, 0x01);
-	NVM_WriteByte(NVM_CONFIG_UPLINK_FRAMES_ADDRESS_OFFSET, 0x00);
-	NVM_WriteByte(NVM_CONFIG_GPS_TIMEOUT_ADDRESS_OFFSET, 0x78);
+	NVM_write_byte(NVM_CONFIG_LOCAL_UTC_OFFSET_ADDRESS_OFFSET, 0x01);
+	NVM_write_byte(NVM_CONFIG_UPLINK_FRAMES_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte(NVM_CONFIG_GPS_TIMEOUT_ADDRESS_OFFSET, 0x78);
 	// Period management and status.
-	NVM_WriteByte(NVM_DAY_COUNT_ADDRESS_OFFSET, 0x01);
-	NVM_WriteByte(NVM_HOURS_COUNT_ADDRESS_OFFSET, 0x01);
-	NVM_WriteByte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte(NVM_DAY_COUNT_ADDRESS_OFFSET, 0x01);
+	NVM_write_byte(NVM_HOURS_COUNT_ADDRESS_OFFSET, 0x01);
+	NVM_write_byte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, 0x00);
 	// RTC.
-	NVM_WriteByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), 0x00);
-	NVM_WriteByte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), 0x00);
-	NVM_WriteByte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, 0x00);
-	NVM_WriteByte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, 0x00);
-	NVM_WriteByte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), 0x00);
+	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), 0x00);
+	NVM_write_byte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, 0x00);
+	NVM_write_byte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, 0x00);
 }

@@ -24,10 +24,10 @@
  * @param:	None.
  * @return:	None.
  */
-static void I2C_Clear(void) {
+static void I2C1_clear(void) {
 	// Disable peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
-	LPTIM1_DelayMilliseconds(1, 0);
+	LPTIM1_delay_milliseconds(1, 0);
 	// Enable peripheral and clear all flags.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
 	I2C1 -> ICR |= 0x00003F38;
@@ -39,15 +39,15 @@ static void I2C_Clear(void) {
  * @param:	None.
  * @return:	None.
  */
-void I2C1_Init(void) {
+void I2C1_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 21); // I2C1EN='1'.
 	// Configure power enable pin.
-	GPIO_Configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
+	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	// Configure SCL and SDA (first as high impedance).
-	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Configure peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').
 	I2C1 -> CR1 &= ~(0b11111 << 8); // Analog filter enabled (ANFOFF='0') and digital filter disabled (DNF='0000').
@@ -65,9 +65,9 @@ void I2C1_Init(void) {
  * @param:	None.
  * @return:	None.
  */
-void I2C1_Disable(void) {
+void I2C1_disable(void) {
 	// Disable power control pin.
-	GPIO_Configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Disable I2C1 peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0);
 	// Clear all flags.
@@ -80,27 +80,27 @@ void I2C1_Disable(void) {
  * @param:	None.
  * @return:	None.
  */
-void I2C1_PowerOn(void) {
+void I2C1_power_on(void) {
 	// Enable GPIOs.
-	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Turn sensors and pull-up resistors on.
-	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	LPTIM1_DelayMilliseconds(100, 1);
+	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
+	LPTIM1_delay_milliseconds(100, 1);
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
  * @param:	None.
  * @return:	None.
  */
-void I2C1_PowerOff(void) {
+void I2C1_power_off(void) {
 	// Turn sensors and pull-up resistors off.
-	GPIO_Write(&GPIO_SENSORS_POWER_ENABLE, 0);
+	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	// Disable I2C alternate function.
-	GPIO_Configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Delay required if another cycle is requested by applicative layer.
-	LPTIM1_DelayMilliseconds(100, 1);
+	LPTIM1_delay_milliseconds(100, 1);
 }
 
 /* WRITE DATA ON I2C1 BUS (see algorithme on p.607 of RM0377 datasheet).
@@ -110,9 +110,9 @@ void I2C1_PowerOff(void) {
  * @param stop_flag:		Generate stop condition at the end of the transfer if non zero.
  * @return:					1 in case of success, 0 in case of failure.
  */
-unsigned char I2C1_Write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag) {
+unsigned char I2C1_write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag) {
 	// Clear peripheral.
-	I2C_Clear();
+	I2C1_clear();
 	// Wait for I2C bus to be ready.
 	unsigned int loop_count = 0;
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
@@ -177,9 +177,9 @@ unsigned char I2C1_Write(unsigned char slave_address, unsigned char* tx_buf, uns
  * @param rx_buf_length:	Number of bytes to receive (length of 'rx_buf').
  * @return:					1 in case of success, 0 in case of failure.
  */
-unsigned char I2C1_Read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+unsigned char I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
 	// Clear peripheral.
-	I2C_Clear();
+	I2C1_clear();
 	// Wait for I2C bus to be ready/
 	unsigned int loop_count = 0;
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {

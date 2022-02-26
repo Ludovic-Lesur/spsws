@@ -15,9 +15,9 @@
 
 /*** DPS310 functions ***/
 
-void DPS310_Init(void);
-void DPS310_PerformMeasurements(unsigned char dps310_i2c_address);
-void DPS310_GetPressure(unsigned int* pressure_pa);
-void DPS310_GetTemperature(signed char* temperature_degrees);
+void DPS310_init(void);
+void DPS310_perform_measurements(unsigned char dps310_i2c_address);
+void DPS310_get_pressure(unsigned int* pressure_pa);
+void DPS310_get_temperature(signed char* temperature_degrees);
 
 #endif /* DPS310_H */

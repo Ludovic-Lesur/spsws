@@ -19,10 +19,10 @@ typedef struct {
 	volatile unsigned int CMP;      // LPTIM compare register.
 	volatile unsigned int ARR;    	// LPTIM autoreload register.
 	volatile unsigned int CNT;     	// LPTIM counter register.
-} LPTIM_BaseAddress;
+} LPTIM_base_address_t;
 
 /*** LPTIM base address ***/
 
-#define LPTIM1	((LPTIM_BaseAddress*) ((unsigned int) 0x40007C00))
+#define LPTIM1	((LPTIM_base_address_t*) ((unsigned int) 0x40007C00))
 
 #endif /* LPTIM_REG_H */

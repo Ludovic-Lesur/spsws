@@ -33,7 +33,7 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 	if (((LPUART1 -> ISR) & (0b1 << 17)) != 0) {
 		// Switch DMA buffer and decode buffer.
 		if (((LPUART1 -> CR1) & (0b1 << 14)) != 0) {
-			NEOM8N_SwitchDmaBuffer(1);
+			NEOM8N_switch_dma_buffer(1);
 		}
 		// Clear CM flag.
 		LPUART1 -> ICR |= (0b1 << 17);
@@ -51,13 +51,13 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
  * @param lpuart_use_lse:	Use LSE as clock source if non zero, HSI otherwise.
  * @return:					None.
  */
-void LPUART1_Init(unsigned char lpuart_use_lse) {
+void LPUART1_init(unsigned char lpuart_use_lse) {
 	// Select peripheral clock.
 	unsigned int lpuart_clock_hz = 0;
 	RCC -> CCIPR &= ~(0b11 << 10); // Reset bits 10-11.
 	if (lpuart_use_lse == 0) {
 		RCC -> CCIPR |= (0b01 << 10); // LPUART1SEL='01'.
-		lpuart_clock_hz = RCC_GetSysclkKhz() * 1000;
+		lpuart_clock_hz = RCC_get_sysclk_khz() * 1000;
 	}
 	else {
 		RCC -> CCIPR |= (0b11 << 10); // LPUART1SEL='11'.
@@ -66,12 +66,12 @@ void LPUART1_Init(unsigned char lpuart_use_lse) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 	// Configure power enable pin.
-	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
+	GPIO_configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_write(&GPIO_GPS_POWER_ENABLE, 0);
 #if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Configure TX and RX GPIOs (first as high impedance).
-	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Configure peripheral.
 	LPUART1 -> CR1 &= 0xEC008000; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -86,7 +86,7 @@ void LPUART1_Init(unsigned char lpuart_use_lse) {
 	LPUART1 -> CR3 |= (0b1 << 6); // Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_LPUART1, 1);
+	NVIC_set_priority(NVIC_IT_LPUART1, 1);
 	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
 }
@@ -95,7 +95,7 @@ void LPUART1_Init(unsigned char lpuart_use_lse) {
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_UpdateBrr(void) {
+void LPUART1_update_brr(void) {
 	// Local variables.
 	unsigned int lpuart_clock_hz = 0;
 	// Check clock source.
@@ -103,7 +103,7 @@ void LPUART1_UpdateBrr(void) {
 		// Disable peripheral.
 		LPUART1 -> CR1 &= ~(0b1 << 0); // UE='0'.
 		// Get current system clock.
-		lpuart_clock_hz = RCC_GetSysclkKhz() * 1000;
+		lpuart_clock_hz = RCC_get_sysclk_khz() * 1000;
 		// Compute BRR value.
 		unsigned int brr = (lpuart_clock_hz * 256);
 		brr /= LPUART_BAUD_RATE;
@@ -117,7 +117,7 @@ void LPUART1_UpdateBrr(void) {
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_EnableTx(void) {
+void LPUART1_enable_tx(void) {
 	// Enable LPUART1 transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
 }
@@ -126,21 +126,21 @@ void LPUART1_EnableTx(void) {
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_EnableRx(void) {
+void LPUART1_enable_rx(void) {
 	// Enable LPUART1 receiver.
 	LPUART1 -> CR1 |= (0b1 << 2); // Enable receiver (RE='1').
-	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
+	NVIC_enable_interrupt(NVIC_IT_LPUART1);
 }
 
 /* DISABLE LPUART PERIPHERAL.
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_Disable(void) {
+void LPUART1_disable(void) {
 	// Disable power control pin.
-	GPIO_Configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_GPS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Disable LPUART1 peripheral.
-	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
+	NVIC_disable_interrupt(NVIC_IT_LPUART1);
 	LPUART1 -> CR1 &= ~(0b1 << 2); // Disable transmitter and receiver (TE='0' adnd RE='0').
 	LPUART1 -> CR1 &= ~(0b1 << 0);
 	// Clear all flags.
@@ -153,38 +153,38 @@ void LPUART1_Disable(void) {
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_PowerOn(void) {
+void LPUART1_power_on(void) {
 #if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Enable GPIOs.
-	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Turn NEOM8N on.
-	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 1);
-	LPTIM1_DelayMilliseconds(100, 1);
+	GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
+	LPTIM1_delay_milliseconds(100, 1);
 }
 
 /* POWER LPUART1 SLAVE OFF.
  * @param:	None.
  * @return:	None.
  */
-void LPUART1_PowerOff(void) {
+void LPUART1_power_off(void) {
 	// Turn NEOM8N off.
-	GPIO_Write(&GPIO_GPS_POWER_ENABLE, 0);
+	GPIO_write(&GPIO_GPS_POWER_ENABLE, 0);
 #if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Disable LPUART alternate function.
-	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Delay required if another cycle is requested by applicative layer.
-	LPTIM1_DelayMilliseconds(100, 1);
+	LPTIM1_delay_milliseconds(100, 1);
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.
  * @param byte_to_send:	Byte to send.
  * @return:				None.
  */
-void LPUART1_SendByte(unsigned char tx_byte) {
+void LPUART1_send_byte(unsigned char tx_byte) {
 	// Fill transmit register.
 	LPUART1 -> TDR = tx_byte;
 	// Wait for transmission to complete.

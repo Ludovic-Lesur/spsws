@@ -49,10 +49,10 @@ typedef struct {
 	volatile unsigned int CMAR7;    // DMA channel 7 memory address register.
 	unsigned int RESERVED6[6];    	// Reserved 0x90-0xA7.
 	volatile unsigned int CSELR;    // DMA channel selection register.
-} DMA_BaseAddress;
+} DMA_base_address_t;
 
 /*** DMA base address ***/
 
-#define DMA1	((DMA_BaseAddress*) ((unsigned int) 0x40020000))
+#define DMA1	((DMA_base_address_t*) ((unsigned int) 0x40020000))
 
 #endif /* DMA_REG_H */

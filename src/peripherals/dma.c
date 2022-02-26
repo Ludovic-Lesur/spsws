@@ -24,7 +24,7 @@ void __attribute__((optimize("-O0"))) DMA1_Channel4_5_6_7_IRQHandler(void) {
 	if (((DMA1 -> ISR) & (0b1 << 21)) != 0) {
 		// Switch DMA buffer without decoding.
 		if (((DMA1 -> CCR6) & (0b1 << 1)) != 0) {
-			NEOM8N_SwitchDmaBuffer(0);
+			NEOM8N_switch_dma_buffer(0);
 		}
 		// Clear flag.
 		DMA1 -> IFCR |= (0b1 << 21); // CTCIF6='1'.
@@ -37,7 +37,7 @@ void __attribute__((optimize("-O0"))) DMA1_Channel4_5_6_7_IRQHandler(void) {
  * @param:	None.
  * @return:	None.
  */
-void DMA1_InitChannel6(void) {
+void DMA1_init_channel6(void) {
 	// Enable peripheral clock.
 	RCC -> AHBENR |= (0b1 << 0); // DMAEN='1'.
 	// Disable DMA channel before configuration (EN='0').
@@ -58,17 +58,17 @@ void DMA1_InitChannel6(void) {
 	// Clear all flags.
 	DMA1 -> IFCR |= 0x00F00000;
 	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_DMA1_CH_4_7, 1);
+	NVIC_set_priority(NVIC_IT_DMA1_CH_4_7, 1);
 }
 
 /* START DMA1 CHANNEL 6 TRANSFER.
  * @param:	None.
  * @return:	None.
  */
-void DMA1_StartChannel6(void) {
+void DMA1_start_channel6(void) {
 	// Clear all flags.
 	DMA1 -> IFCR |= 0x00F00000;
-	NVIC_EnableInterrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_enable_interrupt(NVIC_IT_DMA1_CH_4_7);
 	// Start transfer.
 	DMA1 -> CCR6 |= (0b1 << 0); // EN='1'.
 }
@@ -77,10 +77,10 @@ void DMA1_StartChannel6(void) {
  * @param:	None.
  * @return:	None.
  */
-void DMA1_StopChannel6(void) {
+void DMA1_stop_channel6(void) {
 	// Stop transfer.
 	DMA1 -> CCR6 &= ~(0b1 << 0); // EN='0'.
-	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_disable_interrupt(NVIC_IT_DMA1_CH_4_7);
 }
 
 /* SET DMA1 CHANNEL 6 DESTINATION BUFFER ADDRESS.
@@ -88,7 +88,7 @@ void DMA1_StopChannel6(void) {
  * @param dest_buf_size:	Size of destination buffer.
  * @return:					None.
  */
-void DMA1_SetChannel6DestAddr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
+void DMA1_set_channel6_dest_addr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
 	// Set address.
 	DMA1 -> CMAR6 = dest_buf_addr;
 	// Set buffer size.
@@ -101,10 +101,10 @@ void DMA1_SetChannel6DestAddr(unsigned int dest_buf_addr, unsigned short dest_bu
  * @param:	None.
  * @return:	None.
  */
-void DMA1_Disable(void) {
+void DMA1_disable(void) {
 	// Disable interrupts.
-	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_2_3);
-	NVIC_DisableInterrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_disable_interrupt(NVIC_IT_DMA1_CH_2_3);
+	NVIC_disable_interrupt(NVIC_IT_DMA1_CH_4_7);
 	// Clear all flags.
 	DMA1 -> IFCR |= 0x0FFFFFFF;
 	// Disable peripheral clock.

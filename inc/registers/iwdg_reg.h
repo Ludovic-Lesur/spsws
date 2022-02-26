@@ -16,10 +16,10 @@ typedef struct {
 	volatile unsigned int RLR;  	// IWDG reload register.
 	volatile unsigned int SR;    	// IWDG status register.
 	volatile unsigned int WINR;		// IWDG window register.
-} IWDG_BaseAddress;
+} IWDG_base_address_t;
 
 /*** IWDG base address ***/
 
-#define IWDG	((IWDG_BaseAddress*) ((unsigned int) 0x40003000))
+#define IWDG	((IWDG_base_address_t*) ((unsigned int) 0x40003000))
 
 #endif /* IWDG_REG_H_ */

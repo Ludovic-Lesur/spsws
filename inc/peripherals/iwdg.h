@@ -14,7 +14,7 @@
 
 /*** IWDG functions ***/
 
-void IWDG_Init(void);
-void IWDG_Reload(void);
+void IWDG_init(void);
+void IWDG_reload(void);
 
 #endif /* IWDG_H */

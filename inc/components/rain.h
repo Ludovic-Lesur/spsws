@@ -15,19 +15,16 @@
 
 /*** RAIN global variables ***/
 
-GPIO GPIO_RAIN;
+GPIO_pin_t GPIO_RAIN;
 
 /*** RAIN functions ***/
 
-void RAIN_Init(void);
-void RAIN_StartContinuousMeasure(void);
-void RAIN_StopContinuousMeasure(void);
-void RAIN_GetPluviometry(unsigned char* rain_pluviometry_mm);
-void RAIN_ResetData(void);
-
-/*** RAIN utility functions ***/
-
-void RAIN_EdgeCallback(void);
+void RAIN_init(void);
+void RAIN_start_continuous_measure(void);
+void RAIN_stop_continuous_measure(void);
+void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm);
+void RAIN_reset_data(void);
+void RAIN_edge_callback(void);
 
 #endif
 

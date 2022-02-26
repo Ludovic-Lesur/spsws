@@ -36,10 +36,10 @@ typedef struct {
 	volatile unsigned int BKP2R;		// RTC back-up register 2.
 	volatile unsigned int BKP3R;		// RTC back-up register 3.
 	volatile unsigned int BKP4R;		// RTC back-up register 4.
-} RTC_BaseAddress;
+} RTC_base_address_t;
 
 /*** RTC base address ***/
 
-#define RTC		((RTC_BaseAddress*) ((unsigned int) 0x40002800))
+#define RTC		((RTC_base_address_t*) ((unsigned int) 0x40002800))
 
 #endif /* RTC_REG_H */

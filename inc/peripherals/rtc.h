@@ -13,24 +13,24 @@
 
 /*** RTC functions ***/
 
-void RTC_Reset(void);
-void RTC_Init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
-void RTC_Calibrate(Timestamp* gps_timestamp);
-void RTC_GetTimestamp(Timestamp* rtc_timestamp);
+void RTC_reset(void);
+void RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
+void RTC_calibrate(NEOM8N_time_t* gps_timestamp);
+void RTC_get_timestamp(NEOM8N_time_t* rtc_timestamp);
 
-void RTC_EnableAlarmAInterrupt(void);
-void RTC_DisableAlarmAInterrupt(void);
-volatile unsigned char RTC_GetAlarmAFlag(void);
-void RTC_ClearAlarmAFlag(void);
+void RTC_enable_alarm_a_interrupt(void);
+void RTC_disable_alarm_a_interrupt(void);
+volatile unsigned char RTC_get_alarm_a_flag(void);
+void RTC_clear_alarm_a_flag(void);
 
-void RTC_EnableAlarmBInterrupt(void);
-void RTC_DisableAlarmBInterrupt(void);
-volatile unsigned char RTC_GetAlarmBFlag(void);
-void RTC_ClearAlarmBFlag(void);
+void RTC_enable_alarm_b_interrupt(void);
+void RTC_disable_alarm_b_interrupt(void);
+volatile unsigned char RTC_get_alarm_b_flag(void);
+void RTC_clear_alarm_b_flag(void);
 
-void RTC_StartWakeUpTimer(unsigned int delay_seconds);
-void RTC_StopWakeUpTimer(void);
-volatile unsigned char RTC_GetWakeUpTimerFlag(void);
-void RTC_ClearWakeUpTimerFlag(void);
+void RTC_start_wakeup_timer(unsigned int delay_seconds);
+void RTC_stop_wakeup_timer(void);
+volatile unsigned char RTC_get_wakeup_timer_flag(void);
+void RTC_clear_wakeup_timer_flag(void);
 
 #endif /* RTC_H */

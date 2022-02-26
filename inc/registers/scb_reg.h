@@ -19,10 +19,10 @@ typedef struct {
 	volatile unsigned int CCR;		// SCB configuration and control register.
 	volatile unsigned int SHPR2;	// SCB system handler priority register 2.
 	volatile unsigned int SHPR3;	// SCB system handler priority register 3.
-} SCB_BaseAddress;
+} SCB_base_address_t;
 
 /*** SCB base address ***/
 
-#define SCB		((SCB_BaseAddress*) ((unsigned int) 0xE000ED00))
+#define SCB		((SCB_base_address_t*) ((unsigned int) 0xE000ED00))
 
 #endif /* SCB_REG_H */

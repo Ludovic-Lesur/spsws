@@ -32,38 +32,38 @@ volatile unsigned int rain_edge_count;
  * @param:	None.
  * @return:	None.
  */
-void RAIN_Init(void) {
+void RAIN_init(void) {
 	// GPIO mapping selection.
 	GPIO_RAIN = GPIO_DIO2;
 	// Init GPIOs and EXTI.
-	GPIO_Configure(&GPIO_RAIN, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_ConfigureGpio(&GPIO_RAIN, EXTI_TRIGGER_FALLING_EDGE);
+	GPIO_configure(&GPIO_RAIN, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_configure_gpio(&GPIO_RAIN, EXTI_TRIGGER_FALLING_EDGE);
 }
 
 /* START CONTINUOUS RAIN MEASUREMENTS.
  * @param:	None.
  * @return:	None.
  */
-void RAIN_StartContinuousMeasure(void) {
+void RAIN_start_continuous_measure(void) {
 	// Enable required interrupt.
-	EXTI_ClearAllFlags();
-	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
+	EXTI_clear_all_flags();
+	NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
 }
 
 /* STOP CONTINUOUS RAIN MEASUREMENTS.
  * @param:	None.
  * @return:	None.
  */
-void RAIN_StopContinuousMeasure(void) {
+void RAIN_stop_continuous_measure(void) {
 	// Disable required interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_EXTI_4_15);
+	NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
 }
 
 /* GET PLUVIOMETRY SINCE LAST MEASUREMENT START.
  * @param rain_pluviometry_mm:	Pointer to char that will contain pluviometry in mm.
  * @return:						None.
  */
-void RAIN_GetPluviometry(unsigned char* rain_pluviometry_mm) {
+void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm) {
 	// Convert edge count to mm of rain.
 	unsigned int rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
 	unsigned int rain_mm = (rain_um / 1000);
@@ -85,7 +85,7 @@ void RAIN_GetPluviometry(unsigned char* rain_pluviometry_mm) {
  * @param:	None.
  * @return:	None.
  */
-void RAIN_ResetData(void) {
+void RAIN_reset_data(void) {
 	// Reset edge count.
 	rain_edge_count = 0;
 }
@@ -94,11 +94,11 @@ void RAIN_ResetData(void) {
  * @param:	None.
  * @return:	None.
  */
-void RAIN_EdgeCallback(void) {
+void RAIN_edge_callback(void) {
 	// Increment edge count.
 	rain_edge_count++;
 #ifdef ATM
-	AT_PrintRain(rain_edge_count);
+	AT_print_rain(rain_edge_count);
 #endif
 }
 

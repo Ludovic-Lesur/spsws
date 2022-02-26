@@ -20,11 +20,11 @@ typedef struct {
 	volatile unsigned int TXCRCR;   // SPI TX CRC register.
 	volatile unsigned int I2SCFGR;	// SPI I2S configuration register.
 	volatile unsigned int I2SPR;    // SPI I2S prescaler register.
-} SPI_BaseAddress;
+} SPI_base_address_t;
 
 /*** SPI base addresses ***/
 
-#define SPI1	((SPI_BaseAddress*) ((unsigned int) 0x40013000))
-#define SPI2	((SPI_BaseAddress*) ((unsigned int) 0x40003800))
+#define SPI1	((SPI_base_address_t*) ((unsigned int) 0x40013000))
+#define SPI2	((SPI_base_address_t*) ((unsigned int) 0x40003800))
 
 #endif /* SPI_REG_H_ */

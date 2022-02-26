@@ -34,10 +34,10 @@
 
 /*** NVM functions ***/
 
-void NVM_Enable(void);
-void NVM_Disable(void);
-void NVM_ReadByte(unsigned short address_offset, unsigned char* byte_to_read);
-void NVM_WriteByte(unsigned short address_offset, unsigned char byte_to_store);
-void NVM_ResetDefault(void);
+void NVM_enable(void);
+void NVM_disable(void);
+void NVM_read_byte(unsigned short address_offset, unsigned char* byte_to_read);
+void NVM_write_byte(unsigned short address_offset, unsigned char byte_to_store);
+void NVM_reset_default(void);
 
 #endif /* NVM_H */

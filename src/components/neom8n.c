@@ -33,14 +33,14 @@
 #define NMEA_CHAR_CHECKSUM_START			'*' // To skip '$'.
 #define NMEA_CHAR_SEPARATOR					','
 
-#define NMEA_ZDA_MASK						0x00020000 // Provided to NEOM8N_SelectNmeaMessages() function.
+#define NMEA_ZDA_MASK						0x00020000 // Provided to NEOM8N_select_nmea_messages() function.
 #define NMEA_ZDA_ADDRESS_FIELD_LENGTH		6
 #define NMEA_ZDA_TIME_FIELD_LENGTH			9
 #define NMEA_ZDA_DAY_FIELD_LENGTH			2
 #define NMEA_ZDA_MONTH_FIELD_LENGTH			2
 #define NMEA_ZDA_YEAR_FIELD_LENGTH			4
 
-#define NMEA_GGA_MASK						0x00000008 // Provided to NEOM8N_SelectNmeaMessages() function.
+#define NMEA_GGA_MASK						0x00000008 // Provided to NEOM8N_select_nmea_messages() function.
 #define NMEA_GGA_ADDRESS_FIELD_LENGTH		6
 #define NMEA_GGA_LAT_FIELD_LENGTH			10
 #define NMEA_GGA_NS_FIELD_LENGTH			1
@@ -71,12 +71,12 @@ typedef struct {
 	unsigned int nmea_gga_previous_altitude;
 	unsigned char nmea_gga_high_quality_flag;			// Set to '1' when fix quality indicator is > 1.
 	// Energy monitoring.
-	unsigned int neom8n_vcap_mv;			// Supercap voltage in mV.
-} NEOM8N_Context;
+	unsigned int vcap_mv;			// Supercap voltage in mV.
+} NEOM8N_context_t;
 
 /*** NEOM8N local global variables ***/
 
-static NEOM8N_Context neom8n_ctx;
+static NEOM8N_context_t neom8n_ctx;
 
 /*** NEOM8N local functions ***/
 
@@ -85,7 +85,7 @@ static NEOM8N_Context neom8n_ctx;
  * @param payload_length:	Length of the payload (in bytes) for this message.
  * @return:					None.
  */
-static void NEOM8N_ComputeUbxChecksum(unsigned char* neom8n_command, unsigned char payload_length) {
+static void NEOM8N_compute_ubx_checksum(unsigned char* neom8n_command, unsigned char payload_length) {
 	// See algorithme on p.136 of NEO-M8 programming manual.
 	unsigned char ck_a = 0;
 	unsigned char ck_b = 0;
@@ -103,7 +103,7 @@ static void NEOM8N_ComputeUbxChecksum(unsigned char* neom8n_command, unsigned ch
  * @param:		None;
  * @return ck:	Computed checksum.
  */
-static unsigned char NEOM8N_GetNmeaChecksum(unsigned char* nmea_rx_buf) {
+static unsigned char NEOM8N_get_nmea_checksum(unsigned char* nmea_rx_buf) {
 	// See NMEA messages format on p.105 of NEO-M8 programming manual.
 	unsigned char ck = 0;
 	// Get checksum start index.
@@ -112,7 +112,7 @@ static unsigned char NEOM8N_GetNmeaChecksum(unsigned char* nmea_rx_buf) {
 		checksum_start_char_idx++;
 	}
 	if (checksum_start_char_idx < NMEA_RX_BUFFER_SIZE) {
-		ck = (STRING_AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + STRING_AsciiToHexa(nmea_rx_buf[checksum_start_char_idx+2]);
+		ck = (STRING_ascii_to_hexa(nmea_rx_buf[checksum_start_char_idx+1]) << 4) + STRING_ascii_to_hexa(nmea_rx_buf[checksum_start_char_idx+2]);
 	}
 	return ck;
 }
@@ -121,7 +121,7 @@ static unsigned char NEOM8N_GetNmeaChecksum(unsigned char* nmea_rx_buf) {
  * @param:		None;
  * @return ck:	Computed checksum.
  */
-static unsigned char NEOM8N_ComputeNmeaChecksum(unsigned char* nmea_rx_buf) {
+static unsigned char NEOM8N_compute_nmea_checksum(unsigned char* nmea_rx_buf) {
 	// See algorithme on p.105 of NEO-M8 programming manual.
 	unsigned char ck = 0;
 	// Get message start index.
@@ -147,12 +147,12 @@ static unsigned char NEOM8N_ComputeNmeaChecksum(unsigned char* nmea_rx_buf) {
  * @param nmea_rx_buf:	NMEA message to decode.
  * @return:				None.
  */
-static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gps_timestamp) {
+static void NEOM8N_parse_nmea_zda(unsigned char* nmea_rx_buf, NEOM8N_time_t* gps_timestamp) {
 	unsigned char error_found = 0;
 	unsigned char idx = 0;
 	// Verify checksum.
-	unsigned char received_checksum = NEOM8N_GetNmeaChecksum(nmea_rx_buf);
-	unsigned char computed_checksum = NEOM8N_ComputeNmeaChecksum(nmea_rx_buf);
+	unsigned char received_checksum = NEOM8N_get_nmea_checksum(nmea_rx_buf);
+	unsigned char computed_checksum = NEOM8N_compute_nmea_checksum(nmea_rx_buf);
 	if (computed_checksum == received_checksum) {
 		// Extract NMEA data (see ZDA message format on p.127 of NEO-M8 programming manual).
 		unsigned char sep_idx = 0;
@@ -180,9 +180,9 @@ static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gp
 				// Field 2 = time = <hhmmss.ss>.
 				case 2:
 					if ((idx - sep_idx) == (NMEA_ZDA_TIME_FIELD_LENGTH + 1)) {
-						(*gps_timestamp).hours = STRING_AsciiToHexa(nmea_rx_buf[sep_idx+1]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 2]);
-						(*gps_timestamp).minutes = STRING_AsciiToHexa(nmea_rx_buf[sep_idx+3]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 4]);
-						(*gps_timestamp).seconds = STRING_AsciiToHexa(nmea_rx_buf[sep_idx+5]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 6]);
+						(*gps_timestamp).hours = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx+1]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 2]);
+						(*gps_timestamp).minutes = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx+3]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 4]);
+						(*gps_timestamp).seconds = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx+5]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 6]);
 					}
 					else {
 						error_found = 1;
@@ -191,7 +191,7 @@ static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gp
 				// Field 3 = day = <dd>.
 				case 3:
 					if ((idx - sep_idx) == (NMEA_ZDA_DAY_FIELD_LENGTH + 1)) {
-						(*gps_timestamp).date = STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 2]);
+						(*gps_timestamp).date = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 2]);
 					}
 					else {
 						error_found = 1;
@@ -199,7 +199,7 @@ static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gp
 					break;
 				case 4:
 					if ((idx - sep_idx) == (NMEA_ZDA_MONTH_FIELD_LENGTH + 1)) {
-						(*gps_timestamp).month = STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 2]);
+						(*gps_timestamp).month = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 2]);
 					}
 					else {
 						error_found = 1;
@@ -209,7 +209,7 @@ static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gp
 					if ((idx - sep_idx) == (NMEA_ZDA_YEAR_FIELD_LENGTH + 1)) {
 						(*gps_timestamp).year = 0;
 						for (k=0 ; k<NMEA_ZDA_YEAR_FIELD_LENGTH ; k++) {
-							(*gps_timestamp).year += MATH_Pow10(NMEA_ZDA_YEAR_FIELD_LENGTH - 1 - k) * STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1 + k]);
+							(*gps_timestamp).year += MATH_pow_10(NMEA_ZDA_YEAR_FIELD_LENGTH - 1 - k) * STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1 + k]);
 						}
 						// Last field retrieved, parsing process succeeded.
 						neom8n_ctx.nmea_zda_parsing_success = 1;
@@ -244,14 +244,14 @@ static void NEOM8N_ParseNmeaZdaMessage(unsigned char* nmea_rx_buf, Timestamp* gp
  * @param gps_timestamp:		GPS timestamp structure to analyse.
  * @return gps_timestamp_valid:	1 if GPS timestamp is valid, 0 otherwise.
  */
-static unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp) {
+static unsigned char NEOM8N_time_is_valid(NEOM8N_time_t* gps_time) {
 	unsigned char gps_timestamp_valid = 0;
-	if ((local_gps_timestamp -> date >= 1) && (local_gps_timestamp -> date <= 31) &&
-		(local_gps_timestamp -> month >= 1) && (local_gps_timestamp -> month <= 12) &&
-		(local_gps_timestamp -> year >= 0) && (local_gps_timestamp -> year <= 9999) &&
-		(local_gps_timestamp -> hours >= 0) && (local_gps_timestamp -> hours <= 23) &&
-		(local_gps_timestamp -> minutes >= 0) && (local_gps_timestamp -> minutes <= 59) &&
-		(local_gps_timestamp -> seconds >= 0) && (local_gps_timestamp -> seconds <= 59)) {
+	if ((gps_time -> date >= 1) && (gps_time -> date <= 31) &&
+		(gps_time -> month >= 1) && (gps_time -> month <= 12) &&
+		(gps_time -> year >= 0) && (gps_time -> year <= 9999) &&
+		(gps_time -> hours >= 0) && (gps_time -> hours <= 23) &&
+		(gps_time -> minutes >= 0) && (gps_time -> minutes <= 59) &&
+		(gps_time -> seconds >= 0) && (gps_time -> seconds <= 59)) {
 		gps_timestamp_valid = 1;
 	}
 	return gps_timestamp_valid;
@@ -261,12 +261,12 @@ static unsigned char NEOM8N_TimestampIsValid(Timestamp* local_gps_timestamp) {
  * @param nmea_rx_buf:	NMEA message to decode.
  * @return:						None.
  */
-static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps_position) {
+static void NEOM8N_parse_nmea_gga(unsigned char* nmea_rx_buf, NEOM8N_position_t* gps_position) {
 	unsigned char error_found = 0;
 	unsigned char idx = 0;
 	// Verify checksum.
-	unsigned char received_checksum = NEOM8N_GetNmeaChecksum(nmea_rx_buf);
-	unsigned char computed_checksum = NEOM8N_ComputeNmeaChecksum(nmea_rx_buf);
+	unsigned char received_checksum = NEOM8N_get_nmea_checksum(nmea_rx_buf);
+	unsigned char computed_checksum = NEOM8N_compute_nmea_checksum(nmea_rx_buf);
 	if (computed_checksum == received_checksum) {
 		// Extract NMEA data (see GGA message format on p.114 of NEO-M8 programming manual).
 		unsigned char sep_idx = 0;
@@ -296,11 +296,11 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 				// Field 3 = latitude = <ddmm.mmmmm>.
 				case 3:
 					if ((idx - sep_idx) == (NMEA_GGA_LAT_FIELD_LENGTH + 1)) {
-						(*gps_position).lat_degrees = STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 2]);
-						(*gps_position).lat_minutes = STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 3]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 4]);
+						(*gps_position).lat_degrees = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 2]);
+						(*gps_position).lat_minutes = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 3]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 4]);
 						(*gps_position).lat_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).lat_seconds += MATH_Pow10(4 - k) * STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 6 + k]);
+							(*gps_position).lat_seconds += MATH_pow_10(4 - k) * STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 6 + k]);
 						}
 					}
 					else {
@@ -332,12 +332,12 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 					if ((idx - sep_idx) == (NMEA_GGA_LONG_FIELD_LENGTH + 1)) {
 						(*gps_position).long_degrees = 0;
 						for (k=0 ; k<3 ; k++) {
-							(*gps_position).long_degrees += MATH_Pow10(2 - k) * STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1 + k]);
+							(*gps_position).long_degrees += MATH_pow_10(2 - k) * STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1 + k]);
 						}
-						(*gps_position).long_minutes = STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 4]) * 10 + STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 5]);
+						(*gps_position).long_minutes = STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 4]) * 10 + STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 5]);
 						(*gps_position).long_seconds = 0;
 						for (k=0 ; k<5 ; k++) {
-							(*gps_position).long_seconds += MATH_Pow10(4 - k) * STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 7 + k]);
+							(*gps_position).long_seconds += MATH_pow_10(4 - k) * STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 7 + k]);
 						}
 					}
 					else {
@@ -367,7 +367,7 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 				// Field 7 = quality indicator.
 				case 7:
 					if ((idx - sep_idx) == (NMEA_GGA_QUALITY_FIELD_LENGTH + 1)) {
-						if (STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1]) > 1) {
+						if (STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1]) > 1) {
 							neom8n_ctx.nmea_gga_high_quality_flag = 1;
 						}
 						else {
@@ -389,11 +389,11 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
 						if (alt_number_of_digits > 0) {
 							(*gps_position).altitude = 0;
 							for (k=0 ; k<alt_number_of_digits ; k++) {
-								(*gps_position).altitude += MATH_Pow10(alt_number_of_digits - 1 - k) * STRING_AsciiToHexa(nmea_rx_buf[sep_idx + 1 + k]);
+								(*gps_position).altitude += MATH_pow_10(alt_number_of_digits - 1 - k) * STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + 1 + k]);
 							}
 							// Rounding operation if fractionnal part exists (not required for success).
 							if ((idx - (sep_idx + alt_number_of_digits) - 1) >= 2) {
-								if (STRING_AsciiToHexa(nmea_rx_buf[sep_idx + alt_number_of_digits + 2]) >= 5) {
+								if (STRING_ascii_to_hexa(nmea_rx_buf[sep_idx + alt_number_of_digits + 2]) >= 5) {
 									(*gps_position).altitude++; // Add '1' to altitude.
 								}
 							}
@@ -447,7 +447,7 @@ static void NEOM8N_ParseNmeaGgaMessage(unsigned char* nmea_rx_buf, Position* gps
  * @param local_gps_position:	GPS position structure to analyse.
  * @return gps_position_valid:	1 if GPS position is valid, 0 otherwise.
  */
-static unsigned char NEOM8N_PositionIsValid(Position* local_gps_position) {
+static unsigned char NEOM8N_position_is_valid(NEOM8N_position_t* local_gps_position) {
 	unsigned char gps_position_valid = 0;
 	if ((local_gps_position -> lat_degrees >= 0) && (local_gps_position -> lat_degrees <= 89) &&
 		(local_gps_position -> lat_minutes >= 0) && (local_gps_position -> lat_minutes <= 59) &&
@@ -465,7 +465,7 @@ static unsigned char NEOM8N_PositionIsValid(Position* local_gps_position) {
  * 								0b <ZDA> <VTG> <VLW> <TXT> <RMC> <GSV> <GST> <GSA> <GRS> <GPQ> <GND> <GNQ> <GLQ> <GLL> <GGA> <GBS> <GBQ> <DTM>.
  * @return:						None.
  */
-static void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
+static void NEOM8N_select_nmea_messages(unsigned int nmea_message_id_mask) {
 	// See p.110 for NMEA messages ID.
 	unsigned char nmea_message_id[18] = {0x0A, 0x44, 0x09, 0x00, 0x01, 0x43, 0x42, 0x0D, 0x40, 0x06, 0x02, 0x07, 0x03, 0x04, 0x41, 0x0F, 0x05, 0x08};
 	unsigned char nmea_message_id_idx = 0;
@@ -485,12 +485,12 @@ static void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
 			neom8n_cfg_msg[neom8n_cfg_msg_idx] = rate_value;
 		}
 		// Bytes 14-15 = NEOM8N checksum (CK_A and CK_B).
-		NEOM8N_ComputeUbxChecksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
-		LPUART1_EnableTx();
+		NEOM8N_compute_ubx_checksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
+		LPUART1_enable_tx();
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
-			LPUART1_SendByte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
+			LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 		}
-		LPTIM1_DelayMilliseconds(100, 1);
+		LPTIM1_delay_milliseconds(100, 1);
 	}
 }
 
@@ -500,7 +500,7 @@ static void NEOM8N_SelectNmeaMessages(unsigned int nmea_message_id_mask) {
  * @param:	None.
  * @return:	None.
  */
-void NEOM8N_Init(void) {
+void NEOM8N_init(void) {
 	// Init context.
 	unsigned int byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<NMEA_RX_BUFFER_SIZE ; byte_idx++) neom8n_ctx.nmea_rx_buf1[byte_idx] = 0;
@@ -512,62 +512,62 @@ void NEOM8N_Init(void) {
 	neom8n_ctx.nmea_gga_same_altitude_count = 0;
 	neom8n_ctx.nmea_gga_previous_altitude = 0;
 	neom8n_ctx.nmea_gga_high_quality_flag = 0;
-	neom8n_ctx.neom8n_vcap_mv = 0;
+	neom8n_ctx.vcap_mv = 0;
 }
 
 /* GET CURRENT GPS TIMESTAMP VIA ZDA NMEA  MESSAGES.
  * @param gps_timestamp:	Pointer to GPS timestamp structure that will contain the data.
  * @param timeout_seconds:	Timeout in seconds.
- * @return return_code:		See NEOM8N_ReturnCode structure in neom8n.h.
+ * @return return_code:		See NEOM8N_status_t structure in neom8n.h.
  */
-NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv) {
-	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
-	Timestamp local_gps_timestamp;
+NEOM8N_status_t NEOM8N_get_time(NEOM8N_time_t* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv) {
+	NEOM8N_status_t return_code = NEOM8N_ERROR_TIMEOUT;
+	NEOM8N_time_t gps_time;
 	// Reset flags.
 	neom8n_ctx.nmea_zda_data_valid = 0;
 	neom8n_ctx.nmea_zda_parsing_success = 0;
 	neom8n_ctx.nmea_rx_lf_flag = 0;
 	// Init ADC to monitor supercap voltage.
-	ADC1_Init();
+	ADC1_init();
 	// Reset fix duration and start RTC wake-up timer for timeout.
-	RTC_ClearWakeUpTimerFlag();
-	RTC_StartWakeUpTimer(timeout_seconds);
+	RTC_clear_wakeup_timer_flag();
+	RTC_start_wakeup_timer(timeout_seconds);
 	// Select GGA message to get complete position.
-	NEOM8N_SelectNmeaMessages(NMEA_ZDA_MASK);
+	NEOM8N_select_nmea_messages(NMEA_ZDA_MASK);
 	// Start DMA.
-	DMA1_InitChannel6();
-	DMA1_StopChannel6();
+	DMA1_init_channel6();
+	DMA1_stop_channel6();
 	neom8n_ctx.nmea_rx_fill_buf1 = 1;
-	DMA1_SetChannel6DestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
-	DMA1_StartChannel6();
-	LPUART1_EnableRx();
+	DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	DMA1_start_channel6();
+	LPUART1_enable_rx();
 	// Loop until data is retrieved or timeout expired.
-	while ((RTC_GetWakeUpTimerFlag() == 0) && (neom8n_ctx.nmea_zda_data_valid == 0)) {
+	while ((RTC_get_wakeup_timer_flag() == 0) && (neom8n_ctx.nmea_zda_data_valid == 0)) {
 		// Lower clock while waiting for NMEA frame.
-		RCC_SwitchToMsi();
-		LPUART1_UpdateBrr();
+		RCC_switch_to_msi();
+		LPUART1_update_brr();
 		// Enter low power sleep mode.
-		PWR_EnterLowPowerSleepMode();
+		PWR_enter_low_power_sleep_mode();
 		// Wake-up: check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag != 0) {
 			// Decode incoming NMEA message.
 			if (neom8n_ctx.nmea_rx_fill_buf1 != 0) {
-				NEOM8N_ParseNmeaZdaMessage(neom8n_ctx.nmea_rx_buf2, &local_gps_timestamp); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
+				NEOM8N_parse_nmea_zda(neom8n_ctx.nmea_rx_buf2, &gps_time); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
 			}
 			else {
-				NEOM8N_ParseNmeaZdaMessage(neom8n_ctx.nmea_rx_buf1, &local_gps_timestamp); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
+				NEOM8N_parse_nmea_zda(neom8n_ctx.nmea_rx_buf1, &gps_time); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
 			}
 			if (neom8n_ctx.nmea_zda_parsing_success != 0) {
 				// Check data.
-				if (NEOM8N_TimestampIsValid(&local_gps_timestamp) != 0) {
+				if (NEOM8N_time_is_valid(&gps_time) != 0) {
 					return_code = NEOM8N_SUCCESS;
 					// Save data.
-					(*gps_timestamp).year = local_gps_timestamp.year;
-					(*gps_timestamp).month = local_gps_timestamp.month;
-					(*gps_timestamp).date = local_gps_timestamp.date;
-					(*gps_timestamp).hours = local_gps_timestamp.hours;
-					(*gps_timestamp).minutes = local_gps_timestamp.minutes;
-					(*gps_timestamp).seconds = local_gps_timestamp.seconds;
+					(*gps_timestamp).year = gps_time.year;
+					(*gps_timestamp).month = gps_time.month;
+					(*gps_timestamp).date = gps_time.date;
+					(*gps_timestamp).hours = gps_time.hours;
+					(*gps_timestamp).minutes = gps_time.minutes;
+					(*gps_timestamp).seconds = gps_time.seconds;
 					// Update flag.
 					neom8n_ctx.nmea_zda_data_valid = 1;
 				}
@@ -579,28 +579,28 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned int tim
 			// Wait for next message.
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 			// Switch to high speed clock required for ADC operation.
-			RCC_SwitchToHsi();
+			RCC_switch_to_hsi();
 #ifdef HW3_0
 			// Check supercap voltage.
-			ADC1_PowerOn();
-			ADC1_PerformSupercapMeasurement();
-			ADC1_PowerOff();
-			ADC1_GetSupercapVoltage(&neom8n_ctx.neom8n_vcap_mv);
+			ADC1_power_on();
+			ADC1_perform_vcap_measurement();
+			ADC1_power_off();
+			ADC1_get_data[ADC_DATA_IDX_VCAP_MV, &neom8n_ctx.vcap_mv);
 			// Exit if supercap voltage falls below the given threshold.
-			if (neom8n_ctx.neom8n_vcap_mv < supercap_voltage_min_mv) break;
+			if (neom8n_ctx.vcap_mv < supercap_voltage_min_mv) break;
 #endif
 		}
-		IWDG_Reload();
+		IWDG_reload();
 	}
 	// Stop ADC, DMA and RTC wake-up timer.
-	ADC1_Disable();
-	DMA1_StopChannel6();
-	DMA1_Disable();
-	RTC_StopWakeUpTimer();
-	RTC_ClearWakeUpTimerFlag();
+	ADC1_disable();
+	DMA1_stop_channel6();
+	DMA1_disable();
+	RTC_stop_wakeup_timer();
+	RTC_clear_wakeup_timer_flag();
 	// Go back to HSI.
-	RCC_SwitchToHsi();
-	LPUART1_UpdateBrr();
+	RCC_switch_to_hsi();
+	LPUART1_update_brr();
 	// Return result.
 	return return_code;
 }
@@ -610,12 +610,12 @@ NEOM8N_ReturnCode NEOM8N_GetTimestamp(Timestamp* gps_timestamp, unsigned int tim
  * @param timeout_seconds:		Timeout in seconds.
  * @param vcap_min_mv:			Minimum supercap voltage to ensure GPS operation.
  * @param fix_duration_seconds:	Pointer that will contain effective fix duration.
- * @return return_code:			See NEOM8N_ReturnCode structure in neom8n.h.
+ * @return return_code:			See NEOM8N_status_t structure in neom8n.h.
  */
-NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeout_seconds, unsigned int vcap_min_mv, unsigned int* fix_duration_seconds) {
+NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int vcap_min_mv, unsigned int* fix_duration_seconds) {
 	// Local variables.
-	NEOM8N_ReturnCode return_code = NEOM8N_TIMEOUT;
-	Position local_gps_position;
+	NEOM8N_status_t return_code = NEOM8N_ERROR_TIMEOUT;
+	NEOM8N_position_t local_gps_position;
 	// Reset flags.
 	neom8n_ctx.nmea_gga_parsing_success = 0;
 	neom8n_ctx.nmea_gga_same_altitude_count = 0;
@@ -624,42 +624,42 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeou
 	neom8n_ctx.nmea_rx_lf_flag = 0;
 #ifdef HW3_0
 	// Init ADC to monitor supercap voltage.
-	ADC1_Init();
+	ADC1_init();
 #endif
 	// Reset fix duration and start RTC wake-up timer for timeout.
 	(*fix_duration_seconds) = 0;
-	RTC_ClearWakeUpTimerFlag();
-	RTC_StartWakeUpTimer(timeout_seconds);
+	RTC_clear_wakeup_timer_flag();
+	RTC_start_wakeup_timer(timeout_seconds);
 	// Select GGA message to get complete position.
-	NEOM8N_SelectNmeaMessages(NMEA_GGA_MASK);
+	NEOM8N_select_nmea_messages(NMEA_GGA_MASK);
 	// Start DMA.
-	DMA1_InitChannel6();
-	DMA1_StopChannel6();
+	DMA1_init_channel6();
+	DMA1_stop_channel6();
 	neom8n_ctx.nmea_rx_fill_buf1 = 1;
-	DMA1_SetChannel6DestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
-	DMA1_StartChannel6();
-	LPUART1_EnableRx();
+	DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
+	DMA1_start_channel6();
+	LPUART1_enable_rx();
 	// Loop until data is retrieved or timeout expired.
-	while ((RTC_GetWakeUpTimerFlag() == 0) && (neom8n_ctx.nmea_gga_same_altitude_count < NMEA_GGA_ALT_STABILITY_COUNT) && (neom8n_ctx.nmea_gga_high_quality_flag == 0)) {
+	while ((RTC_get_wakeup_timer_flag() == 0) && (neom8n_ctx.nmea_gga_same_altitude_count < NMEA_GGA_ALT_STABILITY_COUNT) && (neom8n_ctx.nmea_gga_high_quality_flag == 0)) {
 		// Lower clock while waiting for NMEA frame.
-		RCC_SwitchToMsi();
-		LPUART1_UpdateBrr();
+		RCC_switch_to_msi();
+		LPUART1_update_brr();
 		// Enter low power sleep mode.
-		PWR_EnterLowPowerSleepMode();
+		PWR_enter_low_power_sleep_mode();
 		// Wake-up.
 		(*fix_duration_seconds)++; // NMEA frames are output every seconds.
 		// Check LF flag to trigger parsing process.
 		if (neom8n_ctx.nmea_rx_lf_flag != 0) {
 			// Decode incoming NMEA message.
 			if (neom8n_ctx.nmea_rx_fill_buf1 != 0) {
-				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf2, &local_gps_position); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
+				NEOM8N_parse_nmea_gga(neom8n_ctx.nmea_rx_buf2, &local_gps_position); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
 			}
 			else {
-				NEOM8N_ParseNmeaGgaMessage(neom8n_ctx.nmea_rx_buf1, &local_gps_position); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
+				NEOM8N_parse_nmea_gga(neom8n_ctx.nmea_rx_buf1, &local_gps_position); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
 			}
 			if (neom8n_ctx.nmea_gga_parsing_success != 0) {
 				// Check data.
-				if (NEOM8N_PositionIsValid(&local_gps_position) != 0) {
+				if (NEOM8N_position_is_valid(&local_gps_position) != 0) {
 					return_code = NEOM8N_SUCCESS;
 					// Save data.
 					(*gps_position).lat_degrees = local_gps_position.lat_degrees;
@@ -693,31 +693,31 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeou
 			neom8n_ctx.nmea_rx_lf_flag = 0;
 #ifdef HW3_0
 			// Switch to high speed clock required for ADC operation.
-			RCC_SwitchToHsi();
+			RCC_switch_to_hsi();
 			// Check supercap voltage.
 			ADC1_PowerOn();
 			ADC1_PerformVcapMeasurement();
 			ADC1_PowerOff();
-			ADC1_GetData(ADC_DATA_IDX_VCAP_MV, &neom8n_ctx.neom8n_vcap_mv);
+			ADC1_get_data(ADC_DATA_IDX_VCAP_MV, &neom8n_ctx.vcap_mv);
 			// Exit if supercap voltage falls below the given threshold.
-			if (neom8n_ctx.neom8n_vcap_mv < vcap_min_mv) break;
+			if (neom8n_ctx.vcap_mv < vcap_min_mv) break;
 #endif
 		}
-		IWDG_Reload();
+		IWDG_reload();
 	}
 	// Stop ADC and DMA.
-	DMA1_StopChannel6();
-	DMA1_Disable();
+	DMA1_stop_channel6();
+	DMA1_disable();
 	// Go back to HSI.
-	RCC_SwitchToHsi();
-	LPUART1_UpdateBrr();
+	RCC_switch_to_hsi();
+	LPUART1_update_brr();
 	// Stop RTC wake-up timer
-	RTC_StopWakeUpTimer();
+	RTC_stop_wakeup_timer();
 	// Clamp fix duration.
-	if ((RTC_GetWakeUpTimerFlag() > 0) || ((*fix_duration_seconds) > timeout_seconds)) {
+	if ((RTC_get_wakeup_timer_flag() > 0) || ((*fix_duration_seconds) > timeout_seconds)) {
 		(*fix_duration_seconds) = timeout_seconds;
 	}
-	RTC_ClearWakeUpTimerFlag();
+	RTC_clear_wakeup_timer_flag();
 	// Return result.
 	return return_code;
 }
@@ -726,20 +726,20 @@ NEOM8N_ReturnCode NEOM8N_GetPosition(Position* gps_position, unsigned int timeou
  * @param lf_flag:	Indicates if characters match interrupt occured (LPUART).
  * @return:			None.
  */
-void NEOM8N_SwitchDmaBuffer(unsigned char lf_flag) {
+void NEOM8N_switch_dma_buffer(unsigned char lf_flag) {
 	// Stop and start DMA transfer to switch buffer.
-	DMA1_StopChannel6();
+	DMA1_stop_channel6();
 	// Switch buffer.
 	if (neom8n_ctx.nmea_rx_fill_buf1 == 0) {
-		DMA1_SetChannel6DestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
+		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.nmea_rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
 		neom8n_ctx.nmea_rx_fill_buf1 = 1;
 	}
 	else {
-		DMA1_SetChannel6DestAddr((unsigned int) &(neom8n_ctx.nmea_rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
+		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.nmea_rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
 		neom8n_ctx.nmea_rx_fill_buf1 = 0;
 	}
 	// Update LF flag to start decoding or not.
 	neom8n_ctx.nmea_rx_lf_flag = lf_flag;
 	// Restart DMA transfer.
-	DMA1_StartChannel6();
+	DMA1_start_channel6();
 }
