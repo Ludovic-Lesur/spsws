@@ -219,12 +219,12 @@ void ADC1_perform_measurements(void) {
 }
 
 /* GET ADC DATA.
- * @param adc_data_idx:		Index of the data to retrieve.
+ * @param data_idx:		Index of the data to retrieve.
  * @param data:				Pointer that will contain ADC data.
  * @return:					None.
  */
-void ADC1_get_data(ADC_data_index_t adc_data_idx, unsigned int* data) {
-	(*data) = adc_ctx.data[adc_data_idx];
+void ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
+	(*data) = adc_ctx.data[data_idx];
 }
 
 /* GET MCU TEMPERATURE.

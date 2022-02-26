@@ -40,12 +40,14 @@ typedef enum {
 	NVIC_IT_SPI2 = 26,
 	NVIC_IT_USART1 = 27,
 	NVIC_IT_USART2 = 28,
-	NVIC_IT_LPUART1 = 29
+	NVIC_IT_LPUART1 = 29,
+	NVIC_IT_LAST
 } NVIC_interrupt_t;
 
 typedef enum {
 	NVIC_PRIORITY_MAX = 0,
-	NVIC_PRIORITY_MIN = 3
+	NVIC_PRIORITY_MIN = 3,
+	NVIC_PRIORITY_LAST
 } NVIC_priority_t;
 
 /*** NVIC functions ***/

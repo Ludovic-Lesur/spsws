@@ -24,12 +24,14 @@ typedef enum {
 	GPIO_MODE_INPUT,
 	GPIO_MODE_OUTPUT,
 	GPIO_MODE_ALTERNATE_FUNCTION,
-	GPIO_MODE_ANALOG
+	GPIO_MODE_ANALOG,
+	GPIO_MODE_LAST
 } GPIO_mode_t;
 
 typedef enum {
 	GPIO_TYPE_PUSH_PULL,
-	GPIO_TYPE_OPEN_DRAIN
+	GPIO_TYPE_OPEN_DRAIN,
+	GPIO_TYPE_LAST
 } GPIO_output_type_t;
 
 typedef enum {
@@ -37,12 +39,14 @@ typedef enum {
 	GPIO_SPEED_MEDIUM,
 	GPIO_SPEED_HIGH,
 	GPIO_SPEED_VERY_HIGH,
+	GPIO_SPEED_LAST
 } GPIO_output_speed_t;
 
 typedef enum {
 	GPIO_PULL_NONE,
 	GPIO_PULL_UP,
-	GPIO_PULL_DOWN
+	GPIO_PULL_DOWN,
+	GPIO_PULL_LAST
 } GPIO_pull_resistor_t;
 
 /*** GPIO functions ***/

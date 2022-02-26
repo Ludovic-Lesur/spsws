@@ -20,7 +20,7 @@ typedef enum {
 void ADC1_init(void);
 void ADC1_disable(void);
 void ADC1_perform_measurements(void);
-void ADC1_get_data(ADC_data_index_t adc_data_idx, unsigned int* data);
+void ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data);
 void ADC1_get_tmcu_comp2(signed char* tmcu_degrees);
 void ADC1_get_tmcu_comp1(unsigned char* tmcu_degrees);
 
