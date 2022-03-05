@@ -219,13 +219,13 @@ void SPSWS_update_time_flags(void) {
 	// Retrieve previous wake-up timestamp from NVM.
 	unsigned char nvm_byte = 0;
 	NVM_enable();
-	NVM_read_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), &nvm_byte);
+	NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), &nvm_byte);
 	spsws_ctx.previous_wake_up_timestamp.year = (nvm_byte << 8);
-	NVM_read_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), &nvm_byte);
+	NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), &nvm_byte);
 	spsws_ctx.previous_wake_up_timestamp.year |= nvm_byte;
-	NVM_read_byte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, &spsws_ctx.previous_wake_up_timestamp.month);
-	NVM_read_byte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, &spsws_ctx.previous_wake_up_timestamp.date);
-	NVM_read_byte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, &spsws_ctx.previous_wake_up_timestamp.hours);
+	NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_timestamp.month);
+	NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_timestamp.date);
+	NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_timestamp.hours);
 	NVM_disable();
 	// Check timestamp are differents (avoiding false wake-up due to RTC recalibration).
 	if ((spsws_ctx.current_timestamp.year != spsws_ctx.previous_wake_up_timestamp.year) ||
@@ -262,11 +262,11 @@ void SPSWS_update_pwut(void) {
 	RTC_get_timestamp(&spsws_ctx.current_timestamp);
 	// Update previous wake-up timestamp.
 	NVM_enable();
-	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), ((spsws_ctx.current_timestamp.year & 0xFF00) >> 8));
-	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), ((spsws_ctx.current_timestamp.year & 0x00FF) >> 0));
-	NVM_write_byte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, spsws_ctx.current_timestamp.month);
-	NVM_write_byte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, spsws_ctx.current_timestamp.date);
-	NVM_write_byte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, spsws_ctx.current_timestamp.hours);
+	NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_timestamp.year & 0xFF00) >> 8));
+	NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_timestamp.year & 0x00FF) >> 0));
+	NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_timestamp.month);
+	NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_timestamp.date);
+	NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_timestamp.hours);
 	NVM_disable();
 }
 
@@ -297,7 +297,7 @@ int main (void) {
 	spsws_ctx.geoloc_timeout_flag = 0;
 	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	NVM_enable();
-	NVM_read_byte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, &spsws_ctx.status.raw_byte);
+	NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
 	NVM_disable();
 #ifdef IM
 	spsws_ctx.status.field.station_mode = 0;
@@ -668,7 +668,7 @@ int main (void) {
 			I2C1_disable();
 			// Store status byte in NVM.
 			NVM_enable();
-			NVM_write_byte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, spsws_ctx.status.raw_byte);
+			NVM_write_byte(NVM_ADDRESS_STATUS, spsws_ctx.status.raw_byte);
 			NVM_disable();
 			// Switch to internal MSI 65kHz (must be called before WIND functions to init LPTIM with right clock frequency).
 			RCC_switch_to_msi();
@@ -788,7 +788,9 @@ int main (void) {
 	AT_init();
 	// Main loop.
 	while (1) {
-		// Perform AT commands parsing.
+		// Enter sleep mode.
+		PWR_enter_low_power_sleep_mode();
+		// Wake-up: perform AT command parsing.
 		AT_task();
 	}
 	return 0;

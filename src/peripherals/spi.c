@@ -106,16 +106,21 @@ void SPI1_disable(void) {
 }
 
 /* SWITCH ALL SPI1 SLAVES ON.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SPI1_power_on(void) {
+SPI_status_t SPI1_power_on(void) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-	LPTIM1_delay_milliseconds(50, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	LPTIM1_delay_milliseconds(50, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
 #endif
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
@@ -130,14 +135,20 @@ void SPI1_power_on(void) {
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 #endif
 	// Wait for power-on.
-	LPTIM1_delay_milliseconds(50, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SWITCH ALL SPI1 SLAVES OFF.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SPI1_power_off(void) {
+SPI_status_t SPI1_power_off(void) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Turn SPI1 slaves off.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 	GPIO_write(&GPIO_SX1232_CS, 0); // CS low (to avoid powering slaves via SPI bus).
@@ -156,35 +167,47 @@ void SPI1_power_off(void) {
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Wait for power-off.
-	LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SEND A BYTE THROUGH SPI1.
  * @param tx_data:	Data to send (8-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI1_write_byte(unsigned char tx_data) {
+SPI_status_t SPI1_write_byte(unsigned char tx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	unsigned int loop_count = 0;
 #ifdef HW1_0
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
 #endif
 	// Wait for TXE flag.
-	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send data.
 	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
-	return 1;
+errors:
+	return status;
 }
 
 /* READ A BYTE FROM SPI1.
  * @param rx_data:	Pointer to byte that will contain the data to read (8-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
+SPI_status_t SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	unsigned int loop_count = 0;
 #ifdef HW1_0
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
@@ -192,11 +215,13 @@ unsigned char SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
 	// Dummy read to DR to clear RXNE flag.
 	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
 	// Wait for TXE flag.
-	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
@@ -205,47 +230,62 @@ unsigned char SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_RX_TIMEOUT;
+			goto errors;
+		}
 	}
 	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
-	return 1;
+errors:
+	return status;
 }
 
 #ifdef HW1_0
 /* SEND A SHORT THROUGH SPI1.
  * @param tx_data:	Data to send (16-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI1_write_short(unsigned short tx_data) {
+SPI_status_t SPI1_write_short(unsigned short tx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	unsigned int loop_count = 0;
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Wait for TXE flag.
-	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send data.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
-	return 1;
+errors:
+	return status;
 }
 
 /* READ A SHORT FROM SPI1.
  * @param rx_data:	Pointer to short that will contain the data to read (16-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
+SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	unsigned int loop_count = 0;
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Dummy read to DR to clear RXNE flag.
 	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
 	// Wait for TXE flag.
-	unsigned int loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
@@ -254,10 +294,14 @@ unsigned char SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_RX_TIMEOUT;
+			goto errors;
+		}
 	}
 	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
-	return 1;
+errors:
+	return status;
 }
 #endif
 
@@ -318,14 +362,18 @@ void SPI2_disable(void) {
 }
 
 /* SWITCH ALL SPI2 SLAVES ON.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SPI2_power_on(void) {
+SPI_status_t SPI2_power_on(void) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Turn MAX11136 on.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 	// Wait for power-on.
-	LPTIM1_delay_milliseconds(50, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -333,14 +381,20 @@ void SPI2_power_on(void) {
 	GPIO_write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Wait for power-on.
-	LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SWITCH ALL SPI2 SLAVES OFF.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SPI2_power_off(void) {
+SPI_status_t SPI2_power_off(void) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Turn MAX11136 off.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
 	GPIO_write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
@@ -350,39 +404,53 @@ void SPI2_power_off(void) {
 	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 	// Wait for power-off.
-	LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SPI_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SEND A SHORT THROUGH SPI2.
  * @param tx_data:	Data to send (16-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI2_write_short(unsigned short tx_data) {
-	// Wait for TXE flag.
+SPI_status_t SPI2_write_short(unsigned short tx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
 	unsigned int loop_count = 0;
+	// Wait for TXE flag.
 	while (((SPI2 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send data.
 	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
-	return 1;
+errors:
+	return status;
 }
 
 /* READ A SHORT FROM SPI2.
  * @param rx_data:	Pointer to short that will contain the data to read (16-bits).
- * @return:			1 in case of success, 0 in case of failure.
+ * @return status:	Function execution status.
  */
-unsigned char SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
+SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
+	// Local variables.
+	SPI_status_t status = SPI_SUCCESS;
+	unsigned int loop_count = 0;
 	// Dummy read to DR to clear RXNE flag.
 	(*rx_data) = *((volatile unsigned short*) &(SPI2 -> DR));
 	// Wait for TXE flag.
-	unsigned int loop_count = 0;
 	while (((SPI2 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Send dummy data on MOSI to generate clock.
 	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
@@ -391,9 +459,13 @@ unsigned char SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
 	while (((SPI2 -> SR) & (0b1 << 0)) == 0) {
 		// Wait for RXNE='1' or timeout.
 		loop_count++;
-		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > SPI_ACCESS_TIMEOUT_COUNT) {
+			status = SPI_ERROR_RX_TIMEOUT;
+			goto errors;
+		}
 	}
 	(*rx_data) = *((volatile unsigned short*) &(SPI2 -> DR));
-	return 1;
+errors:
+	return status;
 }
 #endif

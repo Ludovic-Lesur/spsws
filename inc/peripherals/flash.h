@@ -8,8 +8,19 @@
 #ifndef FLASH_H
 #define FLASH_H
 
+/*** FLASH structures ***/
+
+typedef enum {
+	FLASH_SUCCESS = 0,
+	FLASH_ERROR_LATENCY,
+	FLASH_ERROR_TIMEOUT,
+	FLASH_ERROR_LAST
+} FLASH_status_t;
+
 /*** FLASH functions ***/
 
-void FLASH_set_latency(unsigned char wait_states);
+FLASH_status_t FLASH_set_latency(unsigned char wait_states);
+
+#define FLASH_status_check(error_base) { if (flash_status != FLASH_SUCCESS) { status = error_base + flash_status; goto errors; }}
 
 #endif /* FLASH_H */

@@ -66,26 +66,27 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 }
 
 /* ENTER INITIALIZATION MODE TO ENABLE RTC REGISTERS UPDATE.
- * @param:						None.
- * @return rtc_initf_success:	1 if RTC entered initialization mode, 0 otherwise.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static unsigned char RTC_enter_initialization_mode(void) {
+static RTC_status_t RTC_enter_initialization_mode(void) {
 	// Local variables.
-	unsigned char rtc_initf_success = 1;
+	RTC_status_t status = RTC_SUCCESS;
+	unsigned int loop_count = 0;
 	// Enter key.
 	RTC -> WPR = 0xCA;
 	RTC -> WPR = 0x53;
 	RTC -> ISR |= (0b1 << 7); // INIT='1'.
-	unsigned int loop_count = 0;
+	// Wait for initialization mode.
 	while (((RTC -> ISR) & (0b1 << 6)) == 0) {
 		// Wait for INITF='1' or timeout.
+		loop_count++;
 		if (loop_count > RTC_INIT_TIMEOUT_COUNT) {
-			rtc_initf_success = 0;
+			status = RTC_ERROR_INITIALIZATION_MODE;
 			break;
 		}
-		loop_count++;
 	}
-	return rtc_initf_success;
+	return status;
 }
 
 /* EXIT INITIALIZATION MODE TO PROTECT RTC REGISTERS.
@@ -119,28 +120,33 @@ void RTC_reset(void) {
 /* INIT HARDWARE RTC PERIPHERAL.
  * @param rtc_use_lse:	RTC will be clocked on LSI if 0, on LSE otherwise.
  * @param lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
- * @return:				None.
+ * @return status:		Function execution status.
  */
-void RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
+RTC_status_t RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
+	// Local variables.
+	RTC_status_t status = RTC_SUCCESS;
 	// Manage RTC clock source.
 	if ((*rtc_use_lse) != 0) {
-		// Use LSE.
-		RCC -> CSR |= (0b01 << 16); // RTCSEL='01'.
+		RCC -> CSR |= (0b01 << 16); // RTCSEL='01' (LSE).
 	}
 	else {
-		// Use LSI.
-		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
+		RCC -> CSR |= (0b10 << 16); // RTCSEL='10' (LSI).
 	}
 	// Enable RTC and register access.
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
 	// Switch to LSI if RTC failed to enter initialization mode.
-	if (RTC_enter_initialization_mode() == 0) {
+	status = RTC_enter_initialization_mode();
+	if (status != RTC_SUCCESS) {
+		// Try using LSI.
 		RTC_reset();
 		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
 		RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
-		RTC_enter_initialization_mode();
-		// Update flag.
-		(*rtc_use_lse) = 0;
+		status = RTC_enter_initialization_mode();
+		if (status != RTC_SUCCESS) {
+			// Update flag.
+			(*rtc_use_lse) = 0;
+			goto errors;
+		}
 	}
 	// Configure prescaler.
 	if ((*rtc_use_lse) != 0) {
@@ -178,19 +184,24 @@ void RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	// Set interrupt priority.
 	NVIC_set_priority(NVIC_IT_RTC, 1);
 	NVIC_enable_interrupt(NVIC_IT_RTC);
+errors:
+	return status;
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
  * @param gps_timestamp:	Pointer to timestamp from GPS.
- * @return:					None.
+ * @return status:			Function execution status.
  */
-void RTC_calibrate(NEOM8N_time_t* gps_timestamp) {
-	// Compute register values.
-	unsigned int tr_value = 0; // Reset all bits.
-	unsigned int dr_value = 0; // Reset all bits.
+RTC_status_t RTC_calibrate(NEOM8N_time_t* gps_timestamp) {
+	// Local variables.
+	RTC_status_t status = RTC_SUCCESS;
+	unsigned int tr_value = 0;
+	unsigned int dr_value = 0;
+	unsigned char tens = 0;
+	unsigned char units = 0;
 	// Year.
-	unsigned char tens = ((gps_timestamp -> year)-2000) / 10;
-	unsigned char units = ((gps_timestamp -> year)-2000) - (tens*10);
+	tens = ((gps_timestamp -> year)-2000) / 10;
+	units = ((gps_timestamp -> year)-2000) - (tens*10);
 	dr_value |= (tens << 20) | (units << 16);
 	// Month.
 	tens = (gps_timestamp -> month) / 10;
@@ -213,12 +224,15 @@ void RTC_calibrate(NEOM8N_time_t* gps_timestamp) {
 	units = (gps_timestamp -> seconds) - (tens*10);
 	tr_value |= (tens << 4) | (units << 0);
 	// Enter initialization mode.
-	RTC_enter_initialization_mode();
+	status = RTC_enter_initialization_mode();
+	if (status != RTC_SUCCESS) goto errors;
 	// Perform update.
 	RTC -> TR = tr_value;
 	RTC -> DR = dr_value;
 	// Exit initialization mode and restart RTC.
 	RTC_exit_initialization_mode();
+errors:
+	return status;
 }
 
 /* GET CURRENT RTC TIME.
@@ -314,43 +328,56 @@ void RTC_clear_alarm_b_flag(void) {
 
 /* START RTC WAKE-UP TIMER.
  * @param delay_seconds:	Delay in seconds.
- * @return:					None.
+ * @return status:			Function execution status.
  */
-void RTC_start_wakeup_timer(unsigned int delay_seconds) {
-	// Clamp parameter.
-	unsigned int local_delay_seconds = delay_seconds;
-	if (local_delay_seconds > RTC_WAKEUP_TIMER_DELAY_MAX) {
-		local_delay_seconds = RTC_WAKEUP_TIMER_DELAY_MAX;
+RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds) {
+	// Local variables.
+	RTC_status_t status = RTC_SUCCESS;
+	// Check parameter.
+	if (delay_seconds > RTC_WAKEUP_TIMER_DELAY_MAX) {
+		status = RTC_ERROR_WAKEUP_TIMER_DELAY;
+		goto errors;
 	}
 	// Check if timer si not allready running.
-	if (((RTC -> CR) & (0b1 << 10)) == 0) {
-		// Enable RTC and register access.
-		RTC_enter_initialization_mode();
-		// Configure wake-up timer.
-		RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
-		RTC -> WUTR = (local_delay_seconds - 1);
-		// Clear flags.
-		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
-		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
-		// Enable interrupt.
-		RTC -> CR |= (0b1 << 14); // WUTE='1'.
-		// Start timer.
-		RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
-		RTC_exit_initialization_mode();
+	if (((RTC -> CR) & (0b1 << 10)) != 0) {
+		status = RTC_ERROR_WAKEUP_TIMER_RUNNING;
+		goto errors;
 	}
+	// Enable RTC and register access.
+	status = RTC_enter_initialization_mode();
+	if (status != RTC_SUCCESS) goto errors;
+	// Configure wake-up timer.
+	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
+	RTC -> WUTR = (delay_seconds - 1);
+	// Clear flags.
+	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
+	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+	// Enable interrupt.
+	RTC -> CR |= (0b1 << 14); // WUTE='1'.
+	// Start timer.
+	RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
+	RTC_exit_initialization_mode();
+errors:
+	return status;
 }
 
 /* STOP RTC WAKE-UP TIMER.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void RTC_stop_wakeup_timer(void) {
+RTC_status_t RTC_stop_wakeup_timer(void) {
+	// Local variables.
+	RTC_status_t status = RTC_SUCCESS;
 	// Enable RTC and register access.
-	RTC_enter_initialization_mode();
-	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
+	status = RTC_enter_initialization_mode();
+	if (status != RTC_SUCCESS) goto errors;
+	// Disable wake-up timer.
+	RTC -> CR &= ~(0b1 << 10);
 	RTC_exit_initialization_mode();
 	// Disable interrupt.
 	RTC -> CR &= ~(0b1 << 14); // WUTE='0'.
+errors:
+	return status;
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.

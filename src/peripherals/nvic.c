@@ -46,10 +46,9 @@ void NVIC_disable_interrupt(NVIC_interrupt_t it_num) {
  */
 void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority) {
 	// Check parameter.
-	if ((priority >= NVIC_PRIORITY_MAX) && (priority <= NVIC_PRIORITY_MIN)) {
-		// Reset bits.
-		NVIC -> IPR[(it_num >> 2)] &= ~(0xFF << (8 * (it_num % 4)));
-		// Set priority.
-		NVIC -> IPR[(it_num >> 2)] |= ((priority << 6) << (8 * (it_num % 4)));
-	}
+	if (priority > NVIC_PRIORITY_MIN) return;
+	// Reset bits.
+	NVIC -> IPR[(it_num >> 2)] &= ~(0xFF << (8 * (it_num % 4)));
+	// Set priority.
+	NVIC -> IPR[(it_num >> 2)] |= ((priority << 6) << (8 * (it_num % 4)));
 }

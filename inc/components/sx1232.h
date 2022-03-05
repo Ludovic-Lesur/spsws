@@ -13,21 +13,17 @@
 // Frequency range.
 #define SX1232_RF_FREQUENCY_HZ_MIN				862000000
 #define SX1232_RF_FREQUENCY_HZ_MAX				1020000000
-
 // TCXO and output clock frequency (DIO5).
 #define SX1232_FXOSC_HZ							32000000
 #define SX1232_CLKOUT_PRESCALER					2
 #define SX1232_CLKOUT_FREQUENCY_KHZ				((SX1232_FXOSC_HZ) / (SX1232_CLKOUT_PRESCALER * 1000))
-
 // Output power ranges.
 #define SX1232_OUTPUT_POWER_RFO_MIN				0
 #define SX1232_OUTPUT_POWER_RFO_MAX				17
 #define SX1232_OUTPUT_POWER_PABOOST_MIN			2
 #define SX1232_OUTPUT_POWER_PABOOST_MAX			20
-
 // SX1232 RXBW exponent maximum value.
 #define SX1232_RXBW_EXPONENT_MAX				7
-
 // RSSI offset due to internal and external LNA (calibration).
 #define SX1232_RSSI_OFFSET_DB					24
 

@@ -18,19 +18,22 @@
 
 #define I2C_ACCESS_TIMEOUT_COUNT	1000000
 
-/*** I2C local functions ***/
-
 /* CLEAR ALL I2C PERIPHERAL FLAGS
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static void I2C1_clear(void) {
+static I2C_status_t I2C1_clear(void) {
+	// Local variables.
+	I2C_status_t status = I2C_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Disable peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
-	LPTIM1_delay_milliseconds(1, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(1, 0); LPTIM1_status_check(I2C_ERROR_LPTIM);
 	// Enable peripheral and clear all flags.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
 	I2C1 -> ICR |= 0x00003F38;
+errors:
+	return status;
 }
 
 /*** I2C functions ***/
@@ -77,30 +80,42 @@ void I2C1_disable(void) {
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void I2C1_power_on(void) {
+I2C_status_t I2C1_power_on(void) {
+	// Local variables.
+	I2C_status_t status = I2C_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Turn sensors and pull-up resistors on.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(I2C_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void I2C1_power_off(void) {
+I2C_status_t I2C1_power_off(void) {
+	// Local variables.
+	I2C_status_t status = I2C_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Turn sensors and pull-up resistors off.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	// Disable I2C alternate function.
 	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Delay required if another cycle is requested by applicative layer.
-	LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(I2C_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* WRITE DATA ON I2C1 BUS (see algorithme on p.607 of RM0377 datasheet).
@@ -108,17 +123,23 @@ void I2C1_power_off(void) {
  * @param tx_buf:			Array containing the byte(s) to send.
  * @param tx_buf_length:	Number of bytes to send (length of 'tx_buf').
  * @param stop_flag:		Generate stop condition at the end of the transfer if non zero.
- * @return:					1 in case of success, 0 in case of failure.
+ * @return status:			Function execution status.
  */
-unsigned char I2C1_write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag) {
+I2C_status_t I2C1_write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag) {
+	// Local variables.
+	I2C_status_t status = I2C_SUCCESS;
+	unsigned int loop_count = 0;
+	unsigned char idx = 0;
 	// Clear peripheral.
 	I2C1_clear();
 	// Wait for I2C bus to be ready.
-	unsigned int loop_count = 0;
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
 		// Wait for BUSY='0' or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_BUSY;
+			goto errors;
+		}
 	}
 	// Configure number of bytes to send.
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
@@ -133,28 +154,36 @@ unsigned char I2C1_write(unsigned char slave_address, unsigned char* tx_buf, uns
 	while (((I2C1 -> CR2) & (0b1 << 13)) != 0) {
 		// Wait for START bit to be cleared by hardware or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_START_BIT_CLEAR;
+			goto errors;
+		}
 	}
 	// Send bytes.
-	unsigned char byte_idx = 0;
 	loop_count = 0;
-	while ((byte_idx < tx_buf_length) && (((I2C1 -> ISR) & (0b1 << 4)) == 0)) {
+	while ((idx < tx_buf_length) && (((I2C1 -> ISR) & (0b1 << 4)) == 0)) {
 		// Wait for transmit buffer to be empty (TXIS='1').
 		if (((I2C1 -> ISR) & (0b1 << 1)) != 0) {
 			// Send next byte.
-			I2C1 -> TXDR = tx_buf[byte_idx];
-			byte_idx++;
+			I2C1 -> TXDR = tx_buf[idx];
+			idx++;
 		}
 		// Exit if timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_TX_BUFFER_EMPTY;
+			goto errors;
+		}
 	}
 	// Wait for last byte to be sent.
 	loop_count = 0;
 	while (((I2C1 -> ISR) & (0b1 << 6)) == 0) {
 		// Wait for TC='1' or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_TRANSFER_COMPLETE;
+			goto errors;
+		}
 	}
 	if (stop_flag != 0) {
 		// Generate stop condition.
@@ -163,29 +192,39 @@ unsigned char I2C1_write(unsigned char slave_address, unsigned char* tx_buf, uns
 		while (((I2C1 -> ISR) & (0b1 << 5)) == 0) {
 			// Wait for STOPF='1' or timeout.
 			loop_count++;
-			if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+			if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+				status = I2C_ERROR_STOP_DETECTION_FLAG;
+				goto errors;
+			}
 		}
 		// Clear flag.
 		I2C1 -> ICR |= (0b1 << 5); // STOPCF='1'.
 	}
-	return 1;
+errors:
+	return status;
 }
 
 /* READ BYTES FROM I2C1 BUS (see algorithme on p.611 of RM0377 datasheet).
  * @param slave_address:	Slave address on 7 bits.
  * @param rx_buf:			Array that will contain the byte(s) to receive.
  * @param rx_buf_length:	Number of bytes to receive (length of 'rx_buf').
- * @return:					1 in case of success, 0 in case of failure.
+ * @return status:			Function execution status.
  */
-unsigned char I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+I2C_status_t I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+	// Local variables.
+	I2C_status_t status = I2C_SUCCESS;
+	unsigned int loop_count = 0;
+	unsigned char idx = 0;
 	// Clear peripheral.
 	I2C1_clear();
-	// Wait for I2C bus to be ready/
-	unsigned int loop_count = 0;
+	// Wait for I2C bus to be ready.
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
 		// Wait for BUSY='0' or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_BUSY;
+			goto errors;
+		}
 	}
 	// Configure number of bytes to send.
 	I2C1 -> CR2 &= 0xFF00FFFF; // Reset bits 16-23.
@@ -201,21 +240,26 @@ unsigned char I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsi
 	while (((I2C1 -> CR2) & (0b1 << 13)) != 0) {
 		// Wait for START bit to be cleared by hardware or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_START_BIT_CLEAR;
+			goto errors;
+		}
 	}
 	// Get bytes.
-	unsigned char byte_idx = 0;
 	loop_count = 0;
-	while (byte_idx < rx_buf_length) {
+	while (idx < rx_buf_length) {
 		// Wait for incoming data (RXNE='1').
 		if (((I2C1 -> ISR) & (0b1 << 2)) != 0) {
 			// Fill RX buffer with new byte */
-			rx_buf[byte_idx] = I2C1 -> RXDR;
-			byte_idx++;
+			rx_buf[idx] = (I2C1 -> RXDR);
+			idx++;
 		}
 		// Exit if timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_RX_TIMEOUT;
+			goto errors;
+		}
 	}
 	// Send a NACK and STOP condition after last byte.
 	I2C1 -> CR2 |= (0b1 << 15);
@@ -224,9 +268,13 @@ unsigned char I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsi
 	while (((I2C1 -> ISR) & (0b1 << 5)) == 0) {
 		// Wait for STOPF='1' or timeout.
 		loop_count++;
-		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) return 0;
+		if (loop_count > I2C_ACCESS_TIMEOUT_COUNT) {
+			status = I2C_ERROR_STOP_DETECTION_FLAG;
+			goto errors;
+		}
 	}
 	// Clear flag.
 	I2C1 -> ICR |= (0b1 << 5); // STOPCF='1'.
-	return 1;
+errors:
+	return status;
 }

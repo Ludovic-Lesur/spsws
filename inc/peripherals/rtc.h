@@ -11,11 +11,21 @@
 #include "mode.h"
 #include "neom8n.h"
 
+/*** RTC structures ***/
+
+typedef enum {
+	RTC_SUCCESS = 0,
+	RTC_ERROR_INITIALIZATION_MODE,
+	RTC_ERROR_WAKEUP_TIMER_DELAY,
+	RTC_ERROR_WAKEUP_TIMER_RUNNING,
+	RTC_ERROR_LAST
+} RTC_status_t;
+
 /*** RTC functions ***/
 
 void RTC_reset(void);
-void RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
-void RTC_calibrate(NEOM8N_time_t* gps_timestamp);
+RTC_status_t RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
+RTC_status_t RTC_calibrate(NEOM8N_time_t* gps_timestamp);
 void RTC_get_timestamp(NEOM8N_time_t* rtc_timestamp);
 
 void RTC_enable_alarm_a_interrupt(void);
@@ -28,9 +38,11 @@ void RTC_disable_alarm_b_interrupt(void);
 volatile unsigned char RTC_get_alarm_b_flag(void);
 void RTC_clear_alarm_b_flag(void);
 
-void RTC_start_wakeup_timer(unsigned int delay_seconds);
-void RTC_stop_wakeup_timer(void);
+RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds);
+RTC_status_t RTC_stop_wakeup_timer(void);
 volatile unsigned char RTC_get_wakeup_timer_flag(void);
 void RTC_clear_wakeup_timer_flag(void);
+
+#define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}
 
 #endif /* RTC_H */

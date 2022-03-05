@@ -9,13 +9,20 @@
 
 #include "iwdg_reg.h"
 
+/*** FLASH local macros ***/
+
+#define IWDG_TIMEOUT_COUNT		100000
+
 /*** IWDG functions ***/
 
 /* INIT AND START INDEPENDENT WATCHDOG.
  * @param:	None.
  * @return:	None.
  */
-void IWDG_init(void) {
+IWDG_status_t IWDG_init(void) {
+	// Local variables.
+	IWDG_status_t status = IWDG_SUCCESS;
+	unsigned int loop_count = 0;
 	// Configure peripheral.
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.
@@ -23,8 +30,15 @@ void IWDG_init(void) {
 	IWDG -> PR |= (0b111 << 0); // PR='111'.
 	// Set reload value.
 	IWDG -> RLR |= 0x00000FFF; // 4095 * (prescaler / LSI) = 27s.
-	// Wait for register to be updated.
-	while (IWDG -> SR != 0); // Wait for WVU='0', RVU='0' and PVU='0'.
+	// Wait for WVU='0', RVU='0' and PVU='0' or timeout.
+	while (IWDG -> SR != 0) {
+		loop_count++;
+		if (loop_count > IWDG_TIMEOUT_COUNT) {
+			status = IWDG_ERROR_TIMEOUT;
+			break;
+		}
+	}
+	return status;
 }
 
 /* RELOAD WATCHDOG COUNTER.

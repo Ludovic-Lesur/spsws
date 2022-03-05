@@ -16,6 +16,10 @@
 #include "usart.h"
 #include "wind.h"
 
+/*** TIM local macros ***/
+
+#define TIM_TIMEOUT_COUNT	1000000
+
 /*** TIM local global variables ***/
 
 static volatile unsigned char tim21_flag = 0;
@@ -64,16 +68,18 @@ void TIM21_init(void) {
 
 /* MEASURE LSI CLOCK FREQUENCY WITH TIM21 CH1.
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
+TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	// Local variables.
+	TIM_status_t status = TIM_SUCCESS;
 	unsigned char tim21_interrupt_count = 0;
 	unsigned int tim21_ccr1_edge1 = 0;
 	unsigned int tim21_ccr1_edge8 = 0;
+	unsigned int loop_count = 0;
 	// Reset counter.
-	TIM21 -> CNT &= 0xFFFF0000;
-	TIM21 -> CCR1 &= 0xFFFF0000;
+	TIM21 -> CNT = 0;
+	TIM21 -> CCR1 = 0;
 	// Enable interrupt.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
 	NVIC_enable_interrupt(NVIC_IT_TIM21);
@@ -84,7 +90,14 @@ void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	while (tim21_interrupt_count < 2) {
 		// Wait for interrupt.
 		tim21_flag = 0;
-		while (tim21_flag == 0);
+		loop_count = 0;
+		while (tim21_flag == 0) {
+			loop_count++;
+			if (loop_count > TIM_TIMEOUT_COUNT) {
+				status = TIM_ERROR_INTERRUPT_TIMEOUT;
+				goto errors;
+			}
+		}
 		tim21_interrupt_count++;
 		if (tim21_interrupt_count == 1) {
 			tim21_ccr1_edge1 = (TIM21 -> CCR1);
@@ -100,6 +113,8 @@ void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
 	// Compute LSI frequency.
 	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
+errors:
+	return status;
 }
 
 /* DISABLE TIM21 PERIPHERAL.

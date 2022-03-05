@@ -11,6 +11,7 @@
 #include "addon_sigfox_rf_protocol_api.h"
 #include "aes.h"
 #include "dps310.h"
+#include "error.h"
 #include "flash_reg.h"
 #include "i2c.h"
 #include "lpuart.h"
@@ -57,12 +58,8 @@
 // Parameters separator.
 #define AT_CHAR_SEPARATOR				','
 // Responses.
-#define AT_RESPONSE_OK					"OK"
 #define AT_RESPONSE_END					"\r\n"
 #define AT_RESPONSE_TAB					"     "
-#define AT_RESPONSE_ERROR_PSR			"PSR_ERROR_"
-#define AT_RESPONSE_ERROR_SFX			"SFX_ERROR_"
-#define AT_RESPONSE_ERROR_APP			"APP_ERROR_"
 // Duration of RSSI command.
 #define AT_RSSI_REPORT_PERIOD_MS		500
 
@@ -112,6 +109,12 @@ static void AT_tm_callback(void);
 
 /*** AT local structures ***/
 
+typedef enum {
+	AT_SUCCESS = 0,
+	AT_ERROR_BUSY,
+	AT_ERROR_LAST
+} AT_status_t;
+
 typedef struct {
 	PARSER_mode_t mode;
 	char* syntax;
@@ -119,26 +122,6 @@ typedef struct {
 	char* description;
 	void (*callback)(void);
 } AT_command_t;
-
-typedef enum {
-	AT_ERROR_SOURCE_PSR,
-	AT_ERROR_SOURCE_SFX,
-	AT_ERROR_SOURCE_APP,
-	AT_ERROR_SOURCE_LAST
-} AT_error_source_t;
-
-typedef enum {
-	APP_ERROR_NVM_ADDRESS_OVERFLOW,
-	APP_ERROR_RF_FREQUENCY_UNDERFLOW,
-	APP_ERROR_RF_FREQUENCY_OVERFLOW,
-	APP_ERROR_RF_OUTPUT_POWER_OVERFLOW,
-	APP_ERROR_INVALID_RC,
-	APP_ERROR_INVALID_TEST_MODE,
-	APP_ERROR_GPS_INVALID_TIMEOUT,
-	APP_ERROR_GPS_TIMEOUT,
-	APP_ERROR_FORBIDDEN_COMMAND,
-	APP_ERROR_LAST
-} AT_applicative_error_t;
 
 typedef struct {
 	// AT command buffer.
@@ -159,7 +142,7 @@ typedef struct {
 /*** AT local global variables ***/
 
 static const AT_command_t AT_COMMAND_LIST[] = {
-	{PARSER_MODE_COMMAND, "AT", "\0", "Ping", AT_print_ok},
+	{PARSER_MODE_COMMAND, "AT", "\0", "Ping command", AT_print_ok},
 	{PARSER_MODE_COMMAND, "AT?", "\0", "List all available AT commands", AT_print_command_list},
 #ifdef AT_COMMANDS_SENSORS
 	{PARSER_MODE_COMMAND, "AT$MCU?", "\0", "Get internal ADC measurements", AT_mcu_callback},
@@ -243,7 +226,7 @@ static void AT_response_add_value(int tx_value, STRING_format_t format, unsigned
 	char str_value[AT_STRING_VALUE_BUFFER_LENGTH];
 	unsigned char idx = 0;
 	// Reset string.
-	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = '\0';
+	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = STRING_CHAR_NULL;
 	// Convert value to string.
 	STRING_convert_value(tx_value, format, print_prefix, str_value);
 	// Add string.
@@ -260,7 +243,7 @@ static void AT_response_send(void) {
 	// Send response over UART.
 	USARTx_send_string(at_ctx.response_buf);
 	// Flush response buffer.
-	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.response_buf[idx] = '\0';
+	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.response_buf[idx] = STRING_CHAR_NULL;
 	at_ctx.response_buf_idx = 0;
 }
 
@@ -269,7 +252,7 @@ static void AT_response_send(void) {
  * @return:	None.
  */
 static void AT_print_ok(void) {
-	AT_response_add_string(AT_RESPONSE_OK);
+	AT_response_add_string("OK");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }
@@ -278,21 +261,10 @@ static void AT_print_ok(void) {
  * @param error_code:	Error code to display.
  * @return:				None.
  */
-static void AT_print_error(AT_error_source_t error_source, unsigned int error_code) {
-	switch (error_source) {
-	case AT_ERROR_SOURCE_PSR:
-		AT_response_add_string(AT_RESPONSE_ERROR_PSR);
-		break;
-	case AT_ERROR_SOURCE_SFX:
-		AT_response_add_string(AT_RESPONSE_ERROR_SFX);
-		break;
-	case AT_ERROR_SOURCE_APP:
-		AT_response_add_string(AT_RESPONSE_ERROR_APP);
-		break;
-	default:
-		break;
-	}
-	AT_response_add_value(error_code, STRING_FORMAT_HEXADECIMAL, 1);
+static void AT_print_error(ERROR_source_t error_source, unsigned int error_code) {
+	AT_response_add_string("ERROR ");
+	AT_response_add_value(error_source, STRING_FORMAT_HEXADECIMAL, 1);
+	AT_response_add_value(error_code, STRING_FORMAT_HEXADECIMAL, 0);
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 }
@@ -345,7 +317,7 @@ static void AT_mcu_callback(void) {
 		AT_response_add_string(AT_RESPONSE_END);
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 	AT_response_send();
 }
@@ -388,7 +360,7 @@ static void AT_adc_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 
 }
@@ -419,7 +391,7 @@ static void AT_iths_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -449,7 +421,7 @@ static void AT_eths_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -479,7 +451,7 @@ static void AT_epts_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -524,7 +496,7 @@ static void AT_eldr_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -549,7 +521,7 @@ static void AT_euvs_callback(void) {
 		AT_response_send();
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -601,7 +573,7 @@ static void AT_wind_callback(void) {
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in enable parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in enable parameter.
 	}
 }
 
@@ -637,7 +609,7 @@ static void AT_rain_callback(void) {
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in enable parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in enable parameter.
 	}
 }
 #endif
@@ -700,18 +672,18 @@ static void AT_time_callback(void) {
 				AT_response_send();
 				break;
 			case NEOM8N_ERROR_TIMEOUT:
-				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
+				AT_print_error(ERROR_SOURCE_NEOM8N, gps_status);
 				break;
 			default:
 				break;
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in timeout parameter.
+			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in timeout parameter.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -765,18 +737,18 @@ static void AT_gps_callback(void) {
 				AT_response_send();
 				break;
 			case NEOM8N_ERROR_TIMEOUT:
-				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_GPS_TIMEOUT);
+				AT_print_error(ERROR_SOURCE_NEOM8N, gps_status);
 				break;
 			default:
 				break;
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in timeout parameter.
+			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in timeout parameter.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 #endif
@@ -818,11 +790,11 @@ static void AT_nvm_callback(void) {
 			AT_response_send();
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_NVM_ADDRESS_OVERFLOW);
+			AT_print_error(ERROR_SOURCE_NVM, 0);
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in address parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in address parameter.
 	}
 }
 
@@ -837,7 +809,7 @@ static void AT_get_id_callback(void) {
 	// Retrieve device ID in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
-		NVM_read_byte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), &id_byte);
+		NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), &id_byte);
 		AT_response_add_value(id_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
 	NVM_disable();
@@ -863,17 +835,17 @@ static void AT_set_id_callback(void) {
 			// Write device ID in NVM.
 			NVM_enable();
 			for (idx=0 ; idx<ID_LENGTH ; idx++) {
-				NVM_write_byte((NVM_SIGFOX_ID_ADDRESS_OFFSET + ID_LENGTH - idx - 1), device_id[idx]);
+				NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), device_id[idx]);
 			}
 			NVM_disable();
 			AT_print_ok();
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
+			AT_print_error(ERROR_SOURCE_PARSER, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in ID parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in ID parameter.
 	}
 }
 
@@ -888,7 +860,7 @@ static void AT_get_key_callback(void) {
 	// Retrieve device key in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
-		NVM_read_byte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), &key_byte);
+		NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), &key_byte);
 		AT_response_add_value(key_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
 	NVM_disable();
@@ -914,17 +886,17 @@ static void AT_set_key_callback(void) {
 			// Write device ID in NVM.
 			NVM_enable();
 			for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
-				NVM_write_byte((NVM_SIGFOX_KEY_ADDRESS_OFFSET + idx), device_key[idx]);
+				NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), device_key[idx]);
 			}
 			NVM_disable();
 			AT_print_ok();
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
+			AT_print_error(ERROR_SOURCE_PARSER, PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH);
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in key parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in key parameter.
 	}
 }
 #endif
@@ -964,11 +936,11 @@ static void AT_so_callback(void) {
 			AT_print_ok();
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+			AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -1005,11 +977,11 @@ static void AT_sb_callback(void) {
 					AT_print_ok();
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+					AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in bidir flag parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in bidir flag parameter.
 			}
 		}
 		else {
@@ -1027,16 +999,16 @@ static void AT_sb_callback(void) {
 					AT_print_ok();
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+					AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in data parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in data parameter.
 			}
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -1074,11 +1046,11 @@ static void AT_sf_callback(void) {
 					AT_print_ok();
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+					AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in bidir flag parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in bidir flag parameter.
 			}
 		}
 		else {
@@ -1096,16 +1068,16 @@ static void AT_sf_callback(void) {
 					AT_print_ok();
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+					AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in data parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in data parameter.
 			}
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 #endif
@@ -1141,13 +1113,13 @@ static void AT_cw_callback(void) {
 							AT_print_ok();
 						}
 						else {
-							AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+							AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 						}
 					}
 				}
 				else {
 					// Error in enable parameter.
-					AT_print_error(AT_ERROR_SOURCE_PSR, parser_status);
+					AT_print_error(ERROR_SOURCE_PARSER, parser_status);
 				}
 			}
 			else if (parser_status == PARSER_SUCCESS) {
@@ -1163,19 +1135,19 @@ static void AT_cw_callback(void) {
 					AT_print_ok();
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in power parameter.
+					AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in power parameter.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in enable parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in enable parameter.
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in frequency parameter.
+			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in frequency parameter.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 
@@ -1219,15 +1191,15 @@ static void AT_rssi_callback(void) {
 				AT_print_ok();
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in duration parameter.
+				AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in duration parameter.
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in frequency parameter.
+			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in frequency parameter.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 #endif
@@ -1334,16 +1306,16 @@ static void AT_set_rc_callback(void) {
 				AT_print_ok();
 				break;
 			default:
-				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC); // Invalid RC.
+				AT_print_error(ERROR_SOURCE_AT, 0); // Invalid RC.
 				break;
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC); // Invalid RC.
+			AT_print_error(ERROR_SOURCE_AT, 0); // Invalid RC.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in RC parameter.
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in RC parameter.
 	}
 }
 #endif
@@ -1377,27 +1349,27 @@ static void AT_tm_callback(void) {
 							AT_print_ok();
 						}
 						else {
-							AT_print_error(AT_ERROR_SOURCE_SFX, sfx_status); // Error from Sigfox library.
+							AT_print_error(ERROR_SOURCE_SIGFOX, sfx_status); // Error from Sigfox library.
 						}
 					}
 					else {
-						AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_TEST_MODE); // Invalid test mode.
+						AT_print_error(ERROR_SOURCE_AT, 0); // Invalid test mode.
 					}
 				}
 				else {
-					AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in test_mode parameter.
+					AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in test_mode parameter.
 				}
 			}
 			else {
-				AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_INVALID_RC); // Invalid RC.
+				AT_print_error(ERROR_SOURCE_AT, 0); // Invalid RC.
 			}
 		}
 		else {
-			AT_print_error(AT_ERROR_SOURCE_PSR, parser_status); // Error in RC parameter.
+			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in RC parameter.
 		}
 	}
 	else {
-		AT_print_error(AT_ERROR_SOURCE_APP, APP_ERROR_FORBIDDEN_COMMAND);
+		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
 	}
 }
 #endif
@@ -1413,7 +1385,7 @@ static void AT_DecodeRxBuffer(void) {
 	unsigned char decode_success = 0;
 	// Empty or too short command.
 	if (at_ctx.command_buf_idx < AT_COMMAND_LENGTH_MIN) {
-		AT_print_error(AT_ERROR_SOURCE_PSR, PARSER_ERROR_UNKNOWN_COMMAND);
+		AT_print_error(ERROR_SOURCE_PARSER, PARSER_ERROR_UNKNOWN_COMMAND);
 	}
 	else {
 		// Update parser length.
@@ -1429,7 +1401,7 @@ static void AT_DecodeRxBuffer(void) {
 			}
 		}
 		if (decode_success == 0) {
-			AT_print_error(AT_ERROR_SOURCE_PSR, PARSER_ERROR_UNKNOWN_COMMAND); // Unknown command.
+			AT_print_error(ERROR_SOURCE_PARSER, PARSER_ERROR_UNKNOWN_COMMAND); // Unknown command.
 		}
 	}
 	// Reset AT parser.

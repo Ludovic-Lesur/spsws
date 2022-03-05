@@ -10,32 +10,60 @@
 #include "flash_reg.h"
 #include "rcc_reg.h"
 
+/*** NVM local macros ***/
+
+#define NVM_TIMEOUT_COUNT	1000000
+
 /*** NVM local functions ***/
 
 /* UNLOCK NVM.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static void NVM_unlock(void) {
+static NVM_status_t NVM_unlock(void) {
+	// Local variables.
+	NVM_status_t status = NVM_SUCCESS;
+	unsigned int loop_count = 0;
 	// Check no write/erase operation is running.
-	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
+		// Wait till BSY='1' or timeout.
+		loop_count++;
+		if (loop_count > NVM_TIMEOUT_COUNT) {
+			status = NVM_ERROR_UNLOCK;
+			goto errors;
+		}
+	}
 	// Check the NVM is not allready unlocked.
 	if (((FLASH -> PECR) & (0b1 << 0)) != 0) {
 		// Perform unlock sequence.
 		FLASH -> PEKEYR = 0x89ABCDEF;
 		FLASH -> PEKEYR = 0x02030405;
 	}
+errors:
+	return status;
 }
 
 /* LOCK NVM.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static void NVM_lock(void) {
+static NVM_status_t NVM_lock(void) {
+	// Local variables.
+	NVM_status_t status = NVM_SUCCESS;
+	unsigned int loop_count = 0;
 	// Check no write/erase operation is running.
-	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
+		// Wait till BSY='1' or timeout.
+		loop_count++;
+		if (loop_count > NVM_TIMEOUT_COUNT) {
+			status = NVM_ERROR_LOCK;
+			goto errors;
+		}
+	}
 	// Lock PECR register.
 	FLASH -> PECR |= (0b1 << 0); // PELOCK='1'.
+errors:
+	return status;
 }
 
 /*** NVM functions ***/
@@ -60,63 +88,102 @@ void NVM_disable(void) {
 
 /* READ A BYTE STORED IN NVM.
  * @param address_offset:	Address offset starting from NVM start address (expressed in bytes).
- * @param byte_to_read:		Pointer to byte that will contain the value to read.
- * @return:					None.
+ * @param data:				Pointer to byte that will contain the value to read.
+ * @return status:			Function execution status.
  */
-void NVM_read_byte(unsigned short address_offset, unsigned char* byte_to_read) {
-	// Unlock NVM.
-	NVM_unlock();
-	// Check if address is in EEPROM range.
-	if (address_offset < EEPROM_SIZE) {
-		(*byte_to_read) = *((unsigned char*) (EEPROM_START_ADDRESS+address_offset)); // Read byte at requested address.
+NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data) {
+	// Local variables.
+	NVM_status_t status = NVM_SUCCESS;
+	// Check address.
+	if (address_offset >= EEPROM_SIZE) {
+		status = NVM_ERROR_ADDRESS;
+		goto errors;
 	}
+	// Unlock NVM.
+	status = NVM_unlock();
+	if (status != NVM_SUCCESS) goto errors;
+	// Read data.
+	(*data) = *((unsigned char*) (EEPROM_START_ADDRESS + address_offset));
 	// Lock NVM.
-	NVM_lock();
+	status = NVM_lock();
+errors:
+	return status;
 }
 
 /* WRITE A BYTE TO NVM.
  * @param address_offset:	Address offset starting from NVM start address (expressed in bytes).
- * @param byte_to_store:	Byte to store in NVM.
- * @return:					None.
+ * @param data:				Byte to store in NVM.
+ * @return status:			Function execution status.
  */
-void NVM_write_byte(unsigned short address_offset, unsigned char byte_to_store) {
-	// Unlock NVM.
-	NVM_unlock();
-	// Check if address is in EEPROM range.
-	if (address_offset < EEPROM_SIZE) {
-		(*((unsigned char*) (EEPROM_START_ADDRESS+address_offset))) = byte_to_store; // Write byte to requested address.
+NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data) {
+	// Local variables.
+	NVM_status_t status = NVM_SUCCESS;
+	unsigned int loop_count = 0;
+	// Check address.
+	if (address_offset >= EEPROM_SIZE) {
+		status = NVM_ERROR_ADDRESS;
+		goto errors;
 	}
+	// Unlock NVM.
+	status = NVM_unlock();
+	if (status != NVM_SUCCESS) goto errors;
+	// Write data.
+	(*((unsigned char*) (EEPROM_START_ADDRESS+address_offset))) = data;
 	// Wait end of operation.
-	while (((FLASH -> SR) & (0b1 << 0)) != 0); // Wait till BSY='1'.
+	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
+		// Wait till BSY='1' or timeout.
+		loop_count++;
+		if (loop_count > NVM_TIMEOUT_COUNT) {
+			status = NVM_ERROR_WRITE;
+			goto errors;
+		}
+	}
 	// Lock NVM.
-	NVM_lock();
+	status = NVM_lock();
+errors:
+	return status;
 }
 
 /* RESET ALL NVM FIELDS TO DEFAULT VALUE.
  * @param:	None.
  * @return:	None.
  */
-void NVM_reset_default(void) {
+NVM_status_t NVM_reset_default(void) {
+	// Local variables.
+	NVM_status_t status = NVM_SUCCESS;
 	// Sigfox parameters.
-	NVM_write_byte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 0), 0x00);
-	NVM_write_byte((NVM_SIGFOX_PN_ADDRESS_OFFSET + 1), 0x00);
-	NVM_write_byte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 0), 0x00);
-	NVM_write_byte((NVM_SIGFOX_SEQ_ADDRESS_OFFSET + 1), 0x00);
-	NVM_write_byte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 0), 0x00);
-	NVM_write_byte((NVM_SIGFOX_FH_ADDRESS_OFFSET + 1), 0x00);
-	NVM_write_byte(NVM_SIGFOX_RL_ADDRESS_OFFSET, 0x00);
-	// Device configuration (mapped on downlink frame).
-	NVM_write_byte(NVM_CONFIG_LOCAL_UTC_OFFSET_ADDRESS_OFFSET, 0x01);
-	NVM_write_byte(NVM_CONFIG_UPLINK_FRAMES_ADDRESS_OFFSET, 0x00);
-	NVM_write_byte(NVM_CONFIG_GPS_TIMEOUT_ADDRESS_OFFSET, 0x78);
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_PN + 0), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_PN + 1), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 0), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 1), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_FH + 0), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_SIGFOX_FH + 1), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_SIGFOX_RL, 0x00);
+	if (status != NVM_SUCCESS) goto errors;
 	// Period management and status.
-	NVM_write_byte(NVM_DAY_COUNT_ADDRESS_OFFSET, 0x01);
-	NVM_write_byte(NVM_HOURS_COUNT_ADDRESS_OFFSET, 0x01);
-	NVM_write_byte(NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET, 0x00);
+	status = NVM_write_byte(NVM_ADDRESS_GEOLOC_DATA_DAY_COUNT, 0x01);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_WEATHER_DATA_HOUR_COUNT, 0x01);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_STATUS, 0x00);
+	if (status != NVM_SUCCESS) goto errors;
 	// RTC.
-	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 0), 0x00);
-	NVM_write_byte((NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET + 1), 0x00);
-	NVM_write_byte(NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET, 0x00);
-	NVM_write_byte(NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET, 0x00);
-	NVM_write_byte(NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET, 0x00);
+	status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+	status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, 0x00);
+	if (status != NVM_SUCCESS) goto errors;
+errors:
+	return status;
 }

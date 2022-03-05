@@ -10,34 +10,41 @@
 
 /*** NVM macros ***/
 
-// Sigfox device parameters.
-#define NVM_SIGFOX_ID_ADDRESS_OFFSET				0
-#define NVM_SIGFOX_KEY_ADDRESS_OFFSET				4
-#define NVM_SIGFOX_PN_ADDRESS_OFFSET				20
-#define NVM_SIGFOX_SEQ_ADDRESS_OFFSET				22
-#define NVM_SIGFOX_FH_ADDRESS_OFFSET				24
-#define NVM_SIGFOX_RL_ADDRESS_OFFSET				26
-// Device configuration (mapped on downlink frame).
-#define NVM_CONFIG_START_ADDRESS_OFFSET				27
-#define NVM_CONFIG_LOCAL_UTC_OFFSET_ADDRESS_OFFSET	27
-#define NVM_CONFIG_UPLINK_FRAMES_ADDRESS_OFFSET		28
-#define NVM_CONFIG_GPS_TIMEOUT_ADDRESS_OFFSET		29
-// Period management and status.
-#define NVM_DAY_COUNT_ADDRESS_OFFSET				35
-#define NVM_HOURS_COUNT_ADDRESS_OFFSET				36
-#define NVM_MONITORING_STATUS_BYTE_ADDRESS_OFFSET	37
-// RTC.
-#define NVM_RTC_PWKUP_YEAR_ADDRESS_OFFSET			38
-#define NVM_RTC_PWKUP_MONTH_ADDRESS_OFFSET			40
-#define NVM_RTC_PWKUP_DATE_ADDRESS_OFFSET			41
-#define NVM_RTC_PWKUP_HOURS_ADDRESS_OFFSET			42
+typedef enum {
+	NVM_SUCCESS = 0,
+	NVM_ERROR_ADDRESS,
+	NVM_ERROR_UNLOCK,
+	NVM_ERROR_LOCK,
+	NVM_ERROR_WRITE,
+	NVM_ERROR_LAST
+} NVM_status_t;
+
+typedef enum {
+	NVM_ADDRESS_SIGFOX_DEVICE_ID = 0,
+	NVM_ADDRESS_SIGFOX_DEVICE_KEY = 4,
+	NVM_ADDRESS_SIGFOX_PN = 20,
+	NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER = 22,
+	NVM_ADDRESS_SIGFOX_FH = 24,
+	NVM_ADDRESS_SIGFOX_RL = 26,
+	NVM_ADDRESS_DEVICE_CONFIGURATION = 27, // Mapped on downlink payload.
+	NVM_ADDRESS_GEOLOC_DATA_DAY_COUNT = 35,
+	NVM_ADDRESS_WEATHER_DATA_HOUR_COUNT = 36,
+	NVM_ADDRESS_STATUS = 37,
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR = 38,
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH = 40,
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE = 41,
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR = 42,
+	NVM_ADDRESS_LAST
+} NVM_address_t;
 
 /*** NVM functions ***/
 
 void NVM_enable(void);
 void NVM_disable(void);
-void NVM_read_byte(unsigned short address_offset, unsigned char* byte_to_read);
-void NVM_write_byte(unsigned short address_offset, unsigned char byte_to_store);
-void NVM_reset_default(void);
+NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data);
+NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data);
+NVM_status_t NVM_reset_default(void);
+
+#define NVM_status_check(error_base) { if (nvm_status != NVM_SUCCESS) { status = error_base + nvm_status; goto errors; }}
 
 #endif /* NVM_H */

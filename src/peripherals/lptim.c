@@ -48,7 +48,9 @@ void __attribute__((optimize("-O0"))) LPTIM1_IRQHandler(void) {
  * @param arr_value:	ARR register value to write.
  * @return:				None.
  */
-static void LPTIM1_write_arr(unsigned int arr_value) {
+static LPTIM_status_t LPTIM1_write_arr(unsigned int arr_value) {
+	// Local variables.
+	LPTIM_status_t status = LPTIM_SUCCESS;
 	unsigned int loop_count = 0;
 	// Reset bits.
 	LPTIM1 -> ICR |= (0b1 << 4);
@@ -56,7 +58,10 @@ static void LPTIM1_write_arr(unsigned int arr_value) {
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
 		// Wait for ARROK='1' or timeout.
 		loop_count++;
-		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
+		if (loop_count > LPTIM_TIMEOUT_COUNT) {
+			status = LPTIM_ERROR_WRITE_ARR;
+			goto errors;
+		}
 	}
 	// Write new value.
 	LPTIM1 -> ICR |= (0b1 << 4);
@@ -65,8 +70,13 @@ static void LPTIM1_write_arr(unsigned int arr_value) {
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
 		// Wait for ARROK='1' or timeout.
 		loop_count++;
-		if (loop_count > LPTIM_TIMEOUT_COUNT) break;
+		if (loop_count > LPTIM_TIMEOUT_COUNT) {
+			status = LPTIM_ERROR_WRITE_ARR;
+			goto errors;
+		}
 	}
+errors:
+	return status;
 }
 
 /*** LPTIM functions ***/
@@ -125,22 +135,26 @@ void LPTIM1_disable(void) {
  * @param stop_mode:	Enter stop mode during delay if non zero.
  * @return:				None.
  */
-void LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode) {
-	// Clamp value if required.
-	unsigned int local_delay_ms = delay_ms;
-	if (local_delay_ms > LPTIM_DELAY_MS_MAX) {
-		local_delay_ms = LPTIM_DELAY_MS_MAX;
+LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode) {
+	// Local variables.
+	LPTIM_status_t status = LPTIM_SUCCESS;
+	unsigned int arr = 0;
+	// Check delay.
+	if (delay_ms > LPTIM_DELAY_MS_MAX) {
+		status = LPTIM_ERROR_DELAY_OVERFLOW;
+		goto errors;
 	}
-	if (local_delay_ms < LPTIM_DELAY_MS_MIN) {
-		local_delay_ms = LPTIM_DELAY_MS_MIN;
+	if (delay_ms < LPTIM_DELAY_MS_MIN) {
+		status = LPTIM_ERROR_DELAY_UNDERFLOW;
+		goto errors;
 	}
 	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
 	// Reset counter.
 	LPTIM1 -> CNT &= 0xFFFF0000;
 	// Compute ARR value.
-	unsigned int arr = ((local_delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
-	LPTIM1_write_arr(arr);
+	arr = ((delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
+	status = LPTIM1_write_arr(arr);
 	// Start timer.
 	NVIC_enable_interrupt(NVIC_IT_LPTIM1);
 	lptim_wake_up = 0;
@@ -154,6 +168,8 @@ void LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode) {
 	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 	NVIC_disable_interrupt(NVIC_IT_LPTIM1);
+errors:
+	return status;
 }
 
 #ifdef WIND_VANE_ULTIMETER

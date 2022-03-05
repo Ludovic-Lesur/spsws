@@ -12,12 +12,11 @@
 
 /*** GPIO structures ***/
 
-// GPIO structure.
 typedef struct {
-	GPIO_base_address_t* gpio_port_address; // GPIOA to GPIOC.
-	unsigned char gpio_port_index; // 0 for GPIOA, 1 for GPIOB, etc.
-	unsigned char gpio_num; // 0 to 15.
-	unsigned char gpio_af_num; // Alternate function number if used.
+	GPIO_base_address_t* port_address; // GPIOA to GPIOC.
+	unsigned char port_index; // 0 for GPIOA, 1 for GPIOB, etc.
+	unsigned char pin_index; // 0 to 15.
+	unsigned char alternate_function_index; // Alternate function number if used.
 } GPIO_pin_t;
 
 typedef enum {
