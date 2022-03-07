@@ -8,44 +8,37 @@
 #ifndef MAX11136_H
 #define MAX11136_H
 
-#include "wind.h"
+#include "mode.h"
+#include "spi.h"
 
-/*** MAX11136 macros ***/
+/*** MAX11136 structures ***/
 
-#define MAX11136_NUMBER_OF_CHANNELS			8
-#define MAX11136_FULL_SCALE					4095
+typedef enum {
+	MAX11136_SUCCESS = 0,
+	MAX11136_ERROR_SPI,
+	MAX11136_ERROR_TIMEOUT = (MAX11136_ERROR_SPI + SPI_ERROR_LAST),
+	MAX11136_ERROR_CONVERSION,
+	MAX11136_ERROR_DATA_INDEX,
+	MAX11136_ERROR_LAST
+} MAX11136_status_t;
 
-// Channels mapping.
-#ifdef HW1_0
-#if (defined CM || defined ATM)
+typedef enum {
+	MAX11136_DATA_INDEX_VSRC_MV,
+	MAX11136_DATA_INDEX_VCAP_MV,
+	MAX11136_DATA_INDEX_LDR_PERCENT,
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define MAX11136_CHANNEL_WIND_DIRECTION		0
+	MAX11136_DATA_WIND_DIRECTION_RATIO,
 #endif
-#endif
-#define MAX11136_CHANNEL_SOLAR_CELL			4
-#define MAX11136_CHANNEL_SUPERCAP			5
-#define MAX11136_CHANNEL_LDR				6
-#define MAX11136_CHANNEL_BANDGAP			7
-#define MAX11136_BANDGAP_VOLTAGE_MV			2048
-#endif
-#ifdef HW2_0
-#if (defined CM || defined ATM)
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define MAX11136_CHANNEL_WIND_DIRECTION		0
-#endif
-#endif
-#define MAX11136_CHANNEL_LDR				1
-#define MAX11136_CHANNEL_BANDGAP			5
-#define MAX11136_BANDGAP_VOLTAGE_MV			2048
-#define MAX11136_CHANNEL_SOLAR_CELL			6
-#define MAX11136_CHANNEL_SUPERCAP			7
-#endif
+	MAX11136_DATA_INDEX_LAST
+} MAX11136_data_index_t;
 
 /*** MAX11136 functions ***/
 
 void MAX11136_init(void);
-void MAX11136_disable_gpio(void);
-void MAX11136_perform_measurements(void);
-void MAX11136_get_data(unsigned char channel, unsigned int* channel_result_12bits);
+void MAX11136_disable(void);
+MAX11136_status_t MAX11136_perform_measurements(void);
+MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, unsigned int* data);
+
+#define MAX11136_status_check(error_base) { if (max11136_status != MAX11136_SUCCESS) { status = error_base + max11136_status; goto errors; }}
 
 #endif /* MAX11136_H */

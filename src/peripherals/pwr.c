@@ -39,13 +39,13 @@ void PWR_init(void) {
 	SCB -> SCR &= ~(0b1 << 1); // SLEEPONEXIT='0'.
 }
 
-/* FUNCTION TO ENTER LOW POWER SLEEP MODE.
+/* FUNCTION TO ENTER SLEEP MODE.
  * @param:	None.
  * @return:	None.
  */
-void PWR_enter_low_power_sleep_mode(void) {
-	// Regulator in low power mode.
-	PWR -> CR |= (0b1 << 0); // LPSDSR='1'.
+void PWR_enter_sleep_mode(void) {
+	// Regulator in normal mode.
+	PWR -> CR &= ~(0b1 << 0); // LPSDSR='0'.
 	// Enter low power sleep mode.
 	SCB -> SCR &= ~(0b1 << 2); // SLEEPDEEP='0'.
 	__asm volatile ("wfi"); // Wait For Interrupt core instruction.

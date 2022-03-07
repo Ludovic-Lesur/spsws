@@ -51,7 +51,6 @@ typedef struct {
 	unsigned int rf_api_frequency_shift_hz;
 	volatile unsigned char rf_api_frequency_shift_direction;
 	// Output power range.
-	signed char rf_api_output_power_min;
 	signed char rf_api_output_power_max;
 	// Downlink.
 	unsigned int rf_api_wait_frame_calls_count;
@@ -136,7 +135,6 @@ static void RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
 	// Init common parameters.
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	rf_api_ctx.rf_api_frequency_shift_direction = 0;
-	rf_api_ctx.rf_api_output_power_min = SX1232_OUTPUT_POWER_PABOOST_MIN;
 	// Init timings.
 	switch (modulation) {
 	case SFX_DBPSK_100BPS:
@@ -235,9 +233,9 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		SX1232_set_modulation(SX1232_MODULATION_FSK, SX1232_MODULATION_SHAPING_FSK_BT_1);
 		SX1232_set_fsk_deviation(800);
 		SX1232_set_bitrate(600);
-		SX1232_set_rx_bandwidth(SX1232_RXBW_MANTISSA_24, SX1232_RXBW_EXPONENT_MAX);
+		SX1232_set_rx_bandwidth(SX1232_RXBW_MANTISSA_24, SX1232_RXBW_EXPONENT_7);
 		SX1232_enable_lna_boost(1);
-		SX1232_configure_rssi(SX1232_RSSI_OFFSET_DB, SX1232_RSSI_SAMPLING_32);
+		SX1232_configure_rssi(SX1232_RSSI_SAMPLING_32);
 		SX1232_set_preamble_detector(1, 0);
 		SX1232_set_sync_word(downlink_sync_word, 2);
 		SX1232_set_data_length(RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
@@ -313,11 +311,14 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Compute frequency shift duration required to invert signal phase.
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.
 	SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz);
-	unsigned int effective_uplink_frequency_hz = SX1232_get_rf_frequency();
+	unsigned int effective_uplink_frequency_hz = 0;
+	SX1232_get_rf_frequency(&effective_uplink_frequency_hz);
 	SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
-	unsigned int effective_high_shifted_frequency_hz = SX1232_get_rf_frequency();
+	unsigned int effective_high_shifted_frequency_hz = 0;
+	SX1232_get_rf_frequency(&effective_high_shifted_frequency_hz);
 	SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
-	unsigned int effective_low_shifted_frequency_hz = SX1232_get_rf_frequency();
+	unsigned int effective_low_shifted_frequency_hz = 0;
+	SX1232_get_rf_frequency(&effective_low_shifted_frequency_hz);
 	// Compute average durations = 1 / (2 * delta_f).
 	unsigned short high_shifted_frequency_duration_us = (1000000) / (2 * (effective_high_shifted_frequency_hz - effective_uplink_frequency_hz));
 	unsigned short low_shifted_frequency_duration_us = (1000000) / (2 * (effective_uplink_frequency_hz - effective_low_shifted_frequency_hz));
@@ -489,6 +490,7 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 		unsigned char rssi_retrieved = 0;
 		unsigned int remaining_delay = RF_API_DOWNLINK_TIMEOUT_SECONDS;
 		unsigned int sub_delay = 0;
+		unsigned int irq_flags = 0;
 		while ((remaining_delay > 0) && (GPIO_read(&GPIO_SX1232_DIO0) == 0)) {
 			// Compute sub-delay.
 			sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
@@ -497,9 +499,11 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t * sta
 			RTC_clear_wakeup_timer_flag();
 			RTC_start_wakeup_timer(sub_delay);
 			while (RTC_get_wakeup_timer_flag() == 0) {
+				// Read SX1232 IRQ flags.
+				SX1232_get_irq_flags(&irq_flags);
 				// Get RSSI when preamble is found.
-				if (((SX1232_get_irq_flags() & 0x0200) != 0) && (rssi_retrieved == 0)) {
-					(*rssi) = SX1232_get_rssi();
+				if (((irq_flags & 0x0200) != 0) && (rssi_retrieved == 0)) {
+					SX1232_get_rssi(rssi);
 					rssi_retrieved = 1;
 				}
 			}

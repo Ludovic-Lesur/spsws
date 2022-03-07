@@ -19,8 +19,10 @@
  * @return result:	Result of computation.
  */
 unsigned int MATH_pow_10(unsigned char power) {
+	// Local variables.
 	unsigned int result = 0;
 	unsigned int pow10_buf[MATH_DECIMAL_MAX_DIGITS] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+	// Check overflow.
 	if (power < MATH_DECIMAL_MAX_DIGITS) {
 		result = pow10_buf[power];
 	}
@@ -103,13 +105,11 @@ unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length,
  * @return:		|x|.
  */
 unsigned int MATH_abs(signed int x) {
+	// Local variables.
 	unsigned int result = 0;
-	if (x > 0) {
-		result = x;
-	}
-	if (x < 0) {
-		result = (-1) * x;
-	}
+	// Check sign.
+	if (x > 0) result = x;
+	if (x < 0) result = (-1) * x;
 	return result;
 }
 
@@ -119,19 +119,22 @@ unsigned int MATH_abs(signed int x) {
  * @return:		Angle of the point (x,y).
  */
 unsigned int MATH_atan2(signed int x, signed int y) {
-	// Check x and y are not null.
+	// Local variables.
 	unsigned int alpha = MATH_ERROR_VALUE;
+	signed int local_x = x;
+	signed int local_y = y;
+	unsigned int abs_x = 0;
+	unsigned int abs_y = 0;
+	// Check x and y are not null.
 	if ((x != 0) || (y != 0)) {
 		// Scale x and y to avoid overflow.
-		signed int local_x = x;
-		signed int local_y = y;
 		while ((MATH_abs(local_x) > 10000) || (MATH_abs(local_y) > 10000)) {
 			local_x = local_x >> 1;
 			local_y = local_y >> 1;
 		}
 		// Compute atan2 function.
-		unsigned int abs_x = MATH_abs(local_x);
-		unsigned int abs_y = MATH_abs(local_y);
+		abs_x = MATH_abs(local_x);
+		abs_y = MATH_abs(local_y);
 		// Use the quotient within [-1,1]
 		if (abs_x >= abs_y) {
 			// Use arctan approximation: arctan(z)=(pi/4)*z.
@@ -190,7 +193,11 @@ unsigned int MATH_atan2(signed int x, signed int y) {
  * @return result:				Result of computation.
  */
 signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position) {
+	// Local variables.
 	signed int result = 0;
+	unsigned char bit_idx = 0;
+	unsigned int not_value = 0;
+	unsigned int absolute_value = 0;
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
@@ -198,14 +205,12 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 	}
 	else {
 		// Value is negative.
-		unsigned char bit_idx = 0;
-		unsigned int not_value = 0;
 		for (bit_idx=0 ; bit_idx<=sign_bit_position ; bit_idx++) {
 			if ((value & (0b1 << bit_idx)) == 0) {
 				not_value |= (0b1 << bit_idx);
 			}
 		}
-		unsigned int absolute_value = not_value + 1;
+		absolute_value = not_value + 1;
 		result = (-1) * absolute_value;
 	}
 	return result;

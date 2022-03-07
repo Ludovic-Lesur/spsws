@@ -9,6 +9,7 @@
 
 #include "exti_reg.h"
 #include "mapping.h"
+#include "mode.h"
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "rain.h"
@@ -44,33 +45,33 @@ void __attribute__((optimize("-O0"))) EXTI2_3_IRQHandler(void) {
 void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 #if (defined CM || defined ATM)
 	// Speed edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_SPEED.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO0.pin_index))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_WIND_SPEED.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO0.pin_index))) != 0) {
 			WIND_speed_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_WIND_SPEED.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO0.pin_index)); // PIFx='1' (writing '1' clears the bit).
 	}
 #ifdef WIND_VANE_ULTIMETER
 	// Direction edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_WIND_DIRECTION.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO1.pin_index))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_WIND_DIRECTION.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO1.pin_index))) != 0) {
 			WIND_direction_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_WIND_DIRECTION.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO1.pin_index)); // PIFx='1' (writing '1' clears the bit).
 	}
 #endif
 	// Rain edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_RAIN.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO2.pin_index))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_RAIN.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO2.pin_index))) != 0) {
 			RAIN_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_RAIN.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO2.pin_index)); // PIFx='1' (writing '1' clears the bit).
 	}
 #endif
 }

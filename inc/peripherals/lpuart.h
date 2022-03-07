@@ -22,7 +22,6 @@ typedef enum {
 /*** LPUART functions ***/
 
 void LPUART1_init(unsigned char lpuart_use_lse);
-void LPUART1_update_brr(void);
 void LPUART1_enable_tx(void);
 void LPUART1_enable_rx(void);
 void LPUART1_disable(void);

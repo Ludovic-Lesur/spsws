@@ -13,10 +13,6 @@
 
 #if (defined CM || defined ATM)
 
-/*** RAIN global variables ***/
-
-GPIO_pin_t GPIO_RAIN;
-
 /*** RAIN functions ***/
 
 void RAIN_init(void);

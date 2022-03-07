@@ -8,18 +8,27 @@
 #ifndef NEOM8N_H
 #define NEOM8N_H
 
+#include "lptim.h"
+#include "lpuart.h"
+#include "rtc.h"
+
 /*** NEOM8N structures ***/
 
-typedef struct {
-	// Date.
-	unsigned short year;
-	unsigned char month;
-	unsigned char date;
-	// Time.
-	unsigned char hours;
-	unsigned char minutes;
-	unsigned char seconds;
-} NEOM8N_time_t;
+typedef enum {
+	NEOM8N_SUCCESS = 0,
+	NEOM8N_ERROR_LPUART,
+	NEOM8N_ERROR_LPTIM = (NEOM8N_ERROR_LPUART + LPUART_ERROR_LAST),
+	NEOM8N_ERROR_RTC = (NEOM8N_ERROR_LPTIM + LPTIM_ERROR_LAST),
+	NEOM8N_ERROR_CHECKSUM = (NEOM8N_ERROR_RTC + RTC_ERROR_LAST),
+	NEOM8N_ERROR_NMEA_FIELD_LENGTH,
+	NEOM8N_ERROR_NMEA_MESSAGE,
+	NEOM8N_ERROR_NMEA_NORTH_FLAG,
+	NEOM8N_ERROR_NMEA_EAST_FLAG,
+	NEOM8N_ERROR_NMEA_UNIT,
+	NEOM8N_ERROR_TIMESTAMP,
+	NEOM8N_ERROR_POSITION,
+	NEOM8N_ERROR_LAST
+} NEOM8N_status_t;
 
 typedef struct {
 	// Latitude.
@@ -36,17 +45,11 @@ typedef struct {
 	unsigned int altitude;
 } NEOM8N_position_t;
 
-typedef enum {
-	NEOM8N_SUCCESS,
-	NEOM8N_ERROR_TIMEOUT,
-	NEOM8N_ERROR_LAST
-} NEOM8N_status_t;
-
 /*** NEOM8N user functions ***/
 
 void NEOM8N_init(void);
 void NEOM8N_switch_dma_buffer(unsigned char lf_flag);
-NEOM8N_status_t NEOM8N_get_time(NEOM8N_time_t* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
-NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv, unsigned int* fix_duration_seconds);
+NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
+NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds);
 
 #endif /* NEOM8N_H */

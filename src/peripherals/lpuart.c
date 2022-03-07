@@ -93,28 +93,6 @@ void LPUART1_init(unsigned char lpuart_use_lse) {
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
 }
 
-/* UPDATE LPUART BAUD RATE ACCORDING TO CLOCK FREQUENCY.
- * @param:	None.
- * @return:	None.
- */
-void LPUART1_update_brr(void) {
-	// Local variables.
-	unsigned int lpuart_clock_hz = 0;
-	// Check clock source.
-	if (((RCC -> CCIPR) & (0b11 << 10)) == (0b01 << 10)) {
-		// Disable peripheral.
-		LPUART1 -> CR1 &= ~(0b1 << 0); // UE='0'.
-		// Get current system clock.
-		lpuart_clock_hz = RCC_get_sysclk_khz() * 1000;
-		// Compute BRR value.
-		unsigned int brr = (lpuart_clock_hz * 256);
-		brr /= LPUART_BAUD_RATE;
-		LPUART1 -> BRR = (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
-		// Enable peripheral.
-		LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
-	}
-}
-
 /* ENABLE LPUART TX OPERATION.
  * @param:	None.
  * @return:	None.

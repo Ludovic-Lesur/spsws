@@ -26,9 +26,14 @@
  * @return value:		Corresponding value.
  */
 unsigned char STRING_ascii_to_hexa(char ascii_code) {
+	// Local variables.
 	unsigned char value = 0;
+	// Check ranges.
 	if ((ascii_code >= 'A') && (ascii_code <= 'F')) {
 		value = ascii_code - 'A' + 10;
+	}
+	if ((ascii_code >= 'a') && (ascii_code <= 'f')) {
+		value = ascii_code - 'a' + 10;
 	}
 	if ((ascii_code >= '0') && (ascii_code <= '9')) {
 		value = ascii_code - '0';
@@ -41,7 +46,9 @@ unsigned char STRING_ascii_to_hexa(char ascii_code) {
  * @return ascii_code:	Corresponding ASCII code.
  */
 char STRING_decimal_to_ascii(unsigned char decimal_digit) {
+	// Local variables.
 	char ascii_code = 0;
+	// Check overflow.
 	if (decimal_digit <= STRING_DIGIT_DECIMAL_MAX) {
 		ascii_code = decimal_digit + '0';
 	}
@@ -53,7 +60,9 @@ char STRING_decimal_to_ascii(unsigned char decimal_digit) {
  * @return ascii_code:	Corresponding ASCII code.
  */
 char STRING_hexa_to_ascii(unsigned char hexa_digit) {
+	// Local variables.
 	char ascii_code = 0;
+	// Check overflow.
 	if (hexa_digit <= STRING_DIGIT_HEXADECIMAL_MAX) {
 		ascii_code = (hexa_digit <= 9 ? (char) (hexa_digit + '0') : (char) (hexa_digit + ('A' - 10)));
 	}
@@ -65,7 +74,7 @@ char STRING_hexa_to_ascii(unsigned char hexa_digit) {
  * @return:				1 if the byte is the ASCII code of an hexadecimal character, 0 otherwise.
  */
 unsigned char STRING_is_hexa_char(char ascii_code) {
-	return (((ascii_code >= '0') && (ascii_code <= '9')) || ((ascii_code >= 'A') && (ascii_code <= 'F')));
+	return (((ascii_code >= '0') && (ascii_code <= '9')) || ((ascii_code >= 'A') && (ascii_code <= 'F')) || ((ascii_code >= 'a') && (ascii_code <= 'f')));
 }
 
 /* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO A DECIMAL CHARACTER.
@@ -117,9 +126,7 @@ void STRING_convert_value(int value, STRING_format_t format, unsigned char print
 					string[string_idx++] = '0';
 				}
 			}
-			if (idx == 0) {
-				break;
-			}
+			if (idx == 0) break;
 		}
 		break;
 	case STRING_FORMAT_HEXADECIMAL:
@@ -137,9 +144,7 @@ void STRING_convert_value(int value, STRING_format_t format, unsigned char print
 				string[string_idx++] = STRING_hexa_to_ascii((generic_byte & 0xF0) >> 4);
 				string[string_idx++] = STRING_hexa_to_ascii(generic_byte & 0x0F);
 			}
-			if (idx == 0) {
-				break;
-			}
+			if (idx == 0) break;
 		}
 		break;
 	case STRING_FORMAT_DECIMAL:
@@ -158,9 +163,7 @@ void STRING_convert_value(int value, STRING_format_t format, unsigned char print
 			if ((first_non_zero_found != 0) || (idx == 0)) {
 				string[string_idx++] = generic_byte + '0';
 			}
-			if (idx == 0) {
-				break;
-			}
+			if (idx == 0) break;
 		}
 		break;
 	case STRING_FORMAT_ASCII:
@@ -168,6 +171,8 @@ void STRING_convert_value(int value, STRING_format_t format, unsigned char print
 		if (value_abs <= STRING_FORMAT_ASCII_MAX_VALUE) {
 			string[string_idx++] = value_abs;
 		}
+		break;
+	default:
 		break;
 	}
     // End string.

@@ -156,8 +156,8 @@ typedef struct {
 	unsigned char day_changed_flag;
 	unsigned char is_afternoon_flag;
 	// Wake-up management.
-	NEOM8N_time_t current_timestamp;
-	NEOM8N_time_t previous_wake_up_timestamp;
+	RTC_time_t current_timestamp;
+	RTC_time_t previous_wake_up_timestamp;
 	// Monitoring.
 	SPSWS_status_t status;
 	SPSWS_sigfox_monitoring_data sigfox_monitoring_data;
@@ -308,12 +308,10 @@ int main (void) {
 	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
 	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 	// Local variables.
-	unsigned int max11136_bandgap_12bits = 0;
-	unsigned int max11136_channel_12bits = 0;
 	unsigned char generic_data_u8 = 0;
 	unsigned int generic_data_u32_1 = 0;
 	unsigned int generic_data_u32_2 = 0;
-	NEOM8N_status_t neom8n_status = NEOM8N_ERROR_TIMEOUT;
+	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	// Main loop.
 	while (1) {
@@ -422,9 +420,6 @@ int main (void) {
 			SKY13317_init();
 			NEOM8N_init();
 			MAX11136_init();
-			SHT3X_init();
-			DPS310_init();
-			SI1133_Init();
 #ifdef CM
 			WIND_init();
 			RAIN_init();
@@ -446,7 +441,7 @@ int main (void) {
 			ADC1_disable();
 			ADC1_get_tmcu_comp1(&generic_data_u8);
 			spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = generic_data_u8;
-			ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &generic_data_u32_1);
+			ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
 			spsws_ctx.sigfox_monitoring_data.field.vmcu_mv = generic_data_u32_1;
 			// Retrieve external ADC data.
 #ifdef HW1_0
@@ -466,13 +461,12 @@ int main (void) {
 			SPI2_power_off();
 #endif
 			// Convert channel results to mV.
-			MAX11136_get_data(MAX11136_CHANNEL_BANDGAP, &max11136_bandgap_12bits);
-			MAX11136_get_data(MAX11136_CHANNEL_SOLAR_CELL, &max11136_channel_12bits);
-			spsws_ctx.sigfox_monitoring_data.field.vsrc_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
-			MAX11136_get_data(MAX11136_CHANNEL_SUPERCAP, &max11136_channel_12bits);
-			spsws_ctx.sigfox_monitoring_data.field.vcap_mv = (max11136_channel_12bits * MAX11136_BANDGAP_VOLTAGE_MV * 269) / (max11136_bandgap_12bits * 34);
-			MAX11136_get_data(MAX11136_CHANNEL_LDR, &max11136_channel_12bits);
-			spsws_ctx.sigfox_weather_data.field.light_percent = (max11136_channel_12bits * 100) / MAX11136_FULL_SCALE;
+			MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &generic_data_u32_1);
+			spsws_ctx.sigfox_monitoring_data.field.vsrc_mv = (unsigned short) generic_data_u32_1;
+			MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &generic_data_u32_1);
+			spsws_ctx.sigfox_monitoring_data.field.vcap_mv = (unsigned short) generic_data_u32_1;
+			MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &generic_data_u32_1);
+			spsws_ctx.sigfox_weather_data.field.light_percent = (unsigned char) generic_data_u32_1;
 			// Retrieve weather sensors data.
 #ifdef HW1_0
 			I2C1_power_on();
@@ -501,11 +495,12 @@ int main (void) {
 			IWDG_reload();
 			DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			DPS310_get_pressure(&generic_data_u32_1);
-			spsws_ctx.sigfox_weather_data.field.absolute_pressure_tenth_hpa = (generic_data_u32_1 == DPS310_PRESSURE_ERROR_VALUE) ? 0xFFFF : (generic_data_u32_1 / 10);
+			// TODO add DPS310_PRESSURE_ERROR_VALUE macro in main and check DPS310 status
+			spsws_ctx.sigfox_weather_data.field.absolute_pressure_tenth_hpa = (generic_data_u32_1 / 10);
 			// External UV index sensor.
 			IWDG_reload();
-			SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
-			SI1133_GetUvIndex(&generic_data_u8);
+			SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
+			SI1133_get_uv_index(&generic_data_u8);
 			spsws_ctx.sigfox_weather_data.field.uv_index = generic_data_u8;
 			// Turn sensors off.
 			I2C1_power_off();
@@ -516,7 +511,8 @@ int main (void) {
 			spsws_ctx.sigfox_weather_data.field.average_wind_speed_kmh = (generic_data_u32_1 / 1000);
 			spsws_ctx.sigfox_weather_data.field.peak_wind_speed_kmh = (generic_data_u32_2 / 1000);
 			WIND_get_direction(&generic_data_u32_1);
-			spsws_ctx.sigfox_weather_data.field.average_wind_direction_two_degrees = (generic_data_u32_1 == WIND_DIRECTION_ERROR_VALUE) ? 0xFF : (generic_data_u32_1 / 2);
+			// TODO add WIND_DIRECTION_ERROR_VALUE 0xFF macro in main and check WIND status
+			spsws_ctx.sigfox_weather_data.field.average_wind_direction_two_degrees = (generic_data_u32_1 / 2);
 			// Retrieve rain measurements.
 			RAIN_get_pluviometry(&generic_data_u8);
 			spsws_ctx.sigfox_weather_data.field.rain_mm = generic_data_u8;
@@ -588,7 +584,7 @@ int main (void) {
 			IWDG_reload();
 			// Get position from GPS.
 			LPUART1_power_on();
-			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, 0, &spsws_ctx.geoloc_fix_duration_seconds);
+			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &spsws_ctx.geoloc_fix_duration_seconds);
 			LPUART1_power_off();
 			// Update flag whatever the result.
 			spsws_ctx.status.field.daily_geoloc = 1;
@@ -656,7 +652,7 @@ int main (void) {
 			// Turn peripherals off.
 			SX1232_disable();
 			SKY13317_disable();
-			MAX11136_disable_gpio();
+			MAX11136_disable();
 			SX1232_tcxo(0);
 #ifdef HW2_0
 			SPI2_disable();
@@ -781,15 +777,12 @@ int main (void) {
 	MAX11136_init();
 	WIND_init();
 	RAIN_init();
-	SHT3X_init();
-	DPS310_init();
-	SI1133_Init();
 	// Init applicative layers.
 	AT_init();
 	// Main loop.
 	while (1) {
 		// Enter sleep mode.
-		PWR_enter_low_power_sleep_mode();
+		PWR_enter_sleep_mode();
 		// Wake-up: perform AT command parsing.
 		AT_task();
 	}

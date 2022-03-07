@@ -101,7 +101,7 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
 	ADC1_disable();
 	// Get MCU supply voltage.
 	unsigned int mcu_supply_voltage_mv = 0;
-	ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &mcu_supply_voltage_mv);
+	ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &mcu_supply_voltage_mv);
 	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
 	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.

@@ -9,7 +9,6 @@
 #define RTC_H
 
 #include "mode.h"
-#include "neom8n.h"
 
 /*** RTC structures ***/
 
@@ -21,12 +20,23 @@ typedef enum {
 	RTC_ERROR_LAST
 } RTC_status_t;
 
+typedef struct {
+	// Date.
+	unsigned short year;
+	unsigned char month;
+	unsigned char date;
+	// Time.
+	unsigned char hours;
+	unsigned char minutes;
+	unsigned char seconds;
+} RTC_time_t;
+
 /*** RTC functions ***/
 
 void RTC_reset(void);
 RTC_status_t RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz);
-RTC_status_t RTC_calibrate(NEOM8N_time_t* gps_timestamp);
-void RTC_get_timestamp(NEOM8N_time_t* rtc_timestamp);
+RTC_status_t RTC_calibrate(RTC_time_t* timestamp);
+void RTC_get_timestamp(RTC_time_t* timestamp);
 
 void RTC_enable_alarm_a_interrupt(void);
 void RTC_disable_alarm_a_interrupt(void);

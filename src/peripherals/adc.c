@@ -31,7 +31,7 @@
 
 typedef struct {
 	unsigned int vrefint_12bits;
-	unsigned int data[ADC_DATA_IDX_LAST];
+	unsigned int data[ADC_DATA_INDEX_LAST];
 	unsigned char tmcu_degrees_comp1;
 	signed char tmcu_degrees_comp2;
 } ADC_context_t;
@@ -116,7 +116,7 @@ static ADC_status_t ADC1_compute_vrefint(void) {
  */
 static void ADC1_compute_vmcu(void) {
 	// Retrieve supply voltage from bandgap result.
-	adc_ctx.data[ADC_DATA_IDX_VMCU_MV] = (VREFINT_CAL * VREFINT_VCC_CALIB_MV) / (adc_ctx.vrefint_12bits);
+	adc_ctx.data[ADC_DATA_INDEX_VMCU_MV] = (VREFINT_CAL * VREFINT_VCC_CALIB_MV) / (adc_ctx.vrefint_12bits);
 }
 
 /* COMPUTE MCU TEMPERATURE THANKS TO INTERNAL VOLTAGE REFERENCE.
@@ -139,7 +139,7 @@ static ADC_status_t ADC1_compute_tmcu(void) {
 	status = ADC1_filtered_conversion(ADC_CHANNEL_TMCU, &raw_temp_sensor_12bits);
 	if (status != ADC_SUCCESS) goto errors;
 	// Compute temperature according to MCU factory calibration (see p.301 and p.847 of RM0377 datasheet).
-	raw_temp_calib_mv = (raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_IDX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
+	raw_temp_calib_mv = (raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_INDEX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
 	temp_calib_degrees = raw_temp_calib_mv * ((int) (TS_CAL2_TEMP-TS_CAL1_TEMP));
 	temp_calib_degrees = (temp_calib_degrees) / ((int) (TS_CAL2 - TS_CAL1));
 	adc_ctx.tmcu_degrees_comp2 = temp_calib_degrees + TS_CAL1_TEMP;
@@ -172,8 +172,8 @@ ADC_status_t ADC1_init(void) {
 	unsigned int loop_count = 0;
 	// Init context.
 	adc_ctx.vrefint_12bits = 0;
-	for (idx=0 ; idx<ADC_DATA_IDX_LAST ; idx++) adc_ctx.data[idx] = 0;
-	adc_ctx.data[ADC_DATA_IDX_VMCU_MV] = ADC_VMCU_DEFAULT_MV;
+	for (idx=0 ; idx<ADC_DATA_INDEX_LAST ; idx++) adc_ctx.data[idx] = 0;
+	adc_ctx.data[ADC_DATA_INDEX_VMCU_MV] = ADC_VMCU_DEFAULT_MV;
 	adc_ctx.tmcu_degrees_comp2 = 0;
 	adc_ctx.tmcu_degrees_comp1 = 0;
 	// Enable peripheral clock.
@@ -265,8 +265,8 @@ ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	// Check index.
-	if (data_idx >= ADC_DATA_IDX_LAST) {
-		status = ADC_ERROR_INDEX;
+	if (data_idx >= ADC_DATA_INDEX_LAST) {
+		status = ADC_ERROR_DATA_INDEX;
 	}
 	else {
 		(*data) = adc_ctx.data[data_idx];

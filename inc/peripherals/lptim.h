@@ -8,7 +8,7 @@
 #ifndef LPTIM_H
 #define LPTIM_H
 
-#include "wind.h"
+#include "mode.h"
 
 /*** LPTIM structures ***/
 
@@ -27,7 +27,7 @@ void LPTIM1_enable(void);
 void LPTIM1_disable(void);
 LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode);
 #ifdef WIND_VANE_ULTIMETER
-void LPTIM1_start(void);
+LPTIM_status_t LPTIM1_start(void);
 void LPTIM1_stop(void);
 unsigned int LPTIM1_get_counter(void);
 #endif

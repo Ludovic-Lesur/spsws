@@ -68,12 +68,11 @@
 static void AT_print_ok(void);
 static void AT_print_command_list(void);
 #ifdef AT_COMMANDS_SENSORS
-static void AT_mcu_callback(void);
 static void AT_adc_callback(void);
+static void AT_max11136_callback(void);
 static void AT_iths_callback(void);
 static void AT_eths_callback(void);
 static void AT_epts_callback(void);
-static void AT_eldr_callback(void);
 static void AT_euvs_callback(void);
 static void AT_wind_callback(void);
 static void AT_rain_callback(void);
@@ -145,14 +144,13 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_COMMAND, "AT", "\0", "Ping command", AT_print_ok},
 	{PARSER_MODE_COMMAND, "AT?", "\0", "List all available AT commands", AT_print_command_list},
 #ifdef AT_COMMANDS_SENSORS
-	{PARSER_MODE_COMMAND, "AT$MCU?", "\0", "Get internal ADC measurements", AT_mcu_callback},
-	{PARSER_MODE_COMMAND, "AT$ADC?", "\0", "Get external ADC measurements (MAX11136)", AT_adc_callback},
+	{PARSER_MODE_COMMAND, "AT$ADC?", "\0", "Get internal ADC measurements", AT_adc_callback},
+	{PARSER_MODE_COMMAND, "AT$MAX11136?", "\0", "Get external ADC measurements (MAX11136)", AT_max11136_callback},
 #ifdef HW2_0
 	{PARSER_MODE_COMMAND, "AT$ITHS?", "\0", "Get internal PCB temperature and humidity (SHT30)", AT_iths_callback},
 #endif
 	{PARSER_MODE_COMMAND, "AT$ETHS?", "\0", "Get external temperature and humidity (SHT30)", AT_eths_callback},
 	{PARSER_MODE_COMMAND, "AT$EPTS?", "\0", "Get pressure and temperature (DPS310)", AT_epts_callback},
-	{PARSER_MODE_COMMAND, "AT$ELDR?", "\0", "Get light (LDR)", AT_eldr_callback},
 	{PARSER_MODE_COMMAND, "AT$EUVS?", "\0", "Get UV (SI1133)", AT_euvs_callback},
 	{PARSER_MODE_HEADER,  "AT$WIND=", "\0", "Enable or disable wind measurements", AT_wind_callback},
 	{PARSER_MODE_HEADER,  "AT$RAIN=", "\0", "Enable or disable rain detection", AT_rain_callback},
@@ -296,7 +294,7 @@ static void AT_print_command_list(void) {
  * @param:	None.
  * @return:	None.
  */
-static void AT_mcu_callback(void) {
+static void AT_adc_callback(void) {
 	// Local variables.
 	unsigned int vmcu_mv = 0;
 	signed char tmcu_degrees = 0;
@@ -307,11 +305,11 @@ static void AT_mcu_callback(void) {
 		ADC1_perform_measurements();
 		ADC1_disable();
 		ADC1_get_tmcu_comp2(&tmcu_degrees);
-		ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
+		ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
 		// Print results.
-		AT_response_add_string("Vcc=");
+		AT_response_add_string("Vmcu=");
 		AT_response_add_value((int) vmcu_mv, STRING_FORMAT_DECIMAL, 0);
-		AT_response_add_string("mV T=");
+		AT_response_add_string("mV Tmcu=");
 		AT_response_add_value((int) tmcu_degrees, STRING_FORMAT_DECIMAL, 0);
 		AT_response_add_string("dC");
 		AT_response_add_string(AT_RESPONSE_END);
@@ -326,43 +324,64 @@ static void AT_mcu_callback(void) {
  * @param:	None.
  * @return:	None.
  */
-static void AT_adc_callback(void) {
+static void AT_max11136_callback(void) {
 	// Local variables.
-	unsigned int result_12bits = 0;
-	unsigned int idx = 0;
+	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
+	unsigned int data = 0;
 	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag == 0) {
-		// Trigger external ADC convertions.
-#ifdef HW1_0
-		SPI1_power_on();
-#endif
-#ifdef HW2_0
-		SPI2_power_on();
-#endif
-		// Run external ADC conversions.
-		MAX11136_perform_measurements();
-#ifdef HW1_0
-		SPI1_power_off();
-#endif
-#ifdef HW2_0
-		SPI2_power_off();
-#endif
-		// Print results.
-		for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) {
-			MAX11136_get_data(idx, &result_12bits);
-			AT_response_add_string("AIN");
-			AT_response_add_value((int) idx, STRING_FORMAT_DECIMAL, 0);
-			AT_response_add_string("=");
-			AT_response_add_value((int) result_12bits, STRING_FORMAT_HEXADECIMAL, 0);
-			AT_response_add_string(" ");
-		}
-		AT_response_add_string(AT_RESPONSE_END);
-		AT_response_send();
-	}
-	else {
+	if (at_ctx.wind_measurement_flag != 0) {
 		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
+		goto errors;
 	}
-
+	AT_print_ok();
+	// Power on ADC.
+#ifdef HW1_0
+	spi_status = SPI1_power_on();
+#endif
+#ifdef HW2_0
+	spi_status = SPI2_power_on();
+#endif
+	if (spi_status != SPI_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_SPI, spi_status);
+		goto errors;
+	}
+	AT_response_add_string("MAX11136 running...");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	// Run external ADC conversions.
+	max11136_status = MAX11136_perform_measurements();
+	// Power off ADC.
+	// Note: status is not checked since GPS data could be valid.
+#ifdef HW1_0
+	SPI1_power_off();
+#endif
+#ifdef HW2_0
+	SPI2_power_off();
+#endif
+	// Check ADC status.
+	if (max11136_status != MAX11136_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_MAX11136, max11136_status);
+		goto errors;
+	}
+	// Vsrc.
+	MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &data);
+	AT_response_add_string("Vsrc=");
+	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
+	// Vcap.
+	AT_response_add_string("mV Vcap=");
+	MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &data);
+	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
+	// LDR.
+	AT_response_add_string("mV Light=");
+	MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &data);
+	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("%");
+	// Response end.
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+errors:
+	return;
 }
 
 /* AT$ITHS? EXECUTION CALLBACK.
@@ -455,51 +474,6 @@ static void AT_epts_callback(void) {
 	}
 }
 
-/* AT$ELDR? EXECUTION CALLBACK.
- * @param:	None.
- * @return:	None.
- */
-static void AT_eldr_callback(void) {
-	// Local variables.
-	unsigned int result_12_bits = 0;
-	unsigned int vmcu_mv = 0;
-	unsigned int light_percent = 0;
-	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag == 0) {
-		// Perform measurements.
-		I2C1_power_on();
-#ifdef HW1_0
-		SPI1_power_on();
-#endif
-#ifdef HW2_0
-		SPI2_power_on();
-#endif
-		// Run external ADC conversions.
-		MAX11136_perform_measurements();
-#ifdef HW1_0
-		SPI1_power_off();
-#endif
-#ifdef HW2_0
-		SPI2_power_off();
-#endif
-		I2C1_power_off();
-		ADC1_perform_measurements();
-		// Get LDR and supply voltage.
-		MAX11136_get_data(MAX11136_CHANNEL_LDR, &result_12_bits);
-		ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &vmcu_mv);
-		light_percent = (100 * result_12_bits) / (vmcu_mv);
-		// Print result.
-		AT_response_add_string("Light=");
-		AT_response_add_value(light_percent, STRING_FORMAT_DECIMAL, 0);
-		AT_response_add_string("%");
-		AT_response_add_string(AT_RESPONSE_END);
-		AT_response_send();
-	}
-	else {
-		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
-	}
-}
-
 /* AT$EUVS? EXECUTION CALLBACK.
  * @param:	None.
  * @return:	None.
@@ -511,9 +485,9 @@ static void AT_euvs_callback(void) {
 	if (at_ctx.wind_measurement_flag == 0) {
 		// Perform measurements.
 		I2C1_power_on();
-		SI1133_PerformMeasurements(SI1133_EXTERNAL_I2C_ADDRESS);
+		SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
 		I2C1_power_off();
-		SI1133_GetUvIndex(&uv_index);
+		SI1133_get_uv_index(&uv_index);
 		// Print result.
 		AT_response_add_string("UVI=");
 		AT_response_add_value(uv_index, STRING_FORMAT_DECIMAL, 0);
@@ -552,11 +526,10 @@ static void AT_wind_callback(void) {
 			AT_response_add_value((int) wind_speed_average, STRING_FORMAT_DECIMAL, 0);
 			AT_response_add_string("m/h PeakSpeed=");
 			AT_response_add_value((int) wind_speed_peak, STRING_FORMAT_DECIMAL, 0);
-			if (wind_direction != WIND_DIRECTION_ERROR_VALUE) {
-				AT_response_add_string("m/h AverageDirection=");
-				AT_response_add_value((int) wind_direction, STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("d");
-			}
+			// TODO check wind status for direction.
+			AT_response_add_string("m/h AverageDirection=");
+			AT_response_add_value((int) wind_direction, STRING_FORMAT_DECIMAL, 0);
+			AT_response_add_string("d");
 			AT_response_add_string(AT_RESPONSE_END);
 			AT_response_send();
 			// Reset data.
@@ -622,69 +595,77 @@ static void AT_rain_callback(void) {
 static void AT_time_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	int timeout_seconds = 0;
-	NEOM8N_time_t gps_timestamp;
-	NEOM8N_status_t gps_status;
+	RTC_time_t gps_timestamp;
 	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag == 0) {
-		// Read timeout parameter.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
-		if (parser_status == PARSER_SUCCESS) {
-			// Start GPS fix.
-			LPUART1_power_on();
-			gps_status = NEOM8N_get_time(&gps_timestamp, (unsigned int) timeout_seconds, 0);
-			LPUART1_power_off();
-			switch (gps_status) {
-			case NEOM8N_SUCCESS:
-				// Year.
-				AT_response_add_value((gps_timestamp.year), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("-");
-				// Month.
-				if ((gps_timestamp.month) < 10) {
-					AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
-				}
-				AT_response_add_value((gps_timestamp.month), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("-");
-				// Day.
-				if ((gps_timestamp.date) < 10) {
-					AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
-				}
-				AT_response_add_value((gps_timestamp.date), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string(" ");
-				// Hours.
-				if ((gps_timestamp.hours) < 10) {
-					AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
-				}
-				AT_response_add_value((gps_timestamp.hours), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string(":");
-				// Minutes.
-				if ((gps_timestamp.minutes) < 10) {
-					AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
-				}
-				AT_response_add_value((gps_timestamp.minutes), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string(":");
-				// Seconds.
-				if ((gps_timestamp.seconds) < 10) {
-					AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
-				}
-				AT_response_add_value((gps_timestamp.seconds), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string(AT_RESPONSE_END);
-				AT_response_send();
-				break;
-			case NEOM8N_ERROR_TIMEOUT:
-				AT_print_error(ERROR_SOURCE_NEOM8N, gps_status);
-				break;
-			default:
-				break;
-			}
-		}
-		else {
-			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in timeout parameter.
-		}
-	}
-	else {
+	if (at_ctx.wind_measurement_flag != 0) {
 		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
+		goto errors;
 	}
+	// Read timeout parameter.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+	if (parser_status != PARSER_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status);
+		goto errors;
+	}
+	AT_print_ok();
+	// Power on GPS.
+	lpuart1_status = LPUART1_power_on();
+	if (lpuart1_status != LPUART_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_LPUART, lpuart1_status);
+		goto errors;
+	}
+	AT_response_add_string("GPS running...");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	// Start time aquisition.
+	neom8n_status = NEOM8N_get_time(&gps_timestamp, (unsigned int) timeout_seconds, 0);
+	// Power off GPS.
+	// Note: status is not checked since GPS data could be valid.
+	LPUART1_power_off();
+	// Check GPS result.
+	if (neom8n_status != NEOM8N_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_NEOM8N, neom8n_status);
+		goto errors;
+	}
+	// Year.
+	AT_response_add_value((gps_timestamp.year), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("-");
+	// Month.
+	if ((gps_timestamp.month) < 10) {
+		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	}
+	AT_response_add_value((gps_timestamp.month), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("-");
+	// Day.
+	if ((gps_timestamp.date) < 10) {
+		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	}
+	AT_response_add_value((gps_timestamp.date), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(" ");
+	// Hours.
+	if ((gps_timestamp.hours) < 10) {
+		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	}
+	AT_response_add_value((gps_timestamp.hours), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(":");
+	// Minutes.
+	if ((gps_timestamp.minutes) < 10) {
+		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	}
+	AT_response_add_value((gps_timestamp.minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(":");
+	// Seconds.
+	if ((gps_timestamp.seconds) < 10) {
+		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	}
+	AT_response_add_value((gps_timestamp.seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+errors:
+	return;
 }
 
 /* AT$GPS EXECUTION CALLBACK.
@@ -694,62 +675,71 @@ static void AT_time_callback(void) {
 static void AT_gps_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	int timeout_seconds = 0;
 	unsigned int fix_duration_seconds = 0;
 	NEOM8N_position_t gps_position;
-	NEOM8N_status_t gps_status;
 	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag == 0) {
-		// Read timeout parameter.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
-		if (parser_status == PARSER_SUCCESS) {
-			// Start GPS fix.
-			LPUART1_power_on();
-			gps_status = NEOM8N_get_position(&gps_position, (unsigned int) timeout_seconds, 0, &fix_duration_seconds);
-			LPUART1_power_off();
-			switch (gps_status) {
-			case NEOM8N_SUCCESS:
-				// Latitude.
-				AT_response_add_string("Lat=");
-				AT_response_add_value((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("d");
-				AT_response_add_value((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("'");
-				AT_response_add_value((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("''-");
-				AT_response_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
-				// Longitude.
-				AT_response_add_string(" Long=");
-				AT_response_add_value((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("d");
-				AT_response_add_value((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("'");
-				AT_response_add_value((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("''-");
-				AT_response_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
-				// Altitude.
-				AT_response_add_string(" Alt=");
-				AT_response_add_value((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("m Fix=");
-				AT_response_add_value(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
-				AT_response_add_string("s");
-				AT_response_add_string(AT_RESPONSE_END);
-				AT_response_send();
-				break;
-			case NEOM8N_ERROR_TIMEOUT:
-				AT_print_error(ERROR_SOURCE_NEOM8N, gps_status);
-				break;
-			default:
-				break;
-			}
-		}
-		else {
-			AT_print_error(ERROR_SOURCE_PARSER, parser_status); // Error in timeout parameter.
-		}
-	}
-	else {
+	if (at_ctx.wind_measurement_flag != 0) {
 		AT_print_error(ERROR_SOURCE_AT, AT_ERROR_BUSY);
+		goto errors;
 	}
+	// Read timeout parameter.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+	if (parser_status != PARSER_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_PARSER, parser_status);
+		goto errors;
+	}
+	AT_print_ok();
+	// Power on GPS.
+	lpuart1_status = LPUART1_power_on();
+	if (lpuart1_status != LPUART_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_LPUART, lpuart1_status);
+		goto errors;
+	}
+	AT_response_add_string("GPS running...");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	// Start GPS fix.
+	neom8n_status = NEOM8N_get_position(&gps_position, (unsigned int) timeout_seconds, &fix_duration_seconds);
+	// Power off GPS.
+	// Note: status is not checked since GPS data could be valid.
+	LPUART1_power_off();
+	// Check GPS result.
+	if (neom8n_status != NEOM8N_SUCCESS) {
+		AT_print_error(ERROR_SOURCE_NEOM8N, neom8n_status);
+		goto errors;
+	}
+	// Latitude.
+	AT_response_add_string("Lat=");
+	AT_response_add_value((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("d");
+	AT_response_add_value((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("'");
+	AT_response_add_value((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("''-");
+	AT_response_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
+	// Longitude.
+	AT_response_add_string(" Long=");
+	AT_response_add_value((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("d");
+	AT_response_add_value((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("'");
+	AT_response_add_value((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("''-");
+	AT_response_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
+	// Altitude.
+	AT_response_add_string(" Alt=");
+	AT_response_add_value((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
+	// Fix duration.
+	AT_response_add_string("m Fix=");
+	AT_response_add_value(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("s");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+errors:
+	return;
 }
 #endif
 
@@ -1160,7 +1150,7 @@ static void AT_rssi_callback(void) {
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	int frequency_hz = 0;
 	int duration_s = 0;
-	signed char rssi_dbm = 0;
+	signed short rssi_dbm = 0;
 	unsigned int report_loop = 0;
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag == 0) {
@@ -1178,7 +1168,7 @@ static void AT_rssi_callback(void) {
 				SX1232_set_mode(SX1232_MODE_RX);
 				LPTIM1_delay_milliseconds(5, 0); // Wait TS_TR=120us typical.
 				while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
-					rssi_dbm = SX1232_get_rssi();
+					SX1232_get_rssi(&rssi_dbm);
 					AT_response_add_string("RSSI=");
 					AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
 					AT_response_add_string("dBm\n");
@@ -1378,7 +1368,7 @@ static void AT_tm_callback(void) {
  * @param:	None.
  * @return:	None.
  */
-static void AT_DecodeRxBuffer(void) {
+static void AT_decode(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	unsigned int idx = 0;
@@ -1444,7 +1434,7 @@ void AT_init(void) {
 void AT_task(void) {
 	// Trigger decoding function if line end found.
 	if (at_ctx.line_end_flag) {
-		AT_DecodeRxBuffer();
+		AT_decode();
 	}
 	// Check RTC flag for wind measurements.
 	if (RTC_get_alarm_b_flag() != 0) {

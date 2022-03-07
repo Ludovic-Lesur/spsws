@@ -8,14 +8,27 @@
 #ifndef SI1133_H
 #define SI1133_H
 
+#include "i2c.h"
+
 /*** SI1133 macros ***/
 
 #define SI1133_EXTERNAL_I2C_ADDRESS		0x52
 
+/*** SI1133 structures ***/
+
+typedef enum {
+	SI1133_SUCCESS = 0,
+	SI1133_ERROR_I2C,
+	SI1133_ERROR_READY = (SI1133_ERROR_I2C + I2C_ERROR_LAST),
+	SI1133_ERROR_COMMAND,
+	SI1133_ERROR_PARAMETER,
+	SI1133_ERROR_TIMEOUT,
+	SI1133_ERROR_LAST
+} SI1133_status_t;
+
 /*** SI1133 functions ***/
 
-void SI1133_Init(void);
-void SI1133_PerformMeasurements(unsigned char si1133_i2c_address);
-void SI1133_GetUvIndex(unsigned char* uv_index);
+SI1133_status_t SI1133_perform_measurements(unsigned char si1133_i2c_address);
+void SI1133_get_uv_index(unsigned char* uv_index);
 
 #endif /* SI1133_H */

@@ -9,6 +9,7 @@
 
 #include "exti.h"
 #include "lptim_reg.h"
+#include "mode.h"
 #include "nvic.h"
 #include "pwr.h"
 #include "rcc.h"
@@ -155,6 +156,7 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 	// Compute ARR value.
 	arr = ((delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
 	status = LPTIM1_write_arr(arr);
+	if (status != LPTIM_SUCCESS) goto errors;
 	// Start timer.
 	NVIC_enable_interrupt(NVIC_IT_LPTIM1);
 	lptim_wake_up = 0;
@@ -177,15 +179,19 @@ errors:
  * @param:	None.
  * @return:	None.
  */
-void LPTIM1_start(void) {
+LPTIM_status_t LPTIM1_start(void) {
+	// Local variables.
+	LPTIM_status_t status = LPTIM_SUCCESS;
 	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-	// Reset counter.
-	LPTIM1 -> CNT &= 0xFFFF0000;
+	LPTIM1 -> CNT = 0;
 	// Set ARR to maximum value (unused).
-	LPTIM1_write_arr(0xFFFF);
+	status = LPTIM1_write_arr(0xFFFF);
+	if (status != LPTIM_SUCCESS) goto errors;
 	// Start timer.
 	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
+errors:
+	return status;
 }
 
 /* START LPTIM COUNTER.

@@ -189,10 +189,10 @@ errors:
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
- * @param gps_timestamp:	Pointer to timestamp from GPS.
+ * @param timestamp:	Pointer to timestamp from GPS.
  * @return status:			Function execution status.
  */
-RTC_status_t RTC_calibrate(NEOM8N_time_t* gps_timestamp) {
+RTC_status_t RTC_calibrate(RTC_time_t* timestamp) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	unsigned int tr_value = 0;
@@ -200,28 +200,28 @@ RTC_status_t RTC_calibrate(NEOM8N_time_t* gps_timestamp) {
 	unsigned char tens = 0;
 	unsigned char units = 0;
 	// Year.
-	tens = ((gps_timestamp -> year)-2000) / 10;
-	units = ((gps_timestamp -> year)-2000) - (tens*10);
+	tens = ((timestamp -> year)-2000) / 10;
+	units = ((timestamp -> year)-2000) - (tens*10);
 	dr_value |= (tens << 20) | (units << 16);
 	// Month.
-	tens = (gps_timestamp -> month) / 10;
-	units = (gps_timestamp -> month) - (tens*10);
+	tens = (timestamp -> month) / 10;
+	units = (timestamp -> month) - (tens*10);
 	dr_value |= (tens << 12) | (units << 8);
 	// Date.
-	tens = (gps_timestamp -> date) / 10;
-	units = (gps_timestamp -> date) - (tens*10);
+	tens = (timestamp -> date) / 10;
+	units = (timestamp -> date) - (tens*10);
 	dr_value |= (tens << 4) | (units << 0);
 	// Hour.
-	tens = (gps_timestamp -> hours) / 10;
-	units = (gps_timestamp -> hours) - (tens*10);
+	tens = (timestamp -> hours) / 10;
+	units = (timestamp -> hours) - (tens*10);
 	tr_value |= (tens << 20) | (units << 16);
 	// Minutes.
-	tens = (gps_timestamp -> minutes) / 10;
-	units = (gps_timestamp -> minutes) - (tens*10);
+	tens = (timestamp -> minutes) / 10;
+	units = (timestamp -> minutes) - (tens*10);
 	tr_value |= (tens << 12) | (units << 8);
 	// Seconds.
-	tens = (gps_timestamp -> seconds) / 10;
-	units = (gps_timestamp -> seconds) - (tens*10);
+	tens = (timestamp -> seconds) / 10;
+	units = (timestamp -> seconds) - (tens*10);
 	tr_value |= (tens << 4) | (units << 0);
 	// Enter initialization mode.
 	status = RTC_enter_initialization_mode();
@@ -239,17 +239,17 @@ errors:
  * @param rtc_timestamp:	Pointer to timestamp that will contain current RTC time.
  * @return:					None.
  */
-void RTC_get_timestamp(NEOM8N_time_t* rtc_timestamp) {
+void RTC_get_timestamp(RTC_time_t* timestamp) {
 	// Read registers.
 	unsigned int dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
 	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
 	// Parse registers into timestamp structure.
-	rtc_timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
-	rtc_timestamp -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
-	rtc_timestamp -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);
-	rtc_timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
-	rtc_timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
-	rtc_timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
+	timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
+	timestamp -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
+	timestamp -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);
+	timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
+	timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
+	timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
 }
 
 /* ENABLE RTC ALARM A INTERRUPT.

@@ -33,11 +33,9 @@ volatile unsigned int rain_edge_count;
  * @return:	None.
  */
 void RAIN_init(void) {
-	// GPIO mapping selection.
-	GPIO_RAIN = GPIO_DIO2;
 	// Init GPIOs and EXTI.
-	GPIO_configure(&GPIO_RAIN, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_RAIN, EXTI_TRIGGER_FALLING_EDGE);
+	GPIO_configure(&GPIO_DIO2, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_configure_gpio(&GPIO_DIO2, EXTI_TRIGGER_FALLING_EDGE);
 }
 
 /* START CONTINUOUS RAIN MEASUREMENTS.

@@ -74,13 +74,10 @@ static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] 
  * @param direction_mv:	Voltage divider output voltage in mV.
  * @return:				None.
  */
-static void WIND_voltage_to_angle(unsigned int direction_12bits) {
-	// Reset result.
-	wind_ctx.direction_degrees = WIND_DIRECTION_ERROR_VALUE;
-	// Compute ratio.
-	unsigned int ratio = (direction_12bits * 1000) / (MAX11136_FULL_SCALE);
-	// Get corresponding angle.
+static void WIND_voltage_to_angle(unsigned int ratio) {
+	// Local variables.
 	unsigned char idx = 0;
+	// Get corresponding angle.
 	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
 		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
 			// Update current angle and table index.
@@ -98,28 +95,18 @@ static void WIND_voltage_to_angle(unsigned int direction_12bits) {
  * @return:	None.
  */
 void WIND_init(void) {
-	// GPIO mapping selection.
-	GPIO_WIND_SPEED = GPIO_DIO0;
-#ifdef WIND_VANE_ULTIMETER
-#ifdef HW1_0
-	GPIO_WIND_DIRECTION = GPIO_DIO2;
-#endif
-#ifdef HW2_0
-	GPIO_WIND_DIRECTION = GPIO_DIO1;
-#endif
-#endif
 	// Init GPIOs and EXTI.
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-	GPIO_configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE);
+	GPIO_configure(&GPIO_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_configure_gpio(&GPIO_DIO0, EXTI_TRIGGER_FALLING_EDGE);
 #endif
 #ifdef WIND_VANE_ULTIMETER
 	// Wind speed.
-	GPIO_configure(&GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_WIND_SPEED, EXTI_TRIGGER_RISING_EDGE);
+	GPIO_configure(&GPIO_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_configure_gpio(&GPIO_DIO0, EXTI_TRIGGER_RISING_EDGE);
 	// Wind direction.
-	GPIO_configure(&GPIO_WIND_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_WIND_DIRECTION, EXTI_TRIGGER_RISING_EDGE);
+	GPIO_configure(&GPIO_DIO1, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_configure_gpio(&GPIO_DIO1, EXTI_TRIGGER_RISING_EDGE);
 #endif
 	// Reset data.
 	WIND_reset_data();
@@ -169,14 +156,21 @@ void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh)
 
 /* GET AVERAGE AVERAGE WIND DIRECTION VALUE SINCE LAST MEASUREMENT START.
  * @param average_direction_degrees:	Pointer to int that will contain average wind direction value in degrees.
- * @return:									None.
+ * @return status:						Function execution status.
  */
-void WIND_get_direction(unsigned int* average_direction_degrees) {
+WIND_status_t WIND_get_direction(unsigned int* average_direction_degrees) {
+	// Local variables.
+	WIND_status_t status = WIND_SUCCESS;
+	unsigned int local_result = 0;
 	// Compute trend point angle (considered as average wind direction).
-	(*average_direction_degrees) = MATH_atan2(wind_ctx.direction_x, wind_ctx.direction_y);
-	if ((*average_direction_degrees) == MATH_ERROR_VALUE) {
-		(*average_direction_degrees) = WIND_DIRECTION_ERROR_VALUE;
+	local_result = MATH_atan2(wind_ctx.direction_x, wind_ctx.direction_y);
+	if (local_result == MATH_ERROR_VALUE) {
+		status = WIND_ERROR_MATH;
+		goto errors;
 	}
+	(*average_direction_degrees) = local_result;
+errors:
+	return status;
 }
 
 /* RESET WIND MEASUREMENT DATA.
@@ -194,7 +188,7 @@ void WIND_reset_data(void) {
 	wind_ctx.speed_mh_average = 0;
 	wind_ctx.speed_mh_peak = 0;
 	// Wind direction.
-	wind_ctx.direction_degrees = WIND_DIRECTION_ERROR_VALUE;
+	wind_ctx.direction_degrees = 0;
 #ifdef WIND_VANE_ULTIMETER
 	wind_ctx.direction_pwm_period = 0;
 	wind_ctx.direction_pwm_duty_cycle = 0;
@@ -209,7 +203,9 @@ void WIND_reset_data(void) {
  * @param:	None.
  * @return:	None.
  */
-void WIND_speed_edge_callback(void) {
+WIND_status_t WIND_speed_edge_callback(void) {
+	// Local variables.
+	WIND_status_t status = WIND_SUCCESS;
 	// Wind speed.
 	wind_ctx.speed_edge_count++;
 	// Wind direction.
@@ -221,9 +217,10 @@ void WIND_speed_edge_callback(void) {
 	if ((wind_ctx.direction_pwm_period > 0) && (wind_ctx.direction_pwm_duty_cycle <= wind_ctx.direction_pwm_period)) {
 		wind_ctx.direction_degrees = (wind_ctx.direction_pwm_duty_cycle * 360) / (wind_ctx.direction_pwm_period);
 	}
-	// Start new cycle.
-	LPTIM1_start();
+	// Start new cycle (LPTIM1 status not checked).
+	status = LPTIM1_start();
 #endif
+	return status;
 }
 
 #ifdef WIND_VANE_ULTIMETER
@@ -238,10 +235,22 @@ void WIND_direction_edge_callback(void) {
 #endif
 
 /* FUNCTION CALLED BY TIM21 INTERRUPT HANDLER WHEN THE MEASUREMENT PERIOD IS REACHED.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void WIND_measurement_period_callback(void) {
+WIND_status_t WIND_measurement_period_callback(void) {
+	// Local variables.
+	WIND_status_t status = WIND_SUCCESS;
+#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
+#ifdef HW1_0
+	SPI_status_t spi1_status = SPI_SUCCESS;
+#endif
+#ifdef HW2_0
+	SPI_status_t spi2_status = SPI_SUCCESS;
+#endif
+	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
+	unsigned int wind_direction_ratio = 0;
+#endif
 	// Update counters.
 	wind_ctx.speed_seconds_count++;
 	wind_ctx.direction_seconds_count++;
@@ -271,43 +280,45 @@ void WIND_measurement_period_callback(void) {
 			// Get direction from ADC.
 #ifdef HW1_0
 			SPI1_enable();
-			SPI1_power_on();
+			spi1_status = SPI1_power_on();
+			SPI1_status_check(WIND_ERROR_SPI);
 #endif
 #ifdef HW2_0
 			SPI2_enable();
-			SPI2_power_on();
+			spi2_status = SPI2_power_on();
+			SPI2_status_check(WIND_ERROR_SPI);
 #endif
-			MAX11136_perform_measurements();
+			max11136_status = MAX11136_perform_measurements();
+			MAX11136_status_check(WIND_ERROR_MAX11136);
+
 #ifdef HW1_0
-			SPI1_power_off();
+			spi1_status = SPI1_power_off();
+			SPI1_status_check(WIND_ERROR_SPI);
 			SPI1_disable();
 #endif
 #ifdef HW2_0
-			SPI2_power_off();
+			spi2_status = SPI2_power_off();
+			SPI2_status_check(WIND_ERROR_SPI);
 			SPI2_disable();
 #endif
 			// Get 12-bits result.
-			unsigned int wind_direction_12bits = 0;
-			MAX11136_get_data(MAX11136_CHANNEL_WIND_DIRECTION, &wind_direction_12bits);
+			max11136_status = MAX11136_get_data(MAX11136_DATA_WIND_DIRECTION_RATIO, &wind_direction_ratio);
+			MAX11136_status_check(WIND_ERROR_MAX11136)
 			// Convert voltage to direction.
-			WIND_voltage_to_angle(wind_direction_12bits);
+			WIND_voltage_to_angle(wind_direction_ratio);
 #endif
-			// Update trend point if direction is valid.
-			if (wind_ctx.direction_degrees != WIND_DIRECTION_ERROR_VALUE) {
-				// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
-				wind_ctx.direction_x += (wind_ctx.speed_mh / 1000) * MATH_COS_TABLE[wind_ctx.direction_degrees];
-				wind_ctx.direction_y += (wind_ctx.speed_mh / 1000) * MATH_SIN_TABLE[wind_ctx.direction_degrees];
+			// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
+			wind_ctx.direction_x += (wind_ctx.speed_mh / 1000) * (signed int) MATH_COS_TABLE[wind_ctx.direction_degrees];
+			wind_ctx.direction_y += (wind_ctx.speed_mh / 1000) * (signed int) MATH_SIN_TABLE[wind_ctx.direction_degrees];
 #ifdef ATM
-				AT_print_wind_direction(wind_ctx.direction_degrees, wind_ctx.direction_x, wind_ctx.direction_y);
+			AT_print_wind_direction(wind_ctx.direction_degrees, wind_ctx.direction_x, wind_ctx.direction_y);
 #endif
-			}
-		}
-		else {
-			wind_ctx.direction_degrees = WIND_DIRECTION_ERROR_VALUE;
 		}
 		// Reset seconds counter.
 		wind_ctx.direction_seconds_count = 0;
 	}
+errors:
+	return status;
 }
 
 #endif

@@ -11,17 +11,17 @@
 /*** ADC structures ***/
 
 typedef enum {
-	ADC_DATA_IDX_VMCU_MV = 0,
-	ADC_DATA_IDX_LAST
-} ADC_data_index_t;
-
-typedef enum {
 	ADC_SUCCESS = 0,
 	ADC_ERROR_CALIBRATION,
-	ADC_ERROR_INDEX,
+	ADC_ERROR_DATA_INDEX,
 	ADC_ERROR_TIMEOUT,
 	ADC_ERROR_LAST
 } ADC_status_t;
+
+typedef enum {
+	ADC_DATA_INDEX_VMCU_MV = 0,
+	ADC_DATA_INDEX_LAST
+} ADC_data_index_t;
 
 /*** ADC functions ***/
 

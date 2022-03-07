@@ -9,8 +9,11 @@
 #define WIND_H
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
+#include "max11136.h"
 #include "mode.h"
+#include "spi.h"
 
 #if (defined CM || defined ATM)
 
@@ -18,18 +21,17 @@
 
 #define WIND_SPEED_MEASUREMENT_PERIOD_SECONDS		1
 #define WIND_DIRECTION_MEASUREMENT_PERIOD_SECONDS	10
-// Wind vane type.
-//#define WIND_VANE_ULTIMETER						// Phase shift technique.
-#define WIND_VANE_ARGENT_DATA_SYSTEMS				// Analog technique.
 
-#define WIND_DIRECTION_ERROR_VALUE					0xFFFFFFFF
+/*** WIND structures ***/
 
-/*** WIND global variables ***/
-
-GPIO_pin_t GPIO_WIND_SPEED;
-#ifdef WIND_VANE_ULTIMETER
-GPIO_pin_t GPIO_WIND_DIRECTION;
-#endif
+typedef enum {
+	WIND_SUCCESS = 0,
+	WIND_ERROR_LPTIM,
+	WIND_ERROR_SPI = (WIND_ERROR_LPTIM + LPTIM_ERROR_LAST),
+	WIND_ERROR_MAX11136 = (WIND_ERROR_SPI + SPI_ERROR_LAST),
+	WIND_ERROR_MATH = (WIND_ERROR_MAX11136 + MAX11136_ERROR_LAST),
+	WIND_ERROR_LAST
+} WIND_status_t;
 
 /*** WIND functions ***/
 
@@ -37,20 +39,14 @@ void WIND_init(void);
 void WIND_start_continuous_measure(void);
 void WIND_stop_continuous_measure(void);
 void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh);
-void WIND_get_direction(unsigned int* average_direction_degrees);
+WIND_status_t WIND_get_direction(unsigned int* average_direction_degrees);
 void WIND_reset_data(void);
-void WIND_speed_edge_callback(void);
+WIND_status_t WIND_speed_edge_callback(void);
 #ifdef WIND_VANE_ULTIMETER
 void WIND_direction_edge_callback(void);
 #endif
-void WIND_measurement_period_callback(void);
-
-/*** Errors management ***/
-
-#if (defined WIND_VANE_ULTIMETER && defined WIND_VANE_ARGENT_DATA_SYSTEMS)
-#error "Only one wind vane type must be selected"
-#endif
-
-#endif /* WIND_H */
+WIND_status_t WIND_measurement_period_callback(void);
 
 #endif
+
+#endif  /* WIND_H */

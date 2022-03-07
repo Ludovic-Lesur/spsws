@@ -16,6 +16,24 @@
 
 /*** SX1232 local macros ***/
 
+// Frequency range.
+#define SX1232_RF_FREQUENCY_HZ_MIN				862000000
+#define SX1232_RF_FREQUENCY_HZ_MAX				1020000000
+// TCXO and output clock frequency (DIO5).
+#define SX1232_FXOSC_HZ							32000000
+#define SX1232_CLKOUT_PRESCALER					2
+#define SX1232_CLKOUT_FREQUENCY_KHZ				((SX1232_FXOSC_HZ) / (SX1232_CLKOUT_PRESCALER * 1000))
+// Last register address
+#define SX1232_REGISTER_ADRESS_LAST				0x7F
+// FSK deviation range.
+#define SX1232_FSK_DEVIATION_MAX				16383 // 2^(14) - 1.
+// Output power ranges.
+#define SX1232_OUTPUT_POWER_RFO_MIN				0
+#define SX1232_OUTPUT_POWER_RFO_MAX				17
+#define SX1232_OUTPUT_POWER_PABOOST_MIN			2
+#define SX1232_OUTPUT_POWER_PABOOST_MAX			20
+// RSSI offset due to internal and external LNA (calibration).
+#define SX1232_RSSI_OFFSET_DB					24
 // SX1232 oscillator frequency.
 #define SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES	8
 // SX1232 minimum and maximum bit rate.
@@ -31,7 +49,6 @@
 
 typedef struct {
 	SX1232_rf_output_pin_t rf_output_pin;
-	signed short rssi_offset;
 } SX1232_context_t;
 
 /*** SX1232 local global variables ***/
@@ -43,39 +60,63 @@ static SX1232_context_t sx1232_ctx;
 /* SX1232 SINGLE ACCESS WRITE FUNCTION.
  * @param addr:		Register address (7 bits).
  * @param valie:	Value to write in register.
- * @return:			None.
+ * @return status:	Function execution status.
  */
-static void SX1232_write_register(unsigned char addr, unsigned char value) {
+static SX1232_status_t SX1232_write_register(unsigned char addr, unsigned char value) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	SPI_status_t spi1_status = SPI_SUCCESS;
+	unsigned char sx1232_spi_command = 0;
 	// Check addr is a 7-bits value.
-	if (addr < (0b1 << 7)) {
-		// Build SPI frame.
-		unsigned char sx1232_spi_command = 0;
-		sx1232_spi_command |= (0b1 << 7) | addr; // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
-		// Write access sequence.
-		GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
-		SPI1_write_byte(sx1232_spi_command);
-		SPI1_write_byte(value);
-		GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
+	if (addr > SX1232_REGISTER_ADRESS_LAST) {
+		status = SX1232_ERROR_ADDRESS;
+		goto errors;
 	}
+	// Build SPI frame.
+	sx1232_spi_command |= (addr | 0x80); // '1 A6 A5 A4 A3 A2 A1 A0' for a write access.
+#ifdef HW1_0
+	SPI1_set_clock_polarity(0);
+#endif
+	// Write access sequence.
+	GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
+	spi1_status = SPI1_write_byte(sx1232_spi_command);
+	SPI1_status_check(SX1232_ERROR_SPI);
+	spi1_status = SPI1_write_byte(value);
+	SPI1_status_check(SX1232_ERROR_SPI);
+errors:
+	GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
+	return status;
 }
 
 /* SX1232 SINGLE ACCESS READ FUNCTION.
  * @param addr:		Register address (7 bits).
  * @param value:	Pointer to byte that will contain the register Value to read.
- * @return:			None.
+ * @return status:	Function execution status.
  */
-static void SX1232_read_register(unsigned char addr, unsigned char* value) {
+static SX1232_status_t SX1232_read_register(unsigned char addr, unsigned char* value) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	SPI_status_t spi1_status = SPI_SUCCESS;
+	unsigned char sx1232_spi_command = 0;
 	// Check addr is a 7-bits value.
-	if (addr < (0b1 << 7)) {
-		// Build SPI frame.
-		unsigned char sx1232_spi_command = 0;
-		sx1232_spi_command |= addr; // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
-		// Write access sequence.
-		GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
-		SPI1_write_byte(sx1232_spi_command);
-		SPI1_read_byte(0xFF, value);
-		GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
+	if (addr > SX1232_REGISTER_ADRESS_LAST) {
+		status = SX1232_ERROR_ADDRESS;
+		goto errors;
 	}
+	// Build SPI frame.
+	sx1232_spi_command = (addr & 0x7F); // '0 A6 A5 A4 A3 A2 A1 A0' for a read access.
+#ifdef HW1_0
+	SPI1_set_clock_polarity(0);
+#endif
+	// Write access sequence.
+	GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
+	spi1_status = SPI1_write_byte(sx1232_spi_command);
+	SPI1_status_check(SX1232_ERROR_SPI);
+	spi1_status = SPI1_read_byte(0xFF, value);
+	SPI1_status_check(SX1232_ERROR_SPI);
+errors:
+	GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
+	return status;
 }
 
 /*** SX1232 functions ***/
@@ -87,7 +128,6 @@ static void SX1232_read_register(unsigned char addr, unsigned char* value) {
 void SX1232_init(void) {
 	// Init context.
 	sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
-	sx1232_ctx.rssi_offset = 0;
 	// Init SX1232 DIOx.
 	GPIO_configure(&GPIO_SX1232_DIO2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -99,6 +139,7 @@ void SX1232_init(void) {
  * @return:	None.
  */
 void SX1232_disable(void) {
+	// Disable GPIOs.
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SX1232_DIO2, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_TCXO32_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -106,29 +147,29 @@ void SX1232_disable(void) {
 
 /* SWITCH SX1232 EXTERNAL TCXO ON OR OFF.
  * @param tcxo_enable:	Power down 32MHz TCXO if 0, power on otherwise.
- * @return:				None.
+ * @return status:		Function execution status.
  */
-void SX1232_tcxo(unsigned char tcxo_enable) {
+SX1232_status_t SX1232_tcxo(unsigned char tcxo_enable) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Update power control.
-	if (tcxo_enable == 0) {
-		GPIO_write(&GPIO_TCXO32_POWER_ENABLE, 0);
-	}
-	else {
-		GPIO_write(&GPIO_TCXO32_POWER_ENABLE, 1);
-		// Wait for TCXO to warm-up.
-		LPTIM1_delay_milliseconds(100, 1);
-	}
+	GPIO_write(&GPIO_TCXO32_POWER_ENABLE, tcxo_enable);
+	// Wait for TCXO to warm-up.
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* SELECT SX1232 OSCILLATOR CONFIGURATION.
- * @param oscillator:	Type of external oscillator used (see SX1232_oscillator_t enumeration in sx1232.h).
- * @return:				None.
+ * @param oscillator:	External oscillator type.
+ * @return status:		Function execution status.
  */
-void SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Select oscillator.
 	switch (oscillator) {
 	case SX1232_OSCILLATOR_QUARTZ:
@@ -140,28 +181,32 @@ void SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 		SX1232_write_register(SX1232_REG_TCXO, 0x19);
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_OSCILLATOR;
+		goto errors;
 	}
 	// Wait TS_OSC = 250us typical.
-	LPTIM1_delay_milliseconds(5, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 1);
+	LPTIM1_status_check(SX1232_ERROR_LPTIM);
 	// Trigger RC oscillator calibration.
-	SX1232_write_register(SX1232_REG_OSC, 0x0F);
+	status = SX1232_write_register(SX1232_REG_OSC, 0x0F);
+errors:
+	return status;
 }
 
 /* SET SX1232 TRANSCEIVER MODE.
- * @param mode: Mode to enter (see SX1232_mode_t enumeration in sx1232.h).
- * @return:		None.
+ * @param mode: 	Mode to enter.
+ * @return status:	Function execution status.
  */
-void SX1232_set_mode(SX1232_mode_t mode) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read OP mode register.
+SX1232_status_t SX1232_set_mode(SX1232_mode_t mode) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char op_mode_reg_value = 0;
-	SX1232_read_register(SX1232_REG_OPMODE, &op_mode_reg_value);
-	op_mode_reg_value &= 0xF8; // Reset bits 0-2.
-	// Program transceiver mode.
+	// Read OP mode register.
+	status = SX1232_read_register(SX1232_REG_OPMODE, &op_mode_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Reset bits 0-2.
+	op_mode_reg_value &= 0xF8;
+	// Compute register.
 	switch (mode) {
 	case SX1232_MODE_SLEEP:
 		// Allready done by previous reset.
@@ -187,29 +232,32 @@ void SX1232_set_mode(SX1232_mode_t mode) {
 		op_mode_reg_value |= 0x05;
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_MODE;
+		goto errors;
 	}
-	SX1232_write_register(SX1232_REG_OPMODE, op_mode_reg_value);
+	// Programe register.
+	status = SX1232_write_register(SX1232_REG_OPMODE, op_mode_reg_value);
+errors:
+	return status;
 }
 
 /* CONFIGURE SX1232 MODULATION.
- * @param modulation: 			Modulation scheme (see SX1232_modulation_t enumeration in sx1232.h).
- * @param modulation_shaping: 	Modulation shaping (see SX1232_modulation_shaping_t enumeration in sx1232.h).
- * @return:						None.
+ * @param modulation: 			Modulation scheme.
+ * @param modulation_shaping: 	Modulation shaping.
+ * @return status:				Function execution status.
  */
-void SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_modulation_shaping_t modulation_shaping) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read OP mode register.
+SX1232_status_t SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_modulation_shaping_t modulation_shaping) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char op_mode_reg_value = 0;
-	SX1232_read_register(SX1232_REG_OPMODE, &op_mode_reg_value);
-	op_mode_reg_value &= 0x87; // Reset bits 3-6.
-	// Program modulation.
+	// Read OP mode register.
+	status = SX1232_read_register(SX1232_REG_OPMODE, &op_mode_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Reset bits 3-6.
+	op_mode_reg_value &= 0x87;
+	// Compute modulation.
 	switch (modulation) {
 	case SX1232_MODULATION_FSK:
-		// Modulation type = '00'.
 		// Allready done by previous reset.
 		break;
 	case SX1232_MODULATION_OOK:
@@ -217,12 +265,12 @@ void SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_modulation_sha
 		op_mode_reg_value |= 0x20;
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_MODULATION;
+		goto errors;
 	}
-	// Program modulation shaping.
+	// Compute modulation shaping.
 	switch (modulation_shaping) {
 	case SX1232_MODULATION_SHAPING_NONE:
-		// Modulation shaping = '00'.
 		// Allready done by previous reset.
 		break;
 	case SX1232_MODULATION_SHAPING_FSK_BT_1:
@@ -240,104 +288,158 @@ void SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_modulation_sha
 		op_mode_reg_value |= 0x18;
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_MODULATION_SHAPING;
+		goto errors;
 	}
-	SX1232_write_register(SX1232_REG_OPMODE, op_mode_reg_value);
+	// Programe register.
+	status = SX1232_write_register(SX1232_REG_OPMODE, op_mode_reg_value);
+errors:
+	return status;
 }
 
 /* SET SX1232 RF FREQUENCY.
- * @param frequency_hz:	Transceiver frequency in Hz.
- * @return:				None.
+ * @param rffrequency_hz:	Transceiver frequency in Hz.
+ * @return status:			Function execution status.
  */
-void SX1232_set_rf_frequency(unsigned int rf_frequency_hz) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Program RF frequency.
-	unsigned long long frf_reg_value = (0b1 << 19);
+SX1232_status_t SX1232_set_rf_frequency(unsigned int rf_frequency_hz) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned long long frf_reg_value = 0;
+	// Check frequency range.
+	if (rf_frequency_hz > SX1232_RF_FREQUENCY_HZ_MAX) {
+		status = SX1232_ERROR_RF_FREQUENCY_OVERFLOW;
+		goto errors;
+	}
+	if (rf_frequency_hz < SX1232_RF_FREQUENCY_HZ_MIN) {
+		status = SX1232_ERROR_RF_FREQUENCY_UNDERFLOW;
+		goto errors;
+	}
+	// Compute register.
+	frf_reg_value = (0b1 << 19);
 	frf_reg_value *= rf_frequency_hz;
 	frf_reg_value /= SX1232_FXOSC_HZ;
-	SX1232_write_register(SX1232_REG_FRFMSB, ((frf_reg_value & 0x00FF0000) >> 16));
-	SX1232_write_register(SX1232_REG_FRFMID, ((frf_reg_value & 0x0000FF00) >> 8));
-	SX1232_write_register(SX1232_REG_FRFLSB, (frf_reg_value & 0x000000FF));
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_FRFMSB, ((frf_reg_value & 0x00FF0000) >> 16));
+	if (status != SX1232_SUCCESS) goto errors;
+	status = SX1232_write_register(SX1232_REG_FRFMID, ((frf_reg_value & 0x0000FF00) >> 8));
+	if (status != SX1232_SUCCESS) goto errors;
+	status = SX1232_write_register(SX1232_REG_FRFLSB, ((frf_reg_value & 0x000000FF) >> 0));
+errors:
+	return status;
 }
 
 /* GET EFFECTIVE RF FREQUENCY.
- * @param:					None.
- * @return rf_frequency_hz:	Effective programmed RF frequency in Hz.
+ * @param rf_frequency_hz:	Pointer to integer that will contain effective programmed RF frequency in Hz.
+ * @return status:			Function execution status.
  */
-unsigned int SX1232_get_rf_frequency(void) {
+SX1232_status_t SX1232_get_rf_frequency(unsigned int* rf_frequency_hz) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char byte_value = 0;
 	unsigned int frf_reg_value = 0;
-	SX1232_read_register(SX1232_REG_FRFMSB, &byte_value);
+	unsigned long long local_rf_frequency_hz = 0;
+	// Read registers.
+	status = SX1232_read_register(SX1232_REG_FRFMSB, &byte_value);
+	if (status != SX1232_SUCCESS) goto errors;
 	frf_reg_value |= (byte_value << 16);
-	SX1232_read_register(SX1232_REG_FRFMID, &byte_value);
+	status = SX1232_read_register(SX1232_REG_FRFMID, &byte_value);
+	if (status != SX1232_SUCCESS) goto errors;
 	frf_reg_value |= (byte_value << 8);
-	SX1232_read_register(SX1232_REG_FRFLSB, &byte_value);
+	status = SX1232_read_register(SX1232_REG_FRFLSB, &byte_value);
+	if (status != SX1232_SUCCESS) goto errors;
 	frf_reg_value |= (byte_value << 0);
-	unsigned long long rf_frequency_hz = ((unsigned long long) SX1232_FXOSC_HZ) * ((unsigned long long) frf_reg_value);
-	rf_frequency_hz /= (0b1 << 19);
-	return ((unsigned int) rf_frequency_hz);
+	// Convert to Hz.
+	local_rf_frequency_hz = ((unsigned long long) SX1232_FXOSC_HZ) * ((unsigned long long) frf_reg_value);
+	local_rf_frequency_hz /= (0b1 << 19);
+	// Convert to integer.
+	(*rf_frequency_hz) = (unsigned int) local_rf_frequency_hz;
+errors:
+	return status;
+}
+
+/* ENABLE FAST FREQUENCY HOPPING.
+ * @param:			None.
+ * @return status:	Function execution status.
+ */
+SX1232_status_t SX1232_enable_fast_frequency_hopping(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned char reg_value = 0;
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PLLHOP, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_PLLHOP, (reg_value | 0x80));
+errors:
+	return status;
 }
 
 /* SET FSK DEVIATION.
  * @param fsk_deviation_hz:	FSK deviation in Hz.
- * @return:					None.
+ * @return status:			Function execution status.
  */
-void SX1232_set_fsk_deviation(unsigned short fsk_deviation_hz) {
-	// Check value is on 14-bits.
-	if (fsk_deviation_hz < (0b1 << 14)) {
-#ifdef HW1_0
-		// Configure SPI.
-		SPI1_set_clock_polarity(0);
-#endif
-		// Program FSK deviation.
-		unsigned long long fdev_reg_value = (0b1 << 19);
-		fdev_reg_value *= fsk_deviation_hz;
-		fdev_reg_value /= SX1232_FXOSC_HZ;
-		SX1232_write_register(SX1232_REG_FDEVMSB, ((fdev_reg_value & 0x00003F00) >> 8));
-		SX1232_write_register(SX1232_REG_FDEVLSB, ((fdev_reg_value & 0x000000FF) >> 0));
+SX1232_status_t SX1232_set_fsk_deviation(unsigned int fsk_deviation_hz) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned long long fdev_reg_value = 0;
+	// Check parameter.
+	if (fsk_deviation_hz > SX1232_FSK_DEVIATION_MAX) {
+		status = SX1232_ERROR_FSK_DEVIATION;
+		goto errors;
 	}
+	// Compute register.
+	fdev_reg_value = (0b1 << 19);
+	fdev_reg_value *= fsk_deviation_hz;
+	fdev_reg_value /= SX1232_FXOSC_HZ;
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_FDEVMSB, ((fdev_reg_value & 0x00003F00) >> 8));
+	if (status != SX1232_SUCCESS) goto errors;
+	status = SX1232_write_register(SX1232_REG_FDEVLSB, ((fdev_reg_value & 0x000000FF) >> 0));
+errors:
+	return status;
 }
 
 /* SET SX1232 BIT RATE.
  * @param bit_rate: Bit rate to program in bit per seconds (bps).
- * @return:			None.
+ * @return status:	Function execution status.
  */
-void SX1232_set_bitrate(unsigned int bit_rate_bps) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+SX1232_status_t SX1232_set_bitrate(unsigned int bit_rate_bps) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned int bit_rate_reg_value = 0;
 	// Check parameter.
-	unsigned int local_bit_rate_bps = bit_rate_bps;
-	if (local_bit_rate_bps < SX1232_BIT_RATE_BPS_MIN) {
-		local_bit_rate_bps = SX1232_BIT_RATE_BPS_MIN;
+	if (bit_rate_bps > SX1232_BIT_RATE_BPS_MAX) {
+		status = SX1232_ERROR_BIT_RATE_OVERFLOW;
+		goto errors;
 	}
-	if (local_bit_rate_bps > SX1232_BIT_RATE_BPS_MAX) {
-		local_bit_rate_bps = SX1232_BIT_RATE_BPS_MAX;
+	if (bit_rate_bps < SX1232_BIT_RATE_BPS_MIN) {
+		status = SX1232_ERROR_BIT_RATE_UNDERFLOW;
+		goto errors;
 	}
-	// Set BitRate register.
-	SX1232_write_register(SX1232_REG_BITRATEFRAC, 0x00);
-	// Compute register value: BR = FXOSC / bit_rate.
-	unsigned int bit_rate_reg_value = SX1232_FXOSC_HZ / local_bit_rate_bps;
-	SX1232_write_register(SX1232_REG_BITRATEMSB, ((bit_rate_reg_value & 0x0000FF00) >> 8));
-	SX1232_write_register(SX1232_REG_BITRATELSB, ((bit_rate_reg_value & 0x000000FF) >> 0));
+	// Compute register.
+	bit_rate_reg_value = SX1232_FXOSC_HZ / bit_rate_bps;
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_BITRATEFRAC, 0x00);
+	if (status != SX1232_SUCCESS) goto errors;
+	status = SX1232_write_register(SX1232_REG_BITRATEMSB, ((bit_rate_reg_value & 0x0000FF00) >> 8));
+	if (status != SX1232_SUCCESS) goto errors;
+	status = SX1232_write_register(SX1232_REG_BITRATELSB, ((bit_rate_reg_value & 0x000000FF) >> 0));
+errors:
+	return status;
 }
 
 /* SET DATA MODE.
- * @param rf_output_power_dbm:	RF output power in dBm.
- * @return:						None.
+ * @param data_mode:	Data mode.
+ * @return status:		Function execution status.
  */
-void SX1232_set_data_mode(SX1232_data_mode_t data_mode) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read Packet config 2 register.
+SX1232_status_t SX1232_set_data_mode(SX1232_data_mode_t data_mode) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char packet_config2_reg_value = 0;
-	SX1232_read_register(SX1232_REG_PACKETCONFIG2, &packet_config2_reg_value);
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PACKETCONFIG2, &packet_config2_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Reset bit 6.
 	packet_config2_reg_value &= 0xBF;
 	// Program data mode.
 	switch (data_mode) {
@@ -346,107 +448,84 @@ void SX1232_set_data_mode(SX1232_data_mode_t data_mode) {
 		packet_config2_reg_value |= 0x40;
 		break;
 	case SX1232_DATA_MODE_CONTINUOUS:
-		// Data mode = '0'.
 		// Allready done by previous reset.
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_DATA_MODE;
+		goto errors;
 	}
-	SX1232_write_register(SX1232_REG_PACKETCONFIG2, packet_config2_reg_value);
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_PACKETCONFIG2, packet_config2_reg_value);
+errors:
+	return status;
 }
 
 /* CONFIGURE SX1232 DIO MAPPING.
- * @param dio:			GPIO to configure (0 to 5).
- * @param dio_mapping:	GPIO function (2-bits value).
+ * @param dio:			DIO to configure (0 to 5).
+ * @param dio_mapping:	DIO function (2-bits value).
+ * @return status:		Function execution status.
  */
-void SX1232_set_dio_mapping(unsigned char dio, unsigned char dio_mapping) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+SX1232_status_t SX1232_set_dio_mapping(SX1232_dio_t dio, SX1232_dio_mapping_t dio_mapping) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned char dio_mapping_reg_addr = 0;
+	unsigned char dio_mapping_reg_value = 0;
 	// Check parameters.
-	if ((dio < SX1232_DIO_NUMBER) && (dio_mapping < SX1232_DIO_MAPPING_MAX_VALUE)) {
-		// Configure proper register.
-		unsigned char dio_mapping_reg_value = 0;
-		switch (dio) {
-		// DIO0.
-		case 0:
-			SX1232_read_register(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0x3F;
-			dio_mapping_reg_value |= (dio_mapping << 6);
-			SX1232_write_register(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
-			break;
-		// DIO1.
-		case 1:
-			SX1232_read_register(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0xCF;
-			dio_mapping_reg_value |= (dio_mapping << 4);
-			SX1232_write_register(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
-			break;
-		// DIO2.
-		case 2:
-			SX1232_read_register(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0xF3;
-			dio_mapping_reg_value |= (dio_mapping << 2);
-			SX1232_write_register(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
-			break;
-		// DIO3.
-		case 3:
-			SX1232_read_register(SX1232_REG_DIOMAPPING1, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0xFC;
-			dio_mapping_reg_value |= (dio_mapping << 0);
-			SX1232_write_register(SX1232_REG_DIOMAPPING1, dio_mapping_reg_value);
-			break;
-		// DIO0.
-		case 4:
-			SX1232_read_register(SX1232_REG_DIOMAPPING2, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0x3F;
-			dio_mapping_reg_value |= (dio_mapping << 6);
-			SX1232_write_register(SX1232_REG_DIOMAPPING2, dio_mapping_reg_value);
-			break;
-		// DIO0.
-		case 5:
-			SX1232_read_register(SX1232_REG_DIOMAPPING2, &dio_mapping_reg_value);
-			dio_mapping_reg_value &= 0xCF;
-			dio_mapping_reg_value |= (dio_mapping << 4);
-			SX1232_write_register(SX1232_REG_DIOMAPPING2, dio_mapping_reg_value);
-			break;
-		}
+	if (dio >= SX1232_DIO_LAST) {
+		status = SX1232_ERROR_DIO;
+		goto errors;
 	}
+	if (dio_mapping >= SX1232_DIO_MAPPING_LAST) {
+		status = SX1232_ERROR_DIO_MAPPING;
+		goto errors;
+	}
+	// Select register and mask.
+	dio_mapping_reg_addr = SX1232_REG_DIOMAPPING1 + (dio / 4);
+	// Read register.
+	status = SX1232_read_register(dio_mapping_reg_addr, &dio_mapping_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute register.
+	dio_mapping_reg_value &= ~(0b11 << ((dio % 4) * 2));
+	dio_mapping_reg_value |= (dio_mapping << ((dio % 4) * 2));
+	// Write register.
+	status = SX1232_write_register(dio_mapping_reg_addr, dio_mapping_reg_value);
+errors:
+	return status;
 }
 
 /* READ SX1232 IRQ FLAGS REGISTERS.
- * @param:	None.
- * @return 	irq_flags_value:	16-bits value read as [REG_IRQFLASG1 REG_IRQFLASG2].
+ * @param irq_flags:	Pointer to 16-bits value read as [REG_IRQFLASG1 REG_IRQFLASG2].
+ * @return status:		Function execution status.
  */
-unsigned short SX1232_get_irq_flags(void) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read registers.
+SX1232_status_t SX1232_get_irq_flags(unsigned int* irq_flags) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char reg_value = 0;
-	unsigned short irq_flags_value = 0;
-	SX1232_read_register(SX1232_REG_IRQFLAGS1, &reg_value);
-	irq_flags_value |= (reg_value << 8);
-	SX1232_read_register(SX1232_REG_IRQFLAGS2, &reg_value);
-	irq_flags_value |= (reg_value << 0);
-	return irq_flags_value;
+	// Reset result.
+	(*irq_flags) = 0;
+	// Read registers.
+	status = SX1232_read_register(SX1232_REG_IRQFLAGS1, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	(*irq_flags) |= (reg_value << 8);
+	status = SX1232_read_register(SX1232_REG_IRQFLAGS2, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	(*irq_flags) |= (reg_value << 0);
+errors:
+	return status;
 }
 
 /* SELECT SX1232 RF OUTPUT PIN.
- * @param rf_outpu_pin:	RF output pin to select (see SX1232_rf_output_pin_t enumeration in sx1232.h).
- * @return:				None.
+ * @param rf_output_pin:	RF output pin to select.
+ * @return status:			Function execution status.
  */
-void SX1232_set_rf_output_pin(SX1232_rf_output_pin_t rf_output_pin) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read PA config register.
+SX1232_status_t SX1232_set_rf_output_pin(SX1232_rf_output_pin_t rf_output_pin) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char pa_config_reg_value = 0;
-	SX1232_read_register(SX1232_REG_PACONFIG, &pa_config_reg_value);
-	// Program RF output pin.
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PACONFIG, &pa_config_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute register.
 	switch (rf_output_pin) {
 	case SX1232_RF_OUTPUT_PIN_RFO:
 		// PaSelect = '0'.
@@ -459,287 +538,328 @@ void SX1232_set_rf_output_pin(SX1232_rf_output_pin_t rf_output_pin) {
 		sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_PABOOST;
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_RF_OUTPUT_PIN;
+		goto errors;
 	}
-	SX1232_write_register(SX1232_REG_PACONFIG, pa_config_reg_value);
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_PACONFIG, pa_config_reg_value);
+errors:
+	return status;
 }
 
 /* SET RF OUTPUT POWER.
  * @param rf_output_power_dbm:	RF output power in dBm.
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void SX1232_set_rf_output_power(unsigned char rf_output_power_dbm) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read PA config register.
+SX1232_status_t SX1232_set_rf_output_power(unsigned char rf_output_power_dbm) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char pa_config_reg_value = 0;
-	SX1232_read_register(SX1232_REG_PACONFIG, &pa_config_reg_value);
-	pa_config_reg_value &= 0xF0; // Reset bits 0-3.
-	// Program RF output power.
-	unsigned char effective_output_power_dbm = rf_output_power_dbm;
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PACONFIG, &pa_config_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Reset bits 0-3.
+	pa_config_reg_value &= 0xF0;
+	// Compute register.
 	switch (sx1232_ctx.rf_output_pin) {
 	case SX1232_RF_OUTPUT_PIN_RFO:
-		// Ensure parameter is reachable.
-		if (effective_output_power_dbm < SX1232_OUTPUT_POWER_RFO_MIN) {
-			effective_output_power_dbm = SX1232_OUTPUT_POWER_RFO_MIN;
+		// Check parameter.
+		if (rf_output_power_dbm > SX1232_OUTPUT_POWER_RFO_MAX) {
+			status = SX1232_ERROR_RF_OUTPUT_POWER_OVERFLOW;
+			goto errors;
 		}
-		if (effective_output_power_dbm > SX1232_OUTPUT_POWER_RFO_MAX) {
-			effective_output_power_dbm = SX1232_OUTPUT_POWER_RFO_MAX;
+		if (rf_output_power_dbm < SX1232_OUTPUT_POWER_RFO_MIN) {
+			status = SX1232_ERROR_RF_OUTPUT_POWER_UNDERFLOW;
+			goto errors;
 		}
 		// Pout = -1 + OutputPower [dBm].
-		pa_config_reg_value |= (effective_output_power_dbm + 1) & 0x0F;
+		pa_config_reg_value |= (rf_output_power_dbm + 1) & 0x0F;
 		break;
 	case SX1232_RF_OUTPUT_PIN_PABOOST:
-		// Ensure parameter is reachable.
-		if (effective_output_power_dbm < SX1232_OUTPUT_POWER_PABOOST_MIN) {
-			effective_output_power_dbm = SX1232_OUTPUT_POWER_PABOOST_MIN;
+		// Check parameter.
+		if (rf_output_power_dbm > SX1232_OUTPUT_POWER_PABOOST_MAX) {
+			status = SX1232_ERROR_RF_OUTPUT_POWER_OVERFLOW;
+			goto errors;
 		}
-		if (effective_output_power_dbm > SX1232_OUTPUT_POWER_PABOOST_MAX) {
-			effective_output_power_dbm = SX1232_OUTPUT_POWER_PABOOST_MAX;
+		if (rf_output_power_dbm < SX1232_OUTPUT_POWER_PABOOST_MIN) {
+			status = SX1232_ERROR_RF_OUTPUT_POWER_UNDERFLOW;
+			goto errors;
 		}
 		// Pout = 2 + OutputPower [dBm].
-		pa_config_reg_value |= (effective_output_power_dbm - 2) & 0x0F;
+		pa_config_reg_value |= (rf_output_power_dbm - 2) & 0x0F;
 		break;
 	default:
-		break;
+		status = SX1232_ERROR_RF_OUTPUT_PIN;
+		goto errors;
 	}
-	SX1232_write_register(SX1232_REG_PACONFIG, pa_config_reg_value);
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_PACONFIG, pa_config_reg_value);
+errors:
+	return status;
 }
 
 /* ENABLE LOW PHASE NOISE PLL.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SX1232_enable_low_phase_noise_pll(void) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Program register.
+SX1232_status_t SX1232_enable_low_phase_noise_pll(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char reg_value = 0;
-	SX1232_read_register(SX1232_REG_PARAMP, &reg_value);
-	SX1232_write_register(SX1232_REG_PARAMP, (reg_value & 0xEF));
-}
-
-/* ENABLE FAST FREQUENCY HOPPING.
- * @param:	None.
- * @return:	None.
- */
-void SX1232_enable_fast_frequency_hopping(void) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PARAMP, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
 	// Program register.
-	unsigned char reg_value = 0;
-	SX1232_read_register(SX1232_REG_PLLHOP, &reg_value);
-	SX1232_write_register(SX1232_REG_PLLHOP, (reg_value | 0x80));
+	status = SX1232_write_register(SX1232_REG_PARAMP, (reg_value & 0xEF));
+errors:
+	return status;
 }
 
 /* START CONTINUOUS WAVE OUTPUT.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SX1232_start_cw(void) {
+SX1232_status_t SX1232_start_cw(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Start data signal.
 	GPIO_write(&GPIO_SX1232_DIO2, 1);
 	// Start radio.
-	SX1232_set_mode(SX1232_MODE_FSTX);
-	LPTIM1_delay_milliseconds(2, 1); // Wait TS_FS=60us typical.
-	SX1232_set_mode(SX1232_MODE_TX);
-	LPTIM1_delay_milliseconds(2, 1); // Wait TS_TR=120us typical.
+	status = SX1232_set_mode(SX1232_MODE_FSTX);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Wait TS_FS=60us typical.
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
+	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	// TX mode.
+	status = SX1232_set_mode(SX1232_MODE_TX);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Wait TS_TR=120us typical.
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
+	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+errors:
+	return status;
 }
 
 /* STOP CONTINUOUS WAVE OUTPUT.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void SX1232_stop_cw(void) {
-	// Stop data signal and radio.
+SX1232_status_t SX1232_stop_cw(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	// Stop data signal.
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
-	LPTIM1_delay_milliseconds(2, 1); // Wait ramp down.
-	SX1232_set_mode(SX1232_MODE_STANDBY);
+	// Wait ramp down.
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
+	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	// Stop radio.
+	status = SX1232_set_mode(SX1232_MODE_STANDBY);
+errors:
+	return status;
 }
 
 /* SET SX1232 RX BANDWIDTH.
  * @param rxbw_mantissa:	RXBW mantissa (see p.30 of SX1232 datasheet).
- * @param rxbw_exponenta:	RXBW exponent (see p.30 of SX1232 datasheet).
- * @return:					None.
+ * @param rxbw_exponent:	RXBW exponent (see p.30 of SX1232 datasheet).
+ * @return status:			Function execution status.
  */
-void SX1232_set_rx_bandwidth(SX1232_rxbw_mantissa_t rxbw_mantissa, unsigned char rxbw_exponent) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read register.
+SX1232_status_t SX1232_set_rx_bandwidth(SX1232_rxbw_mantissa_t rxbw_mantissa, SX1232_rxbw_exponent_t rxbw_exponent) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char rxbw_reg_value = 0;
-	SX1232_read_register(SX1232_REG_RXBW, &rxbw_reg_value);
-	// Program mantissa.
-	rxbw_reg_value &= 0xE0; // Reset bits 0-4.
-	rxbw_reg_value |= (rxbw_mantissa & 0x00000003) << 3;
-	// Program exponent.
-	unsigned char local_rxbw_exponent = rxbw_exponent;
-	if (local_rxbw_exponent > SX1232_RXBW_EXPONENT_MAX) {
-		local_rxbw_exponent = SX1232_RXBW_EXPONENT_MAX;
+	// Check parameters.
+	if (rxbw_mantissa >= SX1232_RXBW_MANTISSA_LAST) {
+		status = SX1232_ERROR_RXBW_MANTISSA;
+		goto errors;
 	}
-	rxbw_reg_value |= local_rxbw_exponent;
+	if (rxbw_exponent >= SX1232_RXBW_EXPONENT_LAST) {
+		status = SX1232_ERROR_RXBW_EXPONENT;
+		goto errors;
+	}
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_RXBW, &rxbw_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute register.
+	rxbw_reg_value &= 0xE0; // Reset bits 0-4.
+	rxbw_reg_value |= ((rxbw_mantissa & 0x03) << 3) | (rxbw_exponent & 0x02);
 	// Program register.
-	SX1232_write_register(SX1232_REG_RXBW, rxbw_reg_value);
+	status = SX1232_write_register(SX1232_REG_RXBW, rxbw_reg_value);
+errors:
+	return status;
 }
 
 /* CONTROL SX1232 LNA BOOST.
  * @param lna_boost_enable:	Enable (1) or disable (0) LNA boost.
- * @return:					None.
+ * @return status:			Function execution status.
  */
-void SX1232_enable_lna_boost(unsigned char lna_boost_enable) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Program register.
+SX1232_status_t SX1232_enable_lna_boost(unsigned char lna_boost_enable) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char lna_reg_value = 0;
-	SX1232_read_register(SX1232_REG_LNA, &lna_reg_value);
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_LNA, &lna_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute register.
 	if (lna_boost_enable != 0) {
-		// LnaBoost = '11'.
-		lna_reg_value |= 0x03;
+		lna_reg_value |= 0x03; // LnaBoost = '11'.
 	}
 	else {
-		// LnaBoost = '00'.
-		lna_reg_value &= 0xFC;
+		lna_reg_value &= 0xFC; // LnaBoost = '00'.
 	}
-	SX1232_write_register(SX1232_REG_LNA, lna_reg_value);
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_LNA, lna_reg_value);
+errors:
+	return status;
 }
 
-/* ENABLE PREAMBLE DETECTOR.
+/* SET PREAMBLE DETECTOR.
  * @param preamble_length_bytes:	Preamble length in bytes (0 disables preamble detector).
  * @param preamble_polarity:		Use 0xAA (0) or 0x55 (1) as preamble byte.
- * @return:							None.
+ * @return status:					Function execution status.
  */
-void SX1232_set_preamble_detector(unsigned char preamble_length_bytes, unsigned char preamble_polarity) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Set length and enable.
+SX1232_status_t SX1232_set_preamble_detector(unsigned char preamble_length_bytes, unsigned char preamble_polarity) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char reg_value = 0;
-	SX1232_read_register(SX1232_REG_PREAMBLEDETECT, &reg_value);
+	// Check parameter.
+	if (preamble_length_bytes > SX1232_PREAMBLE_LENGTH_BYTES_MAX) {
+		status = SX1232_ERROR_PREAMBLE_LENGTH;
+		goto errors;
+	}
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_PREAMBLEDETECT, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Check length;
 	if (preamble_length_bytes == 0) {
 		reg_value &= 0x7F; // Disable preamble detector.
 	}
 	else {
-		unsigned char local_preamble_length_bytes = preamble_length_bytes;
-		if (local_preamble_length_bytes > SX1232_PREAMBLE_LENGTH_BYTES_MAX) {
-			local_preamble_length_bytes = SX1232_PREAMBLE_LENGTH_BYTES_MAX;
-		}
 		reg_value &= 0x9F; // Reset bits 5-6.
 		reg_value |= (preamble_length_bytes - 1);
 		reg_value |= 0x80; // Enable preamble detector.
 	}
-	SX1232_write_register(SX1232_REG_PREAMBLEDETECT, reg_value);
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_PREAMBLEDETECT, reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
 	// Set polarity.
-	SX1232_read_register(SX1232_REG_SYNCCONFIG, &reg_value);
+	status = SX1232_read_register(SX1232_REG_SYNCCONFIG, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Program register.
 	if (preamble_polarity == 0) {
-		SX1232_write_register(SX1232_REG_SYNCCONFIG, (reg_value & 0xDF));
+		status = SX1232_write_register(SX1232_REG_SYNCCONFIG, (reg_value & 0xDF));
 	}
 	else {
-		SX1232_write_register(SX1232_REG_SYNCCONFIG, (reg_value | 0x20));
+		status = SX1232_write_register(SX1232_REG_SYNCCONFIG, (reg_value | 0x20));
 	}
+errors:
+	return status;
 }
 
 /* CONFIGURE RX SYNCHRONIZATION WORD.
  * @param sync_word:				Synchronization word.
  * @param sync_word_length_bytes:	Synchronization word length in bytes.
- * @return:							None.
+ * @return status:					Function execution status.
  */
-void SX1232_set_sync_word(unsigned char* sync_word, unsigned char sync_word_length_bytes) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Check parameters.
-	if ((sync_word_length_bytes > 0) && (sync_word_length_bytes <= SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES)) {
-		// Set syncronization word length.
-		unsigned char reg_value = 0;
-		SX1232_read_register(SX1232_REG_SYNCCONFIG, &reg_value);
-		reg_value &= 0xF8; // Reset bits 0-2.
-		reg_value |= ((sync_word_length_bytes - 1) & 0x07);
-		reg_value &= 0x3F; // Disable receiver auto_restart.
-		reg_value |= 0x10; // Enable syncronization word detector.
-		SX1232_write_register(SX1232_REG_SYNCCONFIG, reg_value);
-		// Fill synchronization word.
-		unsigned char byte_idx = 0;
-		for (byte_idx=0 ; byte_idx<sync_word_length_bytes ; byte_idx++) {
-			// Warning: this loop is working because registers addresses are adjacent.
-			SX1232_write_register((SX1232_REG_SYNCVALUE1 + byte_idx), sync_word[byte_idx]);
-		}
+SX1232_status_t SX1232_set_sync_word(unsigned char* sync_word, unsigned char sync_word_length_bytes) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned char reg_value = 0;
+	unsigned char idx = 0;
+	// Check parameter.
+	if (sync_word_length_bytes > SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES) {
+		status = SX1232_ERROR_SYNC_WORD_LENGTH;
+		goto errors;
 	}
+	// Read register.
+	status = SX1232_read_register(SX1232_REG_SYNCCONFIG, &reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute register.
+	reg_value &= 0xF8; // Reset bits 0-2.
+	reg_value |= ((sync_word_length_bytes - 1) & 0x07);
+	reg_value &= 0x3F; // Disable receiver auto_restart.
+	reg_value |= 0x10; // Enable syncronization word detector.
+	// Program register.
+	status = SX1232_write_register(SX1232_REG_SYNCCONFIG, reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Fill synchronization word.
+	for (idx=0 ; idx<sync_word_length_bytes ; idx++) {
+		// Warning: this loop is working because registers addresses are adjacent.
+		status = SX1232_write_register((SX1232_REG_SYNCVALUE1 + idx), sync_word[idx]);
+		if (status != SX1232_SUCCESS) goto errors;
+	}
+errors:
+	return status;
 }
 
 /* SET RX PAYLOAD LENGTH.
  * @param data_length_bytes:	Data length to receive in bytes.
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void SX1232_set_data_length(unsigned char data_length_bytes) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+SX1232_status_t SX1232_set_data_length(unsigned char data_length_bytes) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	// Use fixed length, no CRC computation, do not clear FIFO when CRC fails.
-	SX1232_write_register(SX1232_REG_PACKETCONFIG1, 0x08);
+	status = SX1232_write_register(SX1232_REG_PACKETCONFIG1, 0x08);
+	if (status != SX1232_SUCCESS) goto errors;
 	// Set data length.
-	SX1232_write_register(SX1232_REG_PAYLOADLENGTH, data_length_bytes);
+	status = SX1232_write_register(SX1232_REG_PAYLOADLENGTH, data_length_bytes);
+errors:
+	return status;
 }
 
 /* CONFIGURE SX1232 RSSI MEASUREMENT.
- * @param rssi_offset: 		RSSI offset in dBm.
  * @param rssi_sampling:	Number of samples used to average RSSI value (see SX1232_rssi_sampling_t enumeration in sx1232.h).
- * @return:					None.
+ * @return status:			Function execution status.
  */
-void SX1232_configure_rssi(signed char rssi_offset, SX1232_rssi_sampling_t rssi_sampling) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Configure offset.
-	sx1232_ctx.rssi_offset = rssi_offset;
-	// Configure sampling.
-	unsigned char rssi_config_reg_value = 0; // Do not use internal RSSI offset.
-	rssi_config_reg_value |= (rssi_sampling & 0x00000007);
+SX1232_status_t SX1232_configure_rssi(SX1232_rssi_sampling_t rssi_sampling) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	// Check parameter.
+	if (rssi_sampling >= SX1232_RSSI_SAMPLING_LAST) {
+		status = SX1232_ERROR_RSSI_SAMPLING;
+		goto errors;
+	}
+	// Program register
+	status = SX1232_write_register(SX1232_REG_RSSICONFIG, rssi_sampling);
+errors:
+	return status;
 }
 
 /* READ SX1232 RSSI.
- * @param:	None.
- * @return:	Absolute RSSI value in dBm.
+ * @param rssi_dbm:	Pointer to signed integer that will contain absolute RSSI value in dBm.
+ * @return status:	Function execution status.
  */
-signed short SX1232_get_rssi(void) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
-	// Read RSSI register and add offset.
-	signed short rssi = 0;
+SX1232_status_t SX1232_get_rssi(signed short* rssi_dbm) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char rssi_reg_value = 0;
-	SX1232_read_register(SX1232_REG_RSSIVALUE, &rssi_reg_value);
-	rssi = (-1) * (((signed short) rssi_reg_value / 2) + sx1232_ctx.rssi_offset);
-	return rssi;
+	// Read RSSI register.
+	status = SX1232_read_register(SX1232_REG_RSSIVALUE, &rssi_reg_value);
+	if (status != SX1232_SUCCESS) goto errors;
+	// Compute RSSI.
+	(*rssi_dbm) = (-1) * (((signed short) rssi_reg_value / 2) + SX1232_RSSI_OFFSET_DB);
+errors:
+	return status;
 }
 
 /* READ SX1232 FIFO.
- * @param rx_data:			Byte array that will contain FIFO data.
- * @param rx_data_length:	Number of bytes to read in FIFO.
+ * @param fifo_data:		Byte array that will contain FIFO data.
+ * @param fifo_data_length:	Number of bytes to read in FIFO.
+ * @return status:			Function execution status.
  */
-void SX1232_read_fifo(unsigned char* rx_data, unsigned char rx_data_length) {
-#ifdef HW1_0
-	// Configure SPI.
-	SPI1_set_clock_polarity(0);
-#endif
+SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_data_length) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	unsigned char idx = 0;
+	unsigned char fifo_data_byte = 0;
 	// Access FIFO byte per byte.
-	unsigned char byte_idx = 0;
-	unsigned char rx_data_byte = 0;
-	for (byte_idx=0 ; byte_idx<rx_data_length ; byte_idx++) {
-		SX1232_read_register(SX1232_REG_FIFO, &rx_data_byte);
-		rx_data[byte_idx] = rx_data_byte;
+	for (idx=0 ; idx<fifo_data_length ; idx++) {
+		status = SX1232_read_register(SX1232_REG_FIFO, &fifo_data_byte);
+		if (status != SX1232_SUCCESS) goto errors;
+		fifo_data[idx] = fifo_data_byte;
 	}
+errors:
+	return status;
 }

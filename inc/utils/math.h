@@ -12,11 +12,10 @@
 
 /*** MATH macros ***/
 
-#if (defined CM || defined ATM)
-
 #define MATH_ERROR_VALUE	0xFFFFFFFF
 
-static const signed int MATH_COS_TABLE[360] = {
+#if (defined CM || defined ATM)
+static const signed short MATH_COS_TABLE[360] = {
 	1000, 1000, 999, 999, 998, 996, 995, 993, 990, 988,
 	985, 982, 978, 974, 970, 966, 961, 956, 951, 946,
 	940, 934, 927, 921, 914, 906, 899, 891, 883, 875,
@@ -55,7 +54,7 @@ static const signed int MATH_COS_TABLE[360] = {
 	985, 988, 990, 993, 995, 996, 998, 999, 999, 1000
 };
 
-static const signed int MATH_SIN_TABLE[360] = {
+static const signed short MATH_SIN_TABLE[360] = {
 	0, 17, 35, 52, 70, 87, 105, 122, 139, 156,
 	174, 191, 208, 225, 242, 259, 276, 292, 309, 326,
 	342, 358, 375, 391, 407, 423, 438, 454, 469, 485,
