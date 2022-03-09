@@ -145,7 +145,7 @@ LPUART_status_t LPUART1_power_on(void) {
 	// Turn NEOM8N on.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(LPUART_ERROR_LPTIM);
+	LPTIM1_status_check(LPUART_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -167,7 +167,7 @@ LPUART_status_t LPUART1_power_off(void) {
 #endif
 	// Delay required if another cycle is requested by applicative layer.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(LPUART_ERROR_LPTIM);
+	LPTIM1_status_check(LPUART_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }

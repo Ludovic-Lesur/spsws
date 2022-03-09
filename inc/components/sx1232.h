@@ -14,9 +14,7 @@
 
 typedef enum {
 	SX1232_SUCCESS = 0,
-	SX1232_ERROR_SPI,
-	SX1232_ERROR_LPTIM = (SX1232_ERROR_SPI + SPI_ERROR_LAST),
-	SX1232_ERROR_ADDRESS = (SX1232_ERROR_LPTIM + LPTIM_ERROR_LAST),
+	SX1232_ERROR_ADDRESS,
 	SX1232_ERROR_OSCILLATOR,
 	SX1232_ERROR_MODE,
 	SX1232_ERROR_MODULATION,
@@ -37,7 +35,10 @@ typedef enum {
 	SX1232_ERROR_PREAMBLE_LENGTH,
 	SX1232_ERROR_SYNC_WORD_LENGTH,
 	SX1232_ERROR_RSSI_SAMPLING,
-	SX1232_ERROR_LAST
+	SX1232_ERROR_FIFO_LENGTH,
+	SX1232_ERROR_BASE_SPI = 0x0100,
+	SX1232_ERROR_BASE_LPTIM = (SX1232_ERROR_BASE_SPI + SPI_ERROR_BASE_LAST),
+	SX1232_ERROR_BASE_LAST = (SX1232_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
 } SX1232_status_t;
 
 // Oscillator configuration.
@@ -173,5 +174,7 @@ SX1232_status_t SX1232_set_data_length(unsigned char data_length_bytes);
 SX1232_status_t SX1232_configure_rssi(SX1232_rssi_sampling_t rssi_sampling);
 SX1232_status_t SX1232_get_rssi(signed short* rssi_dbm);
 SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_data_length);
+
+#define SX1232_status_check(error_base) { if (sx1232_status != SX1232_SUCCESS) { status = error_base + sx1232_status; goto errors; }}
 
 #endif /* SX1232_H */

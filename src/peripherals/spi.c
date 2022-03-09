@@ -116,7 +116,7 @@ SPI_status_t SPI1_power_on(void) {
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
 	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
@@ -136,7 +136,7 @@ SPI_status_t SPI1_power_on(void) {
 #endif
 	// Wait for power-on.
 	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -168,7 +168,7 @@ SPI_status_t SPI1_power_off(void) {
 #endif
 	// Wait for power-off.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -373,7 +373,7 @@ SPI_status_t SPI2_power_on(void) {
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 	// Wait for power-on.
 	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -382,7 +382,7 @@ SPI_status_t SPI2_power_on(void) {
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Wait for power-on.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -405,7 +405,7 @@ SPI_status_t SPI2_power_off(void) {
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 	// Wait for power-off.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }

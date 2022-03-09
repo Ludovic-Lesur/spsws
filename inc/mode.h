@@ -8,8 +8,6 @@
 #ifndef MODE_H
 #define MODE_H
 
-#include "sigfox_api.h"
-
 /*** Wheather station mode ***/
 
 //#define ATM 		// AT command mode.

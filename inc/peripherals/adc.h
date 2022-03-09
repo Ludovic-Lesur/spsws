@@ -8,6 +8,8 @@
 #ifndef ADC_H
 #define ADC_H
 
+#include "lptim.h"
+
 /*** ADC structures ***/
 
 typedef enum {
@@ -15,7 +17,8 @@ typedef enum {
 	ADC_ERROR_CALIBRATION,
 	ADC_ERROR_DATA_INDEX,
 	ADC_ERROR_TIMEOUT,
-	ADC_ERROR_LAST
+	ADC_ERROR_BASE_LPTIM = 0x0100,
+	ADC_ERROR_BASE_LAST = (ADC_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
 } ADC_status_t;
 
 typedef enum {
@@ -29,8 +32,7 @@ ADC_status_t ADC1_init(void);
 void ADC1_disable(void);
 ADC_status_t ADC1_perform_measurements(void);
 ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data);
-void ADC1_get_tmcu_comp2(signed char* tmcu_degrees);
-void ADC1_get_tmcu_comp1(unsigned char* tmcu_degrees);
+void ADC1_get_tmcu(signed char* tmcu_degrees);
 
 #define ADC_status_check(error_base) { if (adc_status != ADC_SUCCESS) { status = error_base + adc_status; goto errors; }}
 

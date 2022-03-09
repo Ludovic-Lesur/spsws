@@ -44,6 +44,8 @@
 // SX1232 DIOs.
 #define SX1232_DIO_NUMBER						6
 #define SX1232_DIO_MAPPING_MAX_VALUE			4
+// SX1232 FIFO.
+#define SX1232_FIFO_LENGTH						64
 
 /*** SX1232 local structures ***/
 
@@ -80,9 +82,9 @@ static SX1232_status_t SX1232_write_register(unsigned char addr, unsigned char v
 	// Write access sequence.
 	GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
 	spi1_status = SPI1_write_byte(sx1232_spi_command);
-	SPI1_status_check(SX1232_ERROR_SPI);
+	SPI1_status_check(SX1232_ERROR_BASE_SPI);
 	spi1_status = SPI1_write_byte(value);
-	SPI1_status_check(SX1232_ERROR_SPI);
+	SPI1_status_check(SX1232_ERROR_BASE_SPI);
 errors:
 	GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
 	return status;
@@ -111,9 +113,9 @@ static SX1232_status_t SX1232_read_register(unsigned char addr, unsigned char* v
 	// Write access sequence.
 	GPIO_write(&GPIO_SX1232_CS, 0); // Falling edge on CS pin.
 	spi1_status = SPI1_write_byte(sx1232_spi_command);
-	SPI1_status_check(SX1232_ERROR_SPI);
+	SPI1_status_check(SX1232_ERROR_BASE_SPI);
 	spi1_status = SPI1_read_byte(0xFF, value);
-	SPI1_status_check(SX1232_ERROR_SPI);
+	SPI1_status_check(SX1232_ERROR_BASE_SPI);
 errors:
 	GPIO_write(&GPIO_SX1232_CS, 1); // Set CS pin.
 	return status;
@@ -157,7 +159,7 @@ SX1232_status_t SX1232_tcxo(unsigned char tcxo_enable) {
 	GPIO_write(&GPIO_TCXO32_POWER_ENABLE, tcxo_enable);
 	// Wait for TCXO to warm-up.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -186,7 +188,7 @@ SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 	}
 	// Wait TS_OSC = 250us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(5, 1);
-	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// Trigger RC oscillator calibration.
 	status = SX1232_write_register(SX1232_REG_OSC, 0x0F);
 errors:
@@ -630,13 +632,13 @@ SX1232_status_t SX1232_start_cw(void) {
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
-	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_TX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
-	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -653,7 +655,7 @@ SX1232_status_t SX1232_stop_cw(void) {
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
 	// Wait ramp down.
 	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
-	LPTIM1_status_check(SX1232_ERROR_LPTIM);
+	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// Stop radio.
 	status = SX1232_set_mode(SX1232_MODE_STANDBY);
 errors:
@@ -854,6 +856,11 @@ SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_da
 	SX1232_status_t status = SX1232_SUCCESS;
 	unsigned char idx = 0;
 	unsigned char fifo_data_byte = 0;
+	// Check parameter.
+	if (fifo_data_length > SX1232_FIFO_LENGTH) {
+		status = SX1232_ERROR_FIFO_LENGTH;
+		goto errors;
+	}
 	// Access FIFO byte per byte.
 	for (idx=0 ; idx<fifo_data_length ; idx++) {
 		status = SX1232_read_register(SX1232_REG_FIFO, &fifo_data_byte);

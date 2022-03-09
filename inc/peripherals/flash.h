@@ -14,7 +14,7 @@ typedef enum {
 	FLASH_SUCCESS = 0,
 	FLASH_ERROR_LATENCY,
 	FLASH_ERROR_TIMEOUT,
-	FLASH_ERROR_LAST
+	FLASH_ERROR_BASE_LAST = 0x0100
 } FLASH_status_t;
 
 /*** FLASH functions ***/

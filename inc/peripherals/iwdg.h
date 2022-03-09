@@ -17,7 +17,7 @@
 typedef enum {
 	IWDG_SUCCESS = 0,
 	IWDG_ERROR_TIMEOUT,
-	IWDG_ERROR_LAST
+	IWDG_ERROR_BASE_LAST = 0x0100
 } IWDG_status_t;
 
 /*** IWDG functions ***/

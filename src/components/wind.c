@@ -286,10 +286,10 @@ WIND_status_t WIND_measurement_period_callback(void) {
 #ifdef HW2_0
 			SPI2_enable();
 			spi2_status = SPI2_power_on();
-			SPI2_status_check(WIND_ERROR_SPI);
+			SPI2_status_check(WIND_ERROR_BASE_SPI);
 #endif
 			max11136_status = MAX11136_perform_measurements();
-			MAX11136_status_check(WIND_ERROR_MAX11136);
+			MAX11136_status_check(WIND_ERROR_BASE_MAX11136);
 
 #ifdef HW1_0
 			spi1_status = SPI1_power_off();
@@ -298,12 +298,12 @@ WIND_status_t WIND_measurement_period_callback(void) {
 #endif
 #ifdef HW2_0
 			spi2_status = SPI2_power_off();
-			SPI2_status_check(WIND_ERROR_SPI);
+			SPI2_status_check(WIND_ERROR_BASE_SPI);
 			SPI2_disable();
 #endif
 			// Get 12-bits result.
 			max11136_status = MAX11136_get_data(MAX11136_DATA_WIND_DIRECTION_RATIO, &wind_direction_ratio);
-			MAX11136_status_check(WIND_ERROR_MAX11136)
+			MAX11136_status_check(WIND_ERROR_BASE_MAX11136)
 			// Convert voltage to direction.
 			WIND_voltage_to_angle(wind_direction_ratio);
 #endif

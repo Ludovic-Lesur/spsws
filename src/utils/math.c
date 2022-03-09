@@ -188,8 +188,8 @@ unsigned int MATH_atan2(signed int x, signed int y) {
 #endif
 
 /* COMPUTE THE TWO'S COMPLEMENT OF A GIVEN VALUE.
- * @param value:				Value on which the two's complement has to be computed.
- * @param sign_bit_position:	NEOM8N_position_t of the sign bit.
+ * @param value:				Input unsigned value.
+ * @param sign_bit_position:	Position of the sign bit in the input.
  * @return result:				Result of computation.
  */
 signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position) {
@@ -201,7 +201,7 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
-		result = value;
+		result = (int) value;
 	}
 	else {
 		// Value is negative.
@@ -212,6 +212,29 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 		}
 		absolute_value = not_value + 1;
 		result = (-1) * absolute_value;
+	}
+	return result;
+}
+
+/* COMPUTE THE ONE'S COMPLEMENT OF A GIVEN VALUE.
+ * @param value:				Input signed value.
+ * @param sign_bit_position:	Position of the sign bit in the output.
+ * @return result:				Result of computation.
+ */
+unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_position) {
+	// Local variables.
+	unsigned int result = 0;
+	unsigned int absolute_value = 0;
+	unsigned int absolute_mask = ((0b1 << sign_bit_position) - 1);
+	// Check value sign.
+	if (value >= 0) {
+		// Value is positive: nothing to do.
+		result = ((unsigned int) value) & absolute_mask;
+	}
+	else {
+		// Set sign bit.
+		absolute_value = (unsigned int) ((-1) * value);
+		result = (0b1 << sign_bit_position) | (absolute_value & absolute_mask);
 	}
 	return result;
 }

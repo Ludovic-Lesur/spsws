@@ -122,7 +122,7 @@ RCC_status_t RCC_switch_to_msi(void) {
 	}
 	// Set flash latency.
 	flash_status = FLASH_set_latency(0);
-	FLASH_status_check(RCC_ERROR_FLASH);
+	FLASH_status_check(RCC_ERROR_BASE_FLASH);
 	// Disable HSI and HSE.
 	RCC -> CR &= ~(0b1 << 0); // Disable HSI (HSI16ON='0').
 	RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
@@ -138,14 +138,14 @@ errors:
  * @param:			None.
  * @return status:	Function execution status.
  */
-unsigned char RCC_switch_to_hsi(void) {
+RCC_status_t RCC_switch_to_hsi(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
 	FLASH_status_t flash_status = FLASH_SUCCESS;
 	unsigned int loop_count = 0;
 	// Set flash latency.
 	flash_status = FLASH_set_latency(1);
-	FLASH_status_check(RCC_ERROR_FLASH);
+	FLASH_status_check(RCC_ERROR_BASE_FLASH);
 	// Init HSI.
 	RCC -> CR |= (0b1 << 0); // Enable HSI (HSI16ON='1').
 	// Wait for HSI to be stable.
@@ -194,7 +194,7 @@ RCC_status_t RCC_switch_to_hse(void) {
 	unsigned int loop_count = 0;
 	// Set flash latency.
 	flash_status = FLASH_set_latency(1);
-	FLASH_status_check(RCC_ERROR_FLASH);
+	FLASH_status_check(RCC_ERROR_BASE_FLASH);
 	// Enable 16MHz TCXO.
 	GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 1);
 	// Init HSE.
@@ -288,7 +288,7 @@ RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	for (sample_idx=0 ; sample_idx<RCC_LSI_AVERAGING_COUNT ; sample_idx++) {
 		// Perform measurement.
 		tim21_status = TIM21_get_lsi_frequency(&lsi_frequency_sample);
-		TIM21_status_check(RCC_ERROR_TIM);
+		TIM21_status_check(RCC_ERROR_BASE_TIM);
 		(*lsi_frequency_hz) = (((*lsi_frequency_hz) * sample_idx) + lsi_frequency_sample) / (sample_idx + 1);
 	}
 	TIM21_disable();

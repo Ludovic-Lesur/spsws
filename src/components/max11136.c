@@ -98,7 +98,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_registe
 	spi2_status = SPI2_write_short(spi_command);
 	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 	// Check status.
-	SPI2_status_check(MAX11136_ERROR_SPI);
+	SPI2_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 errors:
 	return status;
@@ -158,7 +158,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 		spi2_status = SPI2_read_short(0x0000, &max11136_dout);
 		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Check status.
-		SPI2_status_check(MAX11136_ERROR_SPI);
+		SPI2_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;

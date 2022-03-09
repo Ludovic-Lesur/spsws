@@ -46,7 +46,7 @@ static SI1133_status_t SI1133_write_register(unsigned char i2c_address, unsigned
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, tx_buf_length, 1);
-	I2C1_status_check(SI1133_ERROR_I2C);
+	I2C1_status_check(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;
 }
@@ -63,9 +63,9 @@ static SI1133_status_t SI1133_read_register(unsigned char i2c_address, unsigned 
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &register_address, 1, 1);
-	I2C1_status_check(SI1133_ERROR_I2C);
+	I2C1_status_check(SI1133_ERROR_BASE_I2C);
 	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_status_check(SI1133_ERROR_I2C);
+	I2C1_status_check(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;
 }

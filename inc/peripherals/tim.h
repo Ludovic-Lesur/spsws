@@ -22,7 +22,7 @@
 typedef enum {
 	TIM_SUCCESS = 0,
 	TIM_ERROR_INTERRUPT_TIMEOUT,
-	TIM_ERROR_LAST
+	TIM_ERROR_BASE_LAST = 0x0100
 } TIM_status_t;
 
 /*** TIM functions ***/

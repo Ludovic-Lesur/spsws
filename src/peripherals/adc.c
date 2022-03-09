@@ -32,8 +32,7 @@
 typedef struct {
 	unsigned int vrefint_12bits;
 	unsigned int data[ADC_DATA_INDEX_LAST];
-	unsigned char tmcu_degrees_comp1;
-	signed char tmcu_degrees_comp2;
+	signed char tmcu_degrees;
 } ADC_context_t;
 
 /*** ADC local global variables ***/
@@ -54,6 +53,8 @@ static ADC_status_t ADC1_single_conversion(unsigned char adc_channel, unsigned i
 	// Select input channel.
 	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
 	ADC1 -> CHSELR |= (0b1 << adc_channel);
+	// Clear all flags.
+	ADC1 -> ISR |= 0x0000089F;
 	// Read raw supply voltage.
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
 	while (((ADC1 -> ISR) & (0b1 << 2)) == 0) {
@@ -97,16 +98,8 @@ errors:
 static ADC_status_t ADC1_compute_vrefint(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	// Set sampling time (see p.89 of STM32L031x4/6 datasheet).
-	ADC1 -> SMPR &= ~(0b111 << 0); // Reset bits 0-2.
-	ADC1 -> SMPR |= (0b110 << 0); // Sampling time for internal voltage reference is 10us typical, 79.5*(1/ADCCLK) = 9.94us for ADCCLK = SYSCLK/2 = 8MHz;
-	// Wake-up internal voltage reference.
-	ADC1 -> CCR |= (0b1 << 22); // VREFEN='1'.
-	LPTIM1_delay_milliseconds(10, 0); // Wait al least 3ms (see p.55 of STM32L031x4/6 datasheet).
 	// Read raw supply voltage.
 	status = ADC1_filtered_conversion(ADC_CHANNEL_VREFINT, &adc_ctx.vrefint_12bits);
-	// Switch internal voltage reference off.
-	ADC1 -> CCR &= ~(0b1 << 22); // VREFEN='0'.
 	return status;
 }
 
@@ -126,36 +119,18 @@ static void ADC1_compute_vmcu(void) {
 static ADC_status_t ADC1_compute_tmcu(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	int raw_temp_sensor_12bits = 0;
+	unsigned int raw_temp_sensor_12bits = 0;
 	int raw_temp_calib_mv = 0;
 	int temp_calib_degrees = 0;
-	unsigned char temperature_abs = 0;
-	// Set sampling time (see p.88 of STM32L031x4/6 datasheet).
-	ADC1 -> SMPR |= (0b111 << 0); // Sampling time for temperature sensor must be greater than 10us, 160.5*(1/ADCCLK) = 20us for ADCCLK = SYSCLK/2 = 8MHz;
-	// Wake-up VREFINT and temperature sensor.
-	ADC1 -> CCR |= (0b11 << 22); // TSEN='1' and VREFEF='1'.
-	LPTIM1_delay_milliseconds(10, 0); // Wait internal reference stabilization (max 3ms).
 	// Read raw temperature.
 	status = ADC1_filtered_conversion(ADC_CHANNEL_TMCU, &raw_temp_sensor_12bits);
 	if (status != ADC_SUCCESS) goto errors;
 	// Compute temperature according to MCU factory calibration (see p.301 and p.847 of RM0377 datasheet).
-	raw_temp_calib_mv = (raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_INDEX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
+	raw_temp_calib_mv = ((int) raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_INDEX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
 	temp_calib_degrees = raw_temp_calib_mv * ((int) (TS_CAL2_TEMP-TS_CAL1_TEMP));
 	temp_calib_degrees = (temp_calib_degrees) / ((int) (TS_CAL2 - TS_CAL1));
-	adc_ctx.tmcu_degrees_comp2 = temp_calib_degrees + TS_CAL1_TEMP;
-	// Convert to 1-complement value.
-	adc_ctx.tmcu_degrees_comp1 = 0;
-	if (adc_ctx.tmcu_degrees_comp2 < 0) {
-		adc_ctx.tmcu_degrees_comp1 |= 0x80;
-		temperature_abs = (-1) * (adc_ctx.tmcu_degrees_comp2);
-		adc_ctx.tmcu_degrees_comp1 |= (temperature_abs & 0x7F);
-	}
-	else {
-		adc_ctx.tmcu_degrees_comp1 = (adc_ctx.tmcu_degrees_comp2 & 0x7F);
-	}
+	adc_ctx.tmcu_degrees = temp_calib_degrees + TS_CAL1_TEMP;
 errors:
-	// Switch temperature sensor off.
-	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.
 	return status;
 }
 
@@ -168,14 +143,14 @@ errors:
 ADC_status_t ADC1_init(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned char idx = 0;
 	unsigned int loop_count = 0;
 	// Init context.
 	adc_ctx.vrefint_12bits = 0;
 	for (idx=0 ; idx<ADC_DATA_INDEX_LAST ; idx++) adc_ctx.data[idx] = 0;
 	adc_ctx.data[ADC_DATA_INDEX_VMCU_MV] = ADC_VMCU_DEFAULT_MV;
-	adc_ctx.tmcu_degrees_comp2 = 0;
-	adc_ctx.tmcu_degrees_comp1 = 0;
+	adc_ctx.tmcu_degrees = 0;
 	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 	// Ensure ADC is disabled.
@@ -184,13 +159,10 @@ ADC_status_t ADC1_init(void) {
 	}
 	// Enable ADC voltage regulator.
 	ADC1 -> CR |= (0b1 << 28);
-	LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
+	LPTIM1_status_check(ADC_ERROR_BASE_LPTIM);
 	// ADC configuration.
-	ADC1 -> CFGR2 &= ~(0b11 << 30); // Reset bits 30-31.
 	ADC1 -> CFGR2 |= (0b01 << 30); // Use (PCLK2/2) as ADCCLK = SYSCLK/2 (see RCC_init() function).
-	ADC1 -> CFGR1 &= (0b1 << 13); // Single conversion mode.
-	ADC1 -> CFGR1 &= ~(0b11 << 0); // Data resolution = 12 bits (RES='00').
-	ADC1 -> CCR &= 0xFC03FFFF; // No prescaler.
 	ADC1 -> SMPR |= (0b111 << 0); // Maximum sampling time.
 	// ADC calibration.
 	ADC1 -> CR |= (0b1 << 31); // ADCAL='1'.
@@ -202,10 +174,17 @@ ADC_status_t ADC1_init(void) {
 			break;
 		}
 	}
-	// Clear all flags.
-	ADC1 -> ISR |= 0x0000089F;
-	// Return status.
+errors:
 	return status;
+}
+
+/* ENABLE INTERNAL ADC PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void ADC1_enable(void) {
+	// Disable peripheral clock.
+	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 }
 
 /* DISABLE INTERNAL ADC PERIPHERAL.
@@ -213,12 +192,6 @@ ADC_status_t ADC1_init(void) {
  * @return:	None.
  */
 void ADC1_disable(void) {
-	// Disable peripheral.
-	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
-		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
-	}
-	// Clear all flags.
-	ADC1 -> ISR |= 0x0000089F;
 	// Disable peripheral clock.
 	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
 }
@@ -230,6 +203,7 @@ void ADC1_disable(void) {
 ADC_status_t ADC1_perform_measurements(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned int loop_count = 0;
 	// Enable ADC peripheral.
 	ADC1 -> CR |= (0b1 << 0); // ADEN='1'.
@@ -241,14 +215,19 @@ ADC_status_t ADC1_perform_measurements(void) {
 			goto errors;
 		}
 	}
+	// Wake-up VREFINT and temperature sensor.
+	ADC1 -> CCR |= (0b11 << 22); // TSEN='1' and VREFEF='1'.
+	// Wait internal reference stabilization (max 3ms).
+	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
+	LPTIM1_status_check(ADC_ERROR_BASE_LPTIM);
 	// Perform measurements.
 	status = ADC1_compute_vrefint();
 	if (status != ADC_SUCCESS) goto errors;
 	ADC1_compute_vmcu();
 	status = ADC1_compute_tmcu();
 errors:
-	// Clear all flags.
-	ADC1 -> ISR |= 0x0000089F; // Clear all flags.
+	// Switch internal voltage reference off.
+	ADC1 -> CCR &= ~(0b11 << 22); // TSEN='0' and VREFEF='0'.
 	// Disable ADC peripheral.
 	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
 		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
@@ -278,14 +257,6 @@ ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
  * @param tmcu_degrees:	Pointer to signed value that will contain MCU temperature in degrees (2-complement).
  * @return:				None.
  */
-void ADC1_get_tmcu_comp2(signed char* tmcu_degrees) {
-	(*tmcu_degrees) = adc_ctx.tmcu_degrees_comp2;
-}
-
-/* GET MCU TEMPERATURE.
- * @param tmcu_degrees:	Pointer to unsigned value that will contain MCU temperature in degrees (1-complement).
- * @return:				None.
- */
-void ADC1_get_tmcu_comp1(unsigned char* tmcu_degrees) {
-	(*tmcu_degrees) = adc_ctx.tmcu_degrees_comp1;
+void ADC1_get_tmcu(signed char* tmcu_degrees) {
+	(*tmcu_degrees) = adc_ctx.tmcu_degrees;
 }

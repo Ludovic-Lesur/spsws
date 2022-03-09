@@ -511,10 +511,10 @@ static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_
 		LPUART1_enable_tx();
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
 			lpuart1_status = LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
-			LPUART1_status_check(NEOM8N_ERROR_LPUART);
+			LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 		}
 		lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-		LPTIM1_status_check(NEOM8N_ERROR_LPTIM);
+		LPTIM1_status_check(NEOM8N_ERROR_BASE_LPTIM);
 	}
 errors:
 	return status;
@@ -531,7 +531,7 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	// Start RTC wake-up timer.
 	RTC_clear_wakeup_timer_flag();
 	rtc_status = RTC_start_wakeup_timer(timeout_seconds);
-	RTC_status_check(NEOM8N_ERROR_RTC);
+	RTC_status_check(NEOM8N_ERROR_BASE_RTC);
 	// Start DMA.
 	DMA1_init_channel6();
 	DMA1_stop_channel6();

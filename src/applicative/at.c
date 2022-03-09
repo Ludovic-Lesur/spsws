@@ -304,7 +304,7 @@ static void AT_adc_callback(void) {
 		ADC1_init();
 		ADC1_perform_measurements();
 		ADC1_disable();
-		ADC1_get_tmcu_comp2(&tmcu_degrees);
+		ADC1_get_tmcu(&tmcu_degrees);
 		ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
 		// Print results.
 		AT_response_add_string("Vmcu=");
@@ -398,7 +398,7 @@ static void AT_iths_callback(void) {
 		I2C1_power_on();
 		SHT3X_perform_measurements(SHT3X_INTERNAL_I2C_ADDRESS);
 		I2C1_power_off();
-		SHT3X_get_temperature_comp2(&tamb_degrees);
+		SHT3X_get_temperature(&tamb_degrees);
 		SHT3X_get_humidity(&hamb_percent);
 		// Print results.
 		AT_response_add_string("T=");
@@ -428,7 +428,7 @@ static void AT_eths_callback(void) {
 		I2C1_power_on();
 		SHT3X_perform_measurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 		I2C1_power_off();
-		SHT3X_get_temperature_comp2(&tamb_degrees);
+		SHT3X_get_temperature(&tamb_degrees);
 		SHT3X_get_humidity(&hamb_percent);
 		// Print results.
 		AT_response_add_string("T=");

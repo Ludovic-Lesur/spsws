@@ -104,5 +104,6 @@ unsigned int MATH_abs(signed int x);
 unsigned int MATH_atan2(signed int x, signed int y);
 #endif
 signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position);
+unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_position);
 
 #endif /* MATH_H */

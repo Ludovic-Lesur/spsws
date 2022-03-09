@@ -17,7 +17,7 @@
 typedef enum {
 	AES_SUCCESS = 0,
 	AES_ERROR_TIMEOUT,
-	AES_ERROR_LAST
+	AES_ERROR_BASE_LAST = 0x0100
 } AES_status_t;
 
 /*** AES functions ***/

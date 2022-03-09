@@ -28,7 +28,8 @@ static I2C_status_t I2C1_clear(void) {
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Disable peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
-	lptim1_status = LPTIM1_delay_milliseconds(1, 0); LPTIM1_status_check(I2C_ERROR_LPTIM);
+	lptim1_status = LPTIM1_delay_milliseconds(1, 0);
+	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 	// Enable peripheral and clear all flags.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
 	I2C1 -> ICR |= 0x00003F38;
@@ -93,7 +94,7 @@ I2C_status_t I2C1_power_on(void) {
 	// Turn sensors and pull-up resistors on.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(I2C_ERROR_LPTIM);
+	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -113,7 +114,7 @@ I2C_status_t I2C1_power_off(void) {
 	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Delay required if another cycle is requested by applicative layer.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(I2C_ERROR_LPTIM);
+	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }

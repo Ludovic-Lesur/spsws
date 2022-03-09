@@ -16,7 +16,7 @@ typedef enum {
 	NVM_ERROR_UNLOCK,
 	NVM_ERROR_LOCK,
 	NVM_ERROR_WRITE,
-	NVM_ERROR_LAST
+	NVM_ERROR_BASE_LAST = 0x0100
 } NVM_status_t;
 
 typedef enum {

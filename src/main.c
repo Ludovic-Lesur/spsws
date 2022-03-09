@@ -37,6 +37,8 @@
 #include "sx1232.h"
 #include "sigfox_types.h"
 #include "wind.h"
+// Utils.
+#include "math.h"
 // Applicative.
 #include "at.h"
 #include "mode.h"
@@ -308,9 +310,12 @@ int main (void) {
 	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
 	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 	// Local variables.
+	signed char temperature = 0;
 	unsigned char generic_data_u8 = 0;
 	unsigned int generic_data_u32_1 = 0;
+#ifdef CM
 	unsigned int generic_data_u32_2 = 0;
+#endif
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sfx_error = SFX_ERR_NONE;
 	// Main loop.
@@ -439,8 +444,8 @@ int main (void) {
 			ADC1_init();
 			ADC1_perform_measurements();
 			ADC1_disable();
-			ADC1_get_tmcu_comp1(&generic_data_u8);
-			spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = generic_data_u8;
+			ADC1_get_tmcu(&temperature);
+			spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = MATH_one_complement(temperature, 7);
 			ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
 			spsws_ctx.sigfox_monitoring_data.field.vmcu_mv = generic_data_u32_1;
 			// Retrieve external ADC data.
@@ -474,8 +479,8 @@ int main (void) {
 			// Internal temperature/humidity sensor.
 			IWDG_reload();
 			SHT3X_perform_measurements(SHT3X_INTERNAL_I2C_ADDRESS);
-			SHT3X_get_temperature_comp1(&generic_data_u8);
-			spsws_ctx.sigfox_monitoring_data.field.tpcb_degrees = generic_data_u8;
+			SHT3X_get_temperature(&temperature);
+			spsws_ctx.sigfox_monitoring_data.field.tpcb_degrees = MATH_one_complement(temperature, 7);
 			SHT3X_get_humidity(&generic_data_u8);
 			spsws_ctx.sigfox_monitoring_data.field.hpcb_percent = generic_data_u8;
 			// External temperature/humidity sensor.
@@ -486,8 +491,8 @@ int main (void) {
 #ifdef HW2_0
 			IWDG_reload();
 			SHT3X_perform_measurements(SHT3X_EXTERNAL_I2C_ADDRESS);
-			SHT3X_get_temperature_comp1(&generic_data_u8);
-			spsws_ctx.sigfox_weather_data.field.temperature_degrees = generic_data_u8;
+			SHT3X_get_temperature(&temperature);
+			spsws_ctx.sigfox_weather_data.field.temperature_degrees = MATH_one_complement(temperature, 7);
 			SHT3X_get_humidity(&generic_data_u8);
 			spsws_ctx.sigfox_weather_data.field.humidity_percent = generic_data_u8;
 #endif
