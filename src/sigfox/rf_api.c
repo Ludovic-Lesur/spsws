@@ -127,9 +127,7 @@ static RF_api_context_t rf_api_ctx;
  * @param modulation:	Modulation type asked by Sigfox library.
  * @return status:		Function execution status.
  */
-static SIGFOX_API_status_t RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
-	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
+static sfx_u8 RF_API_SetTxModulationParameters(sfx_modulation_type_t modulation) {
 	// Init common parameters.
 	rf_api_ctx.rf_api_phase_shift_required = 0;
 	rf_api_ctx.rf_api_frequency_shift_direction = 0;
@@ -148,12 +146,12 @@ static SIGFOX_API_status_t RF_API_SetTxModulationParameters(sfx_modulation_type_
 		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_FCC;
 		break;
 	default:
-		status = SIGFOX_API_ERROR_MODULATION_TYPE;
 		goto errors;
 	}
 	rf_api_ctx.rf_api_ramp_duration_us = (rf_api_ctx.rf_api_symbol_duration_us / 4);
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_SEND;
 }
 
 /* SELECT RF PATH ACCORDING TO RF MODE AND SIGFOX RADIO CONFIGURAION.
@@ -209,15 +207,14 @@ static void RF_API_SetRfPath(sfx_rf_mode_t rf_mode) {
  *******************************************************************/
 sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	SPI_status_t spi1_status = SPI_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Switch RF on.
 	spi1_status = SPI1_power_on();
-	SPI1_status_check(SIGFOX_API_ERROR_BASE_SPI);
+	if (spi1_status != SPI_SUCCESS) goto errors;
 	// Init transceiver.
 	sx1232_status = SX1232_set_oscillator(SX1232_OSCILLATOR_TCXO);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Configure switch.
 	RF_API_SetRfPath(rf_mode);
 	// Configure transceiver.
@@ -227,15 +224,15 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	case SFX_RF_MODE_TX:
 		// Prepare transceiver for uplink or continuous wave operation.
 		sx1232_status = SX1232_enable_low_phase_noise_pll();
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_enable_fast_frequency_hopping();
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_modulation(SX1232_MODULATION_OOK, SX1232_MODULATION_SHAPING_OOK_BITRATE);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_bitrate(500); // Set bit rate for modulation shaping.
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_data_mode(SX1232_DATA_MODE_CONTINUOUS);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		break;
 	// Downlink.
 	case SFX_RF_MODE_RX:
@@ -243,34 +240,34 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		rf_api_ctx.rf_api_wait_frame_calls_count = 0;
 		// Prepare transceiver for downlink operation (GFSK 800Hz 600bps).
 		sx1232_status = SX1232_set_modulation(SX1232_MODULATION_FSK, SX1232_MODULATION_SHAPING_FSK_BT_1);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_fsk_deviation(800);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_bitrate(600);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_rx_bandwidth(SX1232_RXBW_MANTISSA_24, SX1232_RXBW_EXPONENT_7);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_enable_lna_boost(1);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_configure_rssi(SX1232_RSSI_SAMPLING_32);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_preamble_detector(1, 0);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_sync_word(downlink_sync_word, 2);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_data_length(RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_dio_mapping(SX1232_DIO0, SX1232_DIO_MAPPING0); // Map payload ready interrupt on DIO0.
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_data_mode(SX1232_DATA_MODE_PACKET);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		break;
 	default:
-		status = SIGFOX_API_ERROR_RF_MODE;
 		goto errors;
 	}
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_INIT;
 }
 
 /*!******************************************************************
@@ -285,18 +282,18 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_stop(void) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	SPI_status_t spi1_status = SPI_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Disable all switch channels.
 	SKY13317_set_channel(SKY13317_CHANNEL_NONE);
 	// Power transceiver down.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	spi1_status = SPI1_power_off();
-	SPI1_status_check(SIGFOX_API_ERROR_BASE_SPI);
+	if (spi1_status != SPI_SUCCESS) goto errors;
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_STOP;
 }
 
 /*!******************************************************************
@@ -318,7 +315,7 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
+	sfx_u8 rf_api_status = SFX_ERR_NONE;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	unsigned char stream_byte_idx = 0;
 	unsigned char stream_bit_idx = 0;
@@ -347,22 +344,22 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
 	NVIC_disable_interrupt(NVIC_IT_LPUART1);
 	// Set modulation parameters.
-	status = RF_API_SetTxModulationParameters(type);
-	if (status != SIGFOX_API_SUCCESS) goto errors;
+	rf_api_status = RF_API_SetTxModulationParameters(type);
+	if (rf_api_status != SFX_ERR_NONE) goto errors;
 	// Compute frequency shift duration required to invert signal phase.
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_get_rf_frequency(&effective_uplink_frequency_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz + rf_api_ctx.rf_api_frequency_shift_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_get_rf_frequency(&effective_high_shifted_frequency_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz - rf_api_ctx.rf_api_frequency_shift_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_get_rf_frequency(&effective_low_shifted_frequency_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Compute average durations = 1 / (2 * delta_f).
 	high_shifted_frequency_duration_us = (1000000) / (2 * (effective_high_shifted_frequency_hz - effective_uplink_frequency_hz));
 	low_shifted_frequency_duration_us = (1000000) / (2 * (effective_uplink_frequency_hz - effective_low_shifted_frequency_hz));
@@ -383,11 +380,11 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 	// Start CW.
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_set_rf_output_power(rf_api_ctx.rf_api_output_power_max);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_start_cw();
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// First ramp-up.
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 	rf_api_ctx.rf_api_phase_shift_required = 0;
@@ -418,7 +415,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	while (rf_api_ctx.rf_api_tim2_arr_flag == 0);
 	// Stop CW.
 	sx1232_status = SX1232_stop_cw();
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	TIM2_stop();
 	TIM2_disable();
 	// Re-enable all interrupts.
@@ -431,8 +428,9 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	NVIC_enable_interrupt(NVIC_IT_USART1);
 #endif
 #endif
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_SEND;
 }
 
 /*!******************************************************************
@@ -447,15 +445,15 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_start_continuous_transmission (sfx_modulation_type_t type) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Start CW.
 	sx1232_status = SX1232_set_rf_output_power(rf_api_ctx.rf_api_output_power_max);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	sx1232_status = SX1232_start_cw();
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_START_CONTINUOUS_TRANSMISSION;
 }
 
 /*!******************************************************************
@@ -467,13 +465,13 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_stop_continuous_transmission (void) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Stop CW.
 	sx1232_status = SX1232_stop_cw();
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_STOP_CONTINUOUS_TRANSMISSION;
 }
 
 /*!******************************************************************
@@ -488,15 +486,15 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_change_frequency(sfx_u32 frequency) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Program and save frequency.
 	sx1232_status = SX1232_set_rf_frequency(frequency);
-	SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Update local variable.
 	rf_api_ctx.rf_api_rf_frequency_hz = frequency;
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_CHANGE_FREQ;
 }
 
 /*!******************************************************************
@@ -526,7 +524,6 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *state) {
 	// Local variables.
-	SIGFOX_API_status_t status = SIGFOX_API_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
@@ -541,16 +538,16 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 	if (rf_api_ctx.rf_api_wait_frame_calls_count < RF_API_WAIT_FRAME_CALLS_MAX) {
 		// Go to FSRX state.
 		sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		// Wait TS_FS=60us typical.
 		lptim1_status = LPTIM1_delay_milliseconds(5, 1);
-		LPTIM1_status_check(SIGFOX_API_ERROR_BASE_LPTIM);
+		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		// Go to RX state.
 		sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
-		SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		// Wait TS_TR=120us typical.
 		lptim1_status = LPTIM1_delay_milliseconds(5, 1);
-		LPTIM1_status_check(SIGFOX_API_ERROR_BASE_LPTIM);
+		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		// Wait for external interrupt (payload ready on DIO0).
 		while ((remaining_delay > 0) && (GPIO_read(&GPIO_SX1232_DIO0) == 0)) {
 			// Compute sub-delay.
@@ -559,15 +556,15 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 			// Start wake-up timer.
 			RTC_clear_wakeup_timer_flag();
 			rtc_status = RTC_start_wakeup_timer(sub_delay);
-			RTC_status_check(SIGFOX_API_ERROR_BASE_RTC);
+			if (rtc_status != RTC_SUCCESS) goto errors;
 			while (RTC_get_wakeup_timer_flag() == 0) {
 				// Read SX1232 IRQ flags.
 				sx1232_status = SX1232_get_irq_flags(&irq_flags);
-				SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+				if (sx1232_status != SX1232_SUCCESS) goto errors;
 				// Get RSSI when preamble is found.
 				if (((irq_flags & 0x0200) != 0) && (rssi_retrieved == 0)) {
 					sx1232_status = SX1232_get_rssi(rssi);
-					SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+					if (sx1232_status != SX1232_SUCCESS) goto errors;
 					rssi_retrieved = 1;
 				}
 			}
@@ -576,17 +573,18 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 		}
 		// Stop timer.
 		rtc_status = RTC_stop_wakeup_timer();
-		RTC_status_check(SIGFOX_API_ERROR_BASE_RTC);
+		if (rtc_status != RTC_SUCCESS) goto errors;
 		// Check GPIO.
 		if (GPIO_read(&GPIO_SX1232_DIO0) != 0) {
 			// Downlink frame received.
 			(*state) = DL_PASSED;
 			sx1232_status = SX1232_read_fifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
-			SX1232_status_check(SIGFOX_API_ERROR_BASE_SX1232);
+			if (sx1232_status != SX1232_SUCCESS) goto errors;
 		}
 	}
+	return SFX_ERR_NONE;
 errors:
-	return status;
+	return RF_ERR_API_WAIT_FRAME;
 }
 
 /*!******************************************************************
@@ -610,7 +608,7 @@ errors:
  * \retval SFX_ERR_NONE:                      No error
  *******************************************************************/
 sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_state_enum_t * state) {
-	return SIGFOX_API_SUCCESS;
+	return SFX_ERR_NONE;
 }
 
 /*!******************************************************************
@@ -624,5 +622,5 @@ sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_
  * \retval RF_ERR_API_GET_VERSION:      Get Version error
  *******************************************************************/
 sfx_u8 RF_API_get_version(sfx_u8 **version, sfx_u8 *size) {
-	return SIGFOX_API_SUCCESS;
+	return SFX_ERR_NONE;
 }

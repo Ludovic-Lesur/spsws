@@ -29,14 +29,6 @@
 #ifndef SIGFOX_TYPES_H
 #define SIGFOX_TYPES_H
 
-#include "adc.h"
-#include "aes.h"
-#include "lptim.h"
-#include "nvm.h"
-#include "rtc.h"
-#include "spi.h"
-#include "sx1232.h"
-
 /****************************************************/
 /*!
  * \defgroup SIGFOX_TYPES Custom types used in library
@@ -54,23 +46,6 @@ typedef signed short        sfx_s16;
 typedef signed long         sfx_s32;
 /* Custom Types */
 typedef unsigned short      sfx_error_t;
-
-typedef enum {
-	SIGFOX_API_SUCCESS = 0,
-	SIGFOX_API_ERROR_MALLOC,
-	SIGFOX_API_ERROR_DELAY_TYPE,
-	SIGFOX_API_ERROR_KEY_TYPE,
-	SIGFOX_API_ERROR_MODULATION_TYPE,
-	SIGFOX_API_ERROR_RF_MODE,
-	SIGFOX_API_ERROR_BASE_ADC = 0x0100,
-	SIGFOX_API_ERROR_BASE_LPTIM = (SIGFOX_API_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_NVM = (SIGFOX_API_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_AES = (SIGFOX_API_ERROR_BASE_NVM + NVM_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_RTC = (SIGFOX_API_ERROR_BASE_AES + AES_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_SPI = (SIGFOX_API_ERROR_BASE_RTC + RTC_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_SX1232 = (SIGFOX_API_ERROR_BASE_SPI + SPI_ERROR_BASE_LAST),
-	SIGFOX_API_ERROR_BASE_LAST = (SIGFOX_API_ERROR_BASE_SX1232 + SX1232_ERROR_BASE_LAST)
-} SIGFOX_API_status_t;
 
 #define SFX_NULL            (void*)0
 #define SFX_TRUE            (sfx_bool)(1)
