@@ -139,12 +139,12 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parame
 				status = PARSER_SUCCESS;
 			}
 			else {
-				status = PARSER_ERROR_PARAMETER_BIT_INVALID;
+				status = PARSER_ERROR_BIT_INVALID;
 				goto errors;
 			}
 		}
 		else {
-			status = PARSER_ERROR_PARAMETER_BIT_OVERFLOW;
+			status = PARSER_ERROR_BIT_OVERFLOW;
 			goto errors;
 		}
 		break;
@@ -156,7 +156,7 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parame
 			// Check if parameter can be binary coded on 32 bits = 4 bytes.
 			if (hexa_number_of_bytes > PARSER_PARAMETER_HEXADECIMAL_MAX_BYTES) {
 				// Error in parameter -> value is too large.
-				status = PARSER_ERROR_PARAMETER_HEXA_OVERFLOW;
+				status = PARSER_ERROR_HEXADECIMAL_OVERFLOW;
 				goto errors;
 			}
 			// Scan parameter.
@@ -165,7 +165,7 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parame
 				hexa_digit_idx++;
 				// Check if buffer content are hexadecimal characters.
 				if (STRING_is_hexa_char((parser_ctx -> rx_buf)[idx]) == 0) {
-					status = PARSER_ERROR_PARAMETER_HEXA_INVALID;
+					status = PARSER_ERROR_HEXADECIMAL_INVALID;
 					goto errors;
 				}
 				// Get byte every two digits.
@@ -187,21 +187,21 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parame
 		}
 		else {
 			// Error in parameter -> odd number of digits while using hexadecimal format.
-			status = PARSER_ERROR_PARAMETER_HEXA_ODD_SIZE;
+			status = PARSER_ERROR_HEXADECIMAL_ODD_SIZE;
 			goto errors;
 		}
 		break;
 	case PARSER_PARAMETER_TYPE_DECIMAL:
 		// Check if parameter exists and can be binary coded on 32 bits = 9 digits max.
 		if (param_length_char > PARSER_PARAMETER_DECIMAL_MAX_DIGITS) {
-			status = PARSER_ERROR_PARAMETER_DEC_OVERFLOW;
+			status = PARSER_ERROR_DECIMAL_OVERFLOW;
 			goto errors;
 		}
 		// Scan parameter.
 		for (idx=(parser_ctx -> start_idx) ; idx<=end_idx ; idx++) {
 			// Check if buffer content are decimal characters.
 			if (STRING_is_decimal_char((parser_ctx -> rx_buf)[idx]) == 0) {
-				status = PARSER_ERROR_PARAMETER_DEC_INVALID;
+				status = PARSER_ERROR_DECIMAL_INVALID;
 				goto errors;
 			}
 			// Store digit and increment index.
@@ -277,7 +277,7 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 		// Check if byte array does not exceed given length.
 		if (hexa_number_of_bytes > max_length) {
 			// Error in parameter -> array is too large.
-			status = PARSER_ERROR_PARAMETER_BYTE_ARRAY_INVALID_LENGTH;
+			status = PARSER_ERROR_BYTE_ARRAY_LENGTH;
 			goto errors;
 		}
 		// Scan each byte.
@@ -286,7 +286,7 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 			hexa_digit_idx++;
 			// Check if buffer content are hexadecimal characters.
 			if (STRING_is_hexa_char((parser_ctx -> rx_buf)[idx]) == 0) {
-				status = PARSER_ERROR_PARAMETER_HEXA_INVALID;
+				status = PARSER_ERROR_HEXADECIMAL_INVALID;
 				goto errors;
 			}
 			// Get byte every two digits.
@@ -301,7 +301,7 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 	}
 	else {
 		// Error in parameter -> odd number of digits while using hexadecimal format.
-		status = PARSER_ERROR_PARAMETER_HEXA_ODD_SIZE;
+		status = PARSER_ERROR_HEXADECIMAL_ODD_SIZE;
 		goto errors;
 	}
 	// Update start index after decoding parameter.

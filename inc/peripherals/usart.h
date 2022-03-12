@@ -12,14 +12,12 @@
 
 /*** USART structures ***/
 
-#ifdef ATM
 typedef enum {
 	USART_SUCCESS = 0,
 	USART_ERROR_TX_TIMEOUT,
 	USART_ERROR_STRING_LENGTH,
 	USART_ERROR_BASE_LAST = 0x0100
 } USART_status_t;
-#endif
 
 /*** USART functions ***/
 

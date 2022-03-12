@@ -29,11 +29,12 @@ typedef enum {
 /*** ADC functions ***/
 
 ADC_status_t ADC1_init(void);
+void ADC1_enable(void);
 void ADC1_disable(void);
 ADC_status_t ADC1_perform_measurements(void);
 ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data);
 void ADC1_get_tmcu(signed char* tmcu_degrees);
 
-#define ADC_status_check(error_base) { if (adc_status != ADC_SUCCESS) { status = error_base + adc_status; goto errors; }}
+#define ADC1_status_check(error_base) { if (adc1_status != ADC_SUCCESS) { status = error_base + adc1_status; goto errors; }}
 
 #endif /* ADC_H */

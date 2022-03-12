@@ -31,9 +31,9 @@ static SHT3X_context_t sht3x_ctx;
  * @param:			None.
  * @return status:	Function execution status.
  */
-SHTX_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
+SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
 	// Local variables.
-	SHTX_status_t status = SHT3X_SUCCESS;
+	SHT3X_status_t status = SHT3X_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned char measure_command[2] = {0x24, 0x00};

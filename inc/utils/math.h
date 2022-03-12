@@ -94,15 +94,20 @@ static const signed short MATH_SIN_TABLE[360] = {
 };
 #endif
 
+/*** MATH structures ***/
+
+typedef enum {
+	MATH_SUCCESS = 0,
+	MATH_ERROR_BASE_LAST = 0x0100
+} MATH_status_t;
+
 /*** MATH functions ***/
 
 unsigned int MATH_pow_10(unsigned char power);
 unsigned int MATH_average(unsigned int* data, unsigned char data_length);
 unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length, unsigned char average_length);
-#if (defined CM || defined ATM)
 unsigned int MATH_abs(signed int x);
 unsigned int MATH_atan2(signed int x, signed int y);
-#endif
 signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position);
 unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_position);
 

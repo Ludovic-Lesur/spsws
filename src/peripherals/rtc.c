@@ -350,8 +350,7 @@ RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds) {
 	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
 	RTC -> WUTR = (delay_seconds - 1);
 	// Clear flags.
-	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+	RTC_clear_wakeup_timer_flag();
 	// Enable interrupt.
 	RTC -> CR |= (0b1 << 14); // WUTE='1'.
 	// Start timer.

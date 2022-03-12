@@ -94,18 +94,17 @@ sfx_u8 MCU_API_free(sfx_u8* ptr) {
  *******************************************************************/
 sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_tx, sfx_s16* temperature) {
 	// Local variables.
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 	unsigned int mcu_supply_voltage_mv = 0;
 	signed char mcu_temperature_degrees = 0;
 	// Perform measurements.
-	adc_status = ADC1_init();
-	if (adc_status != ADC_SUCCESS) goto errors;
-	adc_status = ADC1_perform_measurements();
-	if (adc_status != ADC_SUCCESS) goto errors;
+	ADC1_enable();
+	adc1_status = ADC1_perform_measurements();
+	if (adc1_status != ADC_SUCCESS) goto errors;
 	ADC1_disable();
 	// Get MCU supply voltage.
-	adc_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &mcu_supply_voltage_mv);
-	if (adc_status != ADC_SUCCESS) goto errors;
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &mcu_supply_voltage_mv);
+	if (adc1_status != ADC_SUCCESS) goto errors;
 	(*voltage_idle) = (sfx_u16) mcu_supply_voltage_mv;
 	(*voltage_tx) = (sfx_u16) mcu_supply_voltage_mv;
 	// Get MCU internal temperature.
@@ -421,7 +420,9 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
 		// Compute sub-delay.
 		sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
 		remaining_delay -= sub_delay;
-		// Start wake-up timer.
+		// Restart wake-up timer.
+		rtc_status = RTC_stop_wakeup_timer();
+		if (rtc_status != RTC_SUCCESS) goto errors;
 		rtc_status = RTC_start_wakeup_timer(sub_delay);
 		if (rtc_status != RTC_SUCCESS) goto errors;
 		// Enter stop mode.

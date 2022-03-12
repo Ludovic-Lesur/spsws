@@ -11,6 +11,9 @@
 
 #define MATH_MEDIAN_FILTER_LENGTH_MAX	0xFF
 #define MATH_DECIMAL_MAX_DIGITS			10
+#define MATH_SIGN_BIT_MAX_INDEX			31
+
+static unsigned int MATH_POW10[MATH_DECIMAL_MAX_DIGITS] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 
 /*** MATH functions ***/
 
@@ -21,10 +24,9 @@
 unsigned int MATH_pow_10(unsigned char power) {
 	// Local variables.
 	unsigned int result = 0;
-	unsigned int pow10_buf[MATH_DECIMAL_MAX_DIGITS] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 	// Check overflow.
 	if (power < MATH_DECIMAL_MAX_DIGITS) {
-		result = pow10_buf[power];
+		result = MATH_POW10[power];
 	}
 	return result;
 }
@@ -99,7 +101,6 @@ unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length,
 	return filter_out;
 }
 
-#if (defined CM || defined ATM)
 /* COMPUTE ABSOLUTE VALUE.
  * @param x:	Parameter.
  * @return:		|x|.
@@ -185,7 +186,6 @@ unsigned int MATH_atan2(signed int x, signed int y) {
 	}
 	return (alpha);
 }
-#endif
 
 /* COMPUTE THE TWO'S COMPLEMENT OF A GIVEN VALUE.
  * @param value:				Input unsigned value.
@@ -198,6 +198,8 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 	unsigned char bit_idx = 0;
 	unsigned int not_value = 0;
 	unsigned int absolute_value = 0;
+	// Check parameters.
+	if (sign_bit_position > MATH_SIGN_BIT_MAX_INDEX) goto errors;
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
@@ -213,6 +215,7 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 		absolute_value = not_value + 1;
 		result = (-1) * absolute_value;
 	}
+errors:
 	return result;
 }
 
@@ -226,6 +229,8 @@ unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_positi
 	unsigned int result = 0;
 	unsigned int absolute_value = 0;
 	unsigned int absolute_mask = ((0b1 << sign_bit_position) - 1);
+	// Check parameters.
+	if (sign_bit_position > MATH_SIGN_BIT_MAX_INDEX) goto errors;
 	// Check value sign.
 	if (value >= 0) {
 		// Value is positive: nothing to do.
@@ -236,5 +241,6 @@ unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_positi
 		absolute_value = (unsigned int) ((-1) * value);
 		result = (0b1 << sign_bit_position) | (absolute_value & absolute_mask);
 	}
+errors:
 	return result;
 }

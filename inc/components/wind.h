@@ -15,12 +15,12 @@
 #include "mode.h"
 #include "spi.h"
 
-#if (defined CM || defined ATM)
-
 /*** WIND macros ***/
 
+#if (defined CM || defined ATM)
 #define WIND_SPEED_MEASUREMENT_PERIOD_SECONDS		1
 #define WIND_DIRECTION_MEASUREMENT_PERIOD_SECONDS	10
+#endif
 
 /*** WIND structures ***/
 
@@ -35,6 +35,7 @@ typedef enum {
 
 /*** WIND functions ***/
 
+#if (defined CM || defined ATM)
 void WIND_init(void);
 void WIND_start_continuous_measure(void);
 void WIND_stop_continuous_measure(void);
@@ -46,7 +47,6 @@ WIND_status_t WIND_speed_edge_callback(void);
 void WIND_direction_edge_callback(void);
 #endif
 WIND_status_t WIND_measurement_period_callback(void);
-
 #endif
 
 #endif  /* WIND_H */

@@ -197,13 +197,12 @@ USART_status_t USARTx_send_string(char* tx_string) {
 		}
 	}
 	// Enable interrupt.
-	#ifdef HW1_0
-		NVIC_enable_interrupt(NVIC_IT_USART2);
-	#endif
-	#ifdef HW2_0
-		NVIC_enable_interrupt(NVIC_IT_USART1);
-	#endif
-errors:
+#ifdef HW1_0
+	NVIC_enable_interrupt(NVIC_IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_enable_interrupt(NVIC_IT_USART1);
+#endif
 	return status;
 }
 #endif

@@ -553,8 +553,9 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 			// Compute sub-delay.
 			sub_delay = (remaining_delay > IWDG_REFRESH_PERIOD_SECONDS) ? (IWDG_REFRESH_PERIOD_SECONDS) : (remaining_delay);
 			remaining_delay -= sub_delay;
-			// Start wake-up timer.
-			RTC_clear_wakeup_timer_flag();
+			// Restart wake-up timer.
+			rtc_status = RTC_stop_wakeup_timer();
+			if (rtc_status != RTC_SUCCESS) goto errors;
 			rtc_status = RTC_start_wakeup_timer(sub_delay);
 			if (rtc_status != RTC_SUCCESS) goto errors;
 			while (RTC_get_wakeup_timer_flag() == 0) {

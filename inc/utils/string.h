@@ -19,6 +19,11 @@
 /*** STRING structures ***/
 
 typedef enum {
+	STRING_SUCCESS = 0,
+	STRING_ERROR_BASE_LAST = 0x0100
+} STRING_status_t;
+
+typedef enum {
 	STRING_FORMAT_BINARY,
 	STRING_FORMAT_HEXADECIMAL,
 	STRING_FORMAT_DECIMAL,

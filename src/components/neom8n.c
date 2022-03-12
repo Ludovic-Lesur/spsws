@@ -25,6 +25,7 @@
 #define NEOM8N_CHECKSUM_OVERHEAD_LENGTH		4
 #define NEOM8N_CHECKSUM_OFFSET				2
 #define NEOM8N_CFG_MSG_PAYLOAD_LENGTH		8
+#define NEOM8N_TIMEOUT_SECONDS_MIN			10
 
 #define NMEA_RX_BUFFER_SIZE					128
 
@@ -582,6 +583,11 @@ NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	// Reset flags.
 	neom8n_ctx.line_end_flag = 0;
+	// Check timeout parameter.
+	if (timeout_seconds < NEOM8N_TIMEOUT_SECONDS_MIN) {
+		status = NEOM8N_ERROR_TIMEOUT;
+		goto errors;
+	}
 	// Select GGA message to get complete position.
 	status = NEOM8N_select_nmea_messages(NMEA_ZDA_MASK);
 	if (status != NEOM8N_SUCCESS) goto errors;
@@ -632,6 +638,11 @@ NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned in
 	neom8n_ctx.gga_previous_altitude = 0;
 #endif
 	neom8n_ctx.line_end_flag = 0;
+	// Check timeout parameter.
+	if (timeout_seconds < NEOM8N_TIMEOUT_SECONDS_MIN) {
+		status = NEOM8N_ERROR_TIMEOUT;
+		goto errors;
+	}
 	// Reset fix duration and start RTC wake-up timer for timeout.
 	(*fix_duration_seconds) = 0;
 	// Select GGA message to get complete position.
