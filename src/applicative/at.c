@@ -117,7 +117,7 @@ typedef struct {
 
 typedef struct {
 	// AT command buffer.
-	volatile unsigned char command_buf[AT_COMMAND_BUFFER_LENGTH];
+	volatile char command_buf[AT_COMMAND_BUFFER_LENGTH];
 	volatile unsigned int command_buf_idx;
 	volatile unsigned char line_end_flag;
 	PARSER_context_t parser;
@@ -219,7 +219,7 @@ static void AT_response_add_value(int tx_value, STRING_format_t format, unsigned
 	// Reset string.
 	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = STRING_CHAR_NULL;
 	// Convert value to string.
-	STRING_convert_value(tx_value, format, print_prefix, str_value);
+	STRING_value_to_string(tx_value, format, print_prefix, str_value);
 	// Add string.
 	AT_response_add_string(str_value);
 }
@@ -550,7 +550,7 @@ static void AT_wind_callback(void) {
 	unsigned int wind_speed_peak = 0;
 	unsigned int wind_direction = 0;
 	// Read enable parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Start or stop wind continuous measurements.
 	if (enable == 0) {
@@ -598,7 +598,7 @@ static void AT_rain_callback(void) {
 	int enable = 0;
 	unsigned char rain_mm = 0;
 	// Read enable parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Start or stop rain continuous measurements.
 	if (enable == 0) {
@@ -641,7 +641,7 @@ static void AT_time_callback(void) {
 		goto errors;
 	}
 	// Read timeout parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Power on GPS.
 	lpuart1_status = LPUART1_power_on();
@@ -709,7 +709,7 @@ static void AT_gps_callback(void) {
 		goto errors;
 	}
 	// Read timeout parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Power on GPS.
 	lpuart1_status = LPUART1_power_on();
@@ -727,7 +727,7 @@ static void AT_gps_callback(void) {
 	AT_response_add_value((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("'");
 	AT_response_add_value((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
-	AT_response_add_string("''-");
+	AT_response_add_string("''");
 	AT_response_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
 	// Longitude.
 	AT_response_add_string(" Long=");
@@ -736,7 +736,7 @@ static void AT_gps_callback(void) {
 	AT_response_add_value((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("'");
 	AT_response_add_value((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
-	AT_response_add_string("''-");
+	AT_response_add_string("''");
 	AT_response_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
 	// Altitude.
 	AT_response_add_string(" Alt=");
@@ -782,7 +782,7 @@ static void AT_nvm_callback(void) {
 	int address = 0;
 	unsigned char nvm_data = 0;
 	// Read address parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Read byte at requested address.
 	NVM_enable();
@@ -832,13 +832,8 @@ static void AT_set_id_callback(void) {
 	unsigned char extracted_length = 0;
 	unsigned char idx = 0;
 	// Read ID parameter.
-	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, device_id, &extracted_length);
+	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, 1, device_id, &extracted_length);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
-	// Check length.
-	if (extracted_length != ID_LENGTH) {
-		AT_print_status(SPSWS_ERROR_BASE_PARSER + PARSER_ERROR_BYTE_ARRAY_LENGTH);
-		goto errors;
-	}
 	// Write device ID in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
@@ -886,13 +881,8 @@ static void AT_set_key_callback(void) {
 	unsigned char extracted_length = 0;
 	unsigned char idx = 0;
 	// Read key parameter.
-	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, device_key, &extracted_length);
+	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, 1, device_key, &extracted_length);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
-	// Check length.
-	if (extracted_length != AES_BLOCK_SIZE) {
-		AT_print_status(SPSWS_ERROR_BASE_PARSER + PARSER_ERROR_BYTE_ARRAY_LENGTH);
-		goto errors;
-	}
 	// Write device ID in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
@@ -966,10 +956,10 @@ static void AT_sb_callback(void) {
 		goto errors;
 	}
 	// First try with 2 parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &data);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 0, &data);
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
-		parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
+		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// Send Sigfox bit with specified downlink request.
 		sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -987,7 +977,7 @@ static void AT_sb_callback(void) {
 	}
 	else {
 		// Try with 1 parameter.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &data);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &data);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// Send Sigfox bit with no downlink request (by default).
 		sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1024,10 +1014,10 @@ static void AT_sf_callback(void) {
 		goto errors;
 	}
 	// First try with 2 parameters.
-	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 0, 12, data, &extracted_length);
+	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 0, 12, 0, data, &extracted_length);
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
-		parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
+		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// Send Sigfox frame with specified downlink request.
 		sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1045,7 +1035,7 @@ static void AT_sf_callback(void) {
 	}
 	else {
 		// Try with 1 parameter.
-		parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, 12, data, &extracted_length);
+		parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, 12, 0, data, &extracted_length);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// Send Sigfox frame with no downlink request (by default).
 		sfx_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
@@ -1084,13 +1074,13 @@ static void AT_cw_callback(void) {
 		goto errors;
 	}
 	// Read frequency parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// First try with 3 parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
 	if (parser_status == PARSER_SUCCESS) {
 		// There is a third parameter, try to parse power.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// CW with given output power.
 		SIGFOX_API_stop_continuous_transmission();
@@ -1103,7 +1093,7 @@ static void AT_cw_callback(void) {
 	}
 	else {
 		// Power is not given, try to parse enable as last parameter.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
 		AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 		// CW with last output power.
 		SIGFOX_API_stop_continuous_transmission();
@@ -1139,10 +1129,10 @@ static void AT_rssi_callback(void) {
 		goto errors;
 	}
 	// Read frequency parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Read duration parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Init radio.
 	sfx_status = RF_API_init(SFX_RF_MODE_RX);
@@ -1234,7 +1224,7 @@ static void AT_set_rc_callback(void) {
 	int rc_index = 0;
 	unsigned char idx = 0;
 	// Read RC parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Check RC index.
 	if (((sfx_rc_enum_t) rc_index) >= SFX_RC_LIST_MAX_SIZE) {
@@ -1307,10 +1297,10 @@ static void AT_tm_callback(void) {
 		goto errors;
 	}
 	// Read RC parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 0, &rc_index);
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &rc_index);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Read test mode parameter.
-	parser_status =  PARSER_get_parameter(&at_ctx.parser, PARSER_PARAMETER_TYPE_DECIMAL, AT_CHAR_SEPARATOR, 1, &test_mode);
+	parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &test_mode);
 	AT_status_check(parser_status, PARSER_SUCCESS, SPSWS_ERROR_BASE_PARSER);
 	// Call test mode function wth public key.
 	AT_response_add_string("Sigfox addon running...");
@@ -1332,7 +1322,7 @@ static void AT_reset_parser(void) {
 	// Reset parsing variables.
 	at_ctx.command_buf_idx = 0;
 	at_ctx.line_end_flag = 0;
-	at_ctx.parser.rx_buf = (unsigned char*) at_ctx.command_buf;
+	at_ctx.parser.rx_buf = (char*) at_ctx.command_buf;
 	at_ctx.parser.rx_buf_length = 0;
 	at_ctx.parser.separator_idx = 0;
 	at_ctx.parser.start_idx = 0;

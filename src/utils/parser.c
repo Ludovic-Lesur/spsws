@@ -10,12 +10,6 @@
 #include "string.h"
 #include "math.h"
 
-/*** PARSER local macros ***/
-
-#define PARSER_PARAMETER_BINARY_MAX_DIGITS		1
-#define PARSER_PARAMETER_HEXADECIMAL_MAX_BYTES	4
-#define PARSER_PARAMETER_DECIMAL_MAX_DIGITS		10
-
 /*** PARSER local functions ***/
 
 /* SEARCH SEPARATOR IN THE CURRENT AT COMMAND BUFFER.
@@ -89,37 +83,22 @@ errors:
  * @param param_value:  Pointer hat will contain extracted parameter value.
  * @return status:      Searching result.
  */
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parameter_t param_type, char separator, unsigned char last_param, int* param) {
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, unsigned char last_param, int* param) {
     // Local variables.
-	PARSER_status_t status = PARSER_ERROR_UNKNOWN_COMMAND;
+	PARSER_status_t status = PARSER_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
+	unsigned char end_idx = 0;
 	unsigned char param_length_char = 0;
-	unsigned char param_negative_flag = 0;
-	unsigned char idx = 0; // Generic index used in for loops.
-    unsigned char end_idx = 0;
-	unsigned char bit_digit = 0;
-	unsigned char hexa_number_of_bytes = 0;
-	unsigned char hexa_byte_buf[PARSER_PARAMETER_HEXADECIMAL_MAX_BYTES] = {0};
-	unsigned char hexa_digit_idx = 0; // Used instead of idx to ignore offset.
-	unsigned char dec_digit_buf[PARSER_PARAMETER_DECIMAL_MAX_DIGITS] = {0};
-	unsigned char dec_digit_idx = 0; // Used instead of idx to ignore offset.
-	// Search separator if required.
+	// Compute end index.
 	if (last_param != 0) {
 		end_idx = (parser_ctx -> rx_buf_length) - 1;
 	}
 	else {
-		if (PARSER_search_separator(parser_ctx, separator) == PARSER_SUCCESS) {
-			end_idx = (parser_ctx -> separator_idx) - 1;
-		}
-		else {
-			status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
-			goto errors;
-		}
-	}
-	// Manage negative numbers.
-	if ((parser_ctx -> rx_buf)[parser_ctx -> start_idx] == STRING_CHAR_MINUS) {
-		// Set flag and increment start index to skip minus symbol.
-		param_negative_flag = 1;
-		(parser_ctx -> start_idx)++;
+		// Search separator.
+		status = PARSER_search_separator(parser_ctx, separator);
+		if (status != PARSER_SUCCESS) goto errors;
+		// Update end index.
+		end_idx = (parser_ctx -> separator_idx) - 1;
 	}
 	// Compute parameter length.
 	param_length_char = (end_idx - (parser_ctx -> start_idx) + 1);
@@ -128,101 +107,9 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, PARSER_parame
 		status = PARSER_ERROR_PARAMETER_NOT_FOUND;
 		goto errors;
 	}
-	switch (param_type) {
-	case PARSER_PARAMETER_TYPE_BOOLEAN:
-		// Check if there is only 1 digit (start and end index are equal).
-		if (param_length_char == PARSER_PARAMETER_BINARY_MAX_DIGITS) {
-			// Get digit and check if it is a bit.
-			bit_digit = (parser_ctx -> rx_buf)[parser_ctx -> start_idx];
-			if ((bit_digit == STRING_hexa_to_ascii(0)) || (bit_digit == STRING_hexa_to_ascii(1))) {
-				(*param) = STRING_ascii_to_hexa(bit_digit);
-				status = PARSER_SUCCESS;
-			}
-			else {
-				status = PARSER_ERROR_BIT_INVALID;
-				goto errors;
-			}
-		}
-		else {
-			status = PARSER_ERROR_BIT_OVERFLOW;
-			goto errors;
-		}
-		break;
-	case PARSER_PARAMETER_TYPE_HEXADECIMAL:
-		// Check if parameter has an even number of digits (two hexadecimal characters are required to code a byte).
-		if ((param_length_char % 2) == 0) {
-			// Get the number of byte (= number of digits / 2).
-			hexa_number_of_bytes = (param_length_char / 2);
-			// Check if parameter can be binary coded on 32 bits = 4 bytes.
-			if (hexa_number_of_bytes > PARSER_PARAMETER_HEXADECIMAL_MAX_BYTES) {
-				// Error in parameter -> value is too large.
-				status = PARSER_ERROR_HEXADECIMAL_OVERFLOW;
-				goto errors;
-			}
-			// Scan parameter.
-			for (idx=(parser_ctx -> start_idx) ; idx<=end_idx ; idx++) {
-				// Increment digit_idx.
-				hexa_digit_idx++;
-				// Check if buffer content are hexadecimal characters.
-				if (STRING_is_hexa_char((parser_ctx -> rx_buf)[idx]) == 0) {
-					status = PARSER_ERROR_HEXADECIMAL_INVALID;
-					goto errors;
-				}
-				// Get byte every two digits.
-				if ((hexa_digit_idx % 2) == 0) {
-					// Current byte = (previous digit << 4) + (current digit).
-					hexa_byte_buf[(hexa_digit_idx / 2) - 1] = ((STRING_ascii_to_hexa((parser_ctx -> rx_buf)[idx - 1])) << 4) + STRING_ascii_to_hexa((parser_ctx -> rx_buf)[idx]);
-				}
-			}
-			// The loop didn't return, parameter is valid -> retrieve the number.
-			(*param) = 0;
-			for (idx=0 ; idx<hexa_number_of_bytes ; idx++) {
-				(*param) |= hexa_byte_buf[idx] << (8 * (hexa_number_of_bytes - idx - 1)); // MSB is first in 'byte_buf'.
-			}
-			// Add sign.
-			if (param_negative_flag != 0) {
-				(*param) = (-1) * (*param);
-			}
-			status = PARSER_SUCCESS;
-		}
-		else {
-			// Error in parameter -> odd number of digits while using hexadecimal format.
-			status = PARSER_ERROR_HEXADECIMAL_ODD_SIZE;
-			goto errors;
-		}
-		break;
-	case PARSER_PARAMETER_TYPE_DECIMAL:
-		// Check if parameter exists and can be binary coded on 32 bits = 9 digits max.
-		if (param_length_char > PARSER_PARAMETER_DECIMAL_MAX_DIGITS) {
-			status = PARSER_ERROR_DECIMAL_OVERFLOW;
-			goto errors;
-		}
-		// Scan parameter.
-		for (idx=(parser_ctx -> start_idx) ; idx<=end_idx ; idx++) {
-			// Check if buffer content are decimal characters.
-			if (STRING_is_decimal_char((parser_ctx -> rx_buf)[idx]) == 0) {
-				status = PARSER_ERROR_DECIMAL_INVALID;
-				goto errors;
-			}
-			// Store digit and increment index.
-			dec_digit_buf[dec_digit_idx] = STRING_ascii_to_hexa((parser_ctx -> rx_buf)[idx]);
-			dec_digit_idx++;
-		}
-		// The loop didn't return, parameter is valid -> retrieve the number.
-		(*param) = 0;
-		for (idx=0 ; idx<param_length_char ; idx++) {
-			(*param) = (*param) + dec_digit_buf[idx] * (MATH_pow_10((param_length_char - idx - 1))); // Most significant digit is first in dec_digit_buf.
-		}
-		// Add sign.
-		if (param_negative_flag != 0) {
-			(*param) = (-1) * (*param);
-		}
-		status = PARSER_SUCCESS;
-		break;
-	default:
-		// Unknown parameter format.
-		break;
-	}
+	// Convert string.
+	string_status = STRING_string_to_value(&((parser_ctx -> rx_buf)[parser_ctx -> start_idx]), param_type, param_length_char, param);
+	STRING_status_check(PARSER_ERROR_BASE_STRING);
 	// Update start index after decoding parameter.
 	if ((parser_ctx -> separator_idx) > 0) {
 		(parser_ctx -> start_idx) = (parser_ctx -> separator_idx) + 1;
@@ -240,27 +127,21 @@ errors:
  * @param extracted_length:	Length of the extracted buffer.
  * @return status:          Searching result.
  */
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char* param, unsigned char* extracted_length) {
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length) {
     // Local variables.
-	PARSER_status_t status = PARSER_ERROR_UNKNOWN_COMMAND;
+	PARSER_status_t status = PARSER_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
 	unsigned char param_length_char = 0;
-	unsigned char idx = 0; // Generic index used in for loops.
     unsigned char end_idx = 0;
-	unsigned char hexa_number_of_bytes = 0;
-	unsigned char hexa_digit_idx = 0; // Used instead of i to ignore offset.
-	(*extracted_length) = 0;
-	// Search separator if required.
+	// Compute end index.
 	if (last_param != 0) {
 		end_idx = (parser_ctx -> rx_buf_length) - 1;
 	}
 	else {
-		if (PARSER_search_separator(parser_ctx, separator) == PARSER_SUCCESS) {
-			end_idx = (parser_ctx -> separator_idx) - 1;
-		}
-		else {
-			status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
-			goto errors;
-		}
+		status = PARSER_search_separator(parser_ctx, separator);
+		if (status != PARSER_SUCCESS) goto errors;
+		// Update end index.
+		end_idx = (parser_ctx -> separator_idx) - 1;
 	}
 	// Compute parameter length.
 	param_length_char = (end_idx - (parser_ctx -> start_idx) + 1);
@@ -270,43 +151,17 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 		status = PARSER_ERROR_PARAMETER_NOT_FOUND;
 		goto errors;
 	}
-	// Check if parameter has an even number of digits (two hexadecimal characters are required to code a byte).
-	if ((param_length_char % 2) == 0) {
-		// Get the number of byte (= number of digits / 2).
-		hexa_number_of_bytes = (param_length_char / 2);
-		// Check if byte array does not exceed given length.
-		if (hexa_number_of_bytes > max_length) {
-			// Error in parameter -> array is too large.
-			status = PARSER_ERROR_BYTE_ARRAY_LENGTH;
-			goto errors;
-		}
-		// Scan each byte.
-		for (idx=(parser_ctx -> start_idx) ; idx<=end_idx ; idx++) {
-			// Increment digit_idx.
-			hexa_digit_idx++;
-			// Check if buffer content are hexadecimal characters.
-			if (STRING_is_hexa_char((parser_ctx -> rx_buf)[idx]) == 0) {
-				status = PARSER_ERROR_HEXADECIMAL_INVALID;
-				goto errors;
-			}
-			// Get byte every two digits.
-			if ((hexa_digit_idx % 2) == 0) {
-				// Current byte = (previous digit << 4) + (current digit).
-				param[(hexa_digit_idx / 2) - 1] = ((STRING_ascii_to_hexa((parser_ctx -> rx_buf)[idx - 1])) << 4) + STRING_ascii_to_hexa((parser_ctx -> rx_buf)[idx]);
-				(*extracted_length)++;
-			}
-		}
-		// The loop didn't return, byte array is valid
-		status = PARSER_SUCCESS;
-	}
-	else {
-		// Error in parameter -> odd number of digits while using hexadecimal format.
-		status = PARSER_ERROR_HEXADECIMAL_ODD_SIZE;
-		goto errors;
-	}
+	// Convert string.
+	string_status = STRING_hexadecimal_string_to_byte_array(&((parser_ctx -> rx_buf)[parser_ctx -> start_idx]), param, max_length, extracted_length);
+	STRING_status_check(PARSER_ERROR_BASE_STRING);
 	// Update start index after decoding parameter.
 	if ((parser_ctx -> separator_idx) > 0) {
 		(parser_ctx -> start_idx) = (parser_ctx -> separator_idx) + 1;
+	}
+	// Check length if required.
+	if ((exact_length != 0) && ((*extracted_length) != max_length)) {
+		status = PARSER_ERROR_BYTE_ARRAY_LENGTH;
+		goto errors;
 	}
 errors:
 	return status;

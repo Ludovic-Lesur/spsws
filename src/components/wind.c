@@ -161,14 +161,10 @@ void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh)
 WIND_status_t WIND_get_direction(unsigned int* average_direction_degrees) {
 	// Local variables.
 	WIND_status_t status = WIND_SUCCESS;
-	unsigned int local_result = 0;
+	MATH_status_t math_status = MATH_SUCCESS;
 	// Compute trend point angle (considered as average wind direction).
-	local_result = MATH_atan2(wind_ctx.direction_x, wind_ctx.direction_y);
-	if (local_result == MATH_ERROR_VALUE) {
-		status = WIND_ERROR_MATH;
-		goto errors;
-	}
-	(*average_direction_degrees) = local_result;
+	math_status = MATH_atan2(wind_ctx.direction_x, wind_ctx.direction_y, average_direction_degrees);
+	MATH_status_check(WIND_ERROR_BASE_MATH);
 errors:
 	return status;
 }
@@ -281,7 +277,7 @@ WIND_status_t WIND_measurement_period_callback(void) {
 #ifdef HW1_0
 			SPI1_enable();
 			spi1_status = SPI1_power_on();
-			SPI1_status_check(WIND_ERROR_SPI);
+			SPI1_status_check(WIND_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 			SPI2_enable();
@@ -293,7 +289,7 @@ WIND_status_t WIND_measurement_period_callback(void) {
 
 #ifdef HW1_0
 			spi1_status = SPI1_power_off();
-			SPI1_status_check(WIND_ERROR_SPI);
+			SPI1_status_check(WIND_ERROR_BASE_SPI);
 			SPI1_disable();
 #endif
 #ifdef HW2_0

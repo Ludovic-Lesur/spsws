@@ -91,7 +91,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_registe
 	spi1_status = SPI1_write_short(spi_command);
 	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 	// Check status.
-	SPI1_status_check(MAX11136_ERROR_SPI);
+	SPI1_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 	GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
@@ -151,7 +151,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 		spi1_status = SPI1_read_short(0x0000, &max11136_dout);
 		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Check status.
-		SPI1_status_check(MAX11136_ERROR_SPI);
+		SPI1_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.

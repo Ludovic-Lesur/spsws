@@ -24,15 +24,15 @@ typedef struct {
 	signed int tmp_raw;
 	signed int prs_raw;
 	// Calibration coefficients.
-	unsigned int coef_c0;
-	unsigned int coef_c1;
-	unsigned int coef_c00;
-	unsigned int coef_c10;
-	unsigned int coef_c01;
-	unsigned int coef_c11;
-	unsigned int coef_c20;
-	unsigned int coef_c21;
-	unsigned int coef_c30;
+	signed int coef_c0;
+	signed int coef_c1;
+	signed int coef_c00;
+	signed int coef_c10;
+	signed int coef_c01;
+	signed int coef_c11;
+	signed int coef_c20;
+	signed int coef_c21;
+	signed int coef_c30;
 } DPS310_context_t;
 
 /*** DPS310 local global variables ***/
@@ -86,19 +86,19 @@ errors:
 static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
 	unsigned int loop_count = 0;
 	// Reset all coefficients.
-	dps310_ctx.coef_c0 = 0;
-	dps310_ctx.coef_c1 = 0;
-	dps310_ctx.coef_c00 = 0;
-	dps310_ctx.coef_c10 = 0;
-	dps310_ctx.coef_c01 = 0;
-	dps310_ctx.coef_c10 = 0;
-	dps310_ctx.coef_c11 = 0;
-	dps310_ctx.coef_c20 = 0;
-	dps310_ctx.coef_c21 = 0;
-	dps310_ctx.coef_c30 = 0;
+	unsigned int c0 = 0;
+	unsigned int c1 = 0;
+	unsigned int c00 = 0;
+	unsigned int c10 = 0;
+	unsigned int c01 = 0;
+	unsigned int c11 = 0;
+	unsigned int c20 = 0;
+	unsigned int c21 = 0;
+	unsigned int c30 = 0;
 	// Wait for coefficients to be ready for reading.
 	while ((read_byte & (0b1 << 7)) == 0) {
 		// Wait for COEF_RDY='1'.
@@ -114,60 +114,79 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	read_byte = 0;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C0B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c0 |= (read_byte << 4);
+	c0 |= (read_byte << 4);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C0A_C1B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c0 |= (read_byte & 0xF0) >> 4;
-	dps310_ctx.coef_c1 |= (read_byte & 0x0F) << 8;
+	c0 |= (read_byte & 0xF0) >> 4;
+	c1 |= (read_byte & 0x0F) << 8;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C1A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c1 |= read_byte;
+	c1 |= read_byte;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00C, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c00 |= (read_byte << 12);
+	c00 |= (read_byte << 12);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c00 |= (read_byte << 4);
+	c00 |= (read_byte << 4);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00A_C10C, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c00 |= (read_byte & 0xF0) >> 4;
-	dps310_ctx.coef_c10 |= (read_byte & 0x0F) << 16;
+	c00 |= (read_byte & 0xF0) >> 4;
+	c10 |= (read_byte & 0x0F) << 16;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C10B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c10 |= (read_byte << 8);
+	c10 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C10A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c10 |= read_byte;
+	c10 |= read_byte;
 	status = DPS310_read_register(i2c_address,DPS310_REG_COEF_C01B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c01 |= (read_byte << 8);
+	c01 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C01A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c01 |= read_byte;
+	c01 |= read_byte;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C11B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c11 |= (read_byte << 8);
+	c11 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C11A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c11 |= read_byte;
+	c11 |= read_byte;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C20B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c20 |= (read_byte << 8);
+	c20 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C20A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c20 |= read_byte;
+	c20 |= read_byte;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C21B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c21 |= (read_byte << 8);
+	c21 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C21A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c21 |= read_byte;
+	c21 |= read_byte;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C30B, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c30 |= (read_byte << 8);
+	c30 |= (read_byte << 8);
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C30A, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
-	dps310_ctx.coef_c30 |= read_byte;
+	c30 |= read_byte;
+	// Convert to sign values.
+	math_status = MATH_two_complement(c0, 11, &dps310_ctx.coef_c0);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c1, 11, &dps310_ctx.coef_c1);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c00, 19, &dps310_ctx.coef_c00);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c01, 15, &dps310_ctx.coef_c01);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c10, 19, &dps310_ctx.coef_c10);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c11, 15, &dps310_ctx.coef_c11);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c20, 15, &dps310_ctx.coef_c20);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c21, 15, &dps310_ctx.coef_c21);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement(c30, 15, &dps310_ctx.coef_c30);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
 errors:
 	return status;
 }
@@ -179,6 +198,7 @@ errors:
 static DPS310_status_t DPS310_compute_raw_temperature(unsigned char i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
 	unsigned int loop_count = 0;
 	unsigned int tmp_raw = 0;
@@ -224,7 +244,8 @@ static DPS310_status_t DPS310_compute_raw_temperature(unsigned char i2c_address)
 	if (status != DPS310_SUCCESS) goto errors;
 	tmp_raw |= read_byte;
 	// Compute two complement.
-	dps310_ctx.tmp_raw = MATH_two_complement(tmp_raw, 23);
+	math_status = MATH_two_complement(tmp_raw, 23, &dps310_ctx.tmp_raw);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
 errors:
 	return status;
 }
@@ -236,6 +257,7 @@ errors:
 static unsigned char DPS310_compute_raw_pressure(unsigned char dps310_i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
 	unsigned int loop_count = 0;
 	unsigned int prs_raw = 0;
@@ -282,7 +304,8 @@ static unsigned char DPS310_compute_raw_pressure(unsigned char dps310_i2c_addres
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= read_byte;
 	// Compute two complement.
-	dps310_ctx.prs_raw = MATH_two_complement(prs_raw, 23);
+	math_status = MATH_two_complement(prs_raw, 23, &dps310_ctx.prs_raw);
+	MATH_status_check(DPS310_ERROR_BASE_MATH);
 errors:
 	return status;
 }
@@ -318,19 +341,12 @@ void DPS310_get_pressure(unsigned int* pressure_pa) {
 	// Local variables.
 	signed long long psr_temp = 0;
 	signed long long last_term = 0;
-	signed int c00 = MATH_two_complement(dps310_ctx.coef_c00, 19);
-	signed int c01 = MATH_two_complement(dps310_ctx.coef_c01, 15);
-	signed int c10 = MATH_two_complement(dps310_ctx.coef_c10, 19);
-	signed int c11 = MATH_two_complement(dps310_ctx.coef_c11, 15);
-	signed int c20 = MATH_two_complement(dps310_ctx.coef_c20, 15);
-	signed int c21 = MATH_two_complement(dps310_ctx.coef_c21, 15);
-	signed int c30 = MATH_two_complement(dps310_ctx.coef_c30, 15);
 	// Compute pressure in Pa.
-	psr_temp = c20 + (dps310_ctx.prs_raw * c30) / DPS310_SAMPLING_FACTOR_KP;
-	psr_temp = c10 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
-	psr_temp = c00 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
-	psr_temp += (dps310_ctx.tmp_raw * c01) / DPS310_SAMPLING_FACTOR_KT;
-	last_term = c11 + (dps310_ctx.prs_raw * c21) / DPS310_SAMPLING_FACTOR_KP;
+	psr_temp = dps310_ctx.coef_c20 + (dps310_ctx.prs_raw * dps310_ctx.coef_c30) / DPS310_SAMPLING_FACTOR_KP;
+	psr_temp = dps310_ctx.coef_c10 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
+	psr_temp = dps310_ctx.coef_c00 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
+	psr_temp += (dps310_ctx.tmp_raw * dps310_ctx.coef_c01) / DPS310_SAMPLING_FACTOR_KT;
+	last_term = dps310_ctx.coef_c11 + (dps310_ctx.prs_raw * dps310_ctx.coef_c21) / DPS310_SAMPLING_FACTOR_KP;
 	last_term = (dps310_ctx.prs_raw * last_term) / DPS310_SAMPLING_FACTOR_KP;
 	last_term = (dps310_ctx.tmp_raw * last_term) / DPS310_SAMPLING_FACTOR_KT;
 	psr_temp += last_term;
@@ -344,9 +360,8 @@ void DPS310_get_pressure(unsigned int* pressure_pa) {
 void DPS310_get_temperature(signed char* temperature_degrees) {
 	// Local variables.
 	signed long long tmp_temp = 0;
-	signed int c0 = MATH_two_complement(dps310_ctx.coef_c0, 11);
-	signed int c1 = MATH_two_complement(dps310_ctx.coef_c1, 11);
+
 	// Compute temperature in degrees.
-	tmp_temp = (c0 / 2) + (c1 * dps310_ctx.tmp_raw) / DPS310_SAMPLING_FACTOR_KT;
+	tmp_temp = (dps310_ctx.coef_c0 / 2) + (dps310_ctx.coef_c1 * dps310_ctx.tmp_raw) / DPS310_SAMPLING_FACTOR_KT;
 	(*temperature_degrees) = (unsigned char) tmp_temp;
 }

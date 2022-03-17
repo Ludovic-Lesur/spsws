@@ -12,7 +12,10 @@
 
 /*** MATH macros ***/
 
-#define MATH_ERROR_VALUE	0xFFFFFFFF
+#define MATH_BINARY_MAX_LENGTH			32
+#define MATH_DECIMAL_MAX_LENGTH			10
+#define MATH_HEXADECIMAL_MAX_LENGTH		4
+#define MATH_BYTE_MAX					0xFF
 
 #if (defined CM || defined ATM)
 static const signed short MATH_COS_TABLE[360] = {
@@ -98,17 +101,22 @@ static const signed short MATH_SIN_TABLE[360] = {
 
 typedef enum {
 	MATH_SUCCESS = 0,
+	MATH_ERROR_OVERFLOW,
+	MATH_ERROR_UNDEFINED,
+	MATH_ERROR_SIGN_BIT,
 	MATH_ERROR_BASE_LAST = 0x0100
 } MATH_status_t;
 
 /*** MATH functions ***/
 
-unsigned int MATH_pow_10(unsigned char power);
+MATH_status_t MATH_pow_10(unsigned char power, unsigned int* result);
 unsigned int MATH_average(unsigned int* data, unsigned char data_length);
 unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length, unsigned char average_length);
 unsigned int MATH_abs(signed int x);
-unsigned int MATH_atan2(signed int x, signed int y);
-signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position);
-unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_position);
+MATH_status_t MATH_atan2(signed int x, signed int y, unsigned int* alpha);
+MATH_status_t MATH_two_complement(unsigned int value, unsigned char sign_bit_position, signed int* result);
+MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_position, unsigned int* result);
+
+#define MATH_status_check(error_base) { if (math_status != MATH_SUCCESS) { status = error_base + math_status; goto errors; }}
 
 #endif /* MATH_H */

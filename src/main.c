@@ -445,7 +445,8 @@ int main (void) {
 			ADC1_perform_measurements();
 			ADC1_disable();
 			ADC1_get_tmcu(&temperature);
-			spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = MATH_one_complement(temperature, 7);
+			MATH_one_complement(temperature, 7, &generic_data_u32_1);
+			spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = (unsigned char) generic_data_u32_1;
 			ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
 			spsws_ctx.sigfox_monitoring_data.field.vmcu_mv = generic_data_u32_1;
 			// Retrieve external ADC data.
@@ -480,7 +481,8 @@ int main (void) {
 			IWDG_reload();
 			SHT3X_perform_measurements(SHT3X_INTERNAL_I2C_ADDRESS);
 			SHT3X_get_temperature(&temperature);
-			spsws_ctx.sigfox_monitoring_data.field.tpcb_degrees = MATH_one_complement(temperature, 7);
+			MATH_one_complement(temperature, 7, &generic_data_u32_1);
+			spsws_ctx.sigfox_monitoring_data.field.tpcb_degrees = (unsigned char) generic_data_u32_1;
 			SHT3X_get_humidity(&generic_data_u8);
 			spsws_ctx.sigfox_monitoring_data.field.hpcb_percent = generic_data_u8;
 			// External temperature/humidity sensor.
@@ -492,7 +494,8 @@ int main (void) {
 			IWDG_reload();
 			SHT3X_perform_measurements(SHT3X_EXTERNAL_I2C_ADDRESS);
 			SHT3X_get_temperature(&temperature);
-			spsws_ctx.sigfox_weather_data.field.temperature_degrees = MATH_one_complement(temperature, 7);
+			MATH_one_complement(temperature, 7, &generic_data_u32_1);
+			spsws_ctx.sigfox_weather_data.field.temperature_degrees = (unsigned char) generic_data_u32_1;
 			SHT3X_get_humidity(&generic_data_u8);
 			spsws_ctx.sigfox_weather_data.field.humidity_percent = generic_data_u8;
 #endif

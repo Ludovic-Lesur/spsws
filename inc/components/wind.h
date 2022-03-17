@@ -11,6 +11,7 @@
 #include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"
+#include "math.h"
 #include "max11136.h"
 #include "mode.h"
 #include "spi.h"
@@ -30,7 +31,8 @@ typedef enum {
 	WIND_ERROR_BASE_LPTIM = 0x0100,
 	WIND_ERROR_BASE_SPI = (WIND_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
 	WIND_ERROR_BASE_MAX11136 = (WIND_ERROR_BASE_SPI + SPI_ERROR_BASE_LAST),
-	WIND_ERROR_BASE_LAST = (WIND_ERROR_BASE_MAX11136 + MAX11136_ERROR_BASE_LAST)
+	WIND_ERROR_BASE_MATH = (WIND_ERROR_BASE_MAX11136 + MAX11136_ERROR_BASE_LAST),
+	WIND_ERROR_BASE_LAST = (WIND_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
 } WIND_status_t;
 
 /*** WIND functions ***/

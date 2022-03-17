@@ -10,25 +10,26 @@
 /*** MATH local macros ***/
 
 #define MATH_MEDIAN_FILTER_LENGTH_MAX	0xFF
-#define MATH_DECIMAL_MAX_DIGITS			10
-#define MATH_SIGN_BIT_MAX_INDEX			31
-
-static unsigned int MATH_POW10[MATH_DECIMAL_MAX_DIGITS] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 
 /*** MATH functions ***/
 
 /* COMPUTE A POWER A 10.
  * @param power:	Desired power.
- * @return result:	Result of computation.
+ * @param result:	Pointer to the result.
+ * @return status:	Function execution status.
  */
-unsigned int MATH_pow_10(unsigned char power) {
+MATH_status_t MATH_pow_10(unsigned char power, unsigned int* result) {
 	// Local variables.
-	unsigned int result = 0;
-	// Check overflow.
-	if (power < MATH_DECIMAL_MAX_DIGITS) {
-		result = MATH_POW10[power];
+	MATH_status_t status = MATH_SUCCESS;
+	// Check power.
+	if (power >= MATH_DECIMAL_MAX_LENGTH) {
+		status = MATH_ERROR_OVERFLOW;
+		goto errors;
 	}
-	return result;
+	(*result) = MATH_POW10[power];
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE VALUE.
@@ -115,95 +116,96 @@ unsigned int MATH_abs(signed int x) {
 }
 
 /* COMPUTE ATAN2 FUNCTION.
- * @param x:	x parameter.
- * @param y:	y parameter.
- * @return:		Angle of the point (x,y).
+ * @param x:		x parameter.
+ * @param y:		y parameter.
+ * @param alpha:	Pointer to the angle of the point (x,y).
+ * @return status:	Function execution status.
  */
-unsigned int MATH_atan2(signed int x, signed int y) {
+MATH_status_t MATH_atan2(signed int x, signed int y, unsigned int* alpha) {
 	// Local variables.
-	unsigned int alpha = MATH_ERROR_VALUE;
+	MATH_status_t status = MATH_SUCCESS;
 	signed int local_x = x;
 	signed int local_y = y;
 	unsigned int abs_x = 0;
 	unsigned int abs_y = 0;
 	// Check x and y are not null.
-	if ((x != 0) || (y != 0)) {
-		// Scale x and y to avoid overflow.
-		while ((MATH_abs(local_x) > 10000) || (MATH_abs(local_y) > 10000)) {
-			local_x = local_x >> 1;
-			local_y = local_y >> 1;
+	if ((x == 0) && (y == 0)) {
+		status = MATH_ERROR_UNDEFINED;
+		goto errors;
+	}
+	// Scale x and y to avoid overflow.
+	while ((MATH_abs(local_x) > 10000) || (MATH_abs(local_y) > 10000)) {
+		local_x = local_x >> 1;
+		local_y = local_y >> 1;
+	}
+	// Compute atan2 function.
+	abs_x = MATH_abs(local_x);
+	abs_y = MATH_abs(local_y);
+	// Use the quotient within [-1,1]
+	if (abs_x >= abs_y) {
+		// Use arctan approximation: arctan(z)=(pi/4)*z.
+		(*alpha) = (((45 * abs_y) << 10) / (abs_x)) >> 10; // Quadrant 1.
+		// Add offset depending on quadrant.
+		if ((x > 0) && (y < 0)) {
+			(*alpha) = (360 - (*alpha)); // Quadrant 8.
 		}
-		// Compute atan2 function.
-		abs_x = MATH_abs(local_x);
-		abs_y = MATH_abs(local_y);
-		// Use the quotient within [-1,1]
-		if (abs_x >= abs_y) {
-			// Use arctan approximation: arctan(z)=(pi/4)*z.
-			alpha = (((45 * abs_y) << 10) / (abs_x)) >> 10; // Quadrant 1.
-			// Add offset depending on quadrant.
-			if ((x > 0) && (y < 0)) {
-				// Quadrant 8.
-				alpha = (360 - alpha);
+		if (x < 0) {
+			if (y > 0) {
+				(*alpha) = (180 - (*alpha)); // Quadrant 4.
 			}
-			if (x < 0) {
-				if (y > 0) {
-					// Quadrant 4.
-					alpha = (180 - alpha);
-				}
-				else {
-					// Quadrant 5.
-					alpha = (180 + alpha);
-				}
+			else {
+				(*alpha) = (180 + (*alpha)); // Quadrant 5.
+			}
+		}
+	}
+	else {
+		// Use arctan approximation: arctan(z)=(pi/4)*z.
+		(*alpha) = (((45 * abs_x) << 10) / (abs_y)) >> 10;
+		// Add offset depending on quadrant and arctan(1/z)=+/-90-arctan(z).
+		if (x > 0) {
+			if (y > 0) {
+				(*alpha) = (90 - (*alpha)); // Quadrant 2.
+			}
+			else {
+				(*alpha) = (270 + (*alpha)); // Quadrant 7.
 			}
 		}
 		else {
-			// Use arctan approximation: arctan(z)=(pi/4)*z.
-			alpha = (((45 * abs_x) << 10) / (abs_y)) >> 10;
-			// Add offset depending on quadrant and arctan(1/z)=+/-90-arctan(z).
-			if (x > 0) {
-				if (y > 0) {
-					// Quadrant 2.
-					alpha = (90 - alpha);
-				}
-				else {
-					// Quadrant 7.
-					alpha = (270 + alpha);
-				}
+			if (y > 0) {
+				(*alpha) = (90 + (*alpha)); // Quadrant 3.
 			}
 			else {
-				if (y > 0) {
-					// Quadrant 3.
-					alpha = (90 + alpha);
-				}
-				else {
-					// Quadrant 6.
-					alpha = (270 - alpha);
-				}
+				(*alpha) = (270 - (*alpha)); // Quadrant 6.
 			}
 		}
-		// Ensure angle is in [0,359] range.
-		alpha = (alpha % 360);
 	}
-	return (alpha);
+	// Ensure angle is in [0,359] range.
+	(*alpha) = ((*alpha) % 360);
+errors:
+	return status;
 }
 
 /* COMPUTE THE TWO'S COMPLEMENT OF A GIVEN VALUE.
  * @param value:				Input unsigned value.
  * @param sign_bit_position:	Position of the sign bit in the input.
- * @return result:				Result of computation.
+ * @param result:				Pointer to the result.
+ * @return status:				Function execution status.
  */
-signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_position) {
+MATH_status_t MATH_two_complement(unsigned int value, unsigned char sign_bit_position, signed int* result) {
 	// Local variables.
-	signed int result = 0;
+	MATH_status_t status = MATH_SUCCESS;
 	unsigned char bit_idx = 0;
 	unsigned int not_value = 0;
 	unsigned int absolute_value = 0;
 	// Check parameters.
-	if (sign_bit_position > MATH_SIGN_BIT_MAX_INDEX) goto errors;
+	if (sign_bit_position > (MATH_BINARY_MAX_LENGTH - 1)) {
+		status = MATH_ERROR_SIGN_BIT;
+		goto errors;
+	}
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
-		result = (int) value;
+		(*result) = (int) value;
 	}
 	else {
 		// Value is negative.
@@ -213,10 +215,10 @@ signed int MATH_two_complement(unsigned int value, unsigned char sign_bit_positi
 			}
 		}
 		absolute_value = not_value + 1;
-		result = (-1) * absolute_value;
+		(*result) = (-1) * absolute_value;
 	}
 errors:
-	return result;
+	return status;
 }
 
 /* COMPUTE THE ONE'S COMPLEMENT OF A GIVEN VALUE.
@@ -224,23 +226,26 @@ errors:
  * @param sign_bit_position:	Position of the sign bit in the output.
  * @return result:				Result of computation.
  */
-unsigned int MATH_one_complement(signed int value, unsigned char sign_bit_position) {
+MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_position, unsigned int* result) {
 	// Local variables.
-	unsigned int result = 0;
+	MATH_status_t status = MATH_SUCCESS;
 	unsigned int absolute_value = 0;
 	unsigned int absolute_mask = ((0b1 << sign_bit_position) - 1);
 	// Check parameters.
-	if (sign_bit_position > MATH_SIGN_BIT_MAX_INDEX) goto errors;
+	if (sign_bit_position > (MATH_BINARY_MAX_LENGTH - 1)) {
+		status = MATH_ERROR_SIGN_BIT;
+		goto errors;
+	}
 	// Check value sign.
 	if (value >= 0) {
 		// Value is positive: nothing to do.
-		result = ((unsigned int) value) & absolute_mask;
+		(*result) = ((unsigned int) value) & absolute_mask;
 	}
 	else {
 		// Set sign bit.
 		absolute_value = (unsigned int) ((-1) * value);
-		result = (0b1 << sign_bit_position) | (absolute_value & absolute_mask);
+		(*result) = (0b1 << sign_bit_position) | (absolute_value & absolute_mask);
 	}
 errors:
-	return result;
+	return status;
 }

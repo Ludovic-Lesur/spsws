@@ -120,7 +120,7 @@ SPI_status_t SPI1_power_on(void) {
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_LPTIM);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #endif
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
