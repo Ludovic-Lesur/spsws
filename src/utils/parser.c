@@ -152,14 +152,14 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 		goto errors;
 	}
 	// Convert string.
-	string_status = STRING_hexadecimal_string_to_byte_array(&((parser_ctx -> rx_buf)[parser_ctx -> start_idx]), param, max_length, extracted_length);
+	string_status = STRING_hexadecimal_string_to_byte_array(&((parser_ctx -> rx_buf)[parser_ctx -> start_idx]), separator, param, extracted_length);
 	STRING_status_check(PARSER_ERROR_BASE_STRING);
 	// Update start index after decoding parameter.
 	if ((parser_ctx -> separator_idx) > 0) {
 		(parser_ctx -> start_idx) = (parser_ctx -> separator_idx) + 1;
 	}
 	// Check length if required.
-	if ((exact_length != 0) && ((*extracted_length) != max_length)) {
+	if (((exact_length != 0) && ((*extracted_length) != max_length)) || ((*extracted_length) > max_length)) {
 		status = PARSER_ERROR_BYTE_ARRAY_LENGTH;
 		goto errors;
 	}

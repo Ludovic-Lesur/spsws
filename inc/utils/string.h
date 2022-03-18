@@ -47,7 +47,7 @@ STRING_status_t STRING_value_to_string(int value, STRING_format_t format, unsign
 STRING_status_t STRING_byte_array_to_hexadecimal_string(unsigned char* data, unsigned char data_length, unsigned char print_prefix, char* str);
 
 STRING_status_t STRING_string_to_value(char* str, STRING_format_t format, unsigned char number_of_digits, int* value);
-STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, unsigned char* data, unsigned char max_length, unsigned char* extracted_length);
+STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char, unsigned char* data, unsigned char* extracted_length);
 
 #define STRING_status_check(error_base) { if (string_status != STRING_SUCCESS) { status = error_base + string_status; goto errors; }}
 

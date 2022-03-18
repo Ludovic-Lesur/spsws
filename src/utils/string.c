@@ -328,12 +328,12 @@ errors:
 
 /* HEXADECIMAL STRING TO BYTE ARRAY CONVERT FUNCTION.
  * @param str:				Hexadecimal string to convert.
+ * @param end_char:			Ending character of the string.
  * @param data:				Pointer to the output byte array.
- * @param max_length:		Maximum number of bytes to parse.
  * @param extracted_length:	Pointer to the effective extracted length.
  * @return status:			Function execution status.
  */
-STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, unsigned char* data, unsigned char max_length, unsigned char* extracted_length) {
+STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char, unsigned char* data, unsigned char* extracted_length) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	unsigned char char_idx = 0;
@@ -341,7 +341,7 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, unsigned char
 	// Reset extracted length.
 	(*extracted_length) = 0;
 	// Char loop.
-	while (char_idx < (2 * max_length)) {
+	while ((str[char_idx] != end_char) && (str[char_idx] != STRING_CHAR_NULL)) {
 		// Check character.
 		if ((char_idx % 2) == 0) {
 			if (STRING_is_hexadecimal_char(str[char_idx]) != STRING_SUCCESS) {
