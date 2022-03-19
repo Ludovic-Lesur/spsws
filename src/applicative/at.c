@@ -35,6 +35,7 @@
 #include "sx1232.h"
 #include "tim.h"
 #include "usart.h"
+#include "version.h"
 #include "wind.h"
 
 #ifdef ATM
@@ -66,6 +67,7 @@
 
 static void AT_print_ok(void);
 static void AT_print_command_list(void);
+static void AT_print_sw_version(void);
 static void AT_print_error_stack(void);
 #ifdef AT_COMMANDS_SENSORS
 static void AT_adc_callback(void);
@@ -137,6 +139,7 @@ typedef struct {
 static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_COMMAND, "AT", "\0", "Ping command", AT_print_ok},
 	{PARSER_MODE_COMMAND, "AT?", "\0", "List all available AT commands", AT_print_command_list},
+	{PARSER_MODE_COMMAND, "AT$V?", "\0", "Get SW version", AT_print_sw_version},
 	{PARSER_MODE_COMMAND, "AT$ERROR?", "\0", "Read error stack", AT_print_error_stack},
 #ifdef AT_COMMANDS_SENSORS
 	{PARSER_MODE_COMMAND, "AT$ADC?", "\0", "Get internal ADC measurements", AT_adc_callback},
@@ -288,6 +291,37 @@ static void AT_print_command_list(void) {
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
 	}
+}
+
+/* PRINT SW VERSION.
+ * @param:	None.
+ * @return:	None.
+ */
+static void AT_print_sw_version(void) {
+	AT_response_add_string("GIT_VERSION=");
+	AT_response_add_string(GIT_VERSION);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	AT_response_add_string("GIT_MAJOR_VERSION=");
+	AT_response_add_value(GIT_MAJOR_VERSION, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	AT_response_add_string("GIT_MINOR_VERSION=");
+	AT_response_add_value(GIT_MINOR_VERSION, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	AT_response_add_string("GIT_COMMIT_INDEX=");
+	AT_response_add_value(GIT_COMMIT_INDEX, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	AT_response_add_string("GIT_COMMIT_ID=");
+	AT_response_add_value(GIT_COMMIT_ID, STRING_FORMAT_HEXADECIMAL, 1);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	AT_response_add_string("GIT_DIRTY_FLAG=");
+	AT_response_add_value(GIT_DIRTY_FLAG, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
 }
 
 /* PRINT ERROR STACK.
