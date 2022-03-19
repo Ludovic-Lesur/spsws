@@ -22,5 +22,6 @@ typedef enum {
 FLASH_status_t FLASH_set_latency(unsigned char wait_states);
 
 #define FLASH_status_check(error_base) { if (flash_status != FLASH_SUCCESS) { status = error_base + flash_status; goto errors; }}
+#define FLASH_error_check() { ERROR_status_check(flash_status, FLASH_SUCCESS, ERROR_BASE_FLASH); }
 
 #endif /* FLASH_H */

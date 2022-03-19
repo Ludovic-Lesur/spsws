@@ -238,12 +238,7 @@ WIND_status_t WIND_measurement_period_callback(void) {
 	// Local variables.
 	WIND_status_t status = WIND_SUCCESS;
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#ifdef HW1_0
-	SPI_status_t spi1_status = SPI_SUCCESS;
-#endif
-#ifdef HW2_0
-	SPI_status_t spi2_status = SPI_SUCCESS;
-#endif
+	SPI_status_t spi_status = SPI_SUCCESS;
 	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
 	unsigned int wind_direction_ratio = 0;
 #endif
@@ -276,24 +271,24 @@ WIND_status_t WIND_measurement_period_callback(void) {
 			// Get direction from ADC.
 #ifdef HW1_0
 			SPI1_enable();
-			spi1_status = SPI1_power_on();
+			spi_status = SPI1_power_on();
 			SPI1_status_check(WIND_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 			SPI2_enable();
-			spi2_status = SPI2_power_on();
+			spi_status = SPI2_power_on();
 			SPI2_status_check(WIND_ERROR_BASE_SPI);
 #endif
 			max11136_status = MAX11136_perform_measurements();
 			MAX11136_status_check(WIND_ERROR_BASE_MAX11136);
 
 #ifdef HW1_0
-			spi1_status = SPI1_power_off();
+			spi_status = SPI1_power_off();
 			SPI1_status_check(WIND_ERROR_BASE_SPI);
 			SPI1_disable();
 #endif
 #ifdef HW2_0
-			spi2_status = SPI2_power_off();
+			spi_status = SPI2_power_off();
 			SPI2_status_check(WIND_ERROR_BASE_SPI);
 			SPI2_disable();
 #endif

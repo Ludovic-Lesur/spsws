@@ -176,5 +176,6 @@ SX1232_status_t SX1232_get_rssi(signed short* rssi_dbm);
 SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_data_length);
 
 #define SX1232_status_check(error_base) { if (sx1232_status != SX1232_SUCCESS) { status = error_base + sx1232_status; goto errors; }}
+#define SX1232_error_check() { ERROR_status_check(sx1232_status, SX1232_SUCCESS, ERROR_BASE_SX1232); }
 
 #endif /* SX1232_H */

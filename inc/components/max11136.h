@@ -40,5 +40,6 @@ MAX11136_status_t MAX11136_perform_measurements(void);
 MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, unsigned int* data);
 
 #define MAX11136_status_check(error_base) { if (max11136_status != MAX11136_SUCCESS) { status = error_base + max11136_status; goto errors; }}
+#define MAX11136_error_check() { ERROR_status_check(max11136_status, MAX11136_SUCCESS, ERROR_BASE_MAX11136); }
 
 #endif /* MAX11136_H */

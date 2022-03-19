@@ -68,12 +68,7 @@ static MAX11136_context_t max11136_ctx;
 static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_register(unsigned char addr, unsigned short value) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
-#ifdef HW1_0
-	SPI_status_t spi1_status = SPI_SUCCESS;
-#endif
-#ifdef HW2_0
-	SPI_status_t spi2_status = SPI_SUCCESS;
-#endif
+	SPI_status_t spi_status = SPI_SUCCESS;
 	unsigned short spi_command = 0;
 	// Build SPI command.
 	if (addr == MAX11136_REG_ADC_MODE_CONTROL) {
@@ -88,14 +83,14 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_registe
 	// Send command.
 #ifdef HW1_0
 	GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-	spi1_status = SPI1_write_short(spi_command);
+	spi_status = SPI1_write_short(spi_command);
 	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 	// Check status.
 	SPI1_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 	GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-	spi2_status = SPI2_write_short(spi_command);
+	spi_status = SPI2_write_short(spi_command);
 	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 	// Check status.
 	SPI2_status_check(MAX11136_ERROR_BASE_SPI);
@@ -111,17 +106,13 @@ errors:
 static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_channels(void) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
 	unsigned char channel_idx = 0;
 	unsigned int loop_count = 0;
 #ifdef HW1_0
-	SPI_status_t spi1_status = SPI_SUCCESS;
-	// Configure SPI.
 	SPI1_set_clock_polarity(1);
-#endif
-#ifdef HW2_0
-	SPI_status_t spi2_status = SPI_SUCCESS;
 #endif
 	// Configure ADC.
 	// Single-ended unipolar (allready done at POR).
@@ -148,14 +139,14 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 		// Get data from SPI.
 #ifdef HW1_0
 		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-		spi1_status = SPI1_read_short(0x0000, &max11136_dout);
+		spi_status = SPI1_read_short(0x0000, &max11136_dout);
 		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Check status.
 		SPI1_status_check(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
 		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-		spi2_status = SPI2_read_short(0x0000, &max11136_dout);
+		spi_status = SPI2_read_short(0x0000, &max11136_dout);
 		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
 		// Check status.
 		SPI2_status_check(MAX11136_ERROR_BASE_SPI);

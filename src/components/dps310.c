@@ -50,10 +50,10 @@ static DPS310_context_t dps310_ctx;
 static DPS310_status_t DPS310_write_register(unsigned char i2c_address, unsigned char register_address, unsigned char value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c1_status = I2C_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	unsigned char register_write_command[2] = {register_address, value};
 	// I2C transfer.
-	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
+	i2c_status = I2C1_write(i2c_address, register_write_command, 2, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
@@ -68,12 +68,12 @@ errors:
 static DPS310_status_t DPS310_read_register(unsigned char i2c_address, unsigned char register_address, unsigned char* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c1_status = I2C_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	unsigned char local_addr = register_address;
 	// I2C transfer.
-	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
+	i2c_status = I2C1_write(i2c_address, &local_addr, 1, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
-	i2c1_status = I2C1_read(i2c_address, value, 1);
+	i2c_status = I2C1_read(i2c_address, value, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;

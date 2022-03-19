@@ -52,5 +52,6 @@ RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz);
 RCC_status_t RCC_enable_lse(void);
 
 #define RCC_status_check(error_base) { if (rcc_status != RCC_SUCCESS) { status = error_base + rcc_status; goto errors; }}
+#define RCC_error_check() { ERROR_status_check(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC); }
 
 #endif /* RCC_H */

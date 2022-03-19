@@ -35,6 +35,7 @@ ADC_status_t ADC1_perform_measurements(void);
 ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data);
 void ADC1_get_tmcu(signed char* tmcu_degrees);
 
-#define ADC1_status_check(error_base) { if (adc1_status != ADC_SUCCESS) { status = error_base + adc1_status; goto errors; }}
+#define ADC1_status_check(error_base) { if (adc_status != ADC_SUCCESS) { status = error_base + adc_status; goto errors; }}
+#define ADC1_error_check() { ERROR_status_check(adc_status, ADC_SUCCESS, ERROR_BASE_ADC1); }
 
 #endif /* ADC_H */

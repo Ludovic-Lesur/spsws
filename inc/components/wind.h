@@ -51,4 +51,7 @@ void WIND_direction_edge_callback(void);
 WIND_status_t WIND_measurement_period_callback(void);
 #endif
 
+#define WIND_status_check(error_base) { if (wind_status != WIND_SUCCESS) { status = error_base + wind_status; goto errors; }}
+#define WIND_error_check() { ERROR_status_check(wind_status, WIND_SUCCESS, ERROR_BASE_WIND); }
+
 #endif  /* WIND_H */

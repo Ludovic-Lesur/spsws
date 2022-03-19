@@ -29,6 +29,7 @@ LPUART_status_t LPUART1_power_on(void);
 LPUART_status_t LPUART1_power_off(void);
 LPUART_status_t LPUART1_send_byte(unsigned char tx_byte);
 
-#define LPUART1_status_check(error_base) { if (lpuart1_status != LPUART_SUCCESS) { status = error_base + lpuart1_status; goto errors; }}
+#define LPUART1_status_check(error_base) { if (lpuart_status != LPUART_SUCCESS) { status = error_base + lpuart_status; goto errors; }}
+#define LPUART1_error_check() { ERROR_status_check(lpuart_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
 
 #endif /* LPUART_H */

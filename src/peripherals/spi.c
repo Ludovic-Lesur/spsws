@@ -112,14 +112,14 @@ void SPI1_disable(void) {
 SPI_status_t SPI1_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	lptim_status = LPTIM1_delay_milliseconds(50, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	lptim_status = LPTIM1_delay_milliseconds(50, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #endif
 	// Enable GPIOs.
@@ -135,7 +135,7 @@ SPI_status_t SPI1_power_on(void) {
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 #endif
 	// Wait for power-on.
-	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	lptim_status = LPTIM1_delay_milliseconds(50, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -148,7 +148,7 @@ errors:
 SPI_status_t SPI1_power_off(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Turn SPI1 slaves off.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 	GPIO_write(&GPIO_SX1232_CS, 0); // CS low (to avoid powering slaves via SPI bus).
@@ -167,7 +167,7 @@ SPI_status_t SPI1_power_off(void) {
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Wait for power-off.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -368,11 +368,11 @@ void SPI2_disable(void) {
 SPI_status_t SPI2_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Turn MAX11136 on.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 	// Wait for power-on.
-	lptim1_status = LPTIM1_delay_milliseconds(50, 1);
+	lptim_status = LPTIM1_delay_milliseconds(50, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -381,7 +381,7 @@ SPI_status_t SPI2_power_on(void) {
 	GPIO_write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Wait for power-on.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -394,7 +394,7 @@ errors:
 SPI_status_t SPI2_power_off(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Turn MAX11136 off.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
 	GPIO_write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
@@ -404,7 +404,7 @@ SPI_status_t SPI2_power_off(void) {
 	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
 	// Wait for power-off.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;

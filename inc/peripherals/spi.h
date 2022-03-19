@@ -37,7 +37,8 @@ SPI_status_t SPI1_write_short(unsigned short tx_data);
 SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data);
 #endif
 
-#define SPI1_status_check(error_base) { if (spi1_status != SPI_SUCCESS) { status = error_base + spi1_status; goto errors; }}
+#define SPI1_status_check(error_base) { if (spi_status != SPI_SUCCESS) { status = error_base + spi_status; goto errors; }}
+#define SPI1_error_check() { ERROR_status_check(spi_status, SPI_SUCCESS, ERROR_BASE_SPI1); }
 
 #ifdef HW2_0
 void SPI2_init(void);
@@ -48,7 +49,8 @@ SPI_status_t SPI2_power_off(void);
 SPI_status_t SPI2_write_short(unsigned short tx_data);
 SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data);
 
-#define SPI2_status_check(error_base) { if (spi2_status != SPI_SUCCESS) { status = error_base + spi2_status; goto errors; }}
+#define SPI2_status_check(error_base) { if (spi_status != SPI_SUCCESS) { status = error_base + spi_status; goto errors; }}
+#define SPI2_error_check() { ERROR_status_check(spi_status, SPI_SUCCESS, ERROR_BASE_SPI2); }
 #endif
 
 

@@ -54,7 +54,10 @@ typedef struct {
 
 void NEOM8N_init(void);
 void NEOM8N_switch_dma_buffer(unsigned char lf_flag);
-NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_seconds, unsigned int supercap_voltage_min_mv);
+NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_seconds);
 NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds);
+
+#define NEOM8N_status_check(error_base) { if (neom8n_status != NEOM8N_SUCCESS) { status = error_base + neom8n_status; goto errors; }}
+#define NEOM8N_error_check() { ERROR_status_check(neom8n_status, NEOM8N_SUCCESS, ERROR_BASE_NEOM8N); }
 
 #endif /* NEOM8N_H */

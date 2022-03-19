@@ -10,6 +10,15 @@
 
 #include "mode.h"
 
+/*** RTC macros ***/
+
+#define RTC_LOCAL_UTC_OFFSET_WINTER		1
+#define RTC_LOCAL_UTC_OFFSET_SUMMER		2
+#define RTC_WINTER_TIME_LAST_MONTH		3
+#define RTC_WINTER_TIME_FIRST_MONTH		11
+#define RTC_NUMBER_OF_HOURS_PER_DAY		24
+#define RTC_AFTERNOON_HOUR_THRESHOLD	12
+
 /*** RTC structures ***/
 
 typedef enum {
@@ -54,5 +63,6 @@ volatile unsigned char RTC_get_wakeup_timer_flag(void);
 void RTC_clear_wakeup_timer_flag(void);
 
 #define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}
+#define RTC_error_check() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
 
 #endif /* RTC_H */

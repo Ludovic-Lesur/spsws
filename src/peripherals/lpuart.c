@@ -136,7 +136,7 @@ void LPUART1_disable(void) {
 LPUART_status_t LPUART1_power_on(void) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 #if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -144,7 +144,7 @@ LPUART_status_t LPUART1_power_on(void) {
 #endif
 	// Turn NEOM8N on.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(LPUART_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -157,7 +157,7 @@ errors:
 LPUART_status_t LPUART1_power_off(void) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Turn NEOM8N off.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 0);
 #if (defined HW2_0) || ((defined HW1_0) && (!defined DEBUG))
@@ -166,7 +166,7 @@ LPUART_status_t LPUART1_power_off(void) {
 	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Delay required if another cycle is requested by applicative layer.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(LPUART_ERROR_BASE_LPTIM);
 errors:
 	return status;
