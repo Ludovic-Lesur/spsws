@@ -44,6 +44,7 @@
 #include "error.h"
 #include "mode.h"
 #include "sigfox_api.h"
+#include "version.h"
 
 /*** SPSWS macros ***/
 
@@ -57,6 +58,9 @@
 #define SPSWS_AFTERNOON_HOUR_THRESHOLD				12
 // Geoloc.
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
+// Sigfox payload lengths.
+#define SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH			7
+#define SPSWS_SIGFOX_ERROR_DATA_LENGTH				12
 #ifdef IM
 #define SPSWS_SIGFOX_WEATHER_DATA_LENGTH			6
 #else
@@ -109,6 +113,18 @@ typedef union {
 	unsigned char all;
 } SPSWS_flags_t;
 
+// Sigfox SW version frame data format.
+typedef union {
+	unsigned char raw_frame[SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH];
+	struct {
+		unsigned major_version : 8;
+		unsigned minor_version : 8;
+		unsigned commit_index : 8;
+		unsigned commit_id : 28;
+		unsigned dirty_flag : 4;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+} SPSWS_sigfox_sw_version_data_t;
+
 // Sigfox weather frame data format.
 typedef union {
 	unsigned char raw_frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
@@ -125,7 +141,7 @@ typedef union {
 		unsigned rain_mm : 8;
 #endif
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
-} SPSWS_sigfox_weather_data;
+} SPSWS_sigfox_weather_data_t;
 
 // Sigfox monitoring frame data format.
 typedef union {
@@ -139,7 +155,7 @@ typedef union {
 		unsigned vmcu_mv : 12;
 		unsigned status : 8;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
-} SPSWS_sigfox_monitoring_data;
+} SPSWS_sigfox_monitoring_data_t;
 
 // Sigfox geolocation frame data format.
 typedef union {
@@ -156,7 +172,7 @@ typedef union {
 		unsigned altitude_meters : 16;
 		unsigned gps_fix_duration : 8;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
-} SPSWS_sigfox_geoloc_data;
+} SPSWS_sigfox_geoloc_data_t;
 
 typedef struct {
 	// Global.
@@ -168,15 +184,17 @@ typedef struct {
 	// Wake-up management.
 	RTC_time_t current_timestamp;
 	RTC_time_t previous_wake_up_timestamp;
+	// SW version.
+	SPSWS_sigfox_sw_version_data_t sigfox_sw_version_data;
 	// Monitoring.
 	SPSWS_status_t status;
-	SPSWS_sigfox_monitoring_data sigfox_monitoring_data;
+	SPSWS_sigfox_monitoring_data_t sigfox_monitoring_data;
 	// Weather data.
-	SPSWS_sigfox_weather_data sigfox_weather_data;
+	SPSWS_sigfox_weather_data_t sigfox_weather_data;
 	// Geoloc.
 	NEOM8N_position_t position;
 	unsigned int geoloc_fix_duration_seconds;
-	SPSWS_sigfox_geoloc_data sigfox_geoloc_data;
+	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
 	sfx_u32 sigfox_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
@@ -578,11 +596,17 @@ int main (void) {
 		// POR.
 		case SPSWS_STATE_POR:
 			IWDG_reload();
-			// Send OOB frame.
+			// Build software version;
+			spsws_ctx.sigfox_sw_version_data.field.major_version = GIT_MAJOR_VERSION;
+			spsws_ctx.sigfox_sw_version_data.field.minor_version = GIT_MINOR_VERSION;
+			spsws_ctx.sigfox_sw_version_data.field.commit_index = GIT_COMMIT_INDEX;
+			spsws_ctx.sigfox_sw_version_data.field.commit_id = GIT_COMMIT_ID;
+			spsws_ctx.sigfox_sw_version_data.field.dirty_flag = GIT_DIRTY_FLAG;
+			// Send SW version frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.sigfox_sw_version_data.raw_frame, SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Reset all daily flags.
