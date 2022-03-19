@@ -41,6 +41,7 @@
 #include "math.h"
 // Applicative.
 #include "at.h"
+#include "error.h"
 #include "mode.h"
 #include "sigfox_api.h"
 
@@ -97,6 +98,17 @@ typedef union {
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
 } SPSWS_status_t;
 
+typedef union {
+	struct {
+		unsigned por : 1;
+		unsigned hour_changed : 1;
+		unsigned day_changed : 1;
+		unsigned is_afternoon : 1;
+		unsigned geoloc_timeout : 1;
+	};
+	unsigned char all;
+} SPSWS_flags_t;
+
 // Sigfox weather frame data format.
 typedef union {
 	unsigned char raw_frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
@@ -149,14 +161,10 @@ typedef union {
 typedef struct {
 	// Global.
 	SPSWS_state_t state;
+	SPSWS_flags_t flags;
 	// Clocks.
 	unsigned int lsi_frequency_hz;
 	unsigned char lse_running;
-	// Time management.
-	unsigned char por_flag;
-	unsigned char hour_changed_flag;
-	unsigned char day_changed_flag;
-	unsigned char is_afternoon_flag;
 	// Wake-up management.
 	RTC_time_t current_timestamp;
 	RTC_time_t previous_wake_up_timestamp;
@@ -168,7 +176,6 @@ typedef struct {
 	// Geoloc.
 	NEOM8N_position_t position;
 	unsigned int geoloc_fix_duration_seconds;
-	unsigned char geoloc_timeout_flag;
 	SPSWS_sigfox_geoloc_data sigfox_geoloc_data;
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
@@ -234,12 +241,12 @@ void SPSWS_update_time_flags(void) {
 		(spsws_ctx.current_timestamp.month != spsws_ctx.previous_wake_up_timestamp.month) ||
 		(spsws_ctx.current_timestamp.date != spsws_ctx.previous_wake_up_timestamp.date)) {
 		// Day (and thus hour) has changed.
-		spsws_ctx.day_changed_flag = 1;
-		spsws_ctx.hour_changed_flag = 1;
+		spsws_ctx.flags.day_changed = 1;
+		spsws_ctx.flags.hour_changed = 1;
 	}
 	if (spsws_ctx.current_timestamp.hours != spsws_ctx.previous_wake_up_timestamp.hours) {
 		// Hour as changed.
-		spsws_ctx.hour_changed_flag = 1;
+		spsws_ctx.flags.hour_changed = 1;
 	}
 	// Check if we are in afternoon (to enable device geolocation).
 	unsigned char local_utc_offset = SPSWS_LOCAL_UTC_OFFSET_WINTER;
@@ -251,7 +258,7 @@ void SPSWS_update_time_flags(void) {
 		local_hour += SPSWS_NUMBER_OF_HOURS_PER_DAY;
 	}
 	if (local_hour >= SPSWS_AFTERNOON_HOUR_THRESHOLD) {
-		spsws_ctx.is_afternoon_flag = 1;
+		spsws_ctx.flags.is_afternoon = 1;
 	}
 }
 
@@ -280,6 +287,8 @@ void SPSWS_update_pwut(void) {
  * @return: 0.
  */
 int main (void) {
+	// Init error stack
+	ERROR_stack_init();
 	// Init memory.
 	NVIC_init();
 	// Init GPIOs.
@@ -290,13 +299,9 @@ int main (void) {
 	PWR_init();
 	// Init context.
 	spsws_ctx.state = SPSWS_STATE_RESET;
+	spsws_ctx.flags.all = 0;
 	spsws_ctx.lsi_frequency_hz = 0;
 	spsws_ctx.lse_running = 0;
-	spsws_ctx.por_flag = 0;
-	spsws_ctx.hour_changed_flag = 0;
-	spsws_ctx.day_changed_flag = 0;
-	spsws_ctx.is_afternoon_flag = 0;
-	spsws_ctx.geoloc_timeout_flag = 0;
 	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	NVM_enable();
 	NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
@@ -306,18 +311,19 @@ int main (void) {
 #else
 	spsws_ctx.status.field.station_mode = 1;
 #endif
-	unsigned char idx = 0;
-	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
-	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 	// Local variables.
+	unsigned char idx = 0;
 	signed char temperature = 0;
 	unsigned char generic_data_u8 = 0;
 	unsigned int generic_data_u32_1 = 0;
+	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	sfx_error_t sfx_error = SFX_ERR_NONE;
 #ifdef CM
 	unsigned int generic_data_u32_2 = 0;
 #endif
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
-	sfx_error_t sfx_error = SFX_ERR_NONE;
+	// Set Sigfox RC.
+	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
+	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 	// Main loop.
 	while (1) {
 		// Perform state machine.
@@ -328,7 +334,7 @@ int main (void) {
 			// Check reset reason.
 			if (((RCC -> CSR) & (0b1111 << 26)) != 0) {
 				// IWDG, SW, NRST or POR reset: directly go to INIT state.
-				spsws_ctx.por_flag = 1;
+				spsws_ctx.flags.por = 1;
 				spsws_ctx.state = SPSWS_STATE_INIT;
 			}
 			else {
@@ -343,14 +349,14 @@ int main (void) {
 			// Update flags.
 			SPSWS_update_time_flags();
 			// Check flag.
-			if (spsws_ctx.hour_changed_flag == 0) {
+			if (spsws_ctx.flags.hour_changed == 0) {
 				// False detection due to RTC recalibration.
 				spsws_ctx.state = SPSWS_STATE_OFF;
 			}
 			else {
 				// Valid wake-up.
 				spsws_ctx.state = SPSWS_STATE_NVM_WAKE_UP_UPDATE;
-				spsws_ctx.hour_changed_flag = 0; // Reset flag.
+				spsws_ctx.flags.hour_changed = 0; // Reset flag.
 			}
 			break;
 		// NVM WAKE UP UPDATE.
@@ -358,15 +364,15 @@ int main (void) {
 			// Update previous wake-up timestamp.
 			SPSWS_update_pwut();
 			// Check if day changed.
-			if (spsws_ctx.day_changed_flag != 0) {
+			if (spsws_ctx.flags.day_changed != 0) {
 				// Reset daily flags.
 				spsws_ctx.status.field.daily_rtc_calibration = 0;
 				spsws_ctx.status.field.daily_geoloc = 0;
 				spsws_ctx.status.field.daily_downlink = 0;
 				// Reset flags.
-				spsws_ctx.day_changed_flag = 0;
-				spsws_ctx.hour_changed_flag = 0;
-				spsws_ctx.is_afternoon_flag = 0;
+				spsws_ctx.flags.day_changed = 0;
+				spsws_ctx.flags.hour_changed = 0;
+				spsws_ctx.flags.is_afternoon = 0;
 			}
 			// Go to INIT state.
 			spsws_ctx.state = SPSWS_STATE_INIT;
@@ -374,7 +380,7 @@ int main (void) {
 		// INIT.
 		case SPSWS_STATE_INIT:
 			// Low speed oscillators and watchdog (only at POR).
-			if (spsws_ctx.por_flag != 0) {
+			if (spsws_ctx.flags.por != 0) {
 				// Start independant watchdog.
 #ifndef DEBUG
 				IWDG_init();
@@ -397,7 +403,7 @@ int main (void) {
 			// Timers.
 			LPTIM1_init(spsws_ctx.lsi_frequency_hz);
 			// RTC (only at POR).
-			if (spsws_ctx.por_flag != 0) {
+			if (spsws_ctx.flags.por != 0) {
 				spsws_ctx.lse_running = spsws_ctx.status.field.lse_status;
 				RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz);
 				// Update LSE status if RTC failed to start on it.
@@ -430,7 +436,7 @@ int main (void) {
 			RAIN_init();
 #endif
 			// Compute next state.
-			if (spsws_ctx.por_flag == 0) {
+			if (spsws_ctx.flags.por == 0) {
 				spsws_ctx.state = SPSWS_STATE_MEASURE;
 			}
 			else {
@@ -559,7 +565,7 @@ int main (void) {
 				spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
 			}
 			else {
-				if ((spsws_ctx.status.field.daily_geoloc == 0) && (spsws_ctx.is_afternoon_flag != 0)) {
+				if ((spsws_ctx.status.field.daily_geoloc == 0) && (spsws_ctx.flags.is_afternoon != 0)) {
 					// Perform device geolocation.
 					spsws_ctx.state = SPSWS_STATE_GEOLOC;
 				}
@@ -612,18 +618,18 @@ int main (void) {
 			}
 			else {
 				spsws_ctx.sigfox_geoloc_data.raw_frame[0] = spsws_ctx.geoloc_fix_duration_seconds;
-				spsws_ctx.geoloc_timeout_flag = 1;
+				spsws_ctx.flags.geoloc_timeout = 1;
 			}
 			IWDG_reload();
 			// Send uplink geolocation frame.
 			sfx_error = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			if (sfx_error == SFX_ERR_NONE) {
 				sfx_error = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				sfx_error = SIGFOX_API_send_frame(spsws_ctx.sigfox_geoloc_data.raw_frame, ((spsws_ctx.geoloc_timeout_flag) ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.sigfox_downlink_data, 2, 0);
+				sfx_error = SIGFOX_API_send_frame(spsws_ctx.sigfox_geoloc_data.raw_frame, ((spsws_ctx.flags.geoloc_timeout) ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.sigfox_downlink_data, 2, 0);
 			}
 			SIGFOX_API_close();
 			// Reset geoloc variables.
-			spsws_ctx.geoloc_timeout_flag = 0;
+			spsws_ctx.flags.geoloc_timeout = 0;
 			spsws_ctx.geoloc_fix_duration_seconds = 0;
 			// Enter standby mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
@@ -656,7 +662,7 @@ int main (void) {
 		case SPSWS_STATE_OFF:
 			IWDG_reload();
 			// Clear POR flag.
-			spsws_ctx.por_flag = 0;
+			spsws_ctx.flags.por = 0;
 			// Turn peripherals off.
 			SX1232_disable();
 			SKY13317_disable();
@@ -739,6 +745,8 @@ int main (void) {
  * @return: 0.
  */
 int main (void) {
+	// Init error stack
+	ERROR_stack_init();
 	// Init memory.
 	NVIC_init();
 	// Init GPIOs.
