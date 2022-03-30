@@ -85,20 +85,18 @@ void ERROR_stack_init(void);
 void ERROR_stack_add(ERROR_t status);
 void ERROR_stack_read(ERROR_t* error_stack);
 
-#ifdef ATM
 #define ERROR_status_check(status, success, error_base) { \
+	if (status != success) { \
+		ERROR_stack_add(error_base + status); \
+	} \
+}
+
+#define ERROR_status_check_print(status, success, error_base) { \
 	if (status != success) { \
 		ERROR_stack_add(error_base + status); \
 		AT_print_status(error_base + status); \
 		goto errors; \
 	} \
 }
-#else
-#define ERROR_status_check(status, success, error_base) { \
-	if (status != success) { \
-		ERROR_stack_add(error_base + status); \
-	} \
-}
-#endif
 
 #endif /* ERROR_H */

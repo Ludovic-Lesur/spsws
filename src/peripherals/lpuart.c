@@ -94,22 +94,50 @@ void LPUART1_init(unsigned char lpuart_use_lse) {
 }
 
 /* ENABLE LPUART TX OPERATION.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void LPUART1_enable_tx(void) {
+LPUART_status_t LPUART1_enable_tx(void) {
+	// Local variables.
+	LPUART_status_t status = LPUART_SUCCESS;
+	unsigned int loop_count = 0;
 	// Enable LPUART1 transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
+	// Wait for ACK.
+	while (((LPUART1 -> ISR) & (0b1 << 21)) == 0) {
+		// Wait for TEACK='1' or timeout.
+		loop_count++;
+		if (loop_count > LPUART_TIMEOUT_COUNT) {
+			status = LPUART_ERROR_TX_ACK;
+			goto errors;
+		}
+	}
+errors:
+	return status;
 }
 
 /* ENABLE LPUART RX OPERATION.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-void LPUART1_enable_rx(void) {
+LPUART_status_t LPUART1_enable_rx(void) {
+	// Local variables.
+	LPUART_status_t status = LPUART_SUCCESS;
+	unsigned int loop_count = 0;
 	// Enable LPUART1 receiver.
 	LPUART1 -> CR1 |= (0b1 << 2); // Enable receiver (RE='1').
+	// Wait for ACK.
+	while (((LPUART1 -> ISR) & (0b1 << 22)) == 0) {
+		// Wait for REACK='1' or timeout.
+		loop_count++;
+		if (loop_count > LPUART_TIMEOUT_COUNT) {
+			status = LPUART_ERROR_RX_ACK;
+			goto errors;
+		}
+	}
 	NVIC_enable_interrupt(NVIC_IT_LPUART1);
+errors:
+	return status;
 }
 
 /* DISABLE LPUART PERIPHERAL.

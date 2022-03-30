@@ -27,5 +27,6 @@ void IWDG_reload(void);
 
 #define IWDG_status_check(error_base) { if (iwdg_status != IWDG_SUCCESS) { status = error_base + iwdg_status; goto errors; }}
 #define IWDG_error_check() { ERROR_status_check(iwdg_status, IWDG_SUCCESS, ERROR_BASE_IWDG); }
+#define IWDG_error_check_print() { ERROR_status_check_print(iwdg_status, IWDG_SUCCESS, ERROR_BASE_IWDG); }
 
 #endif /* IWDG_H */

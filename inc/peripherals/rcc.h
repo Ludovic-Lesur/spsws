@@ -23,8 +23,6 @@
 
 typedef enum {
 	RCC_SUCCESS = 0,
-	RCC_ERROR_MSI_READY,
-	RCC_ERROR_MSI_SWITCH,
 	RCC_ERROR_HSI_READY,
 	RCC_ERROR_HSI_SWITCH,
 	RCC_ERROR_HSE_READY,
@@ -43,7 +41,6 @@ typedef enum {
 void RCC_init(void);
 void RCC_enable_gpio(void);
 void RCC_disable_gpio(void);
-RCC_status_t RCC_switch_to_msi(void);
 RCC_status_t RCC_switch_to_hsi(void);
 RCC_status_t RCC_switch_to_hse(void);
 unsigned int RCC_get_sysclk_khz(void);
@@ -53,5 +50,6 @@ RCC_status_t RCC_enable_lse(void);
 
 #define RCC_status_check(error_base) { if (rcc_status != RCC_SUCCESS) { status = error_base + rcc_status; goto errors; }}
 #define RCC_error_check() { ERROR_status_check(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC); }
+#define RCC_error_check_print() { ERROR_status_check_print(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC); }
 
 #endif /* RCC_H */

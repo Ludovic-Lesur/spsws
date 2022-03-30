@@ -89,7 +89,9 @@
 
 
 #define SFX_ERR_NONE                                             (sfx_u8)(0x00) /*!< No error - to be used for MANUF_ERROR_CODES and SIGFOX_ERROR_CODES */
+#define SIGFOX_API_status_check(error_base) 					 { if (sigfox_api_status != SFX_ERR_NONE) { status = error_base + sigfox_api_status; goto errors; }}
 #define SIGFOX_API_error_check()								 { ERROR_status_check(sigfox_api_status, SFX_ERR_NONE, ERROR_BASE_SIGFOX); }
+#define SIGFOX_API_error_check_print()							 { ERROR_status_check_print(sigfox_api_status, SFX_ERR_NONE, ERROR_BASE_SIGFOX); }
 
 /*
  * ----------------------------------------------------------------

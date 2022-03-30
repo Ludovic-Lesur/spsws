@@ -33,8 +33,10 @@ void SHT3X_get_humidity(unsigned char* humidity_percent);
 
 #define SHT3X_INT_status_check(error_base) { if (sht3x_status != SHT3X_SUCCESS) { status = error_base + sht3x_status; goto errors; }}
 #define SHT3X_INT_error_check() { ERROR_status_check(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_INT); }
+#define SHT3X_INT_error_check_print() { ERROR_status_check_print(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_INT); }
 
 #define SHT3X_EXT_status_check(error_base) { if (sht3x_status != SHT3X_SUCCESS) { status = error_base + sht3x_status; goto errors; }}
 #define SHT3X_EXT_error_check() { ERROR_status_check(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_EXT); }
+#define SHT3X_EXT_error_check_print() { ERROR_status_check_print(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_EXT); }
 
 #endif /* SHT3X_H */

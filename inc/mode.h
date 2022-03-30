@@ -14,6 +14,14 @@
 #define IM 			// Intermittent mode.
 //#define CM 		// Continuous mode.
 
+#ifdef IM
+#define SPSWS_MODE	0
+#else
+#define SPSWS_MODE	1
+#endif
+
+/*** Wind vane selection ***/
+
 #if (defined CM || defined ATM)
 // Wind vane type.
 //#define WIND_VANE_ULTIMETER			// Phase shift technique.

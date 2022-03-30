@@ -34,5 +34,6 @@ unsigned int LPTIM1_get_counter(void);
 
 #define LPTIM1_status_check(error_base) { if (lptim_status != LPTIM_SUCCESS) { status = error_base + lptim_status; goto errors; }}
 #define LPTIM1_error_check() { ERROR_status_check(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
+#define LPTIM1_error_check_print() { ERROR_status_check_print(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
 
 #endif /* LPTIM_H */

@@ -33,5 +33,6 @@ USART_status_t USARTx_send_string(char* tx_string);
 
 #define USART_status_check(error_base) { if (usart_status != USART_SUCCESS) { status = error_base + usart_status; goto errors; }}
 #define USART_error_check() { ERROR_status_check(usart_status, USART_SUCCESS, ERROR_BASE_USART); }
+#define USART_error_check_print() { ERROR_status_check_print(usart_status, USART_SUCCESS, ERROR_BASE_USART); }
 
 #endif /* USART_H */

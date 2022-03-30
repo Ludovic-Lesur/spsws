@@ -532,6 +532,9 @@ static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_
 	// See p.174 for NEOM8N message format.
 	char neom8n_cfg_msg[NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	unsigned char neom8n_cfg_msg_idx = 0;
+	// Enable LPUART transmitter.
+	lpuart_status = LPUART1_enable_tx();
+	LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 	// Send commands.
 	for (nmea_message_id_idx=0 ; nmea_message_id_idx<18 ; nmea_message_id_idx++) {
 		// Byte 7 = is the ID of the message to enable or disable.
@@ -542,7 +545,6 @@ static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_
 		}
 		// Bytes 14-15 = NEOM8N checksum (CK_A and CK_B).
 		NEOM8N_compute_ubx_checksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
-		LPUART1_enable_tx();
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
 			lpuart_status = LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 			LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
@@ -562,6 +564,7 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
+	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	// Start RTC wake-up timer.
 	RTC_clear_wakeup_timer_flag();
 	rtc_status = RTC_start_wakeup_timer(timeout_seconds);
@@ -573,7 +576,8 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	DMA1_start_channel6();
 	// Start LPUART.
-	LPUART1_enable_rx();
+	lpuart_status = LPUART1_enable_rx();
+	LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 errors:
 	return status;
 }

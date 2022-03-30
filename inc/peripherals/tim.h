@@ -40,5 +40,6 @@ volatile unsigned int TIM2_get_counter(void);
 
 #define TIM21_status_check(error_base) { if (tim21_status != TIM_SUCCESS) { status = error_base + tim21_status; goto errors; }}
 #define TIM21_error_check() { ERROR_status_check(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
+#define TIM21_error_check_print() { ERROR_status_check_print(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
 
 #endif /* TIM_H */

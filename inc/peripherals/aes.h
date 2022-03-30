@@ -28,5 +28,6 @@ AES_status_t AES_encode_cbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char
 
 #define AES_status_check(error_base) { if (aes_status != AES_SUCCESS) { status = error_base + aes_status; goto errors; }}
 #define AES_error_check() { ERROR_status_check(aes_status, AES_SUCCESS, ERROR_BASE_AES); }
+#define AES_error_check_print() { ERROR_status_check_print(aes_status, AES_SUCCESS, ERROR_BASE_AES); }
 
 #endif /* AES_H_ */

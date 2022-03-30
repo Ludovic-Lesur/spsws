@@ -51,5 +51,6 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char
 
 #define STRING_status_check(error_base) { if (string_status != STRING_SUCCESS) { status = error_base + string_status; goto errors; }}
 #define STRING_error_check() { ERROR_status_check(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }
+#define STRING_error_check_print() { ERROR_status_check_print(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }
 
 #endif /* STRING_H */

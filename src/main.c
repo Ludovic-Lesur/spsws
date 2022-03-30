@@ -75,11 +75,8 @@
 /*** SPSWS structures ***/
 
 typedef enum {
-	SPSWS_STATE_RESET,
-	SPSWS_STATE_NVM_WAKE_UP_UPDATE,
-	SPSWS_STATE_HOUR_CHECK,
-	SPSWS_STATE_INIT,
-	SPSWS_STATE_POR,
+	SPSWS_STATE_WAKE_UP,
+	SPSWS_STATE_SW_VERSION,
 	SPSWS_STATE_MEASURE,
 	SPSWS_STATE_MONITORING,
 	SPSWS_STATE_WEATHER_DATA,
@@ -209,6 +206,154 @@ static SPSWS_context_t spsws_ctx;
 
 /*** SPSWS local functions ***/
 
+/* CONFIGURE CLOCK TREE FOR ACTIVE OPERATION.
+ * @param:	None.
+ * @return:	None.
+ */
+static void SPSWS_clock_wake_up(void) {
+	// Local variables.
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	// Enable TCXO power control.
+	RCC_enable_gpio();
+	// Turn HSE on.
+	rcc_status = RCC_switch_to_hse();
+	RCC_error_check();
+	// Check status.
+	if (rcc_status == RCC_SUCCESS) {
+		spsws_ctx.status.field.mcu_clock_source = 1;
+	}
+	else {
+		spsws_ctx.status.field.mcu_clock_source = 0;
+		rcc_status = RCC_switch_to_hsi();
+		RCC_error_check();
+	}
+}
+
+#if (defined IM || defined CM)
+/* CONFIGURE CLOCK TREE FOR SLEEP OPERATION.
+ * @param:	None.
+ * @return:	None.
+ */
+static void SPSWS_clock_sleep(void) {
+	// Local variables.
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	// Turn HSE off.
+	rcc_status = RCC_switch_to_hsi();
+	RCC_error_check();
+	// Disable TCXO power control.
+	RCC_disable_gpio();
+}
+#endif
+
+/* COMMON INIT FUNCTION FOR PERIPHERALS AND COMPONENTS.
+ * @param:	None.
+ * @return:	None.
+ */
+static void SPSWS_init_hw(void) {
+	// Local variables.
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	RTC_status_t rtc_status = RTC_SUCCESS;
+	ADC_status_t adc_status = ADC_SUCCESS;
+#ifndef DEBUG
+	IWDG_status_t iwdg_status = IWDG_SUCCESS;
+#endif
+	// Init error stack
+	ERROR_stack_init();
+	// Init memory.
+	NVIC_init();
+	// Init GPIOs.
+	GPIO_init(); // Required for clock tree configuration.
+	EXTI_init(); // Required to clear RTC flags (EXTI 17).
+	// Init clock and power modules.
+	RCC_init();
+	RCC_enable_gpio();
+	PWR_init();
+	// Reset RTC.
+	RTC_reset();
+	// Start oscillators.
+	rcc_status = RCC_enable_lsi();
+	RCC_error_check();
+	spsws_ctx.status.field.lsi_status = (rcc_status == RCC_SUCCESS) ? 1 : 0;
+	rcc_status = RCC_enable_lse();
+	RCC_error_check();
+	spsws_ctx.status.field.lse_status = (rcc_status == RCC_SUCCESS) ? 1 : 0;
+	// Start independant watchdog.
+#ifndef DEBUG
+	iwdg_status = IWDG_init();
+	IWDG_error_check();
+#endif
+	// High speed oscillator.
+	IWDG_reload();
+	SPSWS_clock_wake_up();
+	// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
+	rcc_status = RCC_get_lsi_frequency(&spsws_ctx.lsi_frequency_hz);
+	RCC_error_check();
+	if (rcc_status != RCC_SUCCESS) spsws_ctx.lsi_frequency_hz = RCC_LSI_FREQUENCY_HZ;
+	IWDG_reload();
+	// RTC (only at POR).
+	spsws_ctx.lse_running = spsws_ctx.status.field.lse_status;
+	rtc_status = RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz);
+	RTC_error_check();
+	// Update LSE status if RTC failed to start on it.
+	if (spsws_ctx.lse_running == 0) {
+		spsws_ctx.status.field.lse_status = 0;
+	}
+	IWDG_reload();
+	// Timers.
+	LPTIM1_init(spsws_ctx.lsi_frequency_hz);
+	// Analog.
+	adc_status = ADC1_init();
+	ADC1_error_check();
+	// Communication interfaces.
+	LPUART1_init(spsws_ctx.lse_running);
+	I2C1_init();
+	SPI1_init();
+#ifdef HW2_0
+	SPI2_init();
+#endif
+#ifdef HW1_0
+	USART2_init();
+#endif
+#ifdef HW2_0
+	USART1_init();
+#endif
+	// Init components.
+	SX1232_init();
+	SKY13317_init();
+	NEOM8N_init();
+	MAX11136_init();
+#ifdef CM
+	WIND_init();
+	RAIN_init();
+#endif
+}
+
+/* COMMON INIT FUNCTION FOR MAIN CONTEXT.
+ * @param:	None.
+ * @return:	None.
+ */
+static void SPSWS_init_context(void) {
+	// Local variables.
+	NVM_status_t nvm_status = NVM_SUCCESS;
+	unsigned char idx = 0;
+	// Init context.
+	spsws_ctx.state = SPSWS_STATE_WAKE_UP;
+	spsws_ctx.flags.all = 0;
+	spsws_ctx.flags.por = 1;
+	spsws_ctx.lsi_frequency_hz = 0;
+	spsws_ctx.lse_running = 0;
+	spsws_ctx.geoloc_fix_duration_seconds = 0;
+	spsws_ctx.status.field.station_mode = SPSWS_MODE;
+	// Read status byte.
+	NVM_enable();
+	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
+	NVM_error_check();
+	NVM_disable();
+	// Set Sigfox RC.
+	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
+	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
+}
+
 #if (defined IM || defined CM)
 /* CHECK IF HOUR OR DATE AS CHANGED SINCE PREVIOUS WAKE-UP AND UPDATE AFTERNOON FLAG.
  * @param:	None.
@@ -262,12 +407,14 @@ static void SPSWS_update_time_flags(void) {
 		spsws_ctx.flags.is_afternoon = 1;
 	}
 }
+#endif
 
+#if (defined IM || defined CM)
 /* UPDATE PREVIOUS WAKE-UP TIMESTAMP IN NVM.
  * @param:	None.
  * @return:	None.
  */
-void SPSWS_update_pwut(void) {
+static void SPSWS_update_pwut(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Retrieve current timestamp from RTC.
@@ -296,12 +443,11 @@ void SPSWS_update_pwut(void) {
  * @return: 0.
  */
 int main (void) {
+	// Init board.
+	SPSWS_init_context();
+	SPSWS_init_hw();
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
-#ifndef DEBUG
-	IWDG_status_t iwdg_status = IWDG_SUCCESS;
-#endif
-	RCC_status_t rcc_status = RCC_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	ADC_status_t adc_status = ADC_SUCCESS;
@@ -312,69 +458,22 @@ int main (void) {
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
-#ifdef CM
-	WIND_status_t wind_status = WIND_SUCCESS;
-#endif
 	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
-	unsigned char idx = 0;
 	signed char temperature = 0;
 	unsigned char generic_data_u8 = 0;
 	unsigned int generic_data_u32_1 = 0;
 #ifdef CM
 	unsigned int generic_data_u32_2 = 0;
+	WIND_status_t wind_status = WIND_SUCCESS;
 #endif
-	// Init error stack
-	ERROR_stack_init();
-	// Init memory.
-	NVIC_init();
-	// Init GPIOs.
-	GPIO_init(); // Required for clock tree configuration.
-	EXTI_init(); // Required to clear RTC flags (EXTI 17).
-	// Init clock and power modules.
-	RCC_init();
-	PWR_init();
-	// Init context.
-	spsws_ctx.state = SPSWS_STATE_RESET;
-	spsws_ctx.flags.all = 0;
-	spsws_ctx.lsi_frequency_hz = 0;
-	spsws_ctx.lse_running = 0;
-	spsws_ctx.geoloc_fix_duration_seconds = 0;
-	NVM_enable();
-	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
-	NVM_error_check();
-	NVM_disable();
-#ifdef IM
-	spsws_ctx.status.field.station_mode = 0;
-#else
-	spsws_ctx.status.field.station_mode = 1;
-#endif
-	// Set Sigfox RC.
-	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
-	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 	// Main loop.
 	while (1) {
 		// Perform state machine.
 		switch (spsws_ctx.state) {
-		// RESET.
-		case SPSWS_STATE_RESET:
+		case SPSWS_STATE_WAKE_UP:
 			IWDG_reload();
-			// Check reset reason.
-			if (((RCC -> CSR) & (0b1111 << 26)) != 0) {
-				// IWDG, SW, NRST or POR reset: directly go to INIT state.
-				spsws_ctx.flags.por = 1;
-				spsws_ctx.state = SPSWS_STATE_INIT;
-			}
-			else {
-				// Other reset or RTC wake-up: standard flow.
-				spsws_ctx.state = SPSWS_STATE_HOUR_CHECK;
-			}
-			// Clear reset flags.
-			RCC -> CSR |= (0b1 << 23); // RMVF='1'.
-			break;
-		// HOUR CHECK.
-		case SPSWS_STATE_HOUR_CHECK:
 			// Update flags.
 			SPSWS_update_time_flags();
 			// Check flag.
@@ -384,112 +483,86 @@ int main (void) {
 			}
 			else {
 				// Valid wake-up.
-				spsws_ctx.state = SPSWS_STATE_NVM_WAKE_UP_UPDATE;
+				SPSWS_clock_wake_up();
+				// Turn RF TCXO on.
+				sx1232_status = SX1232_tcxo(1);
+				SX1232_error_check();
+				SPSWS_update_pwut();
+				// Check if day changed.
+				if (spsws_ctx.flags.day_changed != 0) {
+					// Reset daily flags.
+					spsws_ctx.status.field.daily_rtc_calibration = 0;
+					spsws_ctx.status.field.daily_geoloc = 0;
+					spsws_ctx.status.field.daily_downlink = 0;
+					// Reset flags.
+					spsws_ctx.flags.day_changed = 0;
+					spsws_ctx.flags.hour_changed = 0;
+					spsws_ctx.flags.is_afternoon = 0;
+				}
 				spsws_ctx.flags.hour_changed = 0; // Reset flag.
 			}
+			// Next state.
+			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_SW_VERSION : SPSWS_STATE_MEASURE;
 			break;
-		// NVM WAKE UP UPDATE.
-		case SPSWS_STATE_NVM_WAKE_UP_UPDATE:
-			// Update previous wake-up timestamp.
-			SPSWS_update_pwut();
-			// Check if day changed.
-			if (spsws_ctx.flags.day_changed != 0) {
-				// Reset daily flags.
-				spsws_ctx.status.field.daily_rtc_calibration = 0;
-				spsws_ctx.status.field.daily_geoloc = 0;
-				spsws_ctx.status.field.daily_downlink = 0;
-				// Reset flags.
-				spsws_ctx.flags.day_changed = 0;
-				spsws_ctx.flags.hour_changed = 0;
-				spsws_ctx.flags.is_afternoon = 0;
-			}
-			// Go to INIT state.
-			spsws_ctx.state = SPSWS_STATE_INIT;
-			break;
-		// INIT.
-		case SPSWS_STATE_INIT:
-			// Low speed oscillators and watchdog (only at POR).
-			if (spsws_ctx.flags.por != 0) {
-				// Start oscillators.
-				rcc_status = RCC_enable_lsi();
-				RCC_error_check();
-				spsws_ctx.status.field.lsi_status = (rcc_status == RCC_SUCCESS) ? 1 : 0;
-				rcc_status = RCC_enable_lse();
-				RCC_error_check();
-				spsws_ctx.status.field.lse_status = (rcc_status == RCC_SUCCESS) ? 1 : 0;
-				// Start independant watchdog.
-#ifndef DEBUG
-				iwdg_status = IWDG_init();
-				IWDG_error_check();
-#endif
-				// Reset RTC.
-				RTC_reset();
-			}
-			// High speed oscillator.
+		case SPSWS_STATE_SW_VERSION:
 			IWDG_reload();
-			RCC_enable_gpio();
-			rcc_status = RCC_switch_to_hse();
-			RCC_error_check();
-			if (rcc_status == RCC_SUCCESS) {
-				spsws_ctx.status.field.mcu_clock_source = 1;
+			// Build software version;
+			spsws_ctx.sigfox_sw_version_data.field.major_version = GIT_MAJOR_VERSION;
+			spsws_ctx.sigfox_sw_version_data.field.minor_version = GIT_MINOR_VERSION;
+			spsws_ctx.sigfox_sw_version_data.field.commit_index = GIT_COMMIT_INDEX;
+			spsws_ctx.sigfox_sw_version_data.field.commit_id = GIT_COMMIT_ID;
+			spsws_ctx.sigfox_sw_version_data.field.dirty_flag = GIT_DIRTY_FLAG;
+			// Send SW version frame.
+			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
+			SIGFOX_API_error_check();
+			if (sigfox_api_status == SFX_ERR_NONE) {
+				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
+				SIGFOX_API_error_check();
+				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_sw_version_data.frame, SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+				SIGFOX_API_error_check();
 			}
-			else {
-				spsws_ctx.status.field.mcu_clock_source = 0;
-				rcc_status = RCC_switch_to_hsi();
-				RCC_error_check();
-			}
-			// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
-			rcc_status = RCC_get_lsi_frequency(&spsws_ctx.lsi_frequency_hz);
-			RCC_error_check();
-			if (rcc_status != RCC_SUCCESS) spsws_ctx.lsi_frequency_hz = RCC_LSI_FREQUENCY_HZ;
-			IWDG_reload();
-			// Timers.
-			LPTIM1_init(spsws_ctx.lsi_frequency_hz);
-			// RTC (only at POR).
-			if (spsws_ctx.flags.por != 0) {
-				spsws_ctx.lse_running = spsws_ctx.status.field.lse_status;
-				rtc_status = RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz);
-				RTC_error_check();
-				// Update LSE status if RTC failed to start on it.
-				if (spsws_ctx.lse_running == 0) {
-					spsws_ctx.status.field.lse_status = 0;
-				}
-			}
-			IWDG_reload();
-			// Communication interfaces.
-#ifdef HW1_0
-			USART2_init();
-#endif
-#ifdef HW2_0
-			USART1_init();
-#endif
-			LPUART1_init(spsws_ctx.lse_running);
-			I2C1_init();
-			SPI1_init();
-#ifdef HW2_0
-			SPI2_init();
-#endif
-			// Init components.
-			SX1232_init();
-			SKY13317_init();
-			NEOM8N_init();
-			MAX11136_init();
-#ifdef CM
-			WIND_init();
-			RAIN_init();
-#endif
-			// Turn RF TCXO on.
-			sx1232_status = SX1232_tcxo(1);
+			sigfox_api_status = SIGFOX_API_close();
+			SIGFOX_API_error_check();
+			// Turn radio TCXO off since radio will not be used anymore.
+			sx1232_status = SX1232_tcxo(0);
 			SX1232_error_check();
-			// Compute next state.
-			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_POR : SPSWS_STATE_MEASURE;
+			// Reset all daily flags.
+			spsws_ctx.status.field.first_rtc_calibration = 0;
+			spsws_ctx.status.field.daily_rtc_calibration = 0;
+			spsws_ctx.status.field.daily_geoloc = 0;
+			spsws_ctx.status.field.daily_downlink = 0;
+			// Perform first RTC calibration.
+			spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
 			break;
-		// STATIC MEASURE.
+		case SPSWS_STATE_RTC_CALIBRATION:
+			IWDG_reload();
+			// Get current timestamp from GPS.{
+			lpuart_status = LPUART1_power_on();
+			LPUART1_error_check();
+			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
+			NEOM8N_error_check();
+			lpuart_status = LPUART1_power_off();
+			LPUART1_error_check();
+			// Calibrate RTC if timestamp is available.
+			if (neom8n_status == NEOM8N_SUCCESS) {
+				// Update RTC registers.
+				rtc_status = RTC_calibrate(&spsws_ctx.current_timestamp);
+				RTC_error_check();
+				// Update PWUT when first calibration.
+				if (spsws_ctx.status.field.first_rtc_calibration == 0) {
+					SPSWS_update_pwut();
+				}
+				// Update calibration flags.
+				spsws_ctx.status.field.first_rtc_calibration = 1;
+				spsws_ctx.status.field.daily_rtc_calibration = 1;
+			}
+			// Enter standby mode.
+			spsws_ctx.state = SPSWS_STATE_OFF;
+			break;
 		case SPSWS_STATE_MEASURE:
 			IWDG_reload();
 			// Retrieve internal ADC data.
-			adc_status = ADC1_init();
-			ADC1_error_check();
+			ADC1_enable();
 			adc_status = ADC1_perform_measurements();
 			ADC1_error_check();
 			ADC1_disable();
@@ -642,7 +715,6 @@ int main (void) {
 			// Compute next state.
 			spsws_ctx.state = SPSWS_STATE_MONITORING;
 			break;
-		// MONITORING.
 		case SPSWS_STATE_MONITORING:
 			IWDG_reload();
 			// Send uplink monitoring frame.
@@ -659,7 +731,6 @@ int main (void) {
 			// Compute next state.
 			spsws_ctx.state = SPSWS_STATE_WEATHER_DATA;
 			break;
-		// WEATHER DATA.
 		case SPSWS_STATE_WEATHER_DATA:
 			IWDG_reload();
 			// Send uplink weather frame.
@@ -689,35 +760,6 @@ int main (void) {
 				}
 			}
 			break;
-		// POR.
-		case SPSWS_STATE_POR:
-			IWDG_reload();
-			// Build software version;
-			spsws_ctx.sigfox_sw_version_data.field.major_version = GIT_MAJOR_VERSION;
-			spsws_ctx.sigfox_sw_version_data.field.minor_version = GIT_MINOR_VERSION;
-			spsws_ctx.sigfox_sw_version_data.field.commit_index = GIT_COMMIT_INDEX;
-			spsws_ctx.sigfox_sw_version_data.field.commit_id = GIT_COMMIT_ID;
-			spsws_ctx.sigfox_sw_version_data.field.dirty_flag = GIT_DIRTY_FLAG;
-			// Send SW version frame.
-			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
-			SIGFOX_API_error_check();
-			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				SIGFOX_API_error_check();
-				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_sw_version_data.frame, SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
-				SIGFOX_API_error_check();
-			}
-			sigfox_api_status = SIGFOX_API_close();
-			SIGFOX_API_error_check();
-			// Reset all daily flags.
-			spsws_ctx.status.field.first_rtc_calibration = 0;
-			spsws_ctx.status.field.daily_rtc_calibration = 0;
-			spsws_ctx.status.field.daily_geoloc = 0;
-			spsws_ctx.status.field.daily_downlink = 0;
-			// Perform first RTC calibration.
-			spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
-			break;
-		// GEOLOC.
 		case SPSWS_STATE_GEOLOC:
 			IWDG_reload();
 			// Get position from GPS.
@@ -765,63 +807,32 @@ int main (void) {
 			// Enter standby mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
-		// RTC CALIBRATION.
-		case SPSWS_STATE_RTC_CALIBRATION:
-			IWDG_reload();
-			// Turn radio TCXO off since Sigfox is not required anymore.
-			sx1232_status = SX1232_tcxo(0);
-			SX1232_error_check();
-			// Get current timestamp from GPS.{
-			lpuart_status = LPUART1_power_on();
-			LPUART1_error_check();
-			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
-			NEOM8N_error_check();
-			lpuart_status = LPUART1_power_off();
-			LPUART1_error_check();
-			// Calibrate RTC if timestamp is available.
-			if (neom8n_status == NEOM8N_SUCCESS) {
-				// Update RTC registers.
-				rtc_status = RTC_calibrate(&spsws_ctx.current_timestamp);
-				RTC_error_check();
-				// Update PWUT when first calibration.
-				if (spsws_ctx.status.field.first_rtc_calibration == 0) {
-					SPSWS_update_pwut();
-				}
-				// Update calibration flags.
-				spsws_ctx.status.field.first_rtc_calibration = 1;
-				spsws_ctx.status.field.daily_rtc_calibration = 1;
-			}
-			// Enter standby mode.
-			spsws_ctx.state = SPSWS_STATE_OFF;
-			break;
-		// OFF.
 		case SPSWS_STATE_OFF:
 			IWDG_reload();
+			// Turn radio TCXO off.
+			sx1232_status = SX1232_tcxo(0);
+			SX1232_error_check();
+			// Disable HSE.
+			SPSWS_clock_sleep();
 			// Clear POR flag.
 			spsws_ctx.flags.por = 0;
 			// Turn peripherals off.
-			SX1232_disable();
-			SKY13317_disable();
-			MAX11136_disable();
-			sx1232_status = SX1232_tcxo(0);
-			SX1232_error_check();
+			//SX1232_disable();
+			//SKY13317_disable();
+			//MAX11136_disable();
 #ifdef HW2_0
-			SPI2_disable();
+			//SPI2_disable();
 #endif
-			TIM2_disable();
-			LPTIM1_disable();
-			SPI1_disable();
-			LPUART1_disable();
-			I2C1_disable();
+			//TIM2_disable();
+			//LPTIM1_disable();
+			//SPI1_disable();
+			//LPUART1_disable();
+			//I2C1_disable();
 			// Store status byte in NVM.
 			NVM_enable();
 			nvm_status = NVM_write_byte(NVM_ADDRESS_STATUS, spsws_ctx.status.raw_byte);
 			NVM_error_check();
 			NVM_disable();
-			// Switch to internal MSI 65kHz (must be called before WIND functions to init LPTIM with right clock frequency).
-			rcc_status = RCC_switch_to_msi();
-			RCC_error_check();
-			RCC_disable_gpio();
 #ifdef CM
 			// Re-start continuous measurements.
 			WIND_reset_data();
@@ -837,7 +848,6 @@ int main (void) {
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_SLEEP;
 			break;
-		// SLEEP.
 		case SPSWS_STATE_SLEEP:
 			IWDG_reload();
 			// Enter sleep mode.
@@ -864,7 +874,7 @@ int main (void) {
 				// Clear RTC flags.
 				RTC_clear_alarm_a_flag();
 				// Wake-up.
-				spsws_ctx.state = SPSWS_STATE_RESET;
+				spsws_ctx.state = SPSWS_STATE_WAKE_UP;
 			}
 			break;
 		// UNKNOWN STATE.
@@ -885,55 +895,9 @@ int main (void) {
  * @return: 0.
  */
 int main (void) {
-	// Init error stack
-	ERROR_stack_init();
-	// Init memory.
-	NVIC_init();
-	// Init GPIOs.
-	GPIO_init(); // Required for clock tree configuration.
-	EXTI_init(); // Required to clear RTC flags (EXTI 17).
-	// Init clock and power modules.
-	RCC_init();
-	PWR_init();
-	// Init clocks.
-	RCC_init();
-	RCC_enable_gpio();
-	RTC_reset();
-	// Low speed oscillators.
-	RCC_enable_lsi();
-	spsws_ctx.lse_running = RCC_enable_lse();
-	// High speed oscillator.
-	if (RCC_switch_to_hse() == 0) {
-		RCC_switch_to_hsi();
-	}
-	RCC_get_lsi_frequency(&spsws_ctx.lsi_frequency_hz);
-	RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz);
-	// Timers.
-	LPTIM1_init(spsws_ctx.lsi_frequency_hz);
-	// Analog.
-	ADC1_init();
-	// Communication interfaces.
-	LPUART1_init(spsws_ctx.lse_running);
-	I2C1_init();
-	SPI1_init();
-#ifdef HW2_0
-	SPI2_init();
-#endif
-#ifdef HW1_0
-	USART2_init();
-#endif
-#ifdef HW2_0
-	USART1_init();
-#endif
-	// Init components.
-	SX1232_init();
-	SX1232_tcxo(1);
-	SKY13317_init();
-	NEOM8N_init();
-	MAX11136_init();
-	WIND_init();
-	RAIN_init();
-	// Init applicative layers.
+	SPSWS_init_context();
+	SPSWS_init_hw();
+	// Init AT command layer.
 	AT_init();
 	// Main loop.
 	while (1) {

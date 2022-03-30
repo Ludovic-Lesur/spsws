@@ -45,6 +45,7 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 
 #define PARSER_status_check(error_base) { if (parser_status != PARSER_SUCCESS) { status = error_base + parser_status; goto errors; }}
 #define PARSER_error_check() { ERROR_status_check(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }
+#define PARSER_error_check_print() { ERROR_status_check_print(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }
 
 #endif	/* PARSER_H */
 

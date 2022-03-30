@@ -219,12 +219,14 @@ static void AT_response_add_string(char* tx_string) {
  */
 static void AT_response_add_value(int tx_value, STRING_format_t format, unsigned char print_prefix) {
 	// Local variables.
+	STRING_status_t string_status = STRING_SUCCESS;
 	char str_value[AT_STRING_VALUE_BUFFER_LENGTH];
 	unsigned char idx = 0;
 	// Reset string.
 	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_LENGTH ; idx++) str_value[idx] = STRING_CHAR_NULL;
 	// Convert value to string.
-	STRING_value_to_string(tx_value, format, print_prefix, str_value);
+	string_status = STRING_value_to_string(tx_value, format, print_prefix, str_value);
+	STRING_error_check();
 	// Add string.
 	AT_response_add_string(str_value);
 }
@@ -235,9 +237,11 @@ static void AT_response_add_value(int tx_value, STRING_format_t format, unsigned
  */
 static void AT_response_send(void) {
 	// Local variables.
+	USART_status_t usart_status = USART_SUCCESS;
 	unsigned int idx = 0;
 	// Send response over UART.
-	USARTx_send_string(at_ctx.response_buf);
+	usart_status = USARTx_send_string(at_ctx.response_buf);
+	USART_error_check();
 	// Flush response buffer.
 	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.response_buf[idx] = STRING_CHAR_NULL;
 	at_ctx.response_buf_idx = 0;
@@ -366,11 +370,11 @@ static void AT_adc_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	adc_status = ADC1_perform_measurements();
-	ADC1_error_check();
+	ADC1_error_check_print();
 	// Read data.
 	ADC1_get_tmcu(&tmcu_degrees);
 	adc_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
-	ADC1_error_check();
+	ADC1_error_check_print();
 	// Print results.
 	AT_response_add_string("Vmcu=");
 	AT_response_add_value((int) vmcu_mv, STRING_FORMAT_DECIMAL, 0);
@@ -401,32 +405,32 @@ static void AT_max11136_callback(void) {
 	// Power on ADC.
 #ifdef HW1_0
 	spi_status = SPI1_power_on();
-	SPI1_error_check();
+	SPI1_error_check_print();
 #endif
 #ifdef HW2_0
 	spi_status = SPI2_power_on();
-	SPI2_error_check();
+	SPI2_error_check_print();
 #endif
 	// Run external ADC conversions.
 	AT_response_add_string("MAX11136 running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	max11136_status = MAX11136_perform_measurements();
-	MAX11136_error_check();
+	MAX11136_error_check_print();
 	// Vsrc.
 	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &data);
-	MAX11136_error_check();
+	MAX11136_error_check_print();
 	AT_response_add_string("Vsrc=");
 	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
 	// Vcap.
 	AT_response_add_string("mV Vcap=");
 	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &data);
-	MAX11136_error_check();
+	MAX11136_error_check_print();
 	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
 	// LDR.
 	AT_response_add_string("mV Light=");
 	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &data);
-	MAX11136_error_check();
+	MAX11136_error_check_print();
 	AT_response_add_value((int) data, STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("%");
 	// Response end.
@@ -434,10 +438,12 @@ static void AT_max11136_callback(void) {
 	AT_response_send();
 errors:
 #ifdef HW1_0
-	SPI1_power_off();
+	spi_status = SPI1_power_off();
+	SPI1_error_check();
 #endif
 #ifdef HW2_0
-	SPI2_power_off();
+	spi_status = SPI2_power_off();
+	SPI2_error_check();
 #endif
 	return;
 }
@@ -459,12 +465,12 @@ static void AT_iths_callback(void) {
 	}
 	// Perform measurements.
 	i2c_status = I2C1_power_on();
-	I2C1_error_check();
+	I2C1_error_check_print();
 	AT_response_add_string("SHT3X running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
-	SHT3X_INT_error_check();
+	SHT3X_INT_error_check_print();
 	// Read data.
 	SHT3X_get_temperature(&tamb_degrees);
 	SHT3X_get_humidity(&hamb_percent);
@@ -477,7 +483,8 @@ static void AT_iths_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	I2C1_power_off();
+	i2c_status = I2C1_power_off();
+	I2C1_error_check();
 	return;
 }
 
@@ -498,12 +505,12 @@ static void AT_eths_callback(void) {
 	}
 	// Perform measurements.
 	i2c_status = I2C1_power_on();
-	I2C1_error_check();
+	I2C1_error_check_print();
 	AT_response_add_string("SHT3X running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
-	SHT3X_EXT_error_check();
+	SHT3X_EXT_error_check_print();
 	// Read data.
 	SHT3X_get_temperature(&tamb_degrees);
 	SHT3X_get_humidity(&hamb_percent);
@@ -516,7 +523,8 @@ static void AT_eths_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	I2C1_power_off();
+	i2c_status = I2C1_power_off();
+	I2C1_error_check();
 	return;
 }
 
@@ -537,12 +545,12 @@ static void AT_epts_callback(void) {
 	}
 	// Perform measurements.
 	i2c_status = I2C1_power_on();
-	I2C1_error_check();
+	I2C1_error_check_print();
 	AT_response_add_string("DPS310 running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
-	DPS310_error_check();
+	DPS310_error_check_print();
 	// Read data.
 	DPS310_get_pressure(&pressure_pa);
 	DPS310_get_temperature(&tamb_degrees);
@@ -555,7 +563,8 @@ static void AT_epts_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	I2C1_power_off();
+	i2c_status = I2C1_power_off();
+	I2C1_error_check();
 	return;
 }
 
@@ -575,12 +584,12 @@ static void AT_euvs_callback(void) {
 	}
 	// Perform measurements.
 	i2c_status = I2C1_power_on();
-	I2C1_error_check();
+	I2C1_error_check_print();
 	AT_response_add_string("SI1133 running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
-	SI1133_error_check();
+	SI1133_error_check_print();
 	// Read data.
 	SI1133_get_uv_index(&uv_index);
 	// Print result.
@@ -589,7 +598,8 @@ static void AT_euvs_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	I2C1_power_off();
+	i2c_status = I2C1_power_off();
+	I2C1_error_check();
 	return;
 }
 
@@ -607,7 +617,7 @@ static void AT_wind_callback(void) {
 	unsigned int wind_direction = 0;
 	// Read enable parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Start or stop wind continuous measurements.
 	if (enable == 0) {
 		RTC_disable_alarm_b_interrupt();
@@ -627,7 +637,7 @@ static void AT_wind_callback(void) {
 			AT_response_add_string("m/h AverageDirection=N/A");
 		}
 		else {
-			WIND_error_check();
+			WIND_error_check_print();
 			AT_response_add_string("m/h AverageDirection=");
 			AT_response_add_value((int) wind_direction, STRING_FORMAT_DECIMAL, 0);
 			AT_response_add_string("d");
@@ -659,7 +669,7 @@ static void AT_rain_callback(void) {
 	unsigned char rain_mm = 0;
 	// Read enable parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Start or stop rain continuous measurements.
 	if (enable == 0) {
 		RAIN_stop_continuous_measure();
@@ -702,16 +712,16 @@ static void AT_time_callback(void) {
 	}
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Power on GPS.
 	lpuart_status = LPUART1_power_on();
-	LPUART1_error_check();
+	LPUART1_error_check_print();
 	// Start time aquisition.
 	AT_response_add_string("GPS running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	neom8n_status = NEOM8N_get_time(&gps_timestamp, (unsigned int) timeout_seconds);
-	NEOM8N_error_check();
+	NEOM8N_error_check_print();
 	// Year.
 	AT_response_add_value((gps_timestamp.year), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("-");
@@ -747,7 +757,8 @@ static void AT_time_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	LPUART1_power_off();
+	lpuart_status = LPUART1_power_off();
+	LPUART1_error_check();
 	return;
 }
 
@@ -770,16 +781,16 @@ static void AT_gps_callback(void) {
 	}
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &timeout_seconds);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Power on GPS.
 	lpuart_status = LPUART1_power_on();
-	LPUART1_error_check();
+	LPUART1_error_check_print();
 	// Start GPS fix.
 	AT_response_add_string("GPS running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	neom8n_status = NEOM8N_get_position(&gps_position, (unsigned int) timeout_seconds, &fix_duration_seconds);
-	NEOM8N_error_check();
+	NEOM8N_error_check_print();
 	// Latitude.
 	AT_response_add_string("Lat=");
 	AT_response_add_value((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
@@ -808,7 +819,8 @@ static void AT_gps_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	LPUART1_power_off();
+	lpuart_status = LPUART1_power_off();
+	LPUART1_error_check();
 	return;
 }
 #endif
@@ -824,7 +836,7 @@ static void AT_nvmr_callback(void) {
 	// Reset all NVM field to default value.
 	NVM_enable();
 	nvm_status = NVM_reset_default();
-	NVM_error_check();
+	NVM_error_check_print();
 	AT_print_ok();
 errors:
 	NVM_disable();
@@ -843,11 +855,11 @@ static void AT_nvm_callback(void) {
 	unsigned char nvm_data = 0;
 	// Read address parameters.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Read byte at requested address.
 	NVM_enable();
 	nvm_status = NVM_read_byte((unsigned short) address, &nvm_data);
-	NVM_error_check();
+	NVM_error_check_print();
 	// Print data.
 	AT_response_add_value(nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
 	AT_response_add_string(AT_RESPONSE_END);
@@ -870,7 +882,7 @@ static void AT_get_id_callback(void) {
 	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), &id_byte);
-		NVM_error_check();
+		NVM_error_check_print();
 		AT_response_add_value(id_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
 	AT_response_add_string(AT_RESPONSE_END);
@@ -893,12 +905,12 @@ static void AT_set_id_callback(void) {
 	unsigned char idx = 0;
 	// Read ID parameter.
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, 1, device_id, &extracted_length);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Write device ID in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), device_id[idx]);
-		NVM_error_check();
+		NVM_error_check_print();
 	}
 	AT_print_ok();
 errors:
@@ -919,7 +931,7 @@ static void AT_get_key_callback(void) {
 	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), &key_byte);
-		NVM_error_check();
+		NVM_error_check_print();
 		AT_response_add_value(key_byte, STRING_FORMAT_HEXADECIMAL, (idx==0 ? 1 : 0));
 	}
 	AT_response_add_string(AT_RESPONSE_END);
@@ -942,12 +954,12 @@ static void AT_set_key_callback(void) {
 	unsigned char idx = 0;
 	// Read key parameter.
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, 1, device_key, &extracted_length);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Write device ID in NVM.
 	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), device_key[idx]);
-		NVM_error_check();
+		NVM_error_check_print();
 	}
 	AT_print_ok();
 errors:
@@ -985,17 +997,18 @@ static void AT_so_callback(void) {
 	}
 	// Send Sigfox OOB frame.
 	sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	AT_response_add_string("Sigfox library running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	sigfox_api_status = SIGFOX_API_send_outofband(SFX_OOB_SERVICE);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	AT_print_ok();
 errors:
-	SIGFOX_API_close();
+	sigfox_api_status = SIGFOX_API_close();
+	SIGFOX_API_error_check();
 	return;
 }
 
@@ -1020,17 +1033,17 @@ static void AT_sb_callback(void) {
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
 		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// Send Sigfox bit with specified downlink request.
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
 		sigfox_api_status = SIGFOX_API_send_bit((sfx_bool) data, dl_payload, 2, (sfx_bool) bidir_flag);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		if (bidir_flag != SFX_FALSE) {
 			AT_print_dl_payload(dl_payload);
 		}
@@ -1038,21 +1051,22 @@ static void AT_sb_callback(void) {
 	else {
 		// Try with 1 parameter.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &data);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// Send Sigfox bit with no downlink request (by default).
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
 		sigfox_api_status = SIGFOX_API_send_bit((sfx_bool) data, dl_payload, 2, 0);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 	}
 	AT_print_ok();
 errors:
-	SIGFOX_API_close();
+	sigfox_api_status = SIGFOX_API_close();
+	SIGFOX_API_error_check();
 	return;
 }
 
@@ -1078,17 +1092,17 @@ static void AT_sf_callback(void) {
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
 		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &bidir_flag);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// Send Sigfox frame with specified downlink request.
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
 		sigfox_api_status = SIGFOX_API_send_frame(data, extracted_length, dl_payload, 2, bidir_flag);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		if (bidir_flag != 0) {
 			AT_print_dl_payload(dl_payload);
 		}
@@ -1096,21 +1110,22 @@ static void AT_sf_callback(void) {
 	else {
 		// Try with 1 parameter.
 		parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, 12, 0, data, &extracted_length);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// Send Sigfox frame with no downlink request (by default).
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
 		sigfox_api_status = SIGFOX_API_send_frame(data, extracted_length, dl_payload, 2, 0);
-		SIGFOX_API_error_check();
+		SIGFOX_API_error_check_print();
 	}
 	AT_print_ok();
 errors:
-	SIGFOX_API_close();
+	sigfox_api_status = SIGFOX_API_close();
+	SIGFOX_API_error_check();
 	return;
 }
 #endif
@@ -1135,37 +1150,38 @@ static void AT_cw_callback(void) {
 	}
 	// Read frequency parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// First try with 3 parameters.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
 	if (parser_status == PARSER_SUCCESS) {
 		// There is a third parameter, try to parse power.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// CW with given output power.
 		SIGFOX_API_stop_continuous_transmission();
 		if (enable != 0) {
 			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
-			SIGFOX_API_error_check();
+			SIGFOX_API_error_check_print();
 			sx1232_status = SX1232_set_rf_output_power((unsigned char) power_dbm);
-			SX1232_error_check();
+			SX1232_error_check_print();
 		}
 	}
 	else {
 		// Power is not given, try to parse enable as last parameter.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
-		PARSER_error_check();
+		PARSER_error_check_print();
 		// CW with last output power.
 		SIGFOX_API_stop_continuous_transmission();
 		if (enable != 0) {
 			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
-			SIGFOX_API_error_check();
+			SIGFOX_API_error_check_print();
 		}
 	}
 	AT_print_ok();
 	return;
 errors:
-	SIGFOX_API_stop_continuous_transmission();
+	sigfox_api_status = SIGFOX_API_stop_continuous_transmission();
+	SIGFOX_API_error_check();
 	return;
 }
 
@@ -1190,31 +1206,31 @@ static void AT_rssi_callback(void) {
 	}
 	// Read frequency parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Read duration parameters.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Init radio.
 	sigfox_api_status = RF_API_init(SFX_RF_MODE_RX);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	sigfox_api_status = RF_API_change_frequency((sfx_u32) frequency_hz);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	// Start continuous listening.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
-	SX1232_error_check();
+	SX1232_error_check_print();
 	// Wait TS_FS=60us typical.
 	lptim_status = LPTIM1_delay_milliseconds(5, 0);
-	LPTIM1_error_check();
+	LPTIM1_error_check_print();
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
-	SX1232_error_check();
+	SX1232_error_check_print();
 	// Wait TS_TR=120us typical.
 	lptim_status = LPTIM1_delay_milliseconds(5, 0);
-	LPTIM1_error_check();
+	LPTIM1_error_check_print();
 	// Measurement loop.
 	while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
 		// Read RSSI.
 		sx1232_status = SX1232_get_rssi(&rssi_dbm);
-		SX1232_error_check();
+		SX1232_error_check_print();
 		// Print RSSI.
 		AT_response_add_string("RSSI=");
 		AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
@@ -1222,12 +1238,13 @@ static void AT_rssi_callback(void) {
 		AT_response_send();
 		// Report delay.
 		lptim_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
-		LPTIM1_error_check();
+		LPTIM1_error_check_print();
 		report_loop++;
 	}
 	AT_print_ok();
 errors:
-	RF_API_stop();
+	sigfox_api_status = RF_API_stop();
+	SIGFOX_API_error_check();
 	return;
 }
 #endif
@@ -1285,7 +1302,7 @@ static void AT_set_rc_callback(void) {
 	unsigned char idx = 0;
 	// Read RC parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Check RC index.
 	if (((sfx_rc_enum_t) rc_index) >= SFX_RC_LIST_MAX_SIZE) {
 		AT_print_status(ERROR_SIGFOX_RC);
@@ -1358,16 +1375,16 @@ static void AT_tm_callback(void) {
 	}
 	// Read RC parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &rc_index);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Read test mode parameter.
 	parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &test_mode);
-	PARSER_error_check();
+	PARSER_error_check_print();
 	// Call test mode function wth public key.
 	AT_response_add_string("Sigfox addon running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 	sigfox_api_status = ADDON_SIGFOX_RF_PROTOCOL_API_test_mode((sfx_rc_enum_t) rc_index, (sfx_test_mode_t) test_mode);
-	SIGFOX_API_error_check();
+	SIGFOX_API_error_check_print();
 	AT_print_ok();
 errors:
 	return;

@@ -85,55 +85,6 @@ void RCC_disable_gpio(void) {
 	GPIO_configure(&GPIO_TCXO16_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
-/* CONFIGURE AND USE MSI AS SYSTEM CLOCK.
- * @param:			None.
- * @return status:	Function execution status.
- */
-RCC_status_t RCC_switch_to_msi(void) {
-	// Local variables.
-	RCC_status_t status = RCC_SUCCESS;
-	FLASH_status_t flash_status = FLASH_SUCCESS;
-	unsigned int loop_count = 0;
-	// Init MSI.
-	RCC -> ICSCR &= ~(0b111 << 13); // Set frequency to 65kHz (MSIRANGE='000').
-	RCC -> CR |= (0b1 << 8); // Enable MSI (MSION='1').
-	// Wait for MSI to be stable.
-	while (((RCC -> CR) & (0b1 << 9)) == 0) {
-		// Wait for MSIRDYF='1' or timeout.
-		RCC_delay();
-		loop_count++;
-		if (loop_count > RCC_TIMEOUT_COUNT) {
-			status = RCC_ERROR_MSI_READY;
-			goto errors;
-		}
-	}
-	// Switch SYSCLK.
-	RCC -> CFGR &= ~(0b11 << 0); // Use MSI as system clock (SW='00').
-	// Wait for clock switch.
-	loop_count = 0;
-	while (((RCC -> CFGR) & (0b11 << 2)) != (0b00 << 2)) {
-		// Wait for SWS='00' or timeout.
-		RCC_delay();
-		loop_count++;
-		if (loop_count > RCC_TIMEOUT_COUNT) {
-			status = RCC_ERROR_MSI_SWITCH;
-			goto errors;
-		}
-	}
-	// Set flash latency.
-	flash_status = FLASH_set_latency(0);
-	FLASH_status_check(RCC_ERROR_BASE_FLASH);
-	// Disable HSI and HSE.
-	RCC -> CR &= ~(0b1 << 0); // Disable HSI (HSI16ON='0').
-	RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
-	// Disable 16MHz TCXO power supply.
-	GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 0);
-	// Update flag and frequency.
-	rcc_sysclk_khz = RCC_MSI_FREQUENCY_KHZ;
-errors:
-	return status;
-}
-
 /* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16MHz INTERNAL RC).
  * @param:			None.
  * @return status:	Function execution status.

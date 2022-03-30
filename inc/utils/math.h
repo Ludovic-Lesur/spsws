@@ -119,5 +119,6 @@ MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_posit
 
 #define MATH_status_check(error_base) { if (math_status != MATH_SUCCESS) { status = error_base + math_status; goto errors; }}
 #define MATH_error_check() { ERROR_status_check(math_status, MATH_SUCCESS, ERROR_BASE_MATH); }
+#define MATH_error_check_print() { ERROR_status_check_print(math_status, MATH_SUCCESS, ERROR_BASE_MATH); }
 
 #endif /* MATH_H */
