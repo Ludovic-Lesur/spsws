@@ -157,27 +157,25 @@ RTC_status_t RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 		// Compute prescaler according to measured LSI frequency.
 		RTC -> PRER = (127 << 16) | (((lsi_freq_hz / 128) - 1) << 0); // PREDIV_A=127 and PREDIV_S=((lsi_freq_hz/128)-1).
 	}
+	// Force registers reset.
+	RTC -> CR = 0;
+	RTC -> ALRMAR = 0;
+	RTC -> ALRMBR = 0;
 	// Bypass shadow registers.
 	RTC -> CR |= (0b1 << 5); // BYPSHAD='1'.
 	// Configure alarm A to wake-up MCU every hour.
-	RTC -> ALRMAR = 0; // Reset all bits.
 	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
-	//RTC -> ALRMAR |= (0b1 << 15); // Mask minutes (to wake-up every minute for debug).
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	// Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM).
-	RTC -> ALRMBR = 0;
 	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.
 	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
 	// Configure wake-up timer.
-	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
-	RTC -> CR &= ~(0b111 << 0);
 	RTC -> CR |= (0b100 << 0); // Wake-up timer clocked by RTC clock (1Hz).
 	RTC_exit_initialization_mode();
 	// Configure EXTI lines.
 	EXTI_configure_line(EXTI_LINE_RTC_ALARM, EXTI_TRIGGER_RISING_EDGE);
 	EXTI_configure_line(EXTI_LINE_RTC_WAKEUP_TIMER, EXTI_TRIGGER_RISING_EDGE);
 	// Disable interrupts and clear all flags.
-	RTC -> CR &= ~(0b111 << 12);
 	RTC -> ISR &= 0xFFFE0000;
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
@@ -347,7 +345,6 @@ RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds) {
 	status = RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Configure wake-up timer.
-	RTC -> CR &= ~(0b1 << 10); // Disable wake-up timer.
 	RTC -> WUTR = (delay_seconds - 1);
 	// Clear flags.
 	RTC_clear_wakeup_timer_flag();

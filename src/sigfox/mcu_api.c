@@ -98,10 +98,8 @@ sfx_u8 MCU_API_get_voltage_temperature(sfx_u16* voltage_idle, sfx_u16* voltage_t
 	unsigned int mcu_supply_voltage_mv = 0;
 	signed char mcu_temperature_degrees = 0;
 	// Perform measurements.
-	ADC1_enable();
 	adc1_status = ADC1_perform_measurements();
 	if (adc1_status != ADC_SUCCESS) goto errors;
-	ADC1_disable();
 	// Get MCU supply voltage.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &mcu_supply_voltage_mv);
 	if (adc1_status != ADC_SUCCESS) goto errors;
@@ -193,10 +191,8 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 		case CREDENTIALS_PRIVATE_KEY:
 			// Retrieve device key from NVM.
 			for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE ; byte_idx++) {
-				NVM_enable();
 				nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_DEVICE_KEY+byte_idx, &key_byte);
 				if (nvm_status != NVM_SUCCESS) goto errors;
-				NVM_disable();
 				local_key[byte_idx] = key_byte;
 			}
 			break;
@@ -210,18 +206,16 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 			goto errors;
 	}
 	// Perform encryption.
-	AES_init();
 	for (block_idx=0; block_idx<(aes_block_len / AES_BLOCK_SIZE) ; block_idx++) {
 		// Fill input data and initialization vector with previous result.
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) data_in[byte_idx] = data_to_encrypt[(block_idx * AES_BLOCK_SIZE) + byte_idx];
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) init_vector[byte_idx] = data_out[byte_idx];
 		// Run algorithme.
-		aes_status = AES_encode_cbc(data_in, data_out, init_vector, local_key);
+		aes_status = AES_encrypt(data_in, data_out, init_vector, local_key);
 		if (aes_status != AES_SUCCESS) goto errors;
 		// Fill output data.
 		for (byte_idx=0 ; byte_idx<AES_BLOCK_SIZE; byte_idx++) encrypted_data[(block_idx * AES_BLOCK_SIZE) + byte_idx] = data_out[byte_idx];
 	}
-	AES_disable();
 	return SFX_ERR_NONE;
 errors:
 	return MCU_ERR_API_AES;
@@ -254,7 +248,6 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// PN.
-	NVM_enable();
 	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_PN, &(read_data[SFX_NVMEM_PN]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_PN + 1, &(read_data[SFX_NVMEM_PN + 1]));
@@ -272,7 +265,6 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// RL.
 	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_RL, &(read_data[SFX_NVMEM_RL]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	NVM_disable();
 	return SFX_ERR_NONE;
 errors:
 	return MCU_ERR_API_GETNVMEM;
@@ -306,7 +298,6 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// PN.
-	NVM_enable();
 	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_PN, data_to_write[SFX_NVMEM_PN]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_PN + 1, data_to_write[SFX_NVMEM_PN + 1]);
@@ -324,7 +315,6 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// RL.
 	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_RL, data_to_write[SFX_NVMEM_RL]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	NVM_disable();
 	return SFX_ERR_NONE;
 errors:
 	return MCU_ERR_API_SETNVMEM;
@@ -493,10 +483,8 @@ sfx_u8 MCU_API_get_device_id_and_payload_encryption_flag(sfx_u8 dev_id[ID_LENGTH
 	(*payload_encryption_enabled) = SFX_FALSE;
 	// Get device ID.
 	for (byte_idx=0 ; byte_idx<ID_LENGTH ; byte_idx++) {
-		NVM_enable();
 		nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_DEVICE_ID+byte_idx, &(dev_id[byte_idx]));
 		if (nvm_status != NVM_SUCCESS) goto errors;
-		NVM_disable();
 	}
 	return SFX_ERR_NONE;
 errors:

@@ -222,6 +222,8 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	switch (rf_mode) {
 	// Uplink.
 	case SFX_RF_MODE_TX:
+		// Set default output power.
+		rf_api_ctx.rf_api_output_power_max = RF_API_UPLINK_OUTPUT_POWER_ETSI;
 		// Prepare transceiver for uplink or continuous wave operation.
 		sx1232_status = SX1232_enable_low_phase_noise_pll();
 		if (sx1232_status != SX1232_SUCCESS) goto errors;
@@ -282,15 +284,13 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_stop(void) {
 	// Local variables.
-	SPI_status_t spi1_status = SPI_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Disable all switch channels.
 	SKY13317_set_channel(SKY13317_CHANNEL_NONE);
 	// Power transceiver down.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
-	spi1_status = SPI1_power_off();
-	if (spi1_status != SPI_SUCCESS) goto errors;
+	SPI1_power_off();
 	return SFX_ERR_NONE;
 errors:
 	return RF_ERR_API_STOP;
@@ -329,20 +329,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	unsigned short low_shifted_idle_duration_us = 0;
 	unsigned short idle_duration_us = 0;
 	unsigned short dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
-	// Disable all interrupts.
-#ifdef ATM
-#ifdef HW1_0
-	NVIC_disable_interrupt(NVIC_IT_USART2);
-#endif
-#ifdef HW2_0
-	NVIC_disable_interrupt(NVIC_IT_USART1);
-#endif
-#endif
-	NVIC_disable_interrupt(NVIC_IT_LPTIM1);
-	NVIC_disable_interrupt(NVIC_IT_RTC);
-	NVIC_disable_interrupt(NVIC_IT_DMA1_CH_4_7);
-	NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
-	NVIC_disable_interrupt(NVIC_IT_LPUART1);
 	// Set modulation parameters.
 	rf_api_status = RF_API_SetTxModulationParameters(type);
 	if (rf_api_status != SFX_ERR_NONE) goto errors;
@@ -375,8 +361,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR3_IDX] = dbpsk_timings[2] + frequency_shift_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.rf_api_ramp_duration_us;
 	TIM2_init(dbpsk_timings);
-	TIM2_enable();
-	NVIC_enable_interrupt(NVIC_IT_TIM2);
 	rf_api_ctx.rf_api_tim2_arr_flag = 0;
 	// Start CW.
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_api_rf_frequency_hz);
@@ -417,17 +401,6 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	sx1232_status = SX1232_stop_cw();
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	TIM2_stop();
-	TIM2_disable();
-	// Re-enable all interrupts.
-	NVIC_enable_interrupt(NVIC_IT_RTC);
-#ifdef ATM
-#ifdef HW1_0
-	NVIC_enable_interrupt(NVIC_IT_USART2);
-#endif
-#ifdef HW2_0
-	NVIC_enable_interrupt(NVIC_IT_USART1);
-#endif
-#endif
 	return SFX_ERR_NONE;
 errors:
 	return RF_ERR_API_SEND;

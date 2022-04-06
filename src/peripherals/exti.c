@@ -120,7 +120,7 @@ void EXTI_init(void) {
 	// Mask all sources by default.
 	EXTI -> IMR = 0;
 	// Clear all flags.
-	EXTI -> PR |= 0x007BFFFF; // PIFx='1'.
+	EXTI_clear_all_flags();
 	// Set interrupts priority.
 	NVIC_set_priority(NVIC_IT_EXTI_0_1, 3);
 	NVIC_set_priority(NVIC_IT_EXTI_4_15, 0);

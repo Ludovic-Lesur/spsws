@@ -39,8 +39,7 @@ typedef enum {
 
 /*** NVM functions ***/
 
-void NVM_enable(void);
-void NVM_disable(void);
+void NVM_init(void);
 NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data);
 NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data);
 NVM_status_t NVM_reset_default(void);

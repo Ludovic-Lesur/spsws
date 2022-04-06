@@ -50,16 +50,12 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
 void TIM21_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
-	// Reset timer before configuration.
-	TIM21 -> CR1 &= ~(0b1 << 0); // Disable TIM21 (CEN='0').
-	TIM21 -> CNT &= 0xFFFF0000; // Reset counter.
-	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
-	TIM21 -> PSC = 0; // Timer is clocked by HSI.
-	TIM21 -> ARR = 0xFFFF;
-	// Configure input capture.
-	TIM21 -> CCMR1 |= (0b01 << 0); // Channel input on TI1.
-	TIM21 -> CCMR1 |=(0b11 << 2); // Capture done every 8 edges.
-	TIM21 -> OR |= (0b101 << 2); // CH1 mapped on LSI.
+	// Configure timer.
+	// Channel input on TI1.
+	// Capture done every 8 edges.
+	// CH1 mapped on LSI.
+	TIM21 -> CCMR1 |= (0b01 << 0) | (0b11 << 2);
+	TIM21 -> OR |= (0b101 << 2);
 	// Enable interrupt.
 	TIM21 -> DIER |= (0b1 << 1); // CC1IE='1'.
 	// Generate event to update registers.
@@ -117,16 +113,6 @@ errors:
 	return status;
 }
 
-/* DISABLE TIM21 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void TIM21_disable(void) {
-	// Disable TIM21 peripheral.
-	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
-	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
-}
-
 /* CONFIGURE TIM2 FOR SIGFOX BPSK MODULATION.
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
  * @return:			None.
@@ -134,11 +120,8 @@ void TIM21_disable(void) {
 void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
-	// Reset timer before configuration.
-	TIM2 -> CR1 &= 0xFFFFFE00; // Disable TIM2 (CEN='0').
-	TIM2 -> CNT &= 0xFFFF0000; // Reset counter.
-	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 	// Configure TIM2 to overflow every timing[0] microseconds.
+	TIM2 -> CR1 |= (0b1 << 2); // UIF set only on counter overflow (URS='1').
 	TIM2 -> PSC = (RCC_get_sysclk_khz() / 1000) - 1; // Timer input clock = SYSCLK / (PSC + 1) = 1MHz.
 	TIM2 -> ARR = timings[TIM2_TIMINGS_ARRAY_ARR_IDX];
 	// Configure events timestamps.
@@ -158,33 +141,13 @@ void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	NVIC_disable_interrupt(NVIC_IT_TIM2);
 }
 
-/* ENABLE TIM2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void TIM2_enable(void) {
-	// Enable TIM2 peripheral.
-	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
-}
-
-/* DISABLE TIM2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void TIM2_disable(void) {
-	// Disable TIM2 peripheral.
-	NVIC_disable_interrupt(NVIC_IT_TIM2);
-	TIM2 -> SR &= 0xFFFFFFE0;
-	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
-	TIM2 -> CNT = 0;
-	RCC -> APB1ENR &= ~(0b1 << 0); // TIM2EN='0'.
-}
-
 /* START TIMER2.
  * @param:	None.
  * @return:	None.
  */
 void TIM2_start(void) {
+	// Enable interrupt.
+	NVIC_enable_interrupt(NVIC_IT_TIM2);
 	// Reset and start counter.
 	TIM2 -> CNT &= 0xFFFF0000;
 	TIM2 -> SR &= 0xFFFFFFE0;
@@ -198,6 +161,8 @@ void TIM2_start(void) {
 void TIM2_stop(void) {
 	// Stop counter.
 	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	// Disable interrupt.
+	NVIC_disable_interrupt(NVIC_IT_TIM2);
 }
 
 /* RETURN CURRENT TIM2 COUNTER VALUE.

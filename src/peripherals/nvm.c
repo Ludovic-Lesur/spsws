@@ -72,18 +72,9 @@ errors:
  * @param:	None.
  * @return:	None.
  */
-void NVM_enable(void) {
+void NVM_init(void) {
 	// Enable NVM peripheral.
 	RCC -> AHBENR |= (0b1 << 8); // MIFEN='1'.
-}
-
-/* DISABLE NVM INTERFACE.
- * @param:	None.
- * @return:	None.
- */
-void NVM_disable(void) {
-	// Disable NVM peripheral.
-	RCC -> AHBENR &= ~(0b1 << 8); // MIFEN='1'.
 }
 
 /* READ A BYTE STORED IN NVM.

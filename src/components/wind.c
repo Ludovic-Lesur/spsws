@@ -270,12 +270,10 @@ WIND_status_t WIND_measurement_period_callback(void) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 			// Get direction from ADC.
 #ifdef HW1_0
-			SPI1_enable();
 			spi_status = SPI1_power_on();
 			SPI1_status_check(WIND_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
-			SPI2_enable();
 			spi_status = SPI2_power_on();
 			SPI2_status_check(WIND_ERROR_BASE_SPI);
 #endif
@@ -283,14 +281,11 @@ WIND_status_t WIND_measurement_period_callback(void) {
 			MAX11136_status_check(WIND_ERROR_BASE_MAX11136);
 
 #ifdef HW1_0
-			spi_status = SPI1_power_off();
+			SPI1_power_off();
 			SPI1_status_check(WIND_ERROR_BASE_SPI);
-			SPI1_disable();
 #endif
 #ifdef HW2_0
-			spi_status = SPI2_power_off();
-			SPI2_status_check(WIND_ERROR_BASE_SPI);
-			SPI2_disable();
+			SPI2_power_off();
 #endif
 			// Get 12-bits result.
 			max11136_status = MAX11136_get_data(MAX11136_DATA_WIND_DIRECTION_RATIO, &wind_direction_ratio);

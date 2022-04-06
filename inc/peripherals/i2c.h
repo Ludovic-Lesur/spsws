@@ -29,9 +29,8 @@ typedef enum {
 /*** I2C functions ***/
 
 void I2C1_init(void);
-void I2C1_disable(void);
 I2C_status_t I2C1_power_on(void);
-I2C_status_t I2C1_power_off(void);
+void I2C1_power_off(void);
 I2C_status_t I2C1_write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag);
 I2C_status_t I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length);
 

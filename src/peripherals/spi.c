@@ -28,29 +28,19 @@ void SPI1_init(void) {
 	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
 	// Configure power enable pins.
 	GPIO_configure(&GPIO_RF_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
+	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #ifdef HW1_0
 	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
+	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
-	// Configure NSS, SCK, MISO and MOSI (first as high impedance).
-	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI1_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#ifdef HW1_0
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#endif
+	SPI1_power_off();
 	// Configure peripheral.
-	SPI1 -> CR1 &= 0xFFFF0000; // Disable peripheral before configuration (SPE='0').
-	SPI1 -> CR1 |= (0b1 << 2); // Master mode (MSTR='1').
-	SPI1 -> CR1 |= (0b001 << 3); // Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
-	SPI1 -> CR1 &= ~(0b1 << 11); // 8-bits format (DFF='0') by default.
-#ifdef HW2_0
-	SPI1 -> CR1 &= ~(0b11 << 0); // CPOL='0' and CPHA='0'.
-#endif
-	SPI1 -> CR2 &= 0xFFFFFF08;
-	SPI1 -> CR2 |= (0b1 << 2); // Enable output (SSOE='1').
+	// Master mode (MSTR='1').
+	// Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
+	// 8-bits format (DFF='0') by default.
+	// Enable output (SSOE='1').
+	SPI1 -> CR1 |= (0b1 << 2) | (0b001 << 3);
+	SPI1 -> CR2 |= (0b1 << 2);
 	// Enable peripheral.
 	SPI1 -> CR1 |= (0b1 << 6); // SPE='1'.
 }
@@ -70,41 +60,6 @@ void SPI1_set_clock_polarity(unsigned char polarity) {
 }
 #endif
 
-/* ENABLE SPI1 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void SPI1_enable(void) {
-	// Enable SPI1 peripheral.
-	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
-	SPI1 -> CR1 |= (0b1 << 6);
-	// Configure power enable pins.
-	GPIO_configure(&GPIO_RF_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
-#ifdef HW1_0
-	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
-#endif
-}
-
-/* DISABLE SPI1 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void SPI1_disable(void) {
-	// Disable power control pin.
-	GPIO_configure(&GPIO_RF_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#ifdef HW1_0
-	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-	// Disable SPI1 peripheral.
-	SPI1 -> CR1 &= ~(0b1 << 6);
-	// Clear all flags.
-	SPI1 -> SR &= 0xFFFFFEEF;
-	// Disable peripheral clock.
-	RCC -> APB2ENR &= ~(0b1 << 12); // SPI1EN='0'.
-}
-
 /* SWITCH ALL SPI1 SLAVES ON.
  * @param:			None.
  * @return status:	Function execution status.
@@ -113,64 +68,48 @@ SPI_status_t SPI1_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
-	// Turn SPI1 slaves on.
-	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-	lptim_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
-#ifdef HW1_0
-	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	lptim_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
-#endif
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI1_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_SX1232_CS, 1); // CS high (idle state).
-	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	// Turn SPI1 slaves on.
+	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0
-	GPIO_write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
+	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
+#endif
+	// Chip select high by default.
+	GPIO_write(&GPIO_SX1232_CS, 1);
+#ifdef HW1_0
+	GPIO_write(&GPIO_MAX11136_CS, 1);
 	// Add pull-up to EOC.
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 #endif
-	// Wait for power-on.
-	lptim_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
 
 /* SWITCH ALL SPI1 SLAVES OFF.
- * @param:			None.
- * @return status:	Function execution status.
+ * @param:	None.
+ * @return:	None.
  */
-SPI_status_t SPI1_power_off(void) {
-	// Local variables.
-	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+void SPI1_power_off(void) {
 	// Turn SPI1 slaves off.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
-	GPIO_write(&GPIO_SX1232_CS, 0); // CS low (to avoid powering slaves via SPI bus).
+	GPIO_write(&GPIO_SX1232_CS, 0);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
-	GPIO_write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
+	GPIO_write(&GPIO_MAX11136_CS, 0);
+	// Remove pull-up to EOC.
+	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 	// Disable SPI alternate function.
-	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI1_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-#ifdef HW1_0
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	// Remove pull-up to EOC.
-	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
-	// Wait for power-off.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
-errors:
-	return status;
+	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SPI1_MOSI, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* SEND A BYTE THROUGH SPI1.
@@ -315,50 +254,18 @@ void SPI2_init(void) {
 	RCC -> APB1ENR |= (0b1 << 14); // SPI2EN='1'.
 	// Configure power enable pins.
 	GPIO_configure(&GPIO_ADC_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
-	// Configure NSS, SCK, MISO and MOSI (first as high impedance).
-	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
+	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	SPI2_power_off();
 	// Configure peripheral.
-	SPI2 -> CR1 &= 0xFFFF0000; // Disable peripheral before configuration (SPE='0').
-	SPI2 -> CR1 |= (0b1 << 2); // Master mode (MSTR='1').
-	SPI2 -> CR1 |= (0b001 << 3); // Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
-	SPI2 -> CR1 |= (0b1 << 11); // 16-bits format (DFF='1').
-	SPI2 -> CR1 |= (0b11 << 0); // CPOL='1' and CPHA='1'.
-	SPI2 -> CR2 &= 0xFFFFFF08;
-	SPI2 -> CR2 |= (0b1 << 2); // Enable output (SSOE='1').
+	// Master mode (MSTR='1').
+	// Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
+	// 16-bits format (DFF='1').
+	// CPOL='1' and CPHA='1'.
+	// Enable output (SSOE='1').
+	SPI2 -> CR1 |= (0b1 << 2) | (0b001 << 3) | (0b1 << 11) | (0b11 << 0);
+	SPI2 -> CR2 |= (0b1 << 2);
 	// Enable peripheral.
 	SPI2 -> CR1 |= (0b1 << 6); // SPE='1'.
-}
-
-/* ENABLE SPI2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void SPI2_enable(void) {
-	// Enable SPI2 peripheral.
-	RCC -> APB1ENR |= (0b1 << 14); // SPI2EN='1'.
-	SPI2 -> CR1 |= (0b1 << 6);
-	// Configure power enable pins.
-	GPIO_configure(&GPIO_ADC_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
-}
-
-/* DISABLE SPI2 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void SPI2_disable(void) {
-	// Disable power control pin.
-	GPIO_configure(&GPIO_ADC_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	// Disable SPI2 peripheral.
-	SPI2 -> CR1 &= ~(0b1 << 6);
-	// Clear all flags.
-	SPI2 -> SR &= 0xFFFFFEEF;
-	// Disable peripheral clock.
-	RCC -> APB1ENR &= ~(0b1 << 14); // SPI2EN='0'.
 }
 
 /* SWITCH ALL SPI2 SLAVES ON.
@@ -369,45 +276,34 @@ SPI_status_t SPI2_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
-	// Turn MAX11136 on.
-	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
-	// Wait for power-on.
-	lptim_status = LPTIM1_delay_milliseconds(50, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_MAX11136_CS, 1); // CS high (idle state).
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-	// Wait for power-on.
+	// Turn MAX11136 on.
+	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
+	// Warm-up delay.
 	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
+	// Chip select high by default.
+	GPIO_write(&GPIO_MAX11136_CS, 1);
 errors:
 	return status;
 }
 
 /* SWITCH ALL SPI2 SLAVES OFF.
- * @param:			None.
- * @return status:	Function execution status.
+ * @param:	None.
+ * @return:	None.
  */
-SPI_status_t SPI2_power_off(void) {
-	// Local variables.
-	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+void SPI2_power_off(void) {
 	// Turn MAX11136 off.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
-	GPIO_write(&GPIO_MAX11136_CS, 0); // CS low (to avoid powering slaves via SPI bus).
+	GPIO_write(&GPIO_MAX11136_CS, 0);
 	// Disable SPI alternate function.
-	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_DOWN);
-	// Wait for power-off.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
-errors:
-	return status;
+	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_SPI2_MISO, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* SEND A SHORT THROUGH SPI2.

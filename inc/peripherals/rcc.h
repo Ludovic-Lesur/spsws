@@ -39,8 +39,6 @@ typedef enum {
 /*** RCC functions ***/
 
 void RCC_init(void);
-void RCC_enable_gpio(void);
-void RCC_disable_gpio(void);
 RCC_status_t RCC_switch_to_hsi(void);
 RCC_status_t RCC_switch_to_hse(void);
 unsigned int RCC_get_sysclk_khz(void);

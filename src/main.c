@@ -10,6 +10,7 @@
 // Peripherals.
 #include "adc.h"
 #include "aes.h"
+#include "dma.h"
 #include "exti.h"
 #include "flash.h"
 #include "gpio.h"
@@ -213,8 +214,6 @@ static SPSWS_context_t spsws_ctx;
 static void SPSWS_clock_wake_up(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
-	// Enable TCXO power control.
-	RCC_enable_gpio();
 	// Turn HSE on.
 	rcc_status = RCC_switch_to_hse();
 	RCC_error_check();
@@ -240,8 +239,6 @@ static void SPSWS_clock_sleep(void) {
 	// Turn HSE off.
 	rcc_status = RCC_switch_to_hsi();
 	RCC_error_check();
-	// Disable TCXO power control.
-	RCC_disable_gpio();
 }
 #endif
 
@@ -261,12 +258,12 @@ static void SPSWS_init_hw(void) {
 	ERROR_stack_init();
 	// Init memory.
 	NVIC_init();
+	NVM_init();
 	// Init GPIOs.
 	GPIO_init(); // Required for clock tree configuration.
 	EXTI_init(); // Required to clear RTC flags (EXTI 17).
 	// Init clock and power modules.
 	RCC_init();
-	RCC_enable_gpio();
 	PWR_init();
 	// Reset RTC.
 	RTC_reset();
@@ -299,7 +296,9 @@ static void SPSWS_init_hw(void) {
 		spsws_ctx.status.field.lse_status = 0;
 	}
 	IWDG_reload();
-	// Timers.
+	// Internal.
+	AES_init();
+	DMA1_init_channel6();
 	LPTIM1_init(spsws_ctx.lsi_frequency_hz);
 	// Analog.
 	adc_status = ADC1_init();
@@ -345,10 +344,8 @@ static void SPSWS_init_context(void) {
 	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	spsws_ctx.status.field.station_mode = SPSWS_MODE;
 	// Read status byte.
-	NVM_enable();
 	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
 	NVM_error_check();
-	NVM_disable();
 	// Set Sigfox RC.
 	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
 	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
@@ -368,7 +365,6 @@ static void SPSWS_update_time_flags(void) {
 	// Retrieve current timestamp from RTC.
 	RTC_get_timestamp(&spsws_ctx.current_timestamp);
 	// Retrieve previous wake-up timestamp from NVM.
-	NVM_enable();
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), &nvm_byte);
 	NVM_error_check();
 	spsws_ctx.previous_wake_up_timestamp.year = (nvm_byte << 8);
@@ -381,7 +377,6 @@ static void SPSWS_update_time_flags(void) {
 	NVM_error_check();
 	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_timestamp.hours);
 	NVM_error_check();
-	NVM_disable();
 	// Check timestamp are differents (avoiding false wake-up due to RTC recalibration).
 	if ((spsws_ctx.current_timestamp.year != spsws_ctx.previous_wake_up_timestamp.year) ||
 		(spsws_ctx.current_timestamp.month != spsws_ctx.previous_wake_up_timestamp.month) ||
@@ -420,7 +415,6 @@ static void SPSWS_update_pwut(void) {
 	// Retrieve current timestamp from RTC.
 	RTC_get_timestamp(&spsws_ctx.current_timestamp);
 	// Update previous wake-up timestamp.
-	NVM_enable();
 	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_timestamp.year & 0xFF00) >> 8));
 	NVM_error_check();
 	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_timestamp.year & 0x00FF) >> 0));
@@ -431,7 +425,6 @@ static void SPSWS_update_pwut(void) {
 	NVM_error_check();
 	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_timestamp.hours);
 	NVM_error_check();
-	NVM_disable();
 }
 #endif
 
@@ -477,7 +470,7 @@ int main (void) {
 			// Update flags.
 			SPSWS_update_time_flags();
 			// Check flag.
-			if (spsws_ctx.flags.hour_changed == 0) {
+			if ((spsws_ctx.flags.hour_changed == 0) && (spsws_ctx.flags.por == 0)) {
 				// False detection due to RTC recalibration.
 				spsws_ctx.state = SPSWS_STATE_OFF;
 			}
@@ -500,9 +493,9 @@ int main (void) {
 					spsws_ctx.flags.is_afternoon = 0;
 				}
 				spsws_ctx.flags.hour_changed = 0; // Reset flag.
+				// Next state.
+				spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_SW_VERSION : SPSWS_STATE_MEASURE;
 			}
-			// Next state.
-			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_SW_VERSION : SPSWS_STATE_MEASURE;
 			break;
 		case SPSWS_STATE_SW_VERSION:
 			IWDG_reload();
@@ -541,8 +534,7 @@ int main (void) {
 			LPUART1_error_check();
 			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
 			NEOM8N_error_check();
-			lpuart_status = LPUART1_power_off();
-			LPUART1_error_check();
+			LPUART1_power_off();
 			// Calibrate RTC if timestamp is available.
 			if (neom8n_status == NEOM8N_SUCCESS) {
 				// Update RTC registers.
@@ -562,10 +554,8 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			IWDG_reload();
 			// Retrieve internal ADC data.
-			ADC1_enable();
 			adc_status = ADC1_perform_measurements();
 			ADC1_error_check();
-			ADC1_disable();
 			// Check status.
 			if (adc_status == ADC_SUCCESS) {
 				// Read data.
@@ -597,12 +587,10 @@ int main (void) {
 			max11136_status = MAX11136_perform_measurements();
 			MAX11136_error_check();
 #ifdef HW1_0
-			spi_status = SPI1_power_off();
-			SPI1_error_check();
+			SPI1_power_off();
 #endif
 #ifdef HW2_0
-			spi_status = SPI2_power_off();
-			SPI2_error_check();
+			SPI2_power_off();
 #endif
 			// Check status.
 			if (max11136_status == MAX11136_SUCCESS) {
@@ -684,8 +672,7 @@ int main (void) {
 			si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
 			SI1133_error_check();
 			// Turn sensors off.
-			i2c_status = I2C1_power_off();
-			I2C1_error_check();
+			I2C1_power_off();
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
@@ -767,8 +754,7 @@ int main (void) {
 			LPUART1_error_check();
 			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &spsws_ctx.geoloc_fix_duration_seconds);
 			NEOM8N_error_check();
-			lpuart_status = LPUART1_power_off();
-			LPUART1_error_check();
+			LPUART1_power_off();
 			// Update flag whatever the result.
 			spsws_ctx.status.field.daily_geoloc = 1;
 			// Parse result.
@@ -816,35 +802,23 @@ int main (void) {
 			SPSWS_clock_sleep();
 			// Clear POR flag.
 			spsws_ctx.flags.por = 0;
-			// Turn peripherals off.
-			//SX1232_disable();
-			//SKY13317_disable();
-			//MAX11136_disable();
-#ifdef HW2_0
-			//SPI2_disable();
-#endif
-			//TIM2_disable();
-			//LPTIM1_disable();
-			//SPI1_disable();
-			//LPUART1_disable();
-			//I2C1_disable();
 			// Store status byte in NVM.
-			NVM_enable();
 			nvm_status = NVM_write_byte(NVM_ADDRESS_STATUS, spsws_ctx.status.raw_byte);
 			NVM_error_check();
-			NVM_disable();
 #ifdef CM
 			// Re-start continuous measurements.
 			WIND_reset_data();
 			RAIN_reset_data();
 			WIND_start_continuous_measure();
 			RAIN_start_continuous_measure();
+			NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
 #endif
 			// Clear RTC flags.
 			RTC_clear_alarm_a_flag();
 			RTC_clear_alarm_b_flag();
 			RTC_enable_alarm_a_interrupt();
 			RTC_enable_alarm_b_interrupt();
+			NVIC_enable_interrupt(NVIC_IT_RTC);
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_SLEEP;
 			break;
@@ -867,10 +841,12 @@ int main (void) {
 				// Stop continuous measurements.
 				WIND_stop_continuous_measure();
 				RAIN_stop_continuous_measure();
+				NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
 #endif
 				// Disable RTC alarm interrupts.
 				RTC_disable_alarm_a_interrupt();
 				RTC_disable_alarm_b_interrupt();
+				NVIC_disable_interrupt(NVIC_IT_RTC);
 				// Clear RTC flags.
 				RTC_clear_alarm_a_flag();
 				// Wake-up.
@@ -897,6 +873,9 @@ int main (void) {
 int main (void) {
 	SPSWS_init_context();
 	SPSWS_init_hw();
+	// Turn RF TCXO on.
+	sx1232_status = SX1232_tcxo(1);
+	SX1232_error_check();
 	// Init AT command layer.
 	AT_init();
 	// Main loop.

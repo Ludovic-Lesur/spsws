@@ -129,9 +129,9 @@ void USART2_init(void) {
 	// Enable peripheral.
 	USART2 -> CR1 |= (0b11 << 0);
 #else
-	// Configure TX and RX GPIOs.
-	GPIO_configure(&GPIO_USART2_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_USART2_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	// Configure TX and RX GPIOs as output low.
+	GPIO_configure(&GPIO_USART2_TX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_USART2_RX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #endif
 }
 #endif
@@ -161,9 +161,39 @@ void USART1_init(void) {
 	// Enable peripheral.
 	USART1 -> CR1 |= (0b11 << 0);
 #else
-	// Configure TX and RX GPIOs.
-	GPIO_configure(&GPIO_USART1_TX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_USART1_RX, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	// Configure TX and RX GPIOs as output low.
+	GPIO_configure(&GPIO_USART1_TX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_USART1_RX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
+}
+#endif
+
+#ifdef ATM
+/* ENABLE USART INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void USARTx_enable_interrupt(void) {
+#ifdef HW1_0
+	NVIC_enable_interrupt(NVIC_IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_enable_interrupt(NVIC_IT_USART1);
+#endif
+}
+#endif
+
+#ifdef ATM
+/* DISABLE USART INTERRUPT.
+ * @param:	None.
+ * @return:	None.
+ */
+void USARTx_disable_interrupt(void) {
+#ifdef HW1_0
+	NVIC_disable_interrupt(NVIC_IT_USART2);
+#endif
+#ifdef HW2_0
+	NVIC_disable_interrupt(NVIC_IT_USART1);
 #endif
 }
 #endif
@@ -178,12 +208,7 @@ USART_status_t USARTx_send_string(char* tx_string) {
 	USART_status_t status = USART_SUCCESS;
 	unsigned int char_count = 0;
 	// Disable interrupt.
-#ifdef HW1_0
-	NVIC_disable_interrupt(NVIC_IT_USART2);
-#endif
-#ifdef HW2_0
-	NVIC_disable_interrupt(NVIC_IT_USART1);
-#endif
+	USARTx_disable_interrupt();
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
@@ -197,12 +222,7 @@ USART_status_t USARTx_send_string(char* tx_string) {
 		}
 	}
 	// Enable interrupt.
-#ifdef HW1_0
-	NVIC_enable_interrupt(NVIC_IT_USART2);
-#endif
-#ifdef HW2_0
-	NVIC_enable_interrupt(NVIC_IT_USART1);
-#endif
+	USARTx_enable_interrupt();
 	return status;
 }
 #endif

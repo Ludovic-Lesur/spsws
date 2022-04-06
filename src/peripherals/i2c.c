@@ -48,36 +48,13 @@ void I2C1_init(void) {
 	RCC -> APB1ENR |= (0b1 << 21); // I2C1EN='1'.
 	// Configure power enable pin.
 	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
-	// Configure SCL and SDA (first as high impedance).
-	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	I2C1_power_off();
 	// Configure peripheral.
-	I2C1 -> CR1 &= ~(0b1 << 0); // Disable peripheral before configuration (PE='0').
-	I2C1 -> CR1 &= ~(0b11111 << 8); // Analog filter enabled (ANFOFF='0') and digital filter disabled (DNF='0000').
-	I2C1 -> TIMINGR = 0; // Reset all bits.
-	I2C1 -> TIMINGR |= (7 << 28); // I2CCLK = PCLK1/(PRESC+1) = SYSCLK/(PRESC+1) = 2MHz (HSI) (PRESC='1000').
-	I2C1 -> TIMINGR |= (99 << 8) + 99; // Set SCL frequency to 10kHz. See p.641 of RM0377 datasheet.
-	I2C1 -> CR1 &= ~(0b1 << 17); // Must be kept cleared in master mode (NOSTRETCH='0').
-	I2C1 -> CR2 &= ~(0b1 << 11); // 7-bits addressing mode (ADD10='0').
-	I2C1 -> CR2 &= ~(0b11 << 24); // AUTOEND='0' and RELOAD='0'.
+	// I2CCLK = PCLK1/(PRESC+1) = SYSCLK/(PRESC+1) = 2MHz (HSI) (PRESC='1000').
+	// SCL frequency to 10kHz. See p.641 of RM0377 datasheet.
+	I2C1 -> TIMINGR |= (7 << 28) | (99 << 8) | (99 << 0);
 	// Enable peripheral.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
-}
-
-/* DISABLE I2C PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void I2C1_disable(void) {
-	// Disable power control pin.
-	GPIO_configure(&GPIO_SENSORS_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	// Disable I2C1 peripheral.
-	I2C1 -> CR1 &= ~(0b1 << 0);
-	// Clear all flags.
-	I2C1 -> ICR |= 0x00003F38;
-	// Disable peripheral clock.
-	RCC -> APB1ENR &= ~(0b1 << 21); // I2C1EN='0'.
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
@@ -93,6 +70,7 @@ I2C_status_t I2C1_power_on(void) {
 	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Turn sensors and pull-up resistors on.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
+	// Warm-up delay.
 	lptim_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 errors:
@@ -100,23 +78,15 @@ errors:
 }
 
 /* SWITCH ALL I2C1 SLAVES ON.
- * @param:			None.
- * @return status:	Function execution status.
+ * @param:	None.
+ * @return:	None.
  */
-I2C_status_t I2C1_power_off(void) {
-	// Local variables.
-	I2C_status_t status = I2C_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+void I2C1_power_off(void) {
 	// Turn sensors and pull-up resistors off.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
 	// Disable I2C alternate function.
-	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	// Delay required if another cycle is requested by applicative layer.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
-	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
-errors:
-	return status;
+	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /* WRITE DATA ON I2C1 BUS (see algorithme on p.607 of RM0377 datasheet).

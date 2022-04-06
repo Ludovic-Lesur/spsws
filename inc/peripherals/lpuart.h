@@ -23,12 +23,11 @@ typedef enum {
 
 /*** LPUART functions ***/
 
-void LPUART1_init(unsigned char lpuart_use_lse);
-LPUART_status_t LPUART1_enable_tx(void);
+LPUART_status_t LPUART1_init(unsigned char lpuart_use_lse);
 LPUART_status_t LPUART1_enable_rx(void);
-void LPUART1_disable(void);
+void LPUART1_disable_rx(void);
 LPUART_status_t LPUART1_power_on(void);
-LPUART_status_t LPUART1_power_off(void);
+void LPUART1_power_off(void);
 LPUART_status_t LPUART1_send_byte(unsigned char tx_byte);
 
 #define LPUART1_status_check(error_base) { if (lpuart_status != LPUART_SUCCESS) { status = error_base + lpuart_status; goto errors; }}

@@ -87,48 +87,19 @@ errors:
  * @return:				None.
  */
 void LPTIM1_init(unsigned int lsi_freq_hz) {
-	// Disable peripheral.
-	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
-	// Enable peripheral clock.
+	// Configure clock source.
 	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
 	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
 	lptim_clock_frequency_hz = (lsi_freq_hz >> 5);
+	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
 	// Configure peripheral.
-	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
-	LPTIM1 -> CFGR &= ~(0b1 << 0);
 	LPTIM1 -> CFGR |= (0b101 << 9); // Prescaler = 32.
-	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
 	// Enable LPTIM EXTI line.
 	LPTIM1 -> IER |= (0b1 << 1); // ARRMIE='1'.
 	EXTI_configure_line(EXTI_LINE_LPTIM1, EXTI_TRIGGER_RISING_EDGE);
 	// Set interrupt priority.
 	NVIC_set_priority(NVIC_IT_LPTIM1, 2);
-	// Clear all flags.
-	LPTIM1 -> ICR |= (0b1111111 << 0);
-}
-
-/* ENABLE LPTIM1 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void LPTIM1_enable(void) {
-	// Enable timer clock.
-	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
-}
-
-/* DISABLE LPTIM1 PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void LPTIM1_disable(void) {
-	// Disable timer.
-	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-	LPTIM1 -> CNT &= 0xFFFF0000;
-	// Clear all flags.
-	LPTIM1 -> ICR |= (0b1111111 << 0);
-	// Disable peripheral clock.
-	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 }
 
 /* DELAY FUNCTION.
@@ -151,8 +122,9 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 	}
 	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-	// Reset counter.
+	// Reset counter and flags.
 	LPTIM1 -> CNT &= 0xFFFF0000;
+	LPTIM1 -> ICR |= (0b1111111 << 0);
 	// Compute ARR value.
 	arr = ((delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
 	status = LPTIM1_write_arr(arr);
@@ -184,7 +156,7 @@ LPTIM_status_t LPTIM1_start(void) {
 	LPTIM_status_t status = LPTIM_SUCCESS;
 	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-	LPTIM1 -> CNT = 0;
+	LPTIM1 -> CNT &= 0xFFFF0000;
 	// Set ARR to maximum value (unused).
 	status = LPTIM1_write_arr(0xFFFF);
 	if (status != LPTIM_SUCCESS) goto errors;

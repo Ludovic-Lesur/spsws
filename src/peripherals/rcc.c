@@ -56,33 +56,16 @@ static void RCC_delay(void) {
  * @return:	None.
  */
 void RCC_init(void) {
-	// Prescalers (HCLK, PCLK1 and PCLK2 must not exceed 32MHz).
-	RCC -> CFGR &= ~(0b1111 << 4); // HCLK = SYSCLK = 16MHz (HPRE='0000').
-	RCC -> CFGR &= ~(0b111 << 8); // PCLK1 = HCLK = 16MHz (PPRE1='000').
-	RCC -> CFGR &= ~(0b111 << 11); // PCLK2 = HCLK = 16MHz (PPRE2='000').
-	// Peripherals clock source.
-	RCC -> CCIPR &= 0xFFF0C3F0; // All peripherals clocked via the corresponding APBx line.
-	// Reset clock is MSI 2.1MHz.
-	rcc_sysclk_khz = RCC_MSI_RESET_FREQUENCY_KHZ;
-}
-
-/* ENABLE TCXO CONTROL PIN.
- * @param:	None.
- * @return:	None.
- */
-void RCC_enable_gpio(void) {
+	// Default prescalers (HCLK, PCLK1 and PCLK2 must not exceed 32MHz).
+	// HCLK = SYSCLK = 16MHz (HPRE='0000').
+	// PCLK1 = HCLK = 16MHz (PPRE1='000').
+	// PCLK2 = HCLK = 16MHz (PPRE2='000').
+	// All peripherals clocked via the corresponding APBx line.
 	// Configure TCXO power control pin.
 	GPIO_configure(&GPIO_TCXO16_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 0);
-}
-
-/* DISABLE TCXO CONTROL PIN.
- * @param:	None.
- * @return:	None.
- */
-void RCC_disable_gpio(void) {
-	// Disable TCXO power control pin.
-	GPIO_configure(&GPIO_TCXO16_POWER_ENABLE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	// Reset clock is MSI 2.1MHz.
+	rcc_sysclk_khz = RCC_MSI_RESET_FREQUENCY_KHZ;
 }
 
 /* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16MHz INTERNAL RC).
@@ -242,7 +225,6 @@ RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 		TIM21_status_check(RCC_ERROR_BASE_TIM);
 		(*lsi_frequency_hz) = (((*lsi_frequency_hz) * sample_idx) + lsi_frequency_sample) / (sample_idx + 1);
 	}
-	TIM21_disable();
 	// Check value.
 	if (((*lsi_frequency_hz) < RCC_LSI_FREQUENCY_MIN_HZ) || ((*lsi_frequency_hz) > RCC_LSI_FREQUENCY_MAX_HZ)) {
 		// Set to default value if out of expected range

@@ -179,7 +179,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$RC=", "rc[dec]", "Set Sigfox radio configurationt", AT_set_rc_callback},
 #endif
 #ifdef AT_COMMANDS_TEST_MODES
-	{PARSER_MODE_HEADER,  "AT$TM=", "test_mode[dec]", "Execute Sigfox test mode", AT_tm_callback},
+	{PARSER_MODE_HEADER,  "AT$TM=", "rc_index[dec],test_mode[dec]", "Execute Sigfox test mode", AT_tm_callback},
 #endif
 };
 static AT_context_t at_ctx = {
@@ -365,7 +365,6 @@ static void AT_adc_callback(void) {
 		goto errors;
 	}
 	// Trigger internal ADC conversions.
-	ADC1_enable();
 	AT_response_add_string("ADC running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
@@ -384,7 +383,6 @@ static void AT_adc_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	ADC1_disable();
 	return;
 }
 
@@ -438,12 +436,10 @@ static void AT_max11136_callback(void) {
 	AT_response_send();
 errors:
 #ifdef HW1_0
-	spi_status = SPI1_power_off();
-	SPI1_error_check();
+	SPI1_power_off();
 #endif
 #ifdef HW2_0
-	spi_status = SPI2_power_off();
-	SPI2_error_check();
+	SPI2_power_off();
 #endif
 	return;
 }
@@ -483,8 +479,7 @@ static void AT_iths_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	i2c_status = I2C1_power_off();
-	I2C1_error_check();
+	I2C1_power_off();
 	return;
 }
 
@@ -523,8 +518,7 @@ static void AT_eths_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	i2c_status = I2C1_power_off();
-	I2C1_error_check();
+	I2C1_power_off();
 	return;
 }
 
@@ -563,8 +557,7 @@ static void AT_epts_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	i2c_status = I2C1_power_off();
-	I2C1_error_check();
+	I2C1_power_off();
 	return;
 }
 
@@ -598,8 +591,7 @@ static void AT_euvs_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	i2c_status = I2C1_power_off();
-	I2C1_error_check();
+	I2C1_power_off();
 	return;
 }
 
@@ -757,8 +749,7 @@ static void AT_time_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	lpuart_status = LPUART1_power_off();
-	LPUART1_error_check();
+	LPUART1_power_off();
 	return;
 }
 
@@ -819,8 +810,7 @@ static void AT_gps_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	lpuart_status = LPUART1_power_off();
-	LPUART1_error_check();
+	LPUART1_power_off();
 	return;
 }
 #endif
@@ -834,12 +824,10 @@ static void AT_nvmr_callback(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Reset all NVM field to default value.
-	NVM_enable();
 	nvm_status = NVM_reset_default();
 	NVM_error_check_print();
 	AT_print_ok();
 errors:
-	NVM_disable();
 	return;
 }
 
@@ -857,7 +845,6 @@ static void AT_nvm_callback(void) {
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &address);
 	PARSER_error_check_print();
 	// Read byte at requested address.
-	NVM_enable();
 	nvm_status = NVM_read_byte((unsigned short) address, &nvm_data);
 	NVM_error_check_print();
 	// Print data.
@@ -865,7 +852,6 @@ static void AT_nvm_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	NVM_disable();
 	return;
 }
 
@@ -879,7 +865,6 @@ static void AT_get_id_callback(void) {
 	unsigned char idx = 0;
 	unsigned char id_byte = 0;
 	// Retrieve device ID in NVM.
-	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), &id_byte);
 		NVM_error_check_print();
@@ -888,7 +873,6 @@ static void AT_get_id_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	NVM_disable();
 	return;
 }
 
@@ -907,14 +891,12 @@ static void AT_set_id_callback(void) {
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, ID_LENGTH, 1, device_id, &extracted_length);
 	PARSER_error_check_print();
 	// Write device ID in NVM.
-	NVM_enable();
 	for (idx=0 ; idx<ID_LENGTH ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_ID + ID_LENGTH - idx - 1), device_id[idx]);
 		NVM_error_check_print();
 	}
 	AT_print_ok();
 errors:
-	NVM_disable();
 	return;
 }
 
@@ -928,7 +910,6 @@ static void AT_get_key_callback(void) {
 	unsigned char idx = 0;
 	unsigned char key_byte = 0;
 	// Retrieve device key in NVM.
-	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), &key_byte);
 		NVM_error_check_print();
@@ -937,7 +918,6 @@ static void AT_get_key_callback(void) {
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
-	NVM_disable();
 	return;
 }
 
@@ -956,14 +936,12 @@ static void AT_set_key_callback(void) {
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, AT_CHAR_SEPARATOR, 1, AES_BLOCK_SIZE, 1, device_key, &extracted_length);
 	PARSER_error_check_print();
 	// Write device ID in NVM.
-	NVM_enable();
 	for (idx=0 ; idx<AES_BLOCK_SIZE ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_DEVICE_KEY + idx), device_key[idx]);
 		NVM_error_check_print();
 	}
 	AT_print_ok();
 errors:
-	NVM_disable();
 	return;
 }
 #endif
@@ -1455,12 +1433,7 @@ void AT_init(void) {
 	// Reset parser.
 	AT_reset_parser();
 	// Enable USART interrupt.
-#ifdef HW1_0
-	NVIC_enable_interrupt(NVIC_IT_USART2);
-#endif
-#ifdef HW2_0
-	NVIC_enable_interrupt(NVIC_IT_USART1);
-#endif
+	USARTx_enable_interrupt();
 }
 
 /* MAIN TASK OF AT COMMAND MANAGER.
@@ -1470,7 +1443,10 @@ void AT_init(void) {
 void AT_task(void) {
 	// Trigger decoding function if line end found.
 	if (at_ctx.line_end_flag) {
+		// Decode and execute command.
+		USARTx_disable_interrupt();
 		AT_decode();
+		USARTx_enable_interrupt();
 	}
 	// Check RTC flag for wind measurements.
 	if (RTC_get_alarm_b_flag() != 0) {

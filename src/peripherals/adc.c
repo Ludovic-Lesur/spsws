@@ -178,24 +178,6 @@ errors:
 	return status;
 }
 
-/* ENABLE INTERNAL ADC PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void ADC1_enable(void) {
-	// Disable peripheral clock.
-	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
-}
-
-/* DISABLE INTERNAL ADC PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void ADC1_disable(void) {
-	// Disable peripheral clock.
-	RCC -> APB2ENR &= ~(0b1 << 9); // ADCEN='0'.
-}
-
 /* PERFORM INTERNAL ADC MEASUREMENTS.
  * @param:			None.
  * @return status:	Function execution status.
@@ -229,9 +211,7 @@ errors:
 	// Switch internal voltage reference off.
 	ADC1 -> CCR &= ~(0b11 << 22); // TSEN='0' and VREFEF='0'.
 	// Disable ADC peripheral.
-	if (((ADC1 -> CR) & (0b1 << 0)) != 0) {
-		ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
-	}
+	ADC1 -> CR |= (0b1 << 1); // ADDIS='1'.
 	return status;
 }
 
@@ -246,10 +226,10 @@ ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
 	// Check index.
 	if (data_idx >= ADC_DATA_INDEX_LAST) {
 		status = ADC_ERROR_DATA_INDEX;
+		goto errors;
 	}
-	else {
-		(*data) = adc_ctx.data[data_idx];
-	}
+	(*data) = adc_ctx.data[data_idx];
+errors:
 	return status;
 }
 

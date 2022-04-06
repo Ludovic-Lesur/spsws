@@ -532,9 +532,6 @@ static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_
 	// See p.174 for NEOM8N message format.
 	char neom8n_cfg_msg[NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	unsigned char neom8n_cfg_msg_idx = 0;
-	// Enable LPUART transmitter.
-	lpuart_status = LPUART1_enable_tx();
-	LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 	// Send commands.
 	for (nmea_message_id_idx=0 ; nmea_message_id_idx<18 ; nmea_message_id_idx++) {
 		// Byte 7 = is the ID of the message to enable or disable.
@@ -570,7 +567,6 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	rtc_status = RTC_start_wakeup_timer(timeout_seconds);
 	RTC_status_check(NEOM8N_ERROR_BASE_RTC);
 	// Start DMA.
-	DMA1_init_channel6();
 	DMA1_stop_channel6();
 	neom8n_ctx.fill_buf1 = 1;
 	DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
@@ -582,10 +578,15 @@ errors:
 	return status;
 }
 
+/* STOP NMEA FRAME RECEPTION.
+ * @param:	None.
+ * @return:	None.
+ */
 static void NEOM8N_stop(void) {
 	// Stop DMA.
 	DMA1_stop_channel6();
-	DMA1_disable();
+	// Stop LPUART.
+	LPUART1_disable_rx();
 	// Stop wake-up timer.
 	RTC_stop_wakeup_timer();
 	RTC_clear_wakeup_timer_flag();

@@ -28,6 +28,8 @@ void USART2_init(void);
 void USART1_init(void);
 #endif
 #ifdef ATM
+void USARTx_enable_interrupt(void);
+void USARTx_disable_interrupt(void);
 USART_status_t USARTx_send_string(char* tx_string);
 #endif
 

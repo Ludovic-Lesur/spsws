@@ -23,10 +23,8 @@ typedef enum {
 /*** SPI functions ***/
 
 void SPI1_init(void);
-void SPI1_enable(void);
-void SPI1_disable(void);
 SPI_status_t SPI1_power_on(void);
-SPI_status_t SPI1_power_off(void);
+void SPI1_power_off(void);
 #ifdef HW1_0
 void SPI1_set_clock_polarity(unsigned char polarity);
 #endif
@@ -43,10 +41,8 @@ SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data);
 
 #ifdef HW2_0
 void SPI2_init(void);
-void SPI2_enable(void);
-void SPI2_disable(void);
 SPI_status_t SPI2_power_on(void);
-SPI_status_t SPI2_power_off(void);
+void SPI2_power_off(void);
 SPI_status_t SPI2_write_short(unsigned short tx_data);
 SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data);
 

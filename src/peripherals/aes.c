@@ -24,20 +24,7 @@ void AES_init(void) {
 	// Enable peripheral clock.
 	RCC -> AHBENR |= (0b1 << 24); // CRYPTOEN='1'.
 	// Configure peripheral.
-	AES -> CR &= 0xFFFFE000; // Disable peripheral.
-	AES -> CR |= (0b01 << 5); // CBC algorithme (CHMOD='01').
-	AES -> CR &= ~(0b11 << 1); // No swapping (DATATYPE='00').
-}
-
-/* DISABLE AES PERIPHERAL.
- * @param:	None.
- * @return:	None.
- */
-void AES_disable(void) {
-	// Clear all flags.
-	AES -> CR |= 0x00000180;
-	// Disable peripheral clock.
-	RCC -> AHBENR &= ~(0b1 << 24); // CRYPTOEN='0'.
+	AES -> CR |= (0b01 << 5); // CBC algorithm (CHMOD='01').
 }
 
 /* COMPUTE AES-128 CBC ALGORITHME WITH HARDWARE ACCELERATOR.
@@ -46,14 +33,12 @@ void AES_disable(void) {
  * @param key			AES key (128-bits value).
  * @return status:		Function execution status.
  */
-AES_status_t AES_encode_cbc(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]) {
+AES_status_t AES_encrypt(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]) {
 	// Local variables.
 	AES_status_t status = AES_SUCCESS;
 	unsigned char idx = 0;
 	unsigned int data_32bits = 0;
 	unsigned loop_count = 0;
-	// Configure operation.
-	AES -> CR &= ~(0b11 << 3); // MODE='00'.
 	// Fill key.
 	AES -> KEYR3 = (key[0] << 24) | (key[1] << 16) | (key[2] << 8) | (key[3] << 0);
 	AES -> KEYR2 = (key[4] << 24) | (key[5] << 16) | (key[6] << 8) | (key[7] << 0);
