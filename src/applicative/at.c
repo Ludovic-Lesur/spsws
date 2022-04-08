@@ -47,7 +47,6 @@
 #define AT_COMMANDS_GPS
 #define AT_COMMANDS_NVM
 #define AT_COMMANDS_SIGFOX
-#define AT_COMMANDS_CW_RSSI
 #define AT_COMMANDS_RC
 #define AT_COMMANDS_TEST_MODES
 // Common macros.
@@ -96,16 +95,15 @@ static void AT_so_callback(void);
 static void AT_sb_callback(void);
 static void AT_sf_callback(void);
 #endif
-#ifdef AT_COMMANDS_CW_RSSI
-static void AT_cw_callback(void);
-static void AT_rssi_callback(void);
-#endif
 #ifdef AT_COMMANDS_RC
 static void AT_get_rc_callback(void);
 static void AT_set_rc_callback(void);
 #endif
 #ifdef AT_COMMANDS_TEST_MODES
 static void AT_tm_callback(void);
+static void AT_cw_callback(void);
+static void AT_dl_callback(void);
+static void AT_rssi_callback(void);
 #endif
 
 /*** AT local structures ***/
@@ -170,16 +168,15 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$SB=", "data[bit],(bidir_flag[bit])", "Sigfox send bit", AT_sb_callback},
 	{PARSER_MODE_HEADER,  "AT$SF=", "data[hex],(bidir_flag[bit])", "Sigfox send frame", AT_sf_callback},
 #endif
-#ifdef AT_COMMANDS_CW_RSSI
-	{PARSER_MODE_HEADER,  "AT$CW=", "frequency[hz],enable[bit],(output_power[dbm])", "Start or stop continuous radio transmission", AT_cw_callback},
-	{PARSER_MODE_HEADER,  "AT$RSSI=", "frequency[hz],duration[s]", "Start or stop continuous RSSI measurement", AT_rssi_callback},
-#endif
 #ifdef AT_COMMANDS_RC
 	{PARSER_MODE_COMMAND, "AT$RC?", "\0", "Get Sigfox radio configuration", AT_get_rc_callback},
 	{PARSER_MODE_HEADER,  "AT$RC=", "rc[dec]", "Set Sigfox radio configurationt", AT_set_rc_callback},
 #endif
 #ifdef AT_COMMANDS_TEST_MODES
 	{PARSER_MODE_HEADER,  "AT$TM=", "rc_index[dec],test_mode[dec]", "Execute Sigfox test mode", AT_tm_callback},
+	{PARSER_MODE_HEADER,  "AT$CW=", "frequency[hz],enable[bit],(output_power[dbm])", "Start or stop continuous radio transmission", AT_cw_callback},
+	{PARSER_MODE_HEADER,  "AT$DL=", "frequency[hz]", "Continuous downlink frames decoding", AT_dl_callback},
+	{PARSER_MODE_HEADER,  "AT$RSSI=", "frequency[hz],duration[s]", "Start or stop continuous RSSI measurement", AT_rssi_callback},
 #endif
 };
 static AT_context_t at_ctx = {
@@ -612,8 +609,6 @@ static void AT_wind_callback(void) {
 	PARSER_error_check_print();
 	// Start or stop wind continuous measurements.
 	if (enable == 0) {
-		RTC_disable_alarm_b_interrupt();
-		RTC_clear_alarm_b_flag();
 		WIND_stop_continuous_measure();
 		// Update flag.
 		at_ctx.wind_measurement_flag = 0;
@@ -624,13 +619,14 @@ static void AT_wind_callback(void) {
 		AT_response_add_string("m/h PeakSpeed=");
 		AT_response_add_value((int) wind_speed_peak, STRING_FORMAT_DECIMAL, 0);
 		// Get direction.
+		AT_response_add_string("m/h AverageDirection=");
 		wind_status = WIND_get_direction(&wind_direction);
+
 		if (wind_status == (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED)) {
-			AT_response_add_string("m/h AverageDirection=N/A");
+			AT_response_add_string("N/A");
 		}
 		else {
 			WIND_error_check_print();
-			AT_response_add_string("m/h AverageDirection=");
 			AT_response_add_value((int) wind_direction, STRING_FORMAT_DECIMAL, 0);
 			AT_response_add_string("d");
 		}
@@ -641,7 +637,6 @@ static void AT_wind_callback(void) {
 	}
 	else {
 		WIND_start_continuous_measure();
-		RTC_enable_alarm_b_interrupt();
 		// Update flag.
 		at_ctx.wind_measurement_flag = 1;
 		AT_print_ok();
@@ -954,7 +949,7 @@ errors:
 static void AT_print_dl_payload(sfx_u8* dl_payload) {
 	AT_response_add_string("+RX=");
 	unsigned char idx = 0;
-	for (idx=0 ; idx<8 ; idx++) {
+	for (idx=0 ; idx<SIGFOX_DOWNLINK_DATA_SIZE_BYTES ; idx++) {
 		AT_response_add_value(dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
 	}
 	AT_response_add_string(AT_RESPONSE_END);
@@ -1108,125 +1103,6 @@ errors:
 }
 #endif
 
-#ifdef AT_COMMANDS_CW_RSSI
-/* AT$CW EXECUTION CALLBACK.
- * @param:	None.
- * @return:	None.
- */
-static void AT_cw_callback(void) {
-	// Local variables.
-	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
-	int enable = 0;
-	int frequency_hz = 0;
-	int power_dbm = 0;
-	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag != 0) {
-		AT_print_status(ERROR_BUSY);
-		goto errors;
-	}
-	// Read frequency parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
-	PARSER_error_check_print();
-	// First try with 3 parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
-	if (parser_status == PARSER_SUCCESS) {
-		// There is a third parameter, try to parse power.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
-		PARSER_error_check_print();
-		// CW with given output power.
-		SIGFOX_API_stop_continuous_transmission();
-		if (enable != 0) {
-			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
-			SIGFOX_API_error_check_print();
-			sx1232_status = SX1232_set_rf_output_power((unsigned char) power_dbm);
-			SX1232_error_check_print();
-		}
-	}
-	else {
-		// Power is not given, try to parse enable as last parameter.
-		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
-		PARSER_error_check_print();
-		// CW with last output power.
-		SIGFOX_API_stop_continuous_transmission();
-		if (enable != 0) {
-			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
-			SIGFOX_API_error_check_print();
-		}
-	}
-	AT_print_ok();
-	return;
-errors:
-	sigfox_api_status = SIGFOX_API_stop_continuous_transmission();
-	SIGFOX_API_error_check();
-	return;
-}
-
-/* AT$RSSI EXECUTION CALLBACK.
- * @param:	None.
- * @return:	None.
- */
-static void AT_rssi_callback(void) {
-	// Local variables.
-	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
-	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
-	int frequency_hz = 0;
-	int duration_s = 0;
-	signed short rssi_dbm = 0;
-	unsigned int report_loop = 0;
-	// Check if wind measurement is not running.
-	if (at_ctx.wind_measurement_flag != 0) {
-		AT_print_status(ERROR_BUSY);
-		goto errors;
-	}
-	// Read frequency parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
-	PARSER_error_check_print();
-	// Read duration parameters.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
-	PARSER_error_check_print();
-	// Init radio.
-	sigfox_api_status = RF_API_init(SFX_RF_MODE_RX);
-	SIGFOX_API_error_check_print();
-	sigfox_api_status = RF_API_change_frequency((sfx_u32) frequency_hz);
-	SIGFOX_API_error_check_print();
-	// Start continuous listening.
-	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
-	SX1232_error_check_print();
-	// Wait TS_FS=60us typical.
-	lptim_status = LPTIM1_delay_milliseconds(5, 0);
-	LPTIM1_error_check_print();
-	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
-	SX1232_error_check_print();
-	// Wait TS_TR=120us typical.
-	lptim_status = LPTIM1_delay_milliseconds(5, 0);
-	LPTIM1_error_check_print();
-	// Measurement loop.
-	while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
-		// Read RSSI.
-		sx1232_status = SX1232_get_rssi(&rssi_dbm);
-		SX1232_error_check_print();
-		// Print RSSI.
-		AT_response_add_string("RSSI=");
-		AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
-		AT_response_add_string("dBm\n");
-		AT_response_send();
-		// Report delay.
-		lptim_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
-		LPTIM1_error_check_print();
-		report_loop++;
-	}
-	AT_print_ok();
-errors:
-	sigfox_api_status = RF_API_stop();
-	SIGFOX_API_error_check();
-	return;
-}
-#endif
-
 #ifdef AT_COMMANDS_RC
 /* AT$RC? EXECUTION CALLBACK.
  * @param:	None.
@@ -1336,6 +1212,23 @@ errors:
 #endif
 
 #ifdef AT_COMMANDS_TEST_MODES
+/* PRINT SIGFOX DOWNLINK FRAME ON AT INTERFACE.
+ * @param dl_payload:	Downlink data to print.
+ * @return:				None.
+ */
+static void AT_print_dl_phy_content(sfx_u8* dl_phy_content, int rssi_dbm) {
+	AT_response_add_string("+DL_PHY=");
+	unsigned char idx = 0;
+	for (idx=0 ; idx<SIGFOX_DOWNLINK_PHY_SIZE_BYTES ; idx++) {
+		AT_response_add_value(dl_phy_content[idx], STRING_FORMAT_HEXADECIMAL, 0);
+	}
+	AT_response_add_string(" RSSI=");
+	AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_string("dBm");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+}
+
 /* AT$TM EXECUTION CALLBACK.
  * @param:	None.
  * @return:	None.
@@ -1365,6 +1258,170 @@ static void AT_tm_callback(void) {
 	SIGFOX_API_error_check_print();
 	AT_print_ok();
 errors:
+	return;
+}
+
+/* AT$CW EXECUTION CALLBACK.
+ * @param:	None.
+ * @return:	None.
+ */
+static void AT_cw_callback(void) {
+	// Local variables.
+	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
+	int enable = 0;
+	int frequency_hz = 0;
+	int power_dbm = 0;
+	// Check if wind measurement is not running.
+	if (at_ctx.wind_measurement_flag != 0) {
+		AT_print_status(ERROR_BUSY);
+		goto errors;
+	}
+	// Read frequency parameter.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+	PARSER_error_check_print();
+	// First try with 3 parameters.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 0, &enable);
+	if (parser_status == PARSER_SUCCESS) {
+		// There is a third parameter, try to parse power.
+		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &power_dbm);
+		PARSER_error_check_print();
+		// CW with given output power.
+		SIGFOX_API_stop_continuous_transmission();
+		if (enable != 0) {
+			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
+			SIGFOX_API_error_check_print();
+			sx1232_status = SX1232_set_rf_output_power((unsigned char) power_dbm);
+			SX1232_error_check_print();
+		}
+	}
+	else {
+		// Power is not given, try to parse enable as last parameter.
+		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, AT_CHAR_SEPARATOR, 1, &enable);
+		PARSER_error_check_print();
+		// CW with last output power.
+		SIGFOX_API_stop_continuous_transmission();
+		if (enable != 0) {
+			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
+			SIGFOX_API_error_check_print();
+		}
+	}
+	AT_print_ok();
+	return;
+errors:
+	sigfox_api_status = SIGFOX_API_stop_continuous_transmission();
+	SIGFOX_API_error_check();
+	return;
+}
+
+/* AT$DL EXECUTION CALLBACK.
+ * @param:	None.
+ * @return:	None.
+ */
+static void AT_dl_callback(void) {
+	// Local variables.
+	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
+	sfx_u8 dl_phy_content[SIGFOX_DOWNLINK_PHY_SIZE_BYTES];
+	sfx_s16 rssi_dbm = 0;
+	sfx_rx_state_enum_t dl_status = DL_PASSED;
+	int frequency_hz = 0;
+	// Check if wind measurement is not running.
+	if (at_ctx.wind_measurement_flag != 0) {
+		AT_print_status(ERROR_BUSY);
+		goto errors;
+	}
+	// Read frequency parameter.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &frequency_hz);
+	PARSER_error_check_print();
+	// Start radio.
+	sigfox_api_status = RF_API_init(SFX_RF_MODE_RX);
+	SIGFOX_API_error_check_print();
+	sigfox_api_status = RF_API_change_frequency(frequency_hz);
+	SIGFOX_API_error_check_print();
+	AT_response_add_string("RX GFSK running...");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
+	while (dl_status == DL_PASSED) {
+		sigfox_api_status = RF_API_wait_frame(dl_phy_content, &rssi_dbm, &dl_status);
+		SIGFOX_API_error_check_print();
+		// Check result.
+		if (dl_status == DL_PASSED) {
+			AT_print_dl_phy_content(dl_phy_content, rssi_dbm);
+		}
+		else {
+			AT_response_add_string("RX timeout");
+			AT_response_add_string(AT_RESPONSE_END);
+			AT_response_send();
+		}
+	}
+errors:
+	sigfox_api_status = RF_API_stop();
+	SIGFOX_API_error_check();
+	return;
+}
+
+/* AT$RSSI EXECUTION CALLBACK.
+ * @param:	None.
+ * @return:	None.
+ */
+static void AT_rssi_callback(void) {
+	// Local variables.
+	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
+	int frequency_hz = 0;
+	int duration_s = 0;
+	signed short rssi_dbm = 0;
+	unsigned int report_loop = 0;
+	// Check if wind measurement is not running.
+	if (at_ctx.wind_measurement_flag != 0) {
+		AT_print_status(ERROR_BUSY);
+		goto errors;
+	}
+	// Read frequency parameter.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 0, &frequency_hz);
+	PARSER_error_check_print();
+	// Read duration parameters.
+	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &duration_s);
+	PARSER_error_check_print();
+	// Init radio.
+	sigfox_api_status = RF_API_init(SFX_RF_MODE_RX);
+	SIGFOX_API_error_check_print();
+	sigfox_api_status = RF_API_change_frequency((sfx_u32) frequency_hz);
+	SIGFOX_API_error_check_print();
+	// Start continuous listening.
+	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
+	SX1232_error_check_print();
+	// Wait TS_FS=60us typical.
+	lptim_status = LPTIM1_delay_milliseconds(5, 0);
+	LPTIM1_error_check_print();
+	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
+	SX1232_error_check_print();
+	// Wait TS_TR=120us typical.
+	lptim_status = LPTIM1_delay_milliseconds(5, 0);
+	LPTIM1_error_check_print();
+	// Measurement loop.
+	while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
+		// Read RSSI.
+		sx1232_status = SX1232_get_rssi(&rssi_dbm);
+		SX1232_error_check_print();
+		// Print RSSI.
+		AT_response_add_string("RSSI=");
+		AT_response_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+		AT_response_add_string("dBm\n");
+		AT_response_send();
+		// Report delay.
+		lptim_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
+		LPTIM1_error_check_print();
+		report_loop++;
+	}
+	AT_print_ok();
+errors:
+	sigfox_api_status = RF_API_stop();
+	SIGFOX_API_error_check();
 	return;
 }
 #endif
@@ -1449,10 +1506,9 @@ void AT_task(void) {
 		USARTx_enable_interrupt();
 	}
 	// Check RTC flag for wind measurements.
-	if (RTC_get_alarm_b_flag() != 0) {
+	if ((at_ctx.wind_measurement_flag != 0) && (RTC_get_alarm_b_flag() != 0)) {
 		// Call WIND callback.
 		WIND_measurement_period_callback();
-		RTC_clear_alarm_b_flag();
 	}
 }
 

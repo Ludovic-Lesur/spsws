@@ -12,6 +12,7 @@
 #include "lptim.h"
 #include "lpuart.h"
 #include "mode.h"
+#include "nvic.h"
 #include "pwr.h"
 #include "rcc.h"
 #include "rtc.h"
@@ -561,7 +562,6 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	// Start RTC wake-up timer.
 	RTC_clear_wakeup_timer_flag();
 	rtc_status = RTC_start_wakeup_timer(timeout_seconds);
@@ -572,8 +572,7 @@ static NEOM8N_status_t NEOM8N_start(unsigned int timeout_seconds) {
 	DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	DMA1_start_channel6();
 	// Start LPUART.
-	lpuart_status = LPUART1_enable_rx();
-	LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
+	NVIC_enable_interrupt(NVIC_IT_LPUART1);
 errors:
 	return status;
 }
@@ -586,7 +585,7 @@ static void NEOM8N_stop(void) {
 	// Stop DMA.
 	DMA1_stop_channel6();
 	// Stop LPUART.
-	LPUART1_disable_rx();
+	NVIC_disable_interrupt(NVIC_IT_LPUART1);
 	// Stop wake-up timer.
 	RTC_stop_wakeup_timer();
 	RTC_clear_wakeup_timer_flag();

@@ -818,7 +818,6 @@ int main (void) {
 			RTC_clear_alarm_b_flag();
 			RTC_enable_alarm_a_interrupt();
 			RTC_enable_alarm_b_interrupt();
-			NVIC_enable_interrupt(NVIC_IT_RTC);
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_SLEEP;
 			break;
@@ -846,7 +845,6 @@ int main (void) {
 				// Disable RTC alarm interrupts.
 				RTC_disable_alarm_a_interrupt();
 				RTC_disable_alarm_b_interrupt();
-				NVIC_disable_interrupt(NVIC_IT_RTC);
 				// Clear RTC flags.
 				RTC_clear_alarm_a_flag();
 				// Wake-up.
@@ -871,19 +869,28 @@ int main (void) {
  * @return: 0.
  */
 int main (void) {
+	// Local variables.
+	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	// Init board.
 	SPSWS_init_context();
 	SPSWS_init_hw();
 	// Turn RF TCXO on.
 	sx1232_status = SX1232_tcxo(1);
 	SX1232_error_check();
+	// Enable alarm interrupt to wake-up every seconds to clear watchdog.
+	RTC_clear_alarm_b_flag();
+	RTC_enable_alarm_b_interrupt();
 	// Init AT command layer.
 	AT_init();
 	// Main loop.
 	while (1) {
 		// Enter sleep mode.
 		PWR_enter_sleep_mode();
-		// Wake-up: perform AT command parsing.
+		// Perform AT command parsing.
 		AT_task();
+		// Clear flag and watchdog.
+		RTC_clear_alarm_b_flag();
+		IWDG_reload();
 	}
 	return 0;
 }

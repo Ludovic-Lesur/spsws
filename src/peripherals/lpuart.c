@@ -49,14 +49,12 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 
 /* CONFIGURE LPUART1.
  * @param lpuart_use_lse:	Use LSE as clock source if non zero, HSI otherwise.
- * @return status:			Function execution status.
+ * @return:					None.
  */
-LPUART_status_t LPUART1_init(unsigned char lpuart_use_lse) {
+void LPUART1_init(unsigned char lpuart_use_lse) {
 	// Local variables.
-	LPUART_status_t status = LPUART_SUCCESS;
 	unsigned int lpuart_clock_hz = 0;
 	unsigned int brr = 0;
-	unsigned int loop_count = 0;
 	// Select peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 10); // Reset bits 10-11.
 	if (lpuart_use_lse == 0) {
@@ -83,56 +81,10 @@ LPUART_status_t LPUART1_init(unsigned char lpuart_use_lse) {
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 	// Set interrupt priority.
 	NVIC_set_priority(NVIC_IT_LPUART1, 1);
-	// Enable LPUART1 transmitter.
-	LPUART1 -> CR1 |= (0b1 << 3); // Enable transmitter (TE='1').
-	// Wait for ACK.
-	while (((LPUART1 -> ISR) & (0b1 << 21)) == 0) {
-		// Wait for TEACK='1' or timeout.
-		loop_count++;
-		if (loop_count > LPUART_TIMEOUT_COUNT) {
-			status = LPUART_ERROR_TX_ACK;
-			goto errors;
-		}
-	}
+	// Enable LPUART1 transmitter and receiver.
+	LPUART1 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
 	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
-errors:
-	return status;
-}
-
-/* ENABLE LPUART RX OPERATION.
- * @param:			None.
- * @return status:	Function execution status.
- */
-LPUART_status_t LPUART1_enable_rx(void) {
-	// Local variables.
-	LPUART_status_t status = LPUART_SUCCESS;
-	unsigned int loop_count = 0;
-	// Enable LPUART1 receiver.
-	LPUART1 -> CR1 |= (0b1 << 2); // Enable receiver (RE='1').
-	// Wait for ACK.
-	while (((LPUART1 -> ISR) & (0b1 << 22)) == 0) {
-		// Wait for REACK='1' or timeout.
-		loop_count++;
-		if (loop_count > LPUART_TIMEOUT_COUNT) {
-			status = LPUART_ERROR_RX_ACK;
-			goto errors;
-		}
-	}
-	NVIC_enable_interrupt(NVIC_IT_LPUART1);
-errors:
-	return status;
-}
-
-/* DISABLE LPUART RX OPERATION.
- * @param:	None.
- * @return:	None.
- */
-void LPUART1_disable_rx(void) {
-	// Disable interrupt.
-	NVIC_disable_interrupt(NVIC_IT_LPUART1);
-	// Disable LPUART1 receiver.
-	LPUART1 -> CR1 &= ~(0b1 << 2); // RE='0'.
 }
 
 /* POWER LPUART1 SLAVE ON.

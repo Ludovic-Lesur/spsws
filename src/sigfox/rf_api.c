@@ -29,7 +29,6 @@
 #define RF_API_UPLINK_OUTPUT_POWER_ETSI		14
 #define RF_API_UPLINK_OUTPUT_POWER_FCC		20
 // Downlink parameters.
-#define RF_API_DOWNLINK_FRAME_LENGTH_BYTES	15
 #define RF_API_DOWNLINK_TIMEOUT_SECONDS		25
 #define RF_API_WAIT_FRAME_CALLS_MAX			100
 
@@ -257,7 +256,7 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_sync_word(downlink_sync_word, 2);
 		if (sx1232_status != SX1232_SUCCESS) goto errors;
-		sx1232_status = SX1232_set_data_length(RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+		sx1232_status = SX1232_set_data_length(SIGFOX_DOWNLINK_PHY_SIZE_BYTES);
 		if (sx1232_status != SX1232_SUCCESS) goto errors;
 		sx1232_status = SX1232_set_dio_mapping(SX1232_DIO0, SX1232_DIO_MAPPING0); // Map payload ready interrupt on DIO0.
 		if (sx1232_status != SX1232_SUCCESS) goto errors;
@@ -329,6 +328,8 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	unsigned short low_shifted_idle_duration_us = 0;
 	unsigned short idle_duration_us = 0;
 	unsigned short dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
+	// Disable RTC interrupt during radio processing.
+	NVIC_disable_interrupt(NVIC_IT_RTC);
 	// Set modulation parameters.
 	rf_api_status = RF_API_SetTxModulationParameters(type);
 	if (rf_api_status != SFX_ERR_NONE) goto errors;
@@ -401,6 +402,8 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	sx1232_status = SX1232_stop_cw();
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	TIM2_stop();
+	// Re-enable RTC interrupt.
+	NVIC_enable_interrupt(NVIC_IT_RTC);
 	return SFX_ERR_NONE;
 errors:
 	return RF_ERR_API_SEND;
@@ -552,7 +555,7 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 		if (GPIO_read(&GPIO_SX1232_DIO0) != 0) {
 			// Downlink frame received.
 			(*state) = DL_PASSED;
-			sx1232_status = SX1232_read_fifo(frame, RF_API_DOWNLINK_FRAME_LENGTH_BYTES);
+			sx1232_status = SX1232_read_fifo(frame, SIGFOX_DOWNLINK_PHY_SIZE_BYTES);
 			if (sx1232_status != SX1232_SUCCESS) goto errors;
 		}
 	}
