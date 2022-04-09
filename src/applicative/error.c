@@ -20,7 +20,7 @@ static unsigned int error_stack_idx = 0;
  */
 void ERROR_stack_init(void) {
 	// Reset stack.
-	for (error_stack_idx=0 ; error_stack_idx<ERROR_STACK_DEPTH ; error_stack_idx++) error_stack[error_stack_idx] = 0;
+	for (error_stack_idx=0 ; error_stack_idx<ERROR_STACK_DEPTH ; error_stack_idx++) error_stack[error_stack_idx] = SUCCESS;
 	error_stack_idx = 0;
 }
 
@@ -52,4 +52,22 @@ void ERROR_stack_read(ERROR_t* error_stack_ptr) {
 		chrono_idx = (chrono_idx == 0) ? (ERROR_STACK_DEPTH - 1) : (chrono_idx - 1);
 		error_stack_ptr[idx] = error_stack[chrono_idx];
 	}
+}
+
+/* CHECK IF ERROR STACK IS EMPTY..
+ * @param:	None.
+ * @return:	1 if the stack is empty (no error), 0 otherwise.
+ */
+unsigned char ERROR_stack_is_empty(void) {
+	// Local variables.
+	unsigned char is_empty = 1;
+	unsigned char idx = 0;
+	// Loop on stack.
+	for (idx=0 ; idx<ERROR_STACK_DEPTH ; idx++) {
+		if (error_stack[idx] != SUCCESS) {
+			is_empty = 0;
+			break;
+		}
+	}
+	return is_empty;
 }

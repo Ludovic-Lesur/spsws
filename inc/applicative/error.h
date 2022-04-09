@@ -84,6 +84,7 @@ typedef enum {
 void ERROR_stack_init(void);
 void ERROR_stack_add(ERROR_t status);
 void ERROR_stack_read(ERROR_t* error_stack);
+unsigned char ERROR_stack_is_empty(void);
 
 #define ERROR_status_check(status, success, error_base) { \
 	if (status != success) { \

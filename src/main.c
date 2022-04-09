@@ -800,23 +800,28 @@ int main (void) {
 			spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
 			break;
 		case SPSWS_STATE_ERROR_STACK:
-			// Read error stack.
-			ERROR_stack_read(spsws_ctx.error_stack);
-			// Convert to 8-bits little-endian array.
-			for (idx=0 ; idx<SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
-				spsws_ctx.sigfox_error_stack_data[idx] = spsws_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
-			}
-			// Send frame.
-			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
-			SIGFOX_API_error_check();
-			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
+			// Check stack.
+			if (ERROR_stack_is_empty() == 0) {
+				// Read error stack.
+				ERROR_stack_read(spsws_ctx.error_stack);
+				// Convert to 8-bits little-endian array.
+				for (idx=0 ; idx<SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
+					spsws_ctx.sigfox_error_stack_data[idx] = spsws_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
+				}
+				// Send frame.
+				sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 				SIGFOX_API_error_check();
-				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_error_stack_data, SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+				if (sigfox_api_status == SFX_ERR_NONE) {
+					sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
+					SIGFOX_API_error_check();
+					sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_error_stack_data, SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+					SIGFOX_API_error_check();
+				}
+				sigfox_api_status = SIGFOX_API_close();
 				SIGFOX_API_error_check();
+				// Reset error stack.
+				ERROR_stack_init();
 			}
-			sigfox_api_status = SIGFOX_API_close();
-			SIGFOX_API_error_check();
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
