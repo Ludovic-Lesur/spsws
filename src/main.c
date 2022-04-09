@@ -63,6 +63,7 @@
 #define SPSWS_SIGFOX_MONITORING_DATA_LENGTH			9
 #define SPSWS_SIGFOX_GEOLOC_DATA_LENGTH				11
 #define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH		1
+#define SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH		(ERROR_STACK_DEPTH * 2)
 // Error values.
 #define SPSWS_ERROR_VALUE_VOLTAGE_12BITS			0xFFF
 #define SPSWS_ERROR_VALUE_VOLTAGE_16BITS			0xFFFF
@@ -83,6 +84,7 @@ typedef enum {
 	SPSWS_STATE_WEATHER_DATA,
 	SPSWS_STATE_GEOLOC,
 	SPSWS_STATE_RTC_CALIBRATION,
+	SPSWS_STATE_ERROR_STACK,
 	SPSWS_STATE_OFF,
 	SPSWS_STATE_SLEEP,
 	SPSWS_STATE_LAST
@@ -195,6 +197,9 @@ typedef struct {
 	NEOM8N_position_t position;
 	unsigned int geoloc_fix_duration_seconds;
 	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
+	// Error stack.
+	ERROR_t error_stack[ERROR_STACK_DEPTH];
+	unsigned char sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH];
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
 	sfx_u32 sigfox_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
@@ -454,6 +459,7 @@ int main (void) {
 	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
+	unsigned char idx = 0;
 	signed char temperature = 0;
 	unsigned char generic_data_u8 = 0;
 	unsigned int generic_data_u32_1 = 0;
@@ -548,7 +554,7 @@ int main (void) {
 				spsws_ctx.status.field.first_rtc_calibration = 1;
 				spsws_ctx.status.field.daily_rtc_calibration = 1;
 			}
-			// Enter standby mode.
+			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
 		case SPSWS_STATE_MEASURE:
@@ -790,7 +796,28 @@ int main (void) {
 			// Reset geoloc variables.
 			spsws_ctx.flags.geoloc_timeout = 0;
 			spsws_ctx.geoloc_fix_duration_seconds = 0;
-			// Enter standby mode.
+			// Send error stack frame.
+			spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
+			break;
+		case SPSWS_STATE_ERROR_STACK:
+			// Read error stack.
+			ERROR_stack_read(spsws_ctx.error_stack);
+			// Convert to 8-bits little-endian array.
+			for (idx=0 ; idx<SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
+				spsws_ctx.sigfox_error_stack_data[idx] = spsws_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
+			}
+			// Send frame.
+			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
+			SIGFOX_API_error_check();
+			if (sigfox_api_status == SFX_ERR_NONE) {
+				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
+				SIGFOX_API_error_check();
+				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_error_stack_data, SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+				SIGFOX_API_error_check();
+			}
+			sigfox_api_status = SIGFOX_API_close();
+			SIGFOX_API_error_check();
+			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
 		case SPSWS_STATE_OFF:
