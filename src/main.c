@@ -351,6 +351,11 @@ static void SPSWS_init_context(void) {
 	// Read status byte.
 	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
 	NVM_error_check();
+	// Reset all daily flags.
+	spsws_ctx.status.field.first_rtc_calibration = 0;
+	spsws_ctx.status.field.daily_rtc_calibration = 0;
+	spsws_ctx.status.field.daily_geoloc = 0;
+	spsws_ctx.status.field.daily_downlink = 0;
 	// Set Sigfox RC.
 	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
 	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
@@ -522,20 +527,12 @@ int main (void) {
 			}
 			sigfox_api_status = SIGFOX_API_close();
 			SIGFOX_API_error_check();
-			// Turn radio TCXO off since radio will not be used anymore.
-			sx1232_status = SX1232_tcxo(0);
-			SX1232_error_check();
-			// Reset all daily flags.
-			spsws_ctx.status.field.first_rtc_calibration = 0;
-			spsws_ctx.status.field.daily_rtc_calibration = 0;
-			spsws_ctx.status.field.daily_geoloc = 0;
-			spsws_ctx.status.field.daily_downlink = 0;
 			// Perform first RTC calibration.
 			spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
 			break;
 		case SPSWS_STATE_RTC_CALIBRATION:
 			IWDG_reload();
-			// Get current timestamp from GPS.{
+			// Get current timestamp from GPS.
 			lpuart_status = LPUART1_power_on();
 			LPUART1_error_check();
 			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
@@ -554,8 +551,8 @@ int main (void) {
 				spsws_ctx.status.field.first_rtc_calibration = 1;
 				spsws_ctx.status.field.daily_rtc_calibration = 1;
 			}
-			// Enter sleep mode.
-			spsws_ctx.state = SPSWS_STATE_OFF;
+			// Send error stack at start
+			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;
 			break;
 		case SPSWS_STATE_MEASURE:
 			IWDG_reload();
@@ -618,6 +615,11 @@ int main (void) {
 				spsws_ctx.sigfox_weather_data.field.light_percent = SPSWS_ERROR_VALUE_LIGHT;
 			}
 			// Internal temperature/humidity sensor.
+#ifdef HW1_0
+			// Must be called again because SPI1 power function turned off the sensors.
+			i2c_status = I2C1_power_on();
+			I2C1_error_check();
+#endif
 			IWDG_reload();
 			sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
 			SHT3X_INT_error_check();

@@ -185,11 +185,9 @@ void GPIO_init(void) {
 	// Configure LED pin.
 	GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Programming pins.
-#ifdef HW2_0
-#ifndef DEBUG
+#if (defined HW2_0) && !(defined DEBUG)
 	GPIO_configure(&GPIO_SWDIO, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SWCLK, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#endif
 #endif
 }
 

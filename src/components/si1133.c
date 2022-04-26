@@ -162,7 +162,7 @@ static SI1133_status_t SI1133_send_command(unsigned char i2c_address, unsigned c
 			// Exit if timeout or command error flag set.
 			loop_count++;
 			if ((loop_count > SI1133_TIMEOUT_COUNT) || ((response0 & 0x10) == 0)) {
-				status = SI1133_ERROR_COMMAND;
+				status = SI1133_ERROR_COMMAND_COUNTER;
 				goto errors;
 			}
 		}

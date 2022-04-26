@@ -69,7 +69,7 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static RTC_status_t RTC_enter_initialization_mode(void) {
+static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mode(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	unsigned int loop_count = 0;
@@ -93,7 +93,7 @@ static RTC_status_t RTC_enter_initialization_mode(void) {
  * @param:	None.
  * @return:	None.
  */
-static void RTC_exit_initialization_mode(void) {
+static void __attribute__((optimize("-O0"))) RTC_exit_initialization_mode(void) {
 	RTC -> ISR &= ~(0b1 << 7); // INIT='0'.
 }
 
@@ -103,17 +103,12 @@ static void RTC_exit_initialization_mode(void) {
  * @param:	None.
  * @return:	None.
  */
-void RTC_reset(void) {
+void __attribute__((optimize("-O0"))) RTC_reset(void) {
+	// Local variables.
+	unsigned char j = 0;
 	// Reset RTC peripheral.
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
-	unsigned char j = 0;
-	for (j=0 ; j<100 ; j++) {
-		// Poll a bit always read as '0'.
-		// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
-		if (((RCC -> CR) & (0b1 << 24)) != 0) {
-			break;
-		}
-	}
+	for (j=0 ; j<100 ; j++);
 	RCC -> CSR &= ~(0b1 << 19); // RTCRST='0'.
 }
 
@@ -122,7 +117,7 @@ void RTC_reset(void) {
  * @param lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
  * @return status:		Function execution status.
  */
-RTC_status_t RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Manage RTC clock source.
@@ -190,7 +185,7 @@ errors:
  * @param timestamp:	Pointer to timestamp from GPS.
  * @return status:			Function execution status.
  */
-RTC_status_t RTC_calibrate(RTC_time_t* timestamp) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* timestamp) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	unsigned int tr_value = 0;
@@ -198,28 +193,28 @@ RTC_status_t RTC_calibrate(RTC_time_t* timestamp) {
 	unsigned char tens = 0;
 	unsigned char units = 0;
 	// Year.
-	tens = ((timestamp -> year)-2000) / 10;
-	units = ((timestamp -> year)-2000) - (tens*10);
+	tens = ((timestamp -> year) - 2000) / 10;
+	units = ((timestamp -> year) - 2000) - (tens * 10);
 	dr_value |= (tens << 20) | (units << 16);
 	// Month.
 	tens = (timestamp -> month) / 10;
-	units = (timestamp -> month) - (tens*10);
+	units = (timestamp -> month) - (tens * 10);
 	dr_value |= (tens << 12) | (units << 8);
 	// Date.
 	tens = (timestamp -> date) / 10;
-	units = (timestamp -> date) - (tens*10);
+	units = (timestamp -> date) - (tens * 10);
 	dr_value |= (tens << 4) | (units << 0);
 	// Hour.
 	tens = (timestamp -> hours) / 10;
-	units = (timestamp -> hours) - (tens*10);
+	units = (timestamp -> hours) - (tens * 10);
 	tr_value |= (tens << 20) | (units << 16);
 	// Minutes.
 	tens = (timestamp -> minutes) / 10;
-	units = (timestamp -> minutes) - (tens*10);
+	units = (timestamp -> minutes) - (tens * 10);
 	tr_value |= (tens << 12) | (units << 8);
 	// Seconds.
 	tens = (timestamp -> seconds) / 10;
-	units = (timestamp -> seconds) - (tens*10);
+	units = (timestamp -> seconds) - (tens * 10);
 	tr_value |= (tens << 4) | (units << 0);
 	// Enter initialization mode.
 	status = RTC_enter_initialization_mode();
@@ -237,7 +232,7 @@ errors:
  * @param rtc_timestamp:	Pointer to timestamp that will contain current RTC time.
  * @return:					None.
  */
-void RTC_get_timestamp(RTC_time_t* timestamp) {
+void __attribute__((optimize("-O0"))) RTC_get_timestamp(RTC_time_t* timestamp) {
 	// Read registers.
 	unsigned int dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
 	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.

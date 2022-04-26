@@ -210,12 +210,12 @@ static NEOM8N_status_t NEOM8N_time_is_valid(RTC_time_t* gps_time) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	// Check timestamp fields.
-	if ((gps_time -> date < 1) || (gps_time -> date > 31) ||
-		(gps_time -> month < 1) || (gps_time -> month > 12) ||
-		(gps_time -> year < 2000) || (gps_time -> year > 2100) ||
-		(gps_time -> hours > 23) ||
-		(gps_time -> minutes > 59) ||
-		(gps_time -> seconds > 59))
+	if (((gps_time -> date) < 1) || ((gps_time -> date) > 31) ||
+		((gps_time -> month) < 1) || ((gps_time -> month) > 12) ||
+		((gps_time -> year) < 2021) || ((gps_time -> year) > 2094) ||
+		((gps_time -> hours) > 23) ||
+		((gps_time -> minutes) > 59) ||
+		((gps_time -> seconds) > 59))
 	{
 		status = NEOM8N_ERROR_TIMESTAMP;
 	}
