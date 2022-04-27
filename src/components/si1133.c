@@ -139,29 +139,28 @@ static SI1133_status_t SI1133_send_command(unsigned char i2c_address, unsigned c
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
 		status = SI1133_get_command_counter(i2c_address, &previous_counter);
 		if (status != SI1133_SUCCESS) goto errors;
-	}
-	current_counter = previous_counter;
-	// Read CMD_ERR flag.
-	status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
-	if (status != SI1133_SUCCESS) goto errors;
-	// Read CMD_ERR flag.
-	if ((response0 & 0x10) != 0) {
-		status = SI1133_ERROR_COMMAND;
-		goto errors;
+		current_counter = previous_counter;
 	}
 	// Send command.
 	status = SI1133_write_register(i2c_address, SI1133_REG_COMMAND, &command, 1);
 	if (status != SI1133_SUCCESS) goto errors;
-	// Expect a change in counter.
+	// Read status register.
+	status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
+	if (status != SI1133_SUCCESS) goto errors;
+	// Check error flag.
+	if ((response0 & 0x10) != 0) {
+		status = (SI1133_ERROR_COMMAND + (response0 & 0x0F));
+		goto errors;
+	}
+	// Expect a change in counter and read error flag.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
 		do {
+			// Read counter.
 			status = SI1133_get_command_counter(i2c_address, &current_counter);
 			if (status != SI1133_SUCCESS) goto errors;
-			status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
-			if (status != SI1133_SUCCESS) goto errors;
-			// Exit if timeout or command error flag set.
+			// Exit if timeout.
 			loop_count++;
-			if ((loop_count > SI1133_TIMEOUT_COUNT) || ((response0 & 0x10) == 0)) {
+			if (loop_count > SI1133_TIMEOUT_COUNT) {
 				status = SI1133_ERROR_COMMAND_COUNTER;
 				goto errors;
 			}
@@ -183,8 +182,8 @@ static SI1133_status_t SI1133_set_parameter(unsigned char i2c_address, unsigned 
 	SI1133_status_t status = SI1133_SUCCESS;
 	unsigned char parameter_write_command[2];
 	unsigned char response0 = 0;
-	unsigned char previous_counter = 0;
 	unsigned char current_counter = 0;
+	unsigned char previous_counter = 0;
 	unsigned int loop_count = 0;
 	// Build command.
 	parameter_write_command[0] = value;
@@ -195,21 +194,27 @@ static SI1133_status_t SI1133_set_parameter(unsigned char i2c_address, unsigned 
 	// Get current value of counter in RESPONSE0 register.
 	status = SI1133_get_command_counter(i2c_address, &previous_counter);
 	if (status != SI1133_SUCCESS) goto errors;
-	// Update counter.
 	current_counter = previous_counter;
 	// Send command.
 	status = SI1133_write_register(i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
 	if (status != SI1133_SUCCESS) goto errors;
-	// Expect a change in counter.
+	// Read status register.
+	status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
+	if (status != SI1133_SUCCESS) goto errors;
+	// Check error flag.
+	if ((response0 & 0x10) != 0) {
+		status = (SI1133_ERROR_PARAMETER + (response0 & 0x0F));
+		goto errors;
+	}
+	// Expect a change in counter and read error flag.
 	do {
+		// Read counter and CMD_ERR flag.
 		status = SI1133_get_command_counter(i2c_address, &current_counter);
 		if (status != SI1133_SUCCESS) goto errors;
-		status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
-		if (status != SI1133_SUCCESS) goto errors;
-		// Exit if timeout or command error flag set.
+		// Exit if timeout.
 		loop_count++;
-		if ((loop_count > SI1133_TIMEOUT_COUNT) || ((response0 & 0x10) == 0)) {
-			status = SI1133_ERROR_PARAMETER;
+		if (loop_count > SI1133_TIMEOUT_COUNT) {
+			status = SI1133_ERROR_COMMAND_COUNTER;
 			goto errors;
 		}
 	}

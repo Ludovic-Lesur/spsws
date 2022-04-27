@@ -53,7 +53,7 @@
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS		180
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
 // Sigfox payload lengths.
-#define SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH			7
+#define SPSWS_SIGFOX_STARTUP_DATA_LENGTH			8
 #define SPSWS_SIGFOX_ERROR_DATA_LENGTH				12
 #ifdef IM
 #define SPSWS_SIGFOX_WEATHER_DATA_LENGTH			6
@@ -78,7 +78,7 @@
 
 typedef enum {
 	SPSWS_STATE_WAKE_UP,
-	SPSWS_STATE_SW_VERSION,
+	SPSWS_STATE_STARTUP,
 	SPSWS_STATE_MEASURE,
 	SPSWS_STATE_MONITORING,
 	SPSWS_STATE_WEATHER_DATA,
@@ -115,17 +115,18 @@ typedef union {
 	unsigned char all;
 } SPSWS_flags_t;
 
-// Sigfox SW version frame data format.
+// Sigfox start-up frame data format.
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH];
+	unsigned char frame[SPSWS_SIGFOX_STARTUP_DATA_LENGTH];
 	struct {
+		unsigned reset_reason : 8;
 		unsigned major_version : 8;
 		unsigned minor_version : 8;
 		unsigned commit_index : 8;
 		unsigned commit_id : 28;
 		unsigned dirty_flag : 4;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
-} SPSWS_sigfox_sw_version_data_t;
+} SPSWS_sigfox_startup_data_t;
 
 // Sigfox weather frame data format.
 typedef union {
@@ -187,7 +188,7 @@ typedef struct {
 	RTC_time_t current_timestamp;
 	RTC_time_t previous_wake_up_timestamp;
 	// SW version.
-	SPSWS_sigfox_sw_version_data_t sigfox_sw_version_data;
+	SPSWS_sigfox_startup_data_t sigfox_startup_data;
 	// Monitoring.
 	SPSWS_status_t status;
 	SPSWS_sigfox_monitoring_data_t sigfox_monitoring_data;
@@ -505,24 +506,27 @@ int main (void) {
 				}
 				spsws_ctx.flags.hour_changed = 0; // Reset flag.
 				// Next state.
-				spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_SW_VERSION : SPSWS_STATE_MEASURE;
+				spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_STARTUP : SPSWS_STATE_MEASURE;
 			}
 			break;
-		case SPSWS_STATE_SW_VERSION:
+		case SPSWS_STATE_STARTUP:
 			IWDG_reload();
-			// Build software version;
-			spsws_ctx.sigfox_sw_version_data.field.major_version = GIT_MAJOR_VERSION;
-			spsws_ctx.sigfox_sw_version_data.field.minor_version = GIT_MINOR_VERSION;
-			spsws_ctx.sigfox_sw_version_data.field.commit_index = GIT_COMMIT_INDEX;
-			spsws_ctx.sigfox_sw_version_data.field.commit_id = GIT_COMMIT_ID;
-			spsws_ctx.sigfox_sw_version_data.field.dirty_flag = GIT_DIRTY_FLAG;
+			// Fill reset reason and software version.
+			spsws_ctx.sigfox_startup_data.field.reset_reason = ((RCC -> CSR) >> 24) & 0x0F;
+			spsws_ctx.sigfox_startup_data.field.major_version = GIT_MAJOR_VERSION;
+			spsws_ctx.sigfox_startup_data.field.minor_version = GIT_MINOR_VERSION;
+			spsws_ctx.sigfox_startup_data.field.commit_index = GIT_COMMIT_INDEX;
+			spsws_ctx.sigfox_startup_data.field.commit_id = GIT_COMMIT_ID;
+			spsws_ctx.sigfox_startup_data.field.dirty_flag = GIT_DIRTY_FLAG;
+			// Clear reset flags.
+			RCC -> CSR |= (0b1 << 23);
 			// Send SW version frame.
 			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			SIGFOX_API_error_check();
 			if (sigfox_api_status == SFX_ERR_NONE) {
 				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
 				SIGFOX_API_error_check();
-				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_sw_version_data.frame, SPSWS_SIGFOX_SW_VERSION_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_startup_data.frame, SPSWS_SIGFOX_STARTUP_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 				SIGFOX_API_error_check();
 			}
 			sigfox_api_status = SIGFOX_API_close();

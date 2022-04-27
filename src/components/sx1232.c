@@ -47,15 +47,9 @@
 // SX1232 FIFO.
 #define SX1232_FIFO_LENGTH						64
 
-/*** SX1232 local structures ***/
-
-typedef struct {
-	SX1232_rf_output_pin_t rf_output_pin;
-} SX1232_context_t;
-
 /*** SX1232 local global variables ***/
 
-static SX1232_context_t sx1232_ctx;
+static SX1232_rf_output_pin_t sx1232_rf_output_pin;
 
 /*** SX1232 local functions ***/
 
@@ -129,7 +123,7 @@ errors:
  */
 void SX1232_init(void) {
 	// Init context.
-	sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
+	sx1232_rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
 	// Init SX1232 DIOx.
 	GPIO_configure(&GPIO_SX1232_DIO2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -532,12 +526,12 @@ SX1232_status_t SX1232_set_rf_output_pin(SX1232_rf_output_pin_t rf_output_pin) {
 	case SX1232_RF_OUTPUT_PIN_RFO:
 		// PaSelect = '0'.
 		pa_config_reg_value &= 0x7F;
-		sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
+		sx1232_rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
 		break;
 	case SX1232_RF_OUTPUT_PIN_PABOOST:
 		// PaSelect = '1'.
 		pa_config_reg_value |= 0x80;
-		sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_PABOOST;
+		sx1232_rf_output_pin = SX1232_RF_OUTPUT_PIN_PABOOST;
 		break;
 	default:
 		status = SX1232_ERROR_RF_OUTPUT_PIN;
@@ -563,7 +557,7 @@ SX1232_status_t SX1232_set_rf_output_power(unsigned char rf_output_power_dbm) {
 	// Reset bits 0-3.
 	pa_config_reg_value &= 0xF0;
 	// Compute register.
-	switch (sx1232_ctx.rf_output_pin) {
+	switch (sx1232_rf_output_pin) {
 	case SX1232_RF_OUTPUT_PIN_RFO:
 		// Check parameter.
 		if (rf_output_power_dbm > SX1232_OUTPUT_POWER_RFO_MAX) {
