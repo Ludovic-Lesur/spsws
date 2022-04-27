@@ -203,7 +203,6 @@ typedef struct {
 	unsigned char sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH];
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
-	sfx_u32 sigfox_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
 	sfx_u8 sigfox_downlink_data[SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
 } SPSWS_context_t;
 
@@ -255,11 +254,13 @@ static void SPSWS_clock_sleep(void) {
 static void SPSWS_init_hw(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
+	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	ADC_status_t adc_status = ADC_SUCCESS;
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
+	unsigned char device_id_lsbyte = 0;
 	// Init error stack
 	ERROR_stack_init();
 	// Init memory.
@@ -293,9 +294,12 @@ static void SPSWS_init_hw(void) {
 	RCC_error_check();
 	if (rcc_status != RCC_SUCCESS) spsws_ctx.lsi_frequency_hz = RCC_LSI_FREQUENCY_HZ;
 	IWDG_reload();
+	// Read LS byte of the device ID to add a random delay in RTC alarm.
+	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_DEVICE_ID, &device_id_lsbyte);
+	NVM_error_check();
 	// RTC (only at POR).
 	spsws_ctx.lse_running = spsws_ctx.status.field.lse_status;
-	rtc_status = RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz);
+	rtc_status = RTC_init(&spsws_ctx.lse_running, spsws_ctx.lsi_frequency_hz, device_id_lsbyte);
 	RTC_error_check();
 	// Update LSE status if RTC failed to start on it.
 	if (spsws_ctx.lse_running == 0) {
@@ -340,7 +344,6 @@ static void SPSWS_init_hw(void) {
 static void SPSWS_init_context(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
-	unsigned char idx = 0;
 	// Init context.
 	spsws_ctx.state = SPSWS_STATE_WAKE_UP;
 	spsws_ctx.flags.all = 0;
@@ -359,7 +362,6 @@ static void SPSWS_init_context(void) {
 	spsws_ctx.status.field.daily_downlink = 0;
 	// Set Sigfox RC.
 	spsws_ctx.sigfox_rc = (sfx_rc_t) RC1;
-	for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) spsws_ctx.sigfox_rc_std_config[idx] = 0;
 }
 
 #if (defined IM || defined CM)
@@ -524,8 +526,6 @@ int main (void) {
 			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			SIGFOX_API_error_check();
 			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				SIGFOX_API_error_check();
 				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_startup_data.frame, SPSWS_SIGFOX_STARTUP_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 				SIGFOX_API_error_check();
 			}
@@ -720,8 +720,6 @@ int main (void) {
 			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			SIGFOX_API_error_check();
 			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				SIGFOX_API_error_check();
 				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_monitoring_data.frame, SPSWS_SIGFOX_MONITORING_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 				SIGFOX_API_error_check();
 			}
@@ -736,8 +734,6 @@ int main (void) {
 			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			SIGFOX_API_error_check();
 			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				SIGFOX_API_error_check();
 				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_weather_data.frame, SPSWS_SIGFOX_WEATHER_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 				SIGFOX_API_error_check();
 			}
@@ -792,8 +788,6 @@ int main (void) {
 			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 			SIGFOX_API_error_check();
 			if (sigfox_api_status == SFX_ERR_NONE) {
-				sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-				SIGFOX_API_error_check();
 				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_geoloc_data.frame, ((spsws_ctx.flags.geoloc_timeout) ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH : SPSWS_SIGFOX_GEOLOC_DATA_LENGTH), spsws_ctx.sigfox_downlink_data, 2, 0);
 				SIGFOX_API_error_check();
 			}
@@ -818,8 +812,6 @@ int main (void) {
 				sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
 				SIGFOX_API_error_check();
 				if (sigfox_api_status == SFX_ERR_NONE) {
-					sigfox_api_status = SIGFOX_API_set_std_config(spsws_ctx.sigfox_rc_std_config, SFX_FALSE);
-					SIGFOX_API_error_check();
 					sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_error_stack_data, SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
 					SIGFOX_API_error_check();
 				}

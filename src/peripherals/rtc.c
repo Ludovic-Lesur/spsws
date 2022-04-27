@@ -113,13 +113,16 @@ void __attribute__((optimize("-O0"))) RTC_reset(void) {
 }
 
 /* INIT HARDWARE RTC PERIPHERAL.
- * @param rtc_use_lse:	RTC will be clocked on LSI if 0, on LSE otherwise.
- * @param lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
- * @return status:		Function execution status.
+ * @param rtc_use_lse:			RTC will be clocked on LSI if 0, on LSE otherwise.
+ * @param lsi_freq_hz:			Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
+ * @param alarm_offset_seconds:	Offset added to the alarm A in seconds.
+ * @return status:				Function execution status.
  */
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz, unsigned char alarm_offset_seconds) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
+	unsigned char tens = 0;
+	unsigned char units = 0;
 	// Manage RTC clock source.
 	if ((*rtc_use_lse) != 0) {
 		RCC -> CSR |= (0b01 << 16); // RTCSEL='01' (LSE).
@@ -159,7 +162,9 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_ls
 	// Bypass shadow registers.
 	RTC -> CR |= (0b1 << 5); // BYPSHAD='1'.
 	// Configure alarm A to wake-up MCU every hour.
-	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23); // Mask day and hour (only check minutes and seconds).
+	tens = ((alarm_offset_seconds % 60) / 10) & 0x07;
+	units = ((alarm_offset_seconds % 60) - (tens * 10)) % 0x0F;
+	RTC -> ALRMAR |= (0b1 << 31) | (0b1 << 23) | (tens << 4) | (units << 0); // Mask day and hour (only check minutes and seconds).
 	RTC -> CR |= (0b1 << 8); // Enable Alarm A.
 	// Configure alarm B to wake-up every seconds (watchdog reload and wind measurements for CM).
 	RTC -> ALRMBR |= (0b1 << 31) | (0b1 << 23) | (0b1 << 15) | (0b1 << 7); // Mask all fields.

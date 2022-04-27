@@ -95,10 +95,6 @@ static void AT_so_callback(void);
 static void AT_sb_callback(void);
 static void AT_sf_callback(void);
 #endif
-#ifdef AT_COMMANDS_RC
-static void AT_get_rc_callback(void);
-static void AT_set_rc_callback(void);
-#endif
 #ifdef AT_COMMANDS_TEST_MODES
 static void AT_tm_callback(void);
 static void AT_cw_callback(void);
@@ -128,8 +124,6 @@ typedef struct {
 	unsigned char wind_measurement_flag;
 	// Sigfox RC.
 	sfx_rc_t sigfox_rc;
-	sfx_u32 sigfox_rc_std_config[SIGFOX_RC_STD_CONFIG_SIZE];
-	unsigned char sigfox_rc_idx;
 } AT_context_t;
 
 /*** AT local global variables ***/
@@ -168,10 +162,6 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$SB=", "data[bit],(bidir_flag[bit])", "Sigfox send bit", AT_sb_callback},
 	{PARSER_MODE_HEADER,  "AT$SF=", "data[hex],(bidir_flag[bit])", "Sigfox send frame", AT_sf_callback},
 #endif
-#ifdef AT_COMMANDS_RC
-	{PARSER_MODE_COMMAND, "AT$RC?", "\0", "Get Sigfox radio configuration", AT_get_rc_callback},
-	{PARSER_MODE_HEADER,  "AT$RC=", "rc[dec]", "Set Sigfox radio configurationt", AT_set_rc_callback},
-#endif
 #ifdef AT_COMMANDS_TEST_MODES
 	{PARSER_MODE_HEADER,  "AT$TM=", "rc_index[dec],test_mode[dec]", "Execute Sigfox test mode", AT_tm_callback},
 	{PARSER_MODE_HEADER,  "AT$CW=", "frequency[hz],enable[bit],(output_power[dbm])", "Start or stop continuous radio transmission", AT_cw_callback},
@@ -179,17 +169,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$RSSI=", "frequency[hz],duration[s]", "Start or stop continuous RSSI measurement", AT_rssi_callback},
 #endif
 };
-static AT_context_t at_ctx = {
-	.sigfox_rc = (sfx_rc_t) RC1,
-	.sigfox_rc_idx = SFX_RC1
-};
-#ifdef AT_COMMANDS_RC
-static const sfx_u32 rc2_sm_config[SIGFOX_RC_STD_CONFIG_SIZE] = RC2_SM_CONFIG;
-static const sfx_u32 rc4_sm_config[SIGFOX_RC_STD_CONFIG_SIZE] = RC4_SM_CONFIG;
-static const sfx_u32 rc3a_config[SIGFOX_RC_STD_CONFIG_SIZE] = RC3A_CONFIG;
-static const sfx_u32 rc3c_config[SIGFOX_RC_STD_CONFIG_SIZE] = RC3C_CONFIG;
-static const sfx_u32 rc5_config[SIGFOX_RC_STD_CONFIG_SIZE] = RC5_CONFIG;
-#endif
+static AT_context_t at_ctx;
 
 /*** AT local functions ***/
 
@@ -971,8 +951,6 @@ static void AT_so_callback(void) {
 	// Send Sigfox OOB frame.
 	sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
 	SIGFOX_API_error_check_print();
-	sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-	SIGFOX_API_error_check_print();
 	AT_response_add_string("Sigfox library running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
@@ -1010,8 +988,6 @@ static void AT_sb_callback(void) {
 		// Send Sigfox bit with specified downlink request.
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
 		SIGFOX_API_error_check_print();
-		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
@@ -1027,8 +1003,6 @@ static void AT_sb_callback(void) {
 		PARSER_error_check_print();
 		// Send Sigfox bit with no downlink request (by default).
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
-		SIGFOX_API_error_check_print();
-		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
 		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
@@ -1069,8 +1043,6 @@ static void AT_sf_callback(void) {
 		// Send Sigfox frame with specified downlink request.
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
 		SIGFOX_API_error_check_print();
-		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
@@ -1087,8 +1059,6 @@ static void AT_sf_callback(void) {
 		// Send Sigfox frame with no downlink request (by default).
 		sigfox_api_status = SIGFOX_API_open(&at_ctx.sigfox_rc);
 		SIGFOX_API_error_check_print();
-		sigfox_api_status = SIGFOX_API_set_std_config(at_ctx.sigfox_rc_std_config, SFX_FALSE);
-		SIGFOX_API_error_check_print();
 		AT_response_add_string("Sigfox library running...");
 		AT_response_add_string(AT_RESPONSE_END);
 		AT_response_send();
@@ -1099,114 +1069,6 @@ static void AT_sf_callback(void) {
 errors:
 	sigfox_api_status = SIGFOX_API_close();
 	SIGFOX_API_error_check();
-	return;
-}
-#endif
-
-#ifdef AT_COMMANDS_RC
-/* AT$RC? EXECUTION CALLBACK.
- * @param:	None.
- * @return:	None.
- */
-static void AT_get_rc_callback(void) {
-	// Read current radio configuration.
-	switch (at_ctx.sigfox_rc_idx) {
-	case SFX_RC1:
-		AT_response_add_string("RC1");
-		break;
-	case SFX_RC2:
-		AT_response_add_string("RC2");
-		break;
-	case SFX_RC3A:
-		AT_response_add_string("RC3A");
-		break;
-	case SFX_RC3C:
-		AT_response_add_string("RC3C");
-		break;
-	case SFX_RC4:
-		AT_response_add_string("RC4");
-		break;
-	case SFX_RC5:
-		AT_response_add_string("RC5");
-		break;
-	case SFX_RC6:
-		AT_response_add_string("RC6");
-		break;
-	case SFX_RC7:
-		AT_response_add_string("RC7");
-		break;
-	default:
-		AT_print_status(ERROR_SIGFOX_RC);
-		goto errors;
-	}
-	AT_response_add_string(AT_RESPONSE_END);
-	AT_response_send();
-errors:
-	return;
-}
-
-/* AT$RC EXECUTION CALLBACK.
- * @param:	None.
- * @return:	None.
- */
-static void AT_set_rc_callback(void) {
-	// Local variables.
-	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	int rc_index = 0;
-	unsigned char idx = 0;
-	// Read RC parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, 1, &rc_index);
-	PARSER_error_check_print();
-	// Check RC index.
-	if (((sfx_rc_enum_t) rc_index) >= SFX_RC_LIST_MAX_SIZE) {
-		AT_print_status(ERROR_SIGFOX_RC);
-		goto errors;
-	}
-	// Update radio configuration.
-	switch ((sfx_rc_enum_t) rc_index) {
-	case SFX_RC1:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC1;
-		at_ctx.sigfox_rc_idx = SFX_RC1;
-		break;
-	case SFX_RC2:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC1;
-		for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc2_sm_config[idx];
-		at_ctx.sigfox_rc_idx = SFX_RC2;
-		break;
-	case SFX_RC3A:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC3A;
-		for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc3a_config[idx];
-		at_ctx.sigfox_rc_idx = SFX_RC3A;
-		break;
-	case SFX_RC3C:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC3C;
-		for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc3c_config[idx];
-		at_ctx.sigfox_rc_idx = SFX_RC3C;
-		break;
-	case SFX_RC4:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC4;
-		for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc4_sm_config[idx];
-		at_ctx.sigfox_rc_idx = SFX_RC4;
-		break;
-	case SFX_RC5:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC5;
-		for (idx=0 ; idx<SIGFOX_RC_STD_CONFIG_SIZE ; idx++) at_ctx.sigfox_rc_std_config[idx] = rc5_config[idx];
-		at_ctx.sigfox_rc_idx = SFX_RC5;
-		break;
-	case SFX_RC6:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC6;
-		at_ctx.sigfox_rc_idx = SFX_RC6;
-		break;
-	case SFX_RC7:
-		at_ctx.sigfox_rc = (sfx_rc_t) RC7;
-		at_ctx.sigfox_rc_idx = SFX_RC7;
-		break;
-	default:
-		AT_print_status(ERROR_SIGFOX_RC);
-		goto errors;
-	}
-	AT_print_ok();
-errors:
 	return;
 }
 #endif
@@ -1487,6 +1349,7 @@ void AT_init(void) {
 	for (idx=0 ; idx<AT_RESPONSE_BUFFER_LENGTH ; idx++) at_ctx.response_buf[idx] = '\0';
 	at_ctx.response_buf_idx = 0;
 	at_ctx.wind_measurement_flag = 0;
+	at_ctx.sigfox_rc = (sfx_rc_t) RC1;
 	// Reset parser.
 	AT_reset_parser();
 	// Enable USART interrupt.
