@@ -22,7 +22,6 @@
 
 /*** RTC local global variables ***/
 
-static volatile unsigned char rtc_alarm_a_flag = 0;
 static volatile unsigned char rtc_alarm_b_flag = 0;
 static volatile unsigned char rtc_wakeup_timer_flag = 0;
 
@@ -33,16 +32,6 @@ static volatile unsigned char rtc_wakeup_timer_flag = 0;
  * @return:	None.
  */
 void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
-	// Alarm A interrupt.
-	if (((RTC -> ISR) & (0b1 << 8)) != 0) {
-		// Set local flag.
-		if (((RTC -> CR) & (0b1 << 12)) != 0) {
-			rtc_alarm_a_flag = 1;
-		}
-		// Clear flags.
-		RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
-		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
-	}
 	// Alarm B interrupt.
 	if (((RTC -> ISR) & (0b1 << 9)) != 0) {
 		// Set local flag.
@@ -250,29 +239,15 @@ void __attribute__((optimize("-O0"))) RTC_get_timestamp(RTC_time_t* timestamp) {
 	timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
 }
 
-/* ENABLE RTC ALARM A INTERRUPT.
- * @param:	None.
- * @return:	None.
- */
-void RTC_enable_alarm_a_interrupt(void) {
-	// Enable interrupt.
-	RTC -> CR |= (0b1 << 12); // ALRAIE='1'.
-}
-
-/* DISABLE RTC ALARM A INTERRUPT.
- * @param:	None.
- * @return:	None.
- */
-void RTC_disable_alarm_a_interrupt(void) {
-	// Disable interrupt.
-	RTC -> CR &= ~(0b1 << 12); // ALRAIE='0'.
-}
-
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
 volatile unsigned char RTC_get_alarm_a_flag(void) {
+	// Local variables.
+	volatile unsigned char rtc_alarm_a_flag = 0;
+	// Read register.
+	rtc_alarm_a_flag = (((RTC -> ISR) & (0b1 << 8)) != 0) ? 1 : 0;
 	return rtc_alarm_a_flag;
 }
 
@@ -284,7 +259,6 @@ void RTC_clear_alarm_a_flag(void) {
 	// Clear all flags.
 	RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
-	rtc_alarm_a_flag = 0;
 }
 
 /* ENABLE RTC ALARM B INTERRUPT.

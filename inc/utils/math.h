@@ -109,11 +109,26 @@ typedef enum {
 
 /*** MATH functions ***/
 
+unsigned char MATH_min_u8(unsigned char* data, unsigned char data_length);
+unsigned short MATH_min_u16(unsigned short* data, unsigned char data_length);
+unsigned int MATH_min_u32(unsigned int* data, unsigned char data_length);
+
+unsigned char MATH_max_u8(unsigned char* data, unsigned char data_length);
+unsigned short MATH_max_u16(unsigned short* data, unsigned char data_length);
+unsigned int MATH_max_u32(unsigned int* data, unsigned char data_length);
+
+unsigned char MATH_average_u8(unsigned char* data, unsigned char data_length);
+unsigned short MATH_average_u16(unsigned short* data, unsigned char data_length);
+unsigned int MATH_average_u32(unsigned int* data, unsigned char data_length);
+
+unsigned char MATH_median_filter_u8(unsigned char* data, unsigned char median_length, unsigned char average_length);
+unsigned short MATH_median_filter_u16(unsigned short* data, unsigned char median_length, unsigned char average_length);
+unsigned int MATH_median_filter_u32(unsigned int* data, unsigned char median_length, unsigned char average_length);
+
 MATH_status_t MATH_pow_10(unsigned char power, unsigned int* result);
-unsigned int MATH_average(unsigned int* data, unsigned char data_length);
-unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length, unsigned char average_length);
 unsigned int MATH_abs(signed int x);
 MATH_status_t MATH_atan2(signed int x, signed int y, unsigned int* alpha);
+
 MATH_status_t MATH_two_complement(unsigned int value, unsigned char sign_bit_position, signed int* result);
 MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_position, unsigned int* result);
 

@@ -86,7 +86,7 @@ static ADC_status_t ADC1_filtered_conversion(unsigned char adc_channel, unsigned
 		if (status != ADC_SUCCESS) goto errors;
 	}
 	// Apply median filter.
-	(*adc_result_12bits) = MATH_median_filter(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
+	(*adc_result_12bits) = MATH_median_filter_u32(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
 errors:
 	return status;
 }

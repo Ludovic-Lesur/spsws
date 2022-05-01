@@ -47,8 +47,6 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_ls
 RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* timestamp);
 void __attribute__((optimize("-O0"))) RTC_get_timestamp(RTC_time_t* timestamp);
 
-void RTC_enable_alarm_a_interrupt(void);
-void RTC_disable_alarm_a_interrupt(void);
 volatile unsigned char RTC_get_alarm_a_flag(void);
 void RTC_clear_alarm_a_flag(void);
 

@@ -12,6 +12,92 @@
 #define MATH_MEDIAN_FILTER_LENGTH_MAX	0xFF
 static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 
+/*** MATH local functions ***/
+
+/* GENERIC FUNCTION TO GET MINIMUM VALUE OF AN ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Length of the input buffer.
+ * @return min:			Minimum value of the buffer.
+ */
+#define MATH_min(data, data_length) { \
+	unsigned char idx = 0; \
+	for (idx=0 ; idx<data_length ; idx++) { \
+		if (data[idx] < min) { \
+			min = data[idx]; \
+		} \
+	} \
+	return min; \
+}
+
+/* GENERIC FUNCTION TO GET MINIMUM VALUE OF AN ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Length of the input buffer.
+ * @return min:			Minimum value of the buffer.
+ */
+#define MATH_max(data, data_length) { \
+	unsigned char idx = 0; \
+	for (idx=0 ; idx<data_length ; idx++) { \
+		if (data[idx] > max) { \
+			max = data[idx]; \
+		} \
+	} \
+	return max; \
+}
+
+/* GENERIC FUNCTION TO COMPUTE AVERAGE VALUE OF AN ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Length of the input buffer.
+ * @return average:		Mean value of the buffer.
+ */
+#define MATH_average(data, data_length) { \
+	unsigned char idx = 0; \
+	for (idx=0 ; idx<data_length ; idx++) { \
+		average = ((average * idx) + data[idx]) / (idx + 1); \
+	} \
+	return average; \
+}
+
+/* GENERIC FUNCTION TO COMPUTE AVERAGE MEDIAN VALUE OF AN ARRAY.
+ * @param data:				Input buffer.
+ * @param median_length:	Number of elements taken for median value search.
+ * @param average_length:	Number of center elements taken for final average.
+ * @return filter_out:		Output value of the median filter.
+ */
+#define MATH_median_filter(data, median_length, average_length) { \
+	unsigned char buffer_sorted = 0; \
+	unsigned char idx1 = 0; \
+	unsigned char idx2 = 0; \
+	/* Copy input buffer into local buffer */ \
+	for (idx1=0 ; idx1<median_length ; idx1++) { \
+		local_buf[idx1] = data[idx1]; \
+	} \
+	/* Sort buffer in ascending order. */ \
+	for (idx1=0; idx1<median_length; ++idx1) { \
+		buffer_sorted = 1; \
+		for (idx2=1 ; idx2<(median_length-idx1) ; ++idx2) { \
+			if (local_buf[idx2 - 1] > local_buf[idx2]) { \
+				temp = local_buf[idx2 - 1]; \
+				local_buf[idx2 - 1] = local_buf[idx2]; \
+				local_buf[idx2] = temp; \
+				buffer_sorted = 0; \
+			} \
+		} \
+		if (buffer_sorted != 0) break; \
+	} \
+	/* Compute start and end indexes for final averaging */ \
+	if (average_length > 0) { \
+		/* Clamp value */ \
+		if (average_length > median_length) { \
+			average_length = median_length; \
+		} \
+		start_idx = (median_length / 2) - (average_length / 2); \
+		end_idx = (median_length / 2) + (average_length / 2); \
+		if (end_idx >= median_length) { \
+			end_idx = (median_length - 1); \
+		} \
+	} \
+}
+
 /*** MATH functions ***/
 
 /* COMPUTE A POWER A 10.
@@ -32,73 +118,171 @@ errors:
 	return status;
 }
 
-/* COMPUTE AVERAGE VALUE.
+/* GET MINIMUM VALUE OF A 8-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned char MATH_min_u8(unsigned char* data, unsigned char data_length) {
+	// Local variables.
+	unsigned char min = 0xFF;
+	// Compute minimum value.
+	MATH_min(data, data_length);
+}
+
+/* GET MINIMUM VALUE OF A 16-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned short MATH_min_u16(unsigned short* data, unsigned char data_length) {
+	// Local variables.
+	unsigned short min = 0xFFFF;
+	// Compute minimum value.
+	MATH_min(data, data_length);
+}
+
+/* GET MINIMUM VALUE OF A 32-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned int MATH_min_u32(unsigned int* data, unsigned char data_length) {
+	// Local variables.
+	unsigned int min = 0xFFFFFFFF;
+	// Compute minimum value.
+	MATH_min(data, data_length);
+}
+
+/* GET MAXIMUM VALUE OF A 8-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned char MATH_max_u8(unsigned char* data, unsigned char data_length) {
+	// Local variables.
+	unsigned char max = 0;
+	// Compute minimum value.
+	MATH_max(data, data_length);
+}
+
+/* GET MAXIMUM VALUE OF A 16-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned short MATH_max_u16(unsigned short* data, unsigned char data_length) {
+	// Local variables.
+	unsigned short max = 0;
+	// Compute minimum value.
+	MATH_max(data, data_length);
+}
+
+/* GET MAXIMUM VALUE OF A 32-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return min: 		Minimum value of the input buffer.
+ */
+unsigned int MATH_max_u32(unsigned int* data, unsigned char data_length) {
+	// Local variables.
+	unsigned int max = 0;
+	// Compute minimum value.
+	MATH_max(data, data_length);
+}
+
+/* COMPUTE AVERAGE VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
  * @return average: 	Average value of the input buffer.
  */
-unsigned int MATH_average(unsigned int* data, unsigned char data_length) {
+unsigned char MATH_average_u8(unsigned char* data, unsigned char data_length) {
 	// Local variables.
-	unsigned char idx = 0;
-	unsigned int average = 0;
-	// Compute
-	for (idx=0 ; idx<data_length ; idx++) {
-		average = ((average * idx) + data[idx]) / (idx + 1);
-	}
-	return average;
+	unsigned char average = 0;
+	// Compute average.
+	MATH_average(data, data_length);
 }
 
-/* COMPUTE AVERAGE MEDIAN VALUE
+/* COMPUTE AVERAGE VALUE OF A 16-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return average: 	Average value of the input buffer.
+ */
+unsigned short MATH_average_u16(unsigned short* data, unsigned char data_length) {
+	// Local variables.
+	unsigned short average = 0;
+	// Compute average.
+	MATH_average(data, data_length);
+}
+
+/* COMPUTE AVERAGE VALUE OF A 32-BITS VALUES ARRAY.
+ * @param data:			Input buffer.
+ * @param data_length:	Input buffer length.
+ * @return average: 	Average value of the input buffer.
+ */
+unsigned int MATH_average_u32(unsigned int* data, unsigned char data_length) {
+	// Local variables.
+	unsigned int average = 0;
+	// Compute average.
+	MATH_average(data, data_length);
+}
+
+/* COMPUTE AVERAGE MEDIAN VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:				Input buffer.
  * @param median_length:	Number of elements taken for median value search.
  * @param average_length:	Number of center elements taken for final average.
  * @return filter_out:		Output value of the median filter.
  */
-unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length, unsigned char average_length) {
+unsigned char MATH_median_filter_u8(unsigned char* data, unsigned char median_length, unsigned char average_length) {
 	// Local variables.
-	unsigned int local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
-	unsigned char buffer_sorted = 0;
-	unsigned char idx1 = 0;
-	unsigned char idx2 = 0;
+	unsigned char filter_out = 0;
+	unsigned char local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
+	unsigned char temp = 0;
 	unsigned char start_idx = 0;
 	unsigned char end_idx = 0;
+	// Compute median filter.
+	MATH_median_filter(data, median_length, average_length);
+	// Compute average or median value.
+	filter_out = (average_length > 0)? MATH_average_u8(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
+	return filter_out;
+}
+
+/* COMPUTE AVERAGE MEDIAN VALUE OF A 16-BITS VALUES ARRAY.
+ * @param data:				Input buffer.
+ * @param median_length:	Number of elements taken for median value search.
+ * @param average_length:	Number of center elements taken for final average.
+ * @return filter_out:		Output value of the median filter.
+ */
+unsigned short MATH_median_filter_u16(unsigned short* data, unsigned char median_length, unsigned char average_length) {
+	// Local variables.
+	unsigned short filter_out = 0;
+	unsigned short local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
+	unsigned short temp = 0;
+	unsigned char start_idx = 0;
+	unsigned char end_idx = 0;
+	// Compute median filter.
+	MATH_median_filter(data, median_length, average_length);
+	// Compute average or median value.
+	filter_out = (average_length > 0)? MATH_average_u16(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
+	return filter_out;
+}
+
+/* COMPUTE AVERAGE MEDIAN VALUE OF A 32-BITS VALUES ARRAY.
+ * @param data:				Input buffer.
+ * @param median_length:	Number of elements taken for median value search.
+ * @param average_length:	Number of center elements taken for final average.
+ * @return filter_out:		Output value of the median filter.
+ */
+unsigned int MATH_median_filter_u32(unsigned int* data, unsigned char median_length, unsigned char average_length) {
+	// Local variables.
 	unsigned int filter_out = 0;
+	unsigned int local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
 	unsigned int temp = 0;
-	// Copy input buffer into local buffer.
-	for (idx1=0 ; idx1<median_length ; idx1++) {
-		local_buf[idx1] = data[idx1];
-	}
-	// Sort buffer in ascending order.
-	for (idx1=0; idx1<median_length; ++idx1) {
-		buffer_sorted = 1;
-		for (idx2=1 ; idx2<(median_length-idx1) ; ++idx2) {
-			if (local_buf[idx2 - 1] > local_buf[idx2]) {
-				temp = local_buf[idx2 - 1];
-				local_buf[idx2 - 1] = local_buf[idx2];
-				local_buf[idx2] = temp;
-				buffer_sorted = 0;
-			}
-		}
-		if (buffer_sorted != 0) break;
-	}
-	// Compute average of center values if required.
-	if (average_length > 0) {
-		// Clamp value.
-		if (average_length > median_length) {
-			average_length = median_length;
-		}
-		start_idx = (median_length / 2) - (average_length / 2);
-		end_idx = (median_length / 2) + (average_length / 2);
-		if (end_idx >= median_length) {
-			end_idx = (median_length - 1);
-		}
-		// Compute average.
-		filter_out = MATH_average(&(data[start_idx]), (end_idx - start_idx + 1));
-	}
-	else {
-		// Return median value.
-		filter_out = local_buf[(median_length / 2)];
-	}
+	unsigned char start_idx = 0;
+	unsigned char end_idx = 0;
+	// Compute median filter.
+	MATH_median_filter(data, median_length, average_length);
+	// Compute average or median value.
+	filter_out = (average_length > 0)? MATH_average_u32(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
 	return filter_out;
 }
 
