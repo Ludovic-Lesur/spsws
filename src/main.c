@@ -826,8 +826,10 @@ int main (void) {
 			spsws_ctx.sigfox_weather_data.field.average_wind_speed_kmh = (generic_data_u32_1 / 1000);
 			spsws_ctx.sigfox_weather_data.field.peak_wind_speed_kmh = (generic_data_u32_2 / 1000);
 			wind_status = WIND_get_direction(&generic_data_u32_1);
-			WIND_error_check();
-			// Check status.
+			// Do not store undefined error (meaning that no wind has been detected so no direction can be computed).
+			if ((wind_status != WIND_SUCCESS) && (wind_status != (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED))) {
+				WIND_error_check();
+			}
 			spsws_ctx.sigfox_weather_data.field.average_wind_direction_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
 			// Retrieve rain measurements.
 			RAIN_get_pluviometry(&generic_data_u8);
