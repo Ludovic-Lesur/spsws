@@ -371,12 +371,12 @@ static void SPSWS_init_hw(void) {
 #endif
 }
 
-/* RESET ALL MEASUREMENTS COUNTERS.
+/* RESET ALL MEASUREMENTS.
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_reset_measurement_count(void) {
-	// Weather data.
+static void SPSWS_reset_measurements(void) {
+	// Weather data
 	spsws_ctx.measurements.temperature_degrees.count = 0;
 	spsws_ctx.measurements.temperature_degrees.full_flag = 0;
 	spsws_ctx.measurements.humidity_percent.count = 0;
@@ -387,6 +387,10 @@ static void SPSWS_reset_measurement_count(void) {
 	spsws_ctx.measurements.uv_index.full_flag = 0;
 	spsws_ctx.measurements.absolute_pressure_tenth_hpa.count = 0;
 	spsws_ctx.measurements.absolute_pressure_tenth_hpa.full_flag = 0;
+#ifdef CM
+	WIND_reset_data();
+	RAIN_reset_data();
+#endif
 	// Monitoring data.
 	spsws_ctx.measurements.tmcu_degrees.count = 0;
 	spsws_ctx.measurements.tmcu_degrees.full_flag = 0;
@@ -430,7 +434,7 @@ static void SPSWS_init_context(void) {
 	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	spsws_ctx.status.field.station_mode = SPSWS_MODE;
 	spsws_ctx.seconds_counter = 0;
-	SPSWS_reset_measurement_count();
+	SPSWS_reset_measurements();
 	// Read status byte.
 	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
 	NVM_error_check();
@@ -629,18 +633,11 @@ int main (void) {
 			IWDG_reload();
 			// Update flags.
 			SPSWS_update_time_flags();
-			// Check flag.
-			if ((spsws_ctx.flags.fixed_hour_alarm != 0) && (spsws_ctx.flags.hour_changed == 0)) {
-				// False detection due to RTC recalibration.
-				spsws_ctx.state = SPSWS_STATE_OFF;
-			}
-			else {
-				// Valid wake-up.
-				SPSWS_clock_wake_up();
-				// Turn RF TCXO on.
-				sx1232_status = SX1232_tcxo(1);
-				SX1232_error_check();
-				if (spsws_ctx.flags.fixed_hour_alarm != 0) {
+			// Check alarm flag..
+			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
+				// Check hour change flag.
+				if (spsws_ctx.flags.hour_changed != 0) {
+					// Fixed hour wake-up.
 					SPSWS_update_pwut();
 					// Check if day changed.
 					if (spsws_ctx.flags.day_changed != 0) {
@@ -654,8 +651,21 @@ int main (void) {
 						spsws_ctx.flags.is_afternoon = 0;
 					}
 					spsws_ctx.flags.hour_changed = 0; // Reset flag.
+					// Switch to external clock.
+					SPSWS_clock_wake_up();
+					// Turn RF TCXO on.
+					sx1232_status = SX1232_tcxo(1);
+					SX1232_error_check();
+					// Next state.
+					spsws_ctx.state = SPSWS_STATE_MEASURE;
 				}
-				// Next state.
+				else {
+					// False detection due to RTC recalibration.
+					spsws_ctx.state = SPSWS_STATE_OFF;
+				}
+			}
+			else {
+				// Intermediate measure wake-up (HSE and radio TCXO not required).
 				spsws_ctx.state = SPSWS_STATE_MEASURE;
 			}
 			break;
@@ -829,9 +839,8 @@ int main (void) {
 			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
 				// Compute average data.
 				SPSWS_compute_final_measurements();
-				SPSWS_reset_measurement_count();
-				// Clear flag and send data.
-				spsws_ctx.flags.fixed_hour_alarm = 0;
+				SPSWS_reset_measurements();
+				// Send data.
 				spsws_ctx.state = SPSWS_STATE_MONITORING;
 			}
 			else {
@@ -954,16 +963,15 @@ int main (void) {
 			SX1232_error_check();
 			// Disable HSE.
 			SPSWS_clock_sleep();
-			// Clear POR and wake-up flags.
+			// Clear flags.
 			spsws_ctx.flags.por = 0;
 			spsws_ctx.flags.wake_up = 0;
+			spsws_ctx.flags.fixed_hour_alarm = 0;
 			// Store status byte in NVM.
 			nvm_status = NVM_write_byte(NVM_ADDRESS_STATUS, spsws_ctx.status.raw_byte);
 			NVM_error_check();
 #ifdef CM
 			// Re-start continuous measurements.
-			WIND_reset_data();
-			RAIN_reset_data();
 			WIND_start_continuous_measure();
 			RAIN_start_continuous_measure();
 			NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
