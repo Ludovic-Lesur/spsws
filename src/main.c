@@ -133,11 +133,11 @@ typedef struct {
 } SPSWS_measurement_u16_t;
 
 typedef struct {
-	SPSWS_measurement_u8_t temperature_degrees;
-	SPSWS_measurement_u8_t humidity_percent;
+	SPSWS_measurement_u8_t tamb_degrees;
+	SPSWS_measurement_u8_t hamb_percent;
 	SPSWS_measurement_u8_t light_percent;
 	SPSWS_measurement_u8_t uv_index;
-	SPSWS_measurement_u16_t absolute_pressure_tenth_hpa;
+	SPSWS_measurement_u16_t patm_abs_tenth_hpa;
 	SPSWS_measurement_u8_t tmcu_degrees;
 	SPSWS_measurement_u8_t tpcb_degrees;
 	SPSWS_measurement_u8_t hpcb_percent;
@@ -163,11 +163,11 @@ typedef union {
 typedef union {
 	unsigned char frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
 	struct {
-		unsigned temperature_degrees : 8;
-		unsigned humidity_percent : 8;
+		unsigned tamb_degrees : 8;
+		unsigned hamb_percent : 8;
 		unsigned light_percent : 8;
 		unsigned uv_index : 8;
-		unsigned absolute_pressure_tenth_hpa : 16;
+		unsigned patm_abs_tenth_hpa : 16;
 #ifdef CM
 		unsigned average_wind_speed_kmh : 8;
 		unsigned peak_wind_speed_kmh : 8;
@@ -377,16 +377,16 @@ static void SPSWS_init_hw(void) {
  */
 static void SPSWS_reset_measurements(void) {
 	// Weather data
-	spsws_ctx.measurements.temperature_degrees.count = 0;
-	spsws_ctx.measurements.temperature_degrees.full_flag = 0;
-	spsws_ctx.measurements.humidity_percent.count = 0;
-	spsws_ctx.measurements.humidity_percent.full_flag = 0;
+	spsws_ctx.measurements.tamb_degrees.count = 0;
+	spsws_ctx.measurements.tamb_degrees.full_flag = 0;
+	spsws_ctx.measurements.hamb_percent.count = 0;
+	spsws_ctx.measurements.hamb_percent.full_flag = 0;
 	spsws_ctx.measurements.light_percent.count = 0;
 	spsws_ctx.measurements.light_percent.full_flag = 0;
 	spsws_ctx.measurements.uv_index.count = 0;
 	spsws_ctx.measurements.uv_index.full_flag = 0;
-	spsws_ctx.measurements.absolute_pressure_tenth_hpa.count = 0;
-	spsws_ctx.measurements.absolute_pressure_tenth_hpa.full_flag = 0;
+	spsws_ctx.measurements.patm_abs_tenth_hpa.count = 0;
+	spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag = 0;
 #ifdef CM
 	WIND_reset_data();
 	RAIN_reset_data();
@@ -524,6 +524,7 @@ static void SPSWS_update_pwut(void) {
 }
 #endif
 
+#if (defined IM || defined CM)
 /* COMPUTE FINAL MEASUREMENTS FROM BUFFERS.
  * @param:	None.
  * @return:	None.
@@ -532,11 +533,11 @@ static void SPSWS_compute_final_measurements(void) {
 	// Local variables.
 	unsigned char data_length = 0;
 	// Temperature
-	data_length = (spsws_ctx.measurements.temperature_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.temperature_degrees.count;
-	spsws_ctx.sigfox_weather_data.field.temperature_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.temperature_degrees.data, data_length);
+	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
+	spsws_ctx.sigfox_weather_data.field.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length);
 	// Humidity.
-	data_length = (spsws_ctx.measurements.humidity_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.humidity_percent.count;
-	spsws_ctx.sigfox_weather_data.field.humidity_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : MATH_median_filter_u8(spsws_ctx.measurements.humidity_percent.data, data_length, 0);
+	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
+	spsws_ctx.sigfox_weather_data.field.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0);
 	// Light.
 	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
 	spsws_ctx.sigfox_weather_data.field.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0);
@@ -544,8 +545,8 @@ static void SPSWS_compute_final_measurements(void) {
 	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
 	spsws_ctx.sigfox_weather_data.field.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length);
 	// Absolute pressure.
-	data_length = (spsws_ctx.measurements.absolute_pressure_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.absolute_pressure_tenth_hpa.count;
-	spsws_ctx.sigfox_weather_data.field.absolute_pressure_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : MATH_median_filter_u16(spsws_ctx.measurements.absolute_pressure_tenth_hpa.data, data_length, 0);
+	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
+	spsws_ctx.sigfox_weather_data.field.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0);
 	// MCU temperature.
 	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
 	spsws_ctx.sigfox_monitoring_data.field.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length);
@@ -562,6 +563,7 @@ static void SPSWS_compute_final_measurements(void) {
 	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
 	spsws_ctx.sigfox_monitoring_data.field.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_12BITS : MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0);
 }
+#endif
 
 /*** SPSWS main function ***/
 
@@ -774,10 +776,10 @@ int main (void) {
 			// External temperature/humidity sensor.
 #ifdef HW1_0
 			if (sht3x_status == SHT3X_SUCCESS) {
-				spsws_ctx.measurements.temperature_degrees.data[spsws_ctx.measurements.temperature_degrees.count] = (unsigned char) generic_data_u32_1;
-				SPSWS_increment_measurement_count(spsws_ctx.measurements.temperature_degrees);
-				spsws_ctx.measurements.humidity_percent.data[spsws_ctx.measurements.humidity_percent.count] = generic_data_u8;
-				SPSWS_increment_measurement_count(spsws_ctx.measurements.humidity_percent);
+				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (unsigned char) generic_data_u32_1;
+				SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
+				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_data_u8;
+				SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 			}
 #endif
 #ifdef HW2_0
@@ -788,11 +790,11 @@ int main (void) {
 			if (sht3x_status == SHT3X_SUCCESS) {
 				SHT3X_get_temperature(&temperature);
 				MATH_one_complement(temperature, 7, &generic_data_u32_1);
-				spsws_ctx.measurements.temperature_degrees.data[spsws_ctx.measurements.temperature_degrees.count] = (unsigned char) generic_data_u32_1;
-				SPSWS_increment_measurement_count(spsws_ctx.measurements.temperature_degrees);
+				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (unsigned char) generic_data_u32_1;
+				SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 				SHT3X_get_humidity(&generic_data_u8);
-				spsws_ctx.measurements.humidity_percent.data[spsws_ctx.measurements.humidity_percent.count] = generic_data_u8;
-				SPSWS_increment_measurement_count(spsws_ctx.measurements.humidity_percent);
+				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_data_u8;
+				SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 			}
 #endif
 			// External pressure/temperature sensor.
@@ -803,8 +805,8 @@ int main (void) {
 			if (dps310_status == DPS310_SUCCESS) {
 				// Read data.
 				DPS310_get_pressure(&generic_data_u32_1);
-				spsws_ctx.measurements.absolute_pressure_tenth_hpa.data[spsws_ctx.measurements.absolute_pressure_tenth_hpa.count] = (generic_data_u32_1 / 10);
-				SPSWS_increment_measurement_count(spsws_ctx.measurements.absolute_pressure_tenth_hpa);
+				spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (generic_data_u32_1 / 10);
+				SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 			}
 			// External UV index sensor.
 			IWDG_reload();
@@ -969,6 +971,7 @@ int main (void) {
 			spsws_ctx.flags.por = 0;
 			spsws_ctx.flags.wake_up = 0;
 			spsws_ctx.flags.fixed_hour_alarm = 0;
+			spsws_ctx.seconds_counter = 0;
 			// Store status byte in NVM.
 			nvm_status = NVM_write_byte(NVM_ADDRESS_STATUS, spsws_ctx.status.raw_byte);
 			NVM_error_check();
@@ -978,8 +981,7 @@ int main (void) {
 			RAIN_start_continuous_measure();
 			NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
 #endif
-			// Clear RTC flags.
-			RTC_clear_alarm_b_flag();
+			// Enable RTC interrupt.
 			RTC_enable_alarm_b_interrupt();
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_SLEEP;
@@ -998,13 +1000,12 @@ int main (void) {
 				spsws_ctx.seconds_counter++;
 				// Check measurements period.
 				if (spsws_ctx.seconds_counter >= MEASUREMENT_PERIOD_SECONDS) {
-					// Reset second counter and wake-up for single measurement.
-					spsws_ctx.seconds_counter = 0;
+					// Wake-up for single measurement.
 					spsws_ctx.flags.wake_up = 1;
 				}
 				RTC_clear_alarm_b_flag();
 			}
-			// Check RTC alarm B flag (set every fixed hour).
+			// Check RTC alarm A flag (set every fixed hour).
 			if (RTC_get_alarm_a_flag() != 0) {
 				// Clear RTC flags and set local flag.
 				spsws_ctx.flags.fixed_hour_alarm = 1;

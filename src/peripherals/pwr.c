@@ -62,10 +62,13 @@ void PWR_enter_stop_mode(void) {
 	PWR -> CR |= (0b1 << 2); // CWUF='1'.
 	// Enter stop mode when CPU enters deepsleep.
 	PWR -> CR &= ~(0b1 << 1); // PDDS='0'.
-	// Clear all EXTI line, RTC an peripherals interrupt pending bits.
+	// Clear all EXTI line, peripherals interrupt pending bits.
 	RCC -> CICR |= 0x000001BF;
 	EXTI -> PR |= 0x007BFFFF; // PIFx='1'.
-	RTC -> ISR &= 0xFFFF005F; // Reset alarms, wake-up, tamper and timestamp flags.
+	RTC -> ISR &= 0xFFFE035F; // Reset wake-up, tamper and timestamp flags.
+	// Note: RTC alarms flags are not cleared because alarm A flag is read statically after wake-up in the main.
+	// If the alarm A or B flag is set when entering stop mode, the execution will be ignored but the main will directly treat and clear the flag.
+	// The MCU will enter stop on the second loop.
 	NVIC -> ICPR = 0xFFFFFFFF; // CLEARPENDx='1'.
 	// Enter stop mode.
 	SCB -> SCR |= (0b1 << 2); // SLEEPDEEP='1'.
