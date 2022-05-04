@@ -44,8 +44,8 @@ typedef struct {
 
 void RTC_reset(void);
 RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz, unsigned char alarm_offset_seconds);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* timestamp);
-void __attribute__((optimize("-O0"))) RTC_get_timestamp(RTC_time_t* timestamp);
+RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time);
+void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time);
 
 volatile unsigned char RTC_get_alarm_a_flag(void);
 void RTC_clear_alarm_a_flag(void);

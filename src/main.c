@@ -216,8 +216,8 @@ typedef struct {
 	unsigned int lsi_frequency_hz;
 	unsigned char lse_running;
 	// Wake-up management.
-	RTC_time_t current_timestamp;
-	RTC_time_t previous_wake_up_timestamp;
+	RTC_time_t current_time;
+	RTC_time_t previous_wake_up_time;
 	// Measurements buffers.
 	SPSWS_measurements_t measurements;
 	unsigned int seconds_counter;
@@ -458,39 +458,39 @@ static void SPSWS_update_time_flags(void) {
 	unsigned char nvm_byte = 0;
 	unsigned char local_utc_offset = 0;
 	signed char local_hour = 0;
-	// Retrieve current timestamp from RTC.
-	RTC_get_timestamp(&spsws_ctx.current_timestamp);
-	// Retrieve previous wake-up timestamp from NVM.
+	// Retrieve current time from RTC.
+	RTC_get_time(&spsws_ctx.current_time);
+	// Retrieve previous wake-up time from NVM.
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), &nvm_byte);
 	NVM_error_check();
-	spsws_ctx.previous_wake_up_timestamp.year = (nvm_byte << 8);
+	spsws_ctx.previous_wake_up_time.year = (nvm_byte << 8);
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), &nvm_byte);
 	NVM_error_check();
-	spsws_ctx.previous_wake_up_timestamp.year |= nvm_byte;
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_timestamp.month);
+	spsws_ctx.previous_wake_up_time.year |= nvm_byte;
+	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
 	NVM_error_check();
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_timestamp.date);
+	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
 	NVM_error_check();
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_timestamp.hours);
+	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
 	NVM_error_check();
-	// Check timestamp are differents (avoiding false wake-up due to RTC recalibration).
-	if ((spsws_ctx.current_timestamp.year != spsws_ctx.previous_wake_up_timestamp.year) ||
-		(spsws_ctx.current_timestamp.month != spsws_ctx.previous_wake_up_timestamp.month) ||
-		(spsws_ctx.current_timestamp.date != spsws_ctx.previous_wake_up_timestamp.date)) {
+	// Check time are differents (avoiding false wake-up due to RTC recalibration).
+	if ((spsws_ctx.current_time.year != spsws_ctx.previous_wake_up_time.year) ||
+		(spsws_ctx.current_time.month != spsws_ctx.previous_wake_up_time.month) ||
+		(spsws_ctx.current_time.date != spsws_ctx.previous_wake_up_time.date)) {
 		// Day (and thus hour) has changed.
 		spsws_ctx.flags.day_changed = 1;
 		spsws_ctx.flags.hour_changed = 1;
 	}
-	if (spsws_ctx.current_timestamp.hours != spsws_ctx.previous_wake_up_timestamp.hours) {
+	if (spsws_ctx.current_time.hours != spsws_ctx.previous_wake_up_time.hours) {
 		// Hour as changed.
 		spsws_ctx.flags.hour_changed = 1;
 	}
 	// Check if we are in afternoon (to enable device geolocation).
 	local_utc_offset = RTC_LOCAL_UTC_OFFSET_WINTER;
-	if ((spsws_ctx.current_timestamp.month > RTC_WINTER_TIME_LAST_MONTH) && (spsws_ctx.current_timestamp.month < RTC_WINTER_TIME_FIRST_MONTH)) {
+	if ((spsws_ctx.current_time.month > RTC_WINTER_TIME_LAST_MONTH) && (spsws_ctx.current_time.month < RTC_WINTER_TIME_FIRST_MONTH)) {
 		local_utc_offset = RTC_LOCAL_UTC_OFFSET_SUMMER;
 	}
-	local_hour = (spsws_ctx.current_timestamp.hours + local_utc_offset) % RTC_NUMBER_OF_HOURS_PER_DAY;
+	local_hour = (spsws_ctx.current_time.hours + local_utc_offset) % RTC_NUMBER_OF_HOURS_PER_DAY;
 	if (local_hour < 0) {
 		local_hour += RTC_NUMBER_OF_HOURS_PER_DAY;
 	}
@@ -508,18 +508,18 @@ static void SPSWS_update_time_flags(void) {
 static void SPSWS_update_pwut(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
-	// Retrieve current timestamp from RTC.
-	RTC_get_timestamp(&spsws_ctx.current_timestamp);
-	// Update previous wake-up timestamp.
-	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_timestamp.year & 0xFF00) >> 8));
+	// Retrieve current time from RTC.
+	RTC_get_time(&spsws_ctx.current_time);
+	// Update previous wake-up time.
+	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
 	NVM_error_check();
-	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_timestamp.year & 0x00FF) >> 0));
+	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
 	NVM_error_check();
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_timestamp.month);
+	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
 	NVM_error_check();
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_timestamp.date);
+	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
 	NVM_error_check();
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_timestamp.hours);
+	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
 	NVM_error_check();
 }
 #endif
@@ -673,16 +673,16 @@ int main (void) {
 			break;
 		case SPSWS_STATE_RTC_CALIBRATION:
 			IWDG_reload();
-			// Get current timestamp from GPS.
+			// Get current time from GPS.
 			lpuart_status = LPUART1_power_on();
 			LPUART1_error_check();
-			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_timestamp, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
+			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
 			NEOM8N_error_check();
 			LPUART1_power_off();
-			// Calibrate RTC if timestamp is available.
+			// Calibrate RTC if time is available.
 			if (neom8n_status == NEOM8N_SUCCESS) {
 				// Update RTC registers.
-				rtc_status = RTC_calibrate(&spsws_ctx.current_timestamp);
+				rtc_status = RTC_calibrate(&spsws_ctx.current_time);
 				RTC_error_check();
 				// Update PWUT when first calibration.
 				if (spsws_ctx.status.field.first_rtc_calibration == 0) {
@@ -691,6 +691,10 @@ int main (void) {
 				// Update calibration flags.
 				spsws_ctx.status.field.first_rtc_calibration = 1;
 				spsws_ctx.status.field.daily_rtc_calibration = 1;
+			}
+			else {
+				// In POR case, to avoid wake-up directly after RTC calibration (alarm A will occur during the first GPS time acquisition because of the RTC reset and the random delay).
+				RTC_clear_alarm_a_flag();
 			}
 			// Send error stack at start
 			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;

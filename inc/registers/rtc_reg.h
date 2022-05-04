@@ -23,9 +23,9 @@ typedef struct {
 	volatile unsigned int WPR;			// RTC write protect register.
 	volatile unsigned int SSR;			// RTC sub-seconds register.
 	volatile unsigned int SHIFTR;		// RTC shift control register.
-	volatile unsigned int TSTR;			// RTC timestamp time register.
-	volatile unsigned int TSDR;			// RTC timestamp date register.
-	volatile unsigned int TSSSR;		// RTC timestamp sub-seconds register.
+	volatile unsigned int TSTR;			// RTC time register.
+	volatile unsigned int TSDR;			// RTC date register.
+	volatile unsigned int TSSSR;		// RTC sub-seconds register.
 	volatile unsigned int CALR;			// RTC calibration register.
 	volatile unsigned int TAMPCR;		// RTC tamper configuration register.
 	volatile unsigned int ALRMASSR;		// RTC alarm A sub-seconds register.

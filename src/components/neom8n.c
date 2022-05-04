@@ -203,13 +203,13 @@ static unsigned char NEOM8N_compute_nmea_checksum(char* nmea_rx_buf) {
 }
 
 /* INDICATE IF A GPS TIMESTAMP IS VALID.
- * @param gps_timestamp:	GPS timestamp structure to analyse.
- * @return status			Function execution status.
+ * @param gps_time:	Time structure to analyse.
+ * @return status	Function execution status.
  */
 static NEOM8N_status_t NEOM8N_time_is_valid(RTC_time_t* gps_time) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
-	// Check timestamp fields.
+	// Check time fields.
 	if (((gps_time -> date) < 1) || ((gps_time -> date) > 31) ||
 		((gps_time -> month) < 1) || ((gps_time -> month) > 12) ||
 		((gps_time -> year) < 2021) || ((gps_time -> year) > 2094) ||
@@ -217,17 +217,17 @@ static NEOM8N_status_t NEOM8N_time_is_valid(RTC_time_t* gps_time) {
 		((gps_time -> minutes) > 59) ||
 		((gps_time -> seconds) > 59))
 	{
-		status = NEOM8N_ERROR_TIMESTAMP;
+		status = NEOM8N_ERROR_TIME_INVALID;
 	}
 	return status;
 }
 
 /* NMEA ZDA MESSAGE DECODING FUNCTION.
  * @param nmea_rx_buf:		NMEA message to decode.
- * @param gps_timestamp:	Pointer to timestamp structure.
+ * @param gps_time:	Pointer to time structure.
  * @return status:			Function execution status.
  */
-static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_timestamp) {
+static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_time) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -273,15 +273,15 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 				// Parse hours.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 1]), STRING_FORMAT_DECIMAL, 2, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> hours = (unsigned char) value;
+				gps_time -> hours = (unsigned char) value;
 				// Parse minutes.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 3]), STRING_FORMAT_DECIMAL, 2, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> minutes = (unsigned char) value;
+				gps_time -> minutes = (unsigned char) value;
 				// Parse seconds.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 5]), STRING_FORMAT_DECIMAL, 2, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> seconds = (unsigned char) value;
+				gps_time -> seconds = (unsigned char) value;
 				break;
 			// Field 2 = day = <dd>.
 			case NMEA_ZDA_FIELD_INDEX_DAY:
@@ -290,7 +290,7 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 				// Parse day.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 1]), STRING_FORMAT_DECIMAL, 2, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> date = (unsigned char) value;
+				gps_time -> date = (unsigned char) value;
 				break;
 			// Field 3 = month = <mm>.
 			case NMEA_ZDA_FIELD_INDEX_MONTH:
@@ -299,7 +299,7 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 				// Parse month.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 1]), STRING_FORMAT_DECIMAL, 2, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> month = (unsigned char) value;
+				gps_time -> month = (unsigned char) value;
 				break;
 			// Field 4 = year = <yyyy>.
 			case NMEA_ZDA_FIELD_INDEX_YEAR:
@@ -308,7 +308,7 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 				// Parse year.
 				string_status = STRING_string_to_value(&(nmea_rx_buf[separator_idx + 1]), STRING_FORMAT_DECIMAL, 4, &value);
 				STRING_status_check(NEOM8N_ERROR_BASE_STRING);
-				gps_timestamp -> year = (unsigned short) value;
+				gps_time -> year = (unsigned short) value;
 				break;
 			// Unused or unknown fields.
 			default:
@@ -321,8 +321,8 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 		// Increment character index.
 		char_idx++;
 	}
-	// Check if timestamp is valid.
-	status = NEOM8N_time_is_valid(gps_timestamp);
+	// Check if time is valid.
+	status = NEOM8N_time_is_valid(gps_time);
 errors:
 	return status;
 }
@@ -342,7 +342,7 @@ static NEOM8N_status_t NEOM8N_position_is_valid(NEOM8N_position_t* gps_position)
 		(gps_position -> long_minutes > 59) ||
 		(gps_position -> long_seconds > 99999))
 	{
-		status = NEOM8N_ERROR_POSITION;
+		status = NEOM8N_ERROR_POSITION_INVALID;
 	}
 	return status;
 }
@@ -511,7 +511,7 @@ static NEOM8N_status_t NEOM8N_parse_nmea_gga(char* nmea_rx_buf, NEOM8N_position_
 		// Increment character index.
 		char_idx++;
 	}
-	// Check if timestamp is valid.
+	// Check if time is valid.
 	status = NEOM8N_position_is_valid(gps_position);
 errors:
 	return status;
@@ -611,11 +611,11 @@ void NEOM8N_init(void) {
 }
 
 /* GET GPS TIMESTAMP.
- * @param gps_timestamp:	Pointer to GPS timestamp structure that will contain the data.
+ * @param gps_time:	Pointer to time structure that will contain the data.
  * @param timeout_seconds:	Timeout in seconds.
  * @return status:			Function execution status.
  */
-NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_seconds) {
+NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, unsigned int timeout_seconds) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	// Reset flags.
@@ -639,10 +639,10 @@ NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_
 		if (neom8n_ctx.line_end_flag != 0) {
 			// Decode incoming NMEA message.
 			if (neom8n_ctx.fill_buf1 != 0) {
-				status = NEOM8N_parse_nmea_zda(neom8n_ctx.rx_buf2, gps_timestamp); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
+				status = NEOM8N_parse_nmea_zda(neom8n_ctx.rx_buf2, gps_time); // Buffer 1 is currently filled by DMA, buffer 2 is available for parsing.
 			}
 			else {
-				status = NEOM8N_parse_nmea_zda(neom8n_ctx.rx_buf1, gps_timestamp); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
+				status = NEOM8N_parse_nmea_zda(neom8n_ctx.rx_buf1, gps_time); // Buffer 2 is currently filled by DMA, buffer 1 is available for parsing.
 			}
 			// Check decoding result.
 			if (status == NEOM8N_SUCCESS) break;
@@ -652,6 +652,9 @@ NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_
 		IWDG_reload();
 	}
 errors:
+	if (RTC_get_wakeup_timer_flag() > 0) {
+		status = NEOM8N_ERROR_TIME_TIMEOUT;
+	}
 	NEOM8N_stop();
 	return status;
 }
@@ -758,6 +761,7 @@ errors:
 	// Clamp fix duration.
 	if ((RTC_get_wakeup_timer_flag() > 0) || ((*fix_duration_seconds) > timeout_seconds)) {
 		(*fix_duration_seconds) = timeout_seconds;
+		status = NEOM8N_ERROR_POSITION_TIMEOUT;
 	}
 	NEOM8N_stop();
 	return status;

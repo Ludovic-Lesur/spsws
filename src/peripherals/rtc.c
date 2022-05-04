@@ -176,10 +176,10 @@ errors:
 }
 
 /* UPDATE RTC CALENDAR WITH A GPS TIMESTAMP.
- * @param timestamp:	Pointer to timestamp from GPS.
- * @return status:			Function execution status.
+ * @param time:	Pointer to time from GPS.
+ * @return status:		Function execution status.
  */
-RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* timestamp) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	unsigned int tr_value = 0;
@@ -187,28 +187,28 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* timestam
 	unsigned char tens = 0;
 	unsigned char units = 0;
 	// Year.
-	tens = ((timestamp -> year) - 2000) / 10;
-	units = ((timestamp -> year) - 2000) - (tens * 10);
+	tens = ((time -> year) - 2000) / 10;
+	units = ((time -> year) - 2000) - (tens * 10);
 	dr_value |= (tens << 20) | (units << 16);
 	// Month.
-	tens = (timestamp -> month) / 10;
-	units = (timestamp -> month) - (tens * 10);
+	tens = (time -> month) / 10;
+	units = (time -> month) - (tens * 10);
 	dr_value |= (tens << 12) | (units << 8);
 	// Date.
-	tens = (timestamp -> date) / 10;
-	units = (timestamp -> date) - (tens * 10);
+	tens = (time -> date) / 10;
+	units = (time -> date) - (tens * 10);
 	dr_value |= (tens << 4) | (units << 0);
 	// Hour.
-	tens = (timestamp -> hours) / 10;
-	units = (timestamp -> hours) - (tens * 10);
+	tens = (time -> hours) / 10;
+	units = (time -> hours) - (tens * 10);
 	tr_value |= (tens << 20) | (units << 16);
 	// Minutes.
-	tens = (timestamp -> minutes) / 10;
-	units = (timestamp -> minutes) - (tens * 10);
+	tens = (time -> minutes) / 10;
+	units = (time -> minutes) - (tens * 10);
 	tr_value |= (tens << 12) | (units << 8);
 	// Seconds.
-	tens = (timestamp -> seconds) / 10;
-	units = (timestamp -> seconds) - (tens * 10);
+	tens = (time -> seconds) / 10;
+	units = (time -> seconds) - (tens * 10);
 	tr_value |= (tens << 4) | (units << 0);
 	// Enter initialization mode.
 	status = RTC_enter_initialization_mode();
@@ -223,20 +223,20 @@ errors:
 }
 
 /* GET CURRENT RTC TIME.
- * @param rtc_timestamp:	Pointer to timestamp that will contain current RTC time.
- * @return:					None.
+ * @param rtc_time:	Pointer to time that will contain current RTC time.
+ * @return:			None.
  */
-void __attribute__((optimize("-O0"))) RTC_get_timestamp(RTC_time_t* timestamp) {
+void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
 	// Read registers.
 	unsigned int dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
 	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
-	// Parse registers into timestamp structure.
-	timestamp -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
-	timestamp -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
-	timestamp -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);
-	timestamp -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
-	timestamp -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
-	timestamp -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
+	// Parse registers into time structure.
+	time -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
+	time -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
+	time -> date = ((dr_value & (0b11 << 4)) >> 4) * 10 + (dr_value & 0b1111);
+	time -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
+	time -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
+	time -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.

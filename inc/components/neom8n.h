@@ -26,8 +26,10 @@ typedef enum {
 	NEOM8N_ERROR_NMEA_NORTH_FLAG,
 	NEOM8N_ERROR_NMEA_EAST_FLAG,
 	NEOM8N_ERROR_NMEA_UNIT,
-	NEOM8N_ERROR_TIMESTAMP,
-	NEOM8N_ERROR_POSITION,
+	NEOM8N_ERROR_TIME_INVALID,
+	NEOM8N_ERROR_TIME_TIMEOUT,
+	NEOM8N_ERROR_POSITION_INVALID,
+	NEOM8N_ERROR_POSITION_TIMEOUT,
 	NEOM8N_ERROR_BASE_LPUART = 0x0100,
 	NEOM8N_ERROR_BASE_LPTIM = (NEOM8N_ERROR_BASE_LPUART + LPUART_ERROR_BASE_LAST),
 	NEOM8N_ERROR_BASE_RTC = (NEOM8N_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
@@ -54,7 +56,7 @@ typedef struct {
 
 void NEOM8N_init(void);
 void NEOM8N_switch_dma_buffer(unsigned char lf_flag);
-NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_timestamp, unsigned int timeout_seconds);
+NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, unsigned int timeout_seconds);
 NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds);
 
 #define NEOM8N_status_check(error_base) { if (neom8n_status != NEOM8N_SUCCESS) { status = error_base + neom8n_status; goto errors; }}

@@ -671,7 +671,7 @@ static void AT_time_callback(void) {
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	int timeout_seconds = 0;
-	RTC_time_t gps_timestamp;
+	RTC_time_t gps_time;
 	// Check if wind measurement is not running.
 	if (at_ctx.wind_measurement_flag != 0) {
 		AT_print_status(ERROR_BUSY);
@@ -687,40 +687,40 @@ static void AT_time_callback(void) {
 	AT_response_add_string("GPS running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
-	neom8n_status = NEOM8N_get_time(&gps_timestamp, (unsigned int) timeout_seconds);
+	neom8n_status = NEOM8N_get_time(&gps_time, (unsigned int) timeout_seconds);
 	NEOM8N_error_check_print();
 	// Year.
-	AT_response_add_value((gps_timestamp.year), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.year), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("-");
 	// Month.
-	if ((gps_timestamp.month) < 10) {
+	if ((gps_time.month) < 10) {
 		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	AT_response_add_value((gps_timestamp.month), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.month), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string("-");
 	// Day.
-	if ((gps_timestamp.date) < 10) {
+	if ((gps_time.date) < 10) {
 		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	AT_response_add_value((gps_timestamp.date), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.date), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(" ");
 	// Hours.
-	if ((gps_timestamp.hours) < 10) {
+	if ((gps_time.hours) < 10) {
 		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	AT_response_add_value((gps_timestamp.hours), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.hours), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(":");
 	// Minutes.
-	if ((gps_timestamp.minutes) < 10) {
+	if ((gps_time.minutes) < 10) {
 		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	AT_response_add_value((gps_timestamp.minutes), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(":");
 	// Seconds.
-	if ((gps_timestamp.seconds) < 10) {
+	if ((gps_time.seconds) < 10) {
 		AT_response_add_value(0, STRING_FORMAT_DECIMAL, 0);
 	}
-	AT_response_add_value((gps_timestamp.seconds), STRING_FORMAT_DECIMAL, 0);
+	AT_response_add_value((gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
 errors:
