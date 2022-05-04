@@ -13,7 +13,8 @@
 
 /*** DPS310 local macros ***/
 
-#define DPS310_TIMEOUT_COUNT				1000000
+#define DPS310_SUB_DELAY_MS					100
+#define DPS310_TIMEOUT_MS					2000
 #define DPS310_SAMPLING_FACTOR_KT			524288
 #define DPS310_SAMPLING_FACTOR_KP			1572864
 
@@ -79,6 +80,39 @@ errors:
 	return status;
 }
 
+/* GENERIC FUNCTION TO WAIT FOR A FLAG.
+ * @param i2c_address:		Sensor address
+ * @param register_address: Address of the register to read.
+ * @param bit_index:		Bit index of the flag to wait for.
+ * @param timeout_error:	Error to return in case of timeout.
+ * @return:					Function execution status.
+ */
+static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char register_address, unsigned char bit_index, DPS310_status_t timeout_error) {
+	// Local variables.
+	DPS310_status_t status = DPS310_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	unsigned char reg_value = 0;
+	unsigned int loop_count_ms = 0;
+	// Wait for flag to be set.
+	do {
+		// Read register.
+		status = DPS310_read_register(i2c_address, register_address, &reg_value);
+		if (status != DPS310_SUCCESS) goto errors;
+		// Low power delay.
+		lptim_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, 1);
+		LPTIM1_status_check(DPS310_ERROR_BASE_LPTIM);
+		// Exit if timeout.
+		loop_count_ms += DPS310_SUB_DELAY_MS;
+		if (loop_count_ms > DPS310_TIMEOUT_MS) {
+			status = timeout_error;
+			goto errors;
+		}
+	}
+	while ((reg_value & (0b1 << bit_index)) == 0);
+errors:
+	return status;
+}
+
 /* READ ALL SENSOR CALIBRATION COEFFICIENTS.
  * @param i2c_address:	Sensor address.
  * @return status		Function execution status.
@@ -88,7 +122,6 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
-	unsigned int loop_count = 0;
 	// Reset all coefficients.
 	unsigned int c0 = 0;
 	unsigned int c1 = 0;
@@ -100,16 +133,8 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	unsigned int c21 = 0;
 	unsigned int c30 = 0;
 	// Wait for coefficients to be ready for reading.
-	while ((read_byte & (0b1 << 7)) == 0) {
-		// Wait for COEF_RDY='1'.
-		status = DPS310_read_register(i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
-		if (status != DPS310_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > DPS310_TIMEOUT_COUNT) {
-			status = DPS310_ERROR_COEFFICIENTS_TIMEOUT;
-			goto errors;
-		}
-	}
+	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
+	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients.
 	read_byte = 0;
 	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C0B, &read_byte);
@@ -200,36 +225,18 @@ static DPS310_status_t DPS310_compute_raw_temperature(unsigned char i2c_address)
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
-	unsigned int loop_count = 0;
 	unsigned int tmp_raw = 0;
 	// Wait for sensor to be ready.
-	while ((read_byte & (0b1 << 6)) == 0) {
-		// Wait for SENSOR_RDY='1' or timeout.
-		status = DPS310_read_register(i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
-		if (status != DPS310_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > DPS310_TIMEOUT_COUNT) {
-			status = DPS310_ERROR_SENSOR_TIMEOUT;
-			goto errors;
-		}
-	}
+	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
+	if (status != DPS310_SUCCESS) goto errors;
 	// Trigger temperature measurement.
 	status = DPS310_write_register(i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
 	if (status != DPS310_SUCCESS) goto errors;
 	status = DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for temperature to be ready.
-	loop_count = 0;
-	while ((read_byte & (0b1 << 5)) == 0) {
-		// Wait for TMP_RDY='1' or timeout.
-		status = DPS310_read_register(i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
-		if (status != DPS310_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > DPS310_TIMEOUT_COUNT) {
-			status = DPS310_ERROR_TEMPERATURE_TIMEOUT;
-			goto errors;
-		}
-	}
+	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 5, DPS310_ERROR_TEMPERATURE_TIMEOUT);
+	if (status != DPS310_SUCCESS) goto errors;
 	// Read temperature.
 	// B2.
 	status = DPS310_read_register(i2c_address, DPS310_REG_TMP_B2, &read_byte);
@@ -251,56 +258,37 @@ errors:
 }
 
 /* PERFORM PRESSURE MEASUREMENT.
- * @param dps310_i2c_address:	Sensor address.
- * @return:						1 in case of success, 0 in case of failure.
+ * @param i2c_address:	Sensor address.
+ * @return:				Function execution status.
  */
-static unsigned char DPS310_compute_raw_pressure(unsigned char dps310_i2c_address) {
+static DPS310_status_t DPS310_compute_raw_pressure(unsigned char i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char read_byte = 0;
-	unsigned int loop_count = 0;
 	unsigned int prs_raw = 0;
 	// Wait for sensor to be ready.
-	while ((read_byte & (0b1 << 6)) == 0) {
-		// Wait for SENSOR_RDY='1' or timeout.
-		status = DPS310_read_register(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
-		if (status != DPS310_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > DPS310_TIMEOUT_COUNT) {
-			status = DPS310_ERROR_SENSOR_TIMEOUT;
-			goto errors;
-		}
-	}
-	// Trigger pressure measurement.
-	status = DPS310_write_register(dps310_i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
+	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
-	status = DPS310_write_register(dps310_i2c_address, DPS310_REG_MEAS_CFG, 0x01);
+	// Trigger pressure measurement.
+	status = DPS310_write_register(i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
+	if (status != DPS310_SUCCESS) goto errors;
+	status = DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x01);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for pressure to be ready.
-	read_byte = 0;
-	loop_count = 0;
-	while ((read_byte & (0b1 << 4)) == 0) {
-		// Wait for PRS_RDY='1'or timeout.
-		status = DPS310_read_register(dps310_i2c_address, DPS310_REG_MEAS_CFG, &read_byte);
-		if (status != DPS310_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > DPS310_TIMEOUT_COUNT) {
-			status = DPS310_ERROR_PRESSURE_TIMEOUT;
-			goto errors;
-		}
-	}
+	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 4, DPS310_ERROR_PRESSURE_TIMEOUT);
+	if (status != DPS310_SUCCESS) goto errors;
 	// Read pressure.
 	// B2.
-	status = DPS310_read_register(dps310_i2c_address, DPS310_REG_PRS_B2, &read_byte);
+	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B2, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= (read_byte << 16);
 	// B1.
-	status = DPS310_read_register(dps310_i2c_address, DPS310_REG_PRS_B1, &read_byte);
+	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B1, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= (read_byte << 8);
 	// B0.
-	status = DPS310_read_register(dps310_i2c_address, DPS310_REG_PRS_B0, &read_byte);
+	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B0, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= read_byte;
 	// Compute two complement.

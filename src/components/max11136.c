@@ -8,6 +8,7 @@
 #include "max11136.h"
 
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "max11136_reg.h"
 #include "mode.h"
@@ -44,7 +45,8 @@
 
 #define MAX11136_CONVERSION_LOOPS			3
 
-#define MAX11136_TIMEOUT_COUNT				1000000
+#define MAX11136_SUB_DELAY_MS				100
+#define MAX11136_TIMEOUT_MS					2000
 
 /*** MAX11136 local structures ***/
 
@@ -107,10 +109,11 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
 	unsigned char channel_idx = 0;
-	unsigned int loop_count = 0;
+	unsigned int loop_count_ms = 0;
 #ifdef HW1_0
 	SPI1_set_clock_polarity(1);
 #endif
@@ -128,8 +131,12 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	if (status != MAX11136_SUCCESS) goto errors;
 	// Wait for EOC to be pulled low.
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
-		loop_count++;
-		if (loop_count > MAX11136_TIMEOUT_COUNT) {
+		// Low power delay.
+		lptim_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, 1);
+		LPTIM1_status_check(MAX11136_ERROR_BASE_LPTIM);
+		// Exit if timeout.
+		loop_count_ms += MAX11136_SUB_DELAY_MS;
+		if (loop_count_ms > MAX11136_TIMEOUT_MS) {
 			status = MAX11136_ERROR_TIMEOUT;
 			goto errors;
 		}

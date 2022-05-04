@@ -8,12 +8,14 @@
 #include "si1133.h"
 
 #include "i2c.h"
+#include "lptim.h"
 #include "si1133_reg.h"
 
 /*** SI1133 local macros ***/
 
 #define SI1133_BURST_WRITE_MAX_LENGTH	10
-#define SI1133_TIMEOUT_COUNT			1000000
+#define SI1133_SUB_DELAY_MS				100
+#define SI1133_TIMEOUT_MS				2000
 
 /*** SI1133 local global variables ***/
 
@@ -70,29 +72,43 @@ errors:
 	return status;
 }
 
-/* WAIT FOR SI1133 TO BE READY.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
+/* GENERIC FUNCTION TO WAIT FOR A FLAG.
+ * @param i2c_address:		Sensor address
+ * @param register_address: Address of the register to read.
+ * @param bit_index:		Bit index of the flag to wait for.
+ * @param timeout_error:	Error to return in case of timeout.
+ * @return:					Function execution status.
  */
-static SI1133_status_t SI1133_wait_until_sleep(unsigned char i2c_address) {
+static SI1133_status_t SI1133_wait_flag(unsigned char i2c_address, unsigned char register_address, unsigned char bit_index, SI1133_status_t timeout_error) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
-	unsigned char response0 = 0;
-	unsigned int loop_count = 0;
-	// Wait until SLEEP flag is set.
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	unsigned char reg_value = 0;
+	unsigned int loop_count_ms = 0;
+	// Wait for flag to be set.
 	do {
-		status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
+		// Read register.
+		status = SI1133_read_register(i2c_address, register_address, &reg_value);
 		if (status != SI1133_SUCCESS) goto errors;
-		loop_count++;
-		if (loop_count > SI1133_TIMEOUT_COUNT) {
-			status = SI1133_ERROR_READY;
+		// Low power delay.
+		lptim_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, 1);
+		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
+		// Exit if timeout.
+		loop_count_ms += SI1133_SUB_DELAY_MS;
+		if (loop_count_ms > SI1133_TIMEOUT_MS) {
+			status = timeout_error;
 			goto errors;
 		}
 	}
-	while ((response0 & (0b1 << 5)) == 0);
+	while ((reg_value & (0b1 << bit_index)) == 0);
 errors:
 	return status;
 }
+
+/* WAIT FOR SI1133 TO BE READY. SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 5, SI1133_ERROR_READY)
+ * @param i2c_address:	Sensor address.
+ * @return status:		Function execution status.
+ */
 
 // Function declaration for next function.
 static SI1133_status_t SI1133_send_command(unsigned char i2c_address, unsigned char command);
@@ -120,6 +136,36 @@ errors:
 	return status;
 }
 
+/* WAIT FOR A CHANGE IN SI1133 COMMAND COUNTER.
+ * @param i2c_address:		Sensor address
+ * @param previous_counter:	Previous value of the counter.
+ */
+static SI1133_status_t SI1133_wait_for_command_counter_change(unsigned char i2c_address, unsigned char previous_counter) {
+	// Local variables.
+	SI1133_status_t status = SI1133_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	unsigned char current_counter = previous_counter;
+	unsigned int loop_count_ms = 0;
+	// Wait for command counter change.
+	do {
+		// Read counter.
+		status = SI1133_get_command_counter(i2c_address, &current_counter);
+		if (status != SI1133_SUCCESS) goto errors;
+		// Low power delay.
+		lptim_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, 1);
+		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
+		// Exit if timeout.
+		loop_count_ms += SI1133_SUB_DELAY_MS;
+		if (loop_count_ms > SI1133_TIMEOUT_MS) {
+			status = SI1133_ERROR_COMMAND_COUNTER;
+			goto errors;
+		}
+	}
+	while (current_counter == previous_counter);
+errors:
+	return status;
+}
+
 /* SEND A COMMAND TO SI1133.
  * @param i2c_address:	Sensor address.
  * @param command:		Command to send.
@@ -129,17 +175,14 @@ static SI1133_status_t SI1133_send_command(unsigned char i2c_address, unsigned c
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	unsigned char response0 = 0;
-	unsigned char current_counter = 0;
 	unsigned char previous_counter = 0;
-	unsigned int loop_count = 0;
 	// Wait for sensor to be ready.
-	status = SI1133_wait_until_sleep(i2c_address);
+	status = SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 5, SI1133_ERROR_READY);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Get current value of counter in RESPONSE0 register.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
 		status = SI1133_get_command_counter(i2c_address, &previous_counter);
 		if (status != SI1133_SUCCESS) goto errors;
-		current_counter = previous_counter;
 	}
 	// Send command.
 	status = SI1133_write_register(i2c_address, SI1133_REG_COMMAND, &command, 1);
@@ -154,18 +197,8 @@ static SI1133_status_t SI1133_send_command(unsigned char i2c_address, unsigned c
 	}
 	// Expect a change in counter and read error flag.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
-		do {
-			// Read counter.
-			status = SI1133_get_command_counter(i2c_address, &current_counter);
-			if (status != SI1133_SUCCESS) goto errors;
-			// Exit if timeout.
-			loop_count++;
-			if (loop_count > SI1133_TIMEOUT_COUNT) {
-				status = SI1133_ERROR_COMMAND_COUNTER;
-				goto errors;
-			}
-		}
-		while (current_counter == previous_counter);
+		status = SI1133_wait_for_command_counter_change(i2c_address, previous_counter);
+		if (status != SI1133_SUCCESS) goto errors;
 	}
 errors:
 	return status;
@@ -182,19 +215,16 @@ static SI1133_status_t SI1133_set_parameter(unsigned char i2c_address, unsigned 
 	SI1133_status_t status = SI1133_SUCCESS;
 	unsigned char parameter_write_command[2];
 	unsigned char response0 = 0;
-	unsigned char current_counter = 0;
 	unsigned char previous_counter = 0;
-	unsigned int loop_count = 0;
 	// Build command.
 	parameter_write_command[0] = value;
 	parameter_write_command[1] = 0x80 + (parameter & 0x3F);
 	// Wait for sensor to be ready.
-	status = SI1133_wait_until_sleep(i2c_address);
+	status = SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 5, SI1133_ERROR_READY);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Get current value of counter in RESPONSE0 register.
 	status = SI1133_get_command_counter(i2c_address, &previous_counter);
 	if (status != SI1133_SUCCESS) goto errors;
-	current_counter = previous_counter;
 	// Send command.
 	status = SI1133_write_register(i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
 	if (status != SI1133_SUCCESS) goto errors;
@@ -206,19 +236,9 @@ static SI1133_status_t SI1133_set_parameter(unsigned char i2c_address, unsigned 
 		status = (SI1133_ERROR_PARAMETER + (response0 & 0x0F));
 		goto errors;
 	}
-	// Expect a change in counter and read error flag.
-	do {
-		// Read counter and CMD_ERR flag.
-		status = SI1133_get_command_counter(i2c_address, &current_counter);
-		if (status != SI1133_SUCCESS) goto errors;
-		// Exit if timeout.
-		loop_count++;
-		if (loop_count > SI1133_TIMEOUT_COUNT) {
-			status = SI1133_ERROR_COMMAND_COUNTER;
-			goto errors;
-		}
-	}
-	while (current_counter == previous_counter);
+	// Expect a change in counter.
+	status = SI1133_wait_for_command_counter_change(i2c_address, previous_counter);
+	if (status != SI1133_SUCCESS) goto errors;
 errors:
 	return status;
 }
@@ -249,37 +269,28 @@ errors:
 /*** SI1133 functions ***/
 
 /* PERFORM SI1133 UV INDEX MEASUREMENT.
- * @param:	None.
- * @return:	None.
+ * @param i2c_address:	Sensor address.
+ * @return status:		Function execution status.
  */
-SI1133_status_t SI1133_perform_measurements(unsigned char si1133_i2c_address) {
+SI1133_status_t SI1133_perform_measurements(unsigned char i2c_address) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	unsigned char response0 = 0;
-	unsigned int loop_count = 0;
 	unsigned short raw_uv = 0;
 	// Configure sensor.
-	status = SI1133_configure(si1133_i2c_address);
+	status = SI1133_configure(i2c_address);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Start conversion.
-	status = SI1133_send_command(si1133_i2c_address, SI1133_CMD_FORCE_CH);
+	status = SI1133_send_command(i2c_address, SI1133_CMD_FORCE_CH);
 	if (status != SI1133_SUCCESS) goto errors;
-	// Wait for conversion to complete.
-	do {
-		status = SI1133_read_register(si1133_i2c_address, SI1133_REG_IRQ_STATUS, &response0);
-		if (status != SI1133_SUCCESS) goto errors;
-		// Wait for IRQ0='1' or timeout.
-		loop_count++;
-		if (loop_count > SI1133_TIMEOUT_COUNT) {
-			status = SI1133_ERROR_TIMEOUT;
-		}
-	}
-	while ((response0 & 0x01) == 0);
+	// Wait for conversion to complete (IRQ0='1').
+	status = SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 1, SI1133_ERROR_TIMEOUT);
+	if (status != SI1133_SUCCESS) goto errors;
 	// Get result.
-	status = SI1133_read_register(si1133_i2c_address, SI1133_REG_HOSTOUT0, &response0);
+	status = SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT0, &response0);
 	if (status != SI1133_SUCCESS) goto errors;
 	raw_uv |= (response0 << 8);
-	status = SI1133_read_register(si1133_i2c_address, SI1133_REG_HOSTOUT1, &response0);
+	status = SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT1, &response0);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Convert to UV index.
 	// UV index = k * ((m * raw^2) + raw) where k = 0.008284 = 1 / 121 and m = -0.000231 = -1 / 4329.
