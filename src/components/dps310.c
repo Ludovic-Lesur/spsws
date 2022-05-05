@@ -13,10 +13,11 @@
 
 /*** DPS310 local macros ***/
 
-#define DPS310_SUB_DELAY_MS					100
+#define DPS310_SUB_DELAY_MS					10
 #define DPS310_TIMEOUT_MS					2000
 #define DPS310_SAMPLING_FACTOR_KT			524288
 #define DPS310_SAMPLING_FACTOR_KP			1572864
+#define DPS310_NUMBER_OF_COEF_REGISTERS		18
 
 /*** DPS310 local structures ***/
 
@@ -93,11 +94,11 @@ static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	unsigned char reg_value = 0;
 	unsigned int loop_count_ms = 0;
+	// Read register.
+	status = DPS310_read_register(i2c_address, register_address, &reg_value);
+	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for flag to be set.
-	do {
-		// Read register.
-		status = DPS310_read_register(i2c_address, register_address, &reg_value);
-		if (status != DPS310_SUCCESS) goto errors;
+	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
 		lptim_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, 1);
 		LPTIM1_status_check(DPS310_ERROR_BASE_LPTIM);
@@ -107,8 +108,10 @@ static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char
 			status = timeout_error;
 			goto errors;
 		}
+		// Read register.
+		status = DPS310_read_register(i2c_address, register_address, &reg_value);
+		if (status != DPS310_SUCCESS) goto errors;
 	}
-	while ((reg_value & (0b1 << bit_index)) == 0);
 errors:
 	return status;
 }
@@ -120,9 +123,13 @@ errors:
 static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char read_byte = 0;
+	unsigned char local_addr = DPS310_REG_COEF_C0B;
+	unsigned char idx = 0;
+	unsigned char coef_registers[DPS310_NUMBER_OF_COEF_REGISTERS];
 	// Reset all coefficients.
+	for (idx=0 ; idx<DPS310_NUMBER_OF_COEF_REGISTERS ; idx++) coef_registers[idx] = 0;
 	unsigned int c0 = 0;
 	unsigned int c1 = 0;
 	unsigned int c00 = 0;
@@ -135,64 +142,22 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	// Wait for coefficients to be ready for reading.
 	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
-	// Read all coefficients.
-	read_byte = 0;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C0B, &read_byte);
+	// Read all coefficients with auto-increment method.
+	i2c_status = I2C1_write(i2c_address, &local_addr, 1, 1);
+	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	i2c_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
+	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 	if (status != DPS310_SUCCESS) goto errors;
-	c0 |= (read_byte << 4);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C0A_C1B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c0 |= (read_byte & 0xF0) >> 4;
-	c1 |= (read_byte & 0x0F) << 8;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C1A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c1 |= read_byte;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00C, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c00 |= (read_byte << 12);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c00 |= (read_byte << 4);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C00A_C10C, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c00 |= (read_byte & 0xF0) >> 4;
-	c10 |= (read_byte & 0x0F) << 16;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C10B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c10 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C10A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c10 |= read_byte;
-	status = DPS310_read_register(i2c_address,DPS310_REG_COEF_C01B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c01 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C01A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c01 |= read_byte;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C11B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c11 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C11A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c11 |= read_byte;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C20B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c20 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C20A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c20 |= read_byte;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C21B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c21 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C21A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c21 |= read_byte;
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C30B, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c30 |= (read_byte << 8);
-	status = DPS310_read_register(i2c_address, DPS310_REG_COEF_C30A, &read_byte);
-	if (status != DPS310_SUCCESS) goto errors;
-	c30 |= read_byte;
+	// Compute coefficients.
+	c0 |= (coef_registers[0] << 4) | ((coef_registers[1] & 0xF0) >> 4);
+	c1 |= ((coef_registers[1] & 0x0F) << 8) | (coef_registers[2]);
+	c00 |= (coef_registers[3] << 12) | (coef_registers[4] << 4) | ((coef_registers[5] & 0xF0) >> 4);
+	c10 |= ((coef_registers[5] & 0x0F) << 16) | (coef_registers[6] << 8) | (coef_registers[7]);
+	c01 |= (coef_registers[8] << 8) | (coef_registers[9]);
+	c11 |= (coef_registers[10] << 8) | (coef_registers[11]);
+	c20 |= (coef_registers[12] << 8) | (coef_registers[13]);
+	c21 |= (coef_registers[14] << 8) | (coef_registers[15]);
+	c30 |= (coef_registers[16] << 8) | (coef_registers[17]);
 	// Convert to sign values.
 	math_status = MATH_two_complement(c0, 11, &dps310_ctx.coef_c0);
 	MATH_status_check(DPS310_ERROR_BASE_MATH);
