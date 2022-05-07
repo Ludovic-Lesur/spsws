@@ -86,7 +86,7 @@ static const GPIO_pin_t GPIO_DIO2 =					(GPIO_pin_t) {GPIOA, 0, 15, 0};
 #ifdef HW2_0
 static const GPIO_pin_t GPIO_DIO1 =					(GPIO_pin_t) {GPIOA, 0, 11, 0};
 static const GPIO_pin_t GPIO_DIO3 = 				(GPIO_pin_t) {GPIOB, 1, 3, 0};
-static const GPIO_pin_t GPIO_DIO4	=				(GPIO_pin_t) {GPIOB, 1, 4, 0};
+static const GPIO_pin_t GPIO_DIO4 =					(GPIO_pin_t) {GPIOB, 1, 4, 0};
 #endif
 
 // SX1232_CS.

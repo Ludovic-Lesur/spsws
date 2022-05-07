@@ -64,6 +64,10 @@
 #define SPSWS_SIGFOX_GEOLOC_DATA_LENGTH				11
 #define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH		1
 #define SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH		(ERROR_STACK_DEPTH * 2)
+#ifdef FLOOD_DETECTION
+#define SPSWS_SIGFOX_FLOOD_DATA_LENGTH				2
+#define SPSWS_FLOOD_LEVEL_CHANGE_THRESHOLD			10 // Number of consecutive reading to validate a new flood level.
+#endif
 // Error values.
 #define SPSWS_ERROR_VALUE_VOLTAGE_12BITS			0xFFF
 #define SPSWS_ERROR_VALUE_VOLTAGE_16BITS			0xFFFF
@@ -85,6 +89,9 @@ typedef enum {
 	SPSWS_STATE_MEASURE,
 	SPSWS_STATE_MONITORING,
 	SPSWS_STATE_WEATHER_DATA,
+#ifdef FLOOD_DETECTION
+	SPSWS_STATE_FLOOD_ALARM,
+#endif
 	SPSWS_STATE_GEOLOC,
 	SPSWS_STATE_RTC_CALIBRATION,
 	SPSWS_STATE_ERROR_STACK,
@@ -116,6 +123,9 @@ typedef union {
 		unsigned geoloc_timeout : 1;
 		unsigned wake_up : 1;
 		unsigned fixed_hour_alarm : 1;
+#ifdef FLOOD_DETECTION
+		unsigned flood_alarm : 1;
+#endif
 	};
 	unsigned int all;
 } SPSWS_flags_t;
@@ -208,6 +218,16 @@ typedef union {
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
 } SPSWS_sigfox_geoloc_data_t;
 
+#ifdef FLOOD_DETECTION
+typedef union {
+	unsigned char frame[SPSWS_SIGFOX_FLOOD_DATA_LENGTH];
+	struct {
+		unsigned level : 8;
+		unsigned rain_mm : 8;
+	} field;
+} SPSWS_sigfox_flood_data_t;
+#endif
+
 typedef struct {
 	// Global.
 	SPSWS_state_t state;
@@ -228,6 +248,11 @@ typedef struct {
 	SPSWS_sigfox_monitoring_data_t sigfox_monitoring_data;
 	// Weather data.
 	SPSWS_sigfox_weather_data_t sigfox_weather_data;
+#ifdef FLOOD_DETECTION
+	unsigned char flood_level;
+	unsigned char flood_level_change_count;
+	SPSWS_sigfox_flood_data_t sigfox_flood_data;
+#endif
 	// Geoloc.
 	NEOM8N_position_t position;
 	unsigned int geoloc_fix_duration_seconds;
@@ -390,6 +415,10 @@ static void SPSWS_reset_measurements(void) {
 #ifdef CM
 	WIND_reset_data();
 	RAIN_reset_data();
+#endif
+#ifdef FLOOD_DETECTION
+	spsws_ctx.flood_level = 0;
+	spsws_ctx.flood_level_change_count = 0;
 #endif
 	// Monitoring data.
 	spsws_ctx.measurements.tmcu_degrees.count = 0;
@@ -852,7 +881,12 @@ int main (void) {
 				spsws_ctx.state = SPSWS_STATE_MONITORING;
 			}
 			else {
+#ifdef FLOOD_DETECTION
+				// Check if flood level has changed.
+				spsws_ctx.state = (spsws_ctx.flags.flood_alarm != 0) ? SPSWS_STATE_FLOOD_ALARM : SPSWS_STATE_OFF;
+#else
 				spsws_ctx.state = SPSWS_STATE_OFF;
+#endif
 			}
 			break;
 		case SPSWS_STATE_MONITORING:
@@ -896,6 +930,28 @@ int main (void) {
 				}
 			}
 			break;
+#ifdef FLOOD_DETECTION
+		case SPSWS_STATE_FLOOD_ALARM:
+			// Read level and pluviometry.
+			RAIN_get_pluviometry(&generic_data_u8);
+			spsws_ctx.sigfox_flood_data.field.rain_mm = generic_data_u8;
+			spsws_ctx.sigfox_flood_data.field.level = spsws_ctx.flood_level;
+			// Send uplink flood alarm frame.
+			sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);
+			SIGFOX_API_error_check();
+			if (sigfox_api_status == SFX_ERR_NONE) {
+				sigfox_api_status = SIGFOX_API_send_frame(spsws_ctx.sigfox_flood_data.frame, SPSWS_SIGFOX_FLOOD_DATA_LENGTH, spsws_ctx.sigfox_downlink_data, 2, 0);
+				SIGFOX_API_error_check();
+			}
+			sigfox_api_status = SIGFOX_API_close();
+			SIGFOX_API_error_check();
+			// Reset flags.
+			spsws_ctx.flags.flood_alarm = 0;
+			spsws_ctx.flood_level_change_count = 0;
+			// Next state.
+			spsws_ctx.state = SPSWS_STATE_OFF;
+			break;
+#endif
 		case SPSWS_STATE_GEOLOC:
 			IWDG_reload();
 			// Get position from GPS.
@@ -1000,6 +1056,23 @@ int main (void) {
 #ifdef CM
 				wind_status = WIND_measurement_period_callback();
 				WIND_error_check();
+#endif
+#ifdef FLOOD_DETECTION
+				// Check flood level if there is no pending alarm.
+				if (spsws_ctx.flags.flood_alarm == 0) {
+					RAIN_get_flood_level(&generic_data_u8);
+					if (spsws_ctx.flood_level != generic_data_u8) {
+						spsws_ctx.flood_level_change_count++;
+					}
+					else {
+						spsws_ctx.flood_level_change_count = 0;
+					}
+					// Check change count.
+					if (spsws_ctx.flood_level_change_count >= SPSWS_FLOOD_LEVEL_CHANGE_THRESHOLD) {
+						spsws_ctx.flood_level = generic_data_u8;
+						spsws_ctx.flags.flood_alarm = 1;
+					}
+				}
 #endif
 				spsws_ctx.seconds_counter++;
 				// Check measurements period.

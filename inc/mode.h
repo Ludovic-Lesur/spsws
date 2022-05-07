@@ -28,6 +28,12 @@
 #define WIND_VANE_ARGENT_DATA_SYSTEMS	// Analog technique.
 #endif
 
+/*** Flood detection feature ***/
+
+#if (defined HW2_0) && (defined CM) && (defined WIND_VANE_ARGENT_DATA_SYSTEMS)
+//#define FLOOD_DETECTION
+#endif
+
 /*** Debug mode ***/
 
 //#define DEBUG		// Use LED and programming pins for debug purpose if defined.

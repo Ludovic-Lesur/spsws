@@ -19,6 +19,9 @@ void RAIN_init(void);
 void RAIN_start_continuous_measure(void);
 void RAIN_stop_continuous_measure(void);
 void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm);
+#ifdef FLOOD_DETECTION
+void RAIN_get_flood_level(unsigned char* flood_level);
+#endif
 void RAIN_reset_data(void);
 void RAIN_edge_callback(void);
 

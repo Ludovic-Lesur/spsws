@@ -19,8 +19,12 @@
 /*** RAIN local macros ***/
 
 // Pluviometry conversion ratio.
-#define RAIN_EDGE_TO_UM		279
-#define RAIN_MAX_VALUE_MM	0xFF
+#define RAIN_EDGE_TO_UM				279
+#define RAIN_MAX_VALUE_MM			0xFF
+// Flood alarm levels mapping.
+#define RAIN_GPIO_FLOOD_LEVEL_1		GPIO_DIO1
+#define RAIN_GPIO_FLOOD_LEVEL_2		GPIO_DIO3
+#define RAIN_GPIO_FLOOD_LEVEL_3		GPIO_DIO4
 
 /*** RAIN local global variables ***/
 
@@ -36,6 +40,11 @@ void RAIN_init(void) {
 	// Init GPIOs and EXTI.
 	GPIO_configure(&GPIO_DIO2, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	EXTI_configure_gpio(&GPIO_DIO2, EXTI_TRIGGER_FALLING_EDGE);
+#ifdef FLOOD_DETECTION
+	GPIO_configure(&RAIN_GPIO_FLOOD_LEVEL_1, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&RAIN_GPIO_FLOOD_LEVEL_2, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&RAIN_GPIO_FLOOD_LEVEL_3, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 }
 
 /* START CONTINUOUS RAIN MEASUREMENTS.
@@ -78,6 +87,28 @@ void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm) {
 		(*rain_pluviometry_mm) = (unsigned char) rain_mm;
 	}
 }
+
+#ifdef FLOOD_DETECTION
+/* GET CURRENT FLOOD LEVEL.
+ * @param flood_level:	Pointer to char that will current flood level.
+ * @return:				None.
+ */
+void RAIN_get_flood_level(unsigned char* flood_level) {
+	// Read inputs.
+	if (GPIO_read(&RAIN_GPIO_FLOOD_LEVEL_3) == 0) {
+		(*flood_level) = 3;
+	}
+	else if (GPIO_read(&RAIN_GPIO_FLOOD_LEVEL_2) == 0) {
+		(*flood_level) = 2;
+	}
+	else if (GPIO_read(&RAIN_GPIO_FLOOD_LEVEL_1) == 0) {
+		(*flood_level) = 1;
+	}
+	else {
+		(*flood_level) = 0;
+	}
+}
+#endif
 
 /* RESET RAIN MEASUREMENT DATA.
  * @param:	None.
