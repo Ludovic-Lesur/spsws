@@ -98,7 +98,7 @@ errors:
 static ADC_status_t ADC1_compute_vrefint(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	// Read raw supply voltage.
+	// Read raw reference voltage.
 	status = ADC1_filtered_conversion(ADC_CHANNEL_VREFINT, &adc_ctx.vrefint_12bits);
 	return status;
 }
@@ -216,9 +216,9 @@ errors:
 }
 
 /* GET ADC DATA.
- * @param data_idx:		Index of the data to retrieve.
- * @param data:			Pointer that will contain ADC data.
- * @return status:		Function execution status.
+ * @param data_idx:	Index of the data to retrieve.
+ * @param data:		Pointer that will contain ADC data.
+ * @return status:	Function execution status.
  */
 ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
 	// Local variables.

@@ -271,11 +271,11 @@ static SPSWS_context_t spsws_ctx;
 
 /*** SPSWS local functions ***/
 
-/* CONFIGURE CLOCK TREE FOR ACTIVE OPERATION.
+/* CONFIGURE MCU CLOCK TREE FOR ACTIVE OPERATION.
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_clock_wake_up(void) {
+static void SPSWS_mcu_clock_wake_up(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	// Turn HSE on.
@@ -292,6 +292,18 @@ static void SPSWS_clock_wake_up(void) {
 	}
 }
 
+/* WAKE-UP RADIO TCXO.
+ * @param:	None.
+ * @return:	None.
+ */
+static void SPSWS_rf_clock_wake_up(void) {
+	// Local variables.
+	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	// Turn RF TCXO on.
+	sx1232_status = SX1232_tcxo(1);
+	SX1232_error_check();
+}
+
 #if (defined IM || defined CM)
 /* CONFIGURE CLOCK TREE FOR SLEEP OPERATION.
  * @param:	None.
@@ -300,9 +312,13 @@ static void SPSWS_clock_wake_up(void) {
 static void SPSWS_clock_sleep(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
+	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Turn HSE off.
 	rcc_status = RCC_switch_to_hsi();
 	RCC_error_check();
+	// Turn radio TCXO off.
+	sx1232_status = SX1232_tcxo(0);
+	SX1232_error_check();
 }
 #endif
 
@@ -340,15 +356,15 @@ static void SPSWS_init_hw(void) {
 	rcc_status = RCC_enable_lse();
 	RCC_error_check();
 	spsws_ctx.status.field.lse_status = (rcc_status == RCC_SUCCESS) ? 1 : 0;
-	// Start independant watchdog.
+	// Start independent watchdog.
 #ifndef DEBUG
 	iwdg_status = IWDG_init();
 	IWDG_error_check();
 #endif
 	// High speed oscillator.
 	IWDG_reload();
-	SPSWS_clock_wake_up();
-	// Get LSI effective frequency (must be called after HSx initialization and before RTC inititialization).
+	SPSWS_mcu_clock_wake_up();
+	// Get LSI effective frequency (must be called after HSx initialization and before RTC initialization).
 	rcc_status = RCC_get_lsi_frequency(&spsws_ctx.lsi_frequency_hz);
 	RCC_error_check();
 	if (rcc_status != RCC_SUCCESS) spsws_ctx.lsi_frequency_hz = RCC_LSI_FREQUENCY_HZ;
@@ -416,10 +432,6 @@ static void SPSWS_reset_measurements(void) {
 	WIND_reset_data();
 	RAIN_reset_data();
 #endif
-#ifdef FLOOD_DETECTION
-	spsws_ctx.flood_level = 0;
-	spsws_ctx.flood_level_change_count = 0;
-#endif
 	// Monitoring data.
 	spsws_ctx.measurements.tmcu_degrees.count = 0;
 	spsws_ctx.measurements.tmcu_degrees.full_flag = 0;
@@ -464,6 +476,10 @@ static void SPSWS_init_context(void) {
 	spsws_ctx.status.field.station_mode = SPSWS_MODE;
 	spsws_ctx.seconds_counter = 0;
 	SPSWS_reset_measurements();
+#ifdef FLOOD_DETECTION
+	spsws_ctx.flood_level = 0;
+	spsws_ctx.flood_level_change_count = 0;
+#endif
 	// Read status byte.
 	nvm_status = NVM_read_byte(NVM_ADDRESS_STATUS, &spsws_ctx.status.raw_byte);
 	NVM_error_check();
@@ -608,7 +624,7 @@ int main (void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+
 	ADC_status_t adc_status = ADC_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	I2C_status_t i2c_status = I2C_SUCCESS;
@@ -633,12 +649,8 @@ int main (void) {
 		// Perform state machine.
 		switch (spsws_ctx.state) {
 		case SPSWS_STATE_STARTUP:
-			// Init clock.
-			SPSWS_clock_wake_up();
-			// Turn RF TCXO on.
-			sx1232_status = SX1232_tcxo(1);
-			SX1232_error_check();
 			IWDG_reload();
+			SPSWS_rf_clock_wake_up();
 			// Fill reset reason and software version.
 			spsws_ctx.sigfox_startup_data.field.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
 			spsws_ctx.sigfox_startup_data.field.major_version = GIT_MAJOR_VERSION;
@@ -683,10 +695,8 @@ int main (void) {
 					}
 					spsws_ctx.flags.hour_changed = 0; // Reset flag.
 					// Switch to external clock.
-					SPSWS_clock_wake_up();
-					// Turn RF TCXO on.
-					sx1232_status = SX1232_tcxo(1);
-					SX1232_error_check();
+					SPSWS_mcu_clock_wake_up();
+					SPSWS_rf_clock_wake_up();
 					// Next state.
 					spsws_ctx.state = SPSWS_STATE_MEASURE;
 				}
@@ -696,8 +706,15 @@ int main (void) {
 				}
 			}
 			else {
-				// Intermediate measure wake-up (HSE and radio TCXO not required).
+				// Intermediate measure wake-up.
 				spsws_ctx.state = SPSWS_STATE_MEASURE;
+#ifdef FLOOD_DETECTION
+				// Turn clocks on if alarm has to be sent.
+				if (spsws_ctx.flags.flood_alarm != 0) {
+					SPSWS_mcu_clock_wake_up();
+					SPSWS_rf_clock_wake_up();
+				}
+#endif
 			}
 			break;
 		case SPSWS_STATE_RTC_CALIBRATION:
@@ -1022,9 +1039,6 @@ int main (void) {
 			break;
 		case SPSWS_STATE_OFF:
 			IWDG_reload();
-			// Turn radio TCXO off.
-			sx1232_status = SX1232_tcxo(0);
-			SX1232_error_check();
 			// Disable HSE.
 			SPSWS_clock_sleep();
 			// Clear flags.
