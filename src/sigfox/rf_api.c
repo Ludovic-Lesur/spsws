@@ -283,16 +283,19 @@ errors:
  *******************************************************************/
 sfx_u8 RF_API_stop(void) {
 	// Local variables.
+	sfx_u8 status = SFX_ERR_NONE;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Disable all switch channels.
 	SKY13317_set_channel(SKY13317_CHANNEL_NONE);
 	// Power transceiver down.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-	if (sx1232_status != SX1232_SUCCESS) goto errors;
-	SPI1_power_off();
-	return SFX_ERR_NONE;
+	if (sx1232_status != SX1232_SUCCESS) {
+		status = RF_ERR_API_STOP;
+		goto errors;
+	}
 errors:
-	return RF_ERR_API_STOP;
+	SPI1_power_off();
+	return status;
 }
 
 /*!******************************************************************

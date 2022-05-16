@@ -113,7 +113,7 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 	LPTIM_status_t status = LPTIM_SUCCESS;
 	unsigned int arr = 0;
 	// Check delay.
-	if ((delay_ms > LPTIM_DELAY_MS_MAX) || ((delay_ms > IWDG_REFRESH_PERIOD_SECONDS) && (stop_mode != 0))) {
+	if ((delay_ms > LPTIM_DELAY_MS_MAX) || ((delay_ms > (IWDG_REFRESH_PERIOD_SECONDS * 1000)) && (stop_mode != 0))) {
 		status = LPTIM_ERROR_DELAY_OVERFLOW;
 		goto errors;
 	}
@@ -144,6 +144,8 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 		NVIC_disable_interrupt(NVIC_IT_LPTIM1);
 	}
 	else {
+		// Start timer.
+		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 		// Wait for flag.
 		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
 	}

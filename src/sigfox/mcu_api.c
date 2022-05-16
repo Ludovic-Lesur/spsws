@@ -18,6 +18,7 @@
 #include "pwr.h"
 #include "rtc.h"
 #include "sigfox_types.h"
+#include "spi.h"
 
 /*** MCU API local macros ***/
 
@@ -76,6 +77,9 @@ errors:
  * \retval MCU_ERR_API_FREE:                     Free error
  *******************************************************************/
 sfx_u8 MCU_API_free(sfx_u8* ptr) {
+	// This is the only low level function called when library is closed.
+	// Calling power off function ensures that the radio is powered down if any error occured during Sigfox transmission.
+	SPI1_power_off();
 	return SFX_ERR_NONE;
 }
 
