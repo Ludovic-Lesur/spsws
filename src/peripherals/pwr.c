@@ -12,7 +12,6 @@
 #include "nvic_reg.h"
 #include "pwr_reg.h"
 #include "rcc_reg.h"
-#include "rcc.h"
 #include "rtc_reg.h"
 #include "scb_reg.h"
 

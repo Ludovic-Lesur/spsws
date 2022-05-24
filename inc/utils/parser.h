@@ -39,9 +39,9 @@ typedef struct {
 
 /*** PARSER functions ***/
 
-PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* str);
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, unsigned char last_param, int* param);
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length);
+PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* ref);
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, int* param);
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length);
 
 #define PARSER_status_check(error_base) { if (parser_status != PARSER_SUCCESS) { status = error_base + parser_status; goto errors; }}
 #define PARSER_error_check() { ERROR_status_check(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }

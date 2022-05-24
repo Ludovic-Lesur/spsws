@@ -37,16 +37,17 @@ static PARSER_status_t PARSER_search_separator(PARSER_context_t* parser_ctx, cha
 /* CHECK EQUALITY BETWEEN A GIVEN COMMAND OR HEADER AND THE CURRENT AT COMMAND BUFFER.
  * @param parser_ctx:   Parser structure.
  * @param mode:			Comparison mode.
- * @param str:			Input string.
+ * @param ref:			Reference string to compare with the buffer.
  * @return status:      Comparison result.
  */
-PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* command) {
+PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* ref) {
 	// Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	unsigned int idx = 0;
 	// Compare all characters.
-	while (command[idx] != STRING_CHAR_NULL) {
-		if ((parser_ctx -> rx_buf)[(parser_ctx -> start_idx) + idx] != command[idx]) {
+	while (ref[idx] != STRING_CHAR_NULL) {
+		// Compare current character.
+		if ((parser_ctx -> rx_buf)[(parser_ctx -> start_idx) + idx] != ref[idx]) {
 			// Difference found or end of command, exit loop.
 			status = PARSER_ERROR_UNKNOWN_COMMAND;
 			goto errors;
@@ -79,26 +80,24 @@ errors:
  * @param parser_ctx:   Parser structure.
  * @param param_type:   Format of parameter to get.
  * @param separator:    Parameter separator character.
- * @param last_param:   Indicates if the parameter to scan is the last in AT command.
  * @param param_value:  Pointer hat will contain extracted parameter value.
  * @return status:      Searching result.
  */
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, unsigned char last_param, int* param) {
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, int* param) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	unsigned char end_idx = 0;
 	unsigned char param_length_char = 0;
 	// Compute end index.
-	if (last_param != 0) {
-		end_idx = (parser_ctx -> rx_buf_length) - 1;
-	}
-	else {
+	if (separator != STRING_CHAR_NULL) {
 		// Search separator.
 		status = PARSER_search_separator(parser_ctx, separator);
 		if (status != PARSER_SUCCESS) goto errors;
-		// Update end index.
 		end_idx = (parser_ctx -> separator_idx) - 1;
+	}
+	else {
+		end_idx = (parser_ctx -> rx_buf_length) - 1;
 	}
 	// Compute parameter length.
 	param_length_char = (end_idx - (parser_ctx -> start_idx) + 1);
@@ -121,27 +120,26 @@ errors:
 /* RETRIEVE A HEXADECIMAL BYTE ARRAY IN THE CURRENT AT BUFFER.
  * @param parser_ctx:       Parser structure.
  * @param separator:        Parameter separator character.
- * @param last_param:		Indicates if the parameter to scan is the last in AT command.
  * @param max_length:       Maximum length of the byte array.
  * @param param:            Pointer to the extracted byte array.
  * @param extracted_length:	Length of the extracted buffer.
  * @return status:          Searching result.
  */
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char last_param, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length) {
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	unsigned char param_length_char = 0;
     unsigned char end_idx = 0;
-	// Compute end index.
-	if (last_param != 0) {
-		end_idx = (parser_ctx -> rx_buf_length) - 1;
-	}
-	else {
+    // Compute end index.
+	if (separator != STRING_CHAR_NULL) {
+		// Search separator.
 		status = PARSER_search_separator(parser_ctx, separator);
 		if (status != PARSER_SUCCESS) goto errors;
-		// Update end index.
 		end_idx = (parser_ctx -> separator_idx) - 1;
+	}
+	else {
+		end_idx = (parser_ctx -> rx_buf_length) - 1;
 	}
 	// Compute parameter length.
 	param_length_char = (end_idx - (parser_ctx -> start_idx) + 1);

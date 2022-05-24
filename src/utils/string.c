@@ -45,7 +45,6 @@ errors:
 	return status;
 }
 
-#if 0
 /* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN DECIMAL VALUE.
  * @param value:	Decimal digit.
  * @return chr:		Corresponding ASCII code.
@@ -62,7 +61,6 @@ static STRING_status_t STRING_decimal_value_to_char(unsigned char value, char* c
 errors:
 	return status;
 }
-#endif
 
 /* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO AN HEXADECIMAL CHARACTER.
  * @param chr:		Character to analyse.
@@ -195,7 +193,8 @@ STRING_status_t STRING_value_to_string(int value, STRING_format_t format, unsign
 				first_non_zero_found = 1;
 			}
 			if ((first_non_zero_found != 0) || (idx == 0)) {
-				str[str_idx++] = generic_byte + '0';
+				status = STRING_decimal_value_to_char(generic_byte, &(str[str_idx++]));
+				if (status != STRING_SUCCESS) goto errors;
 			}
 			if (idx == 0) break;
 		}
@@ -345,8 +344,9 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char
 		// Check character.
 		if ((char_idx % 2) == 0) {
 			if (STRING_is_hexadecimal_char(str[char_idx]) != STRING_SUCCESS) {
-				// Hexadecimal string end reached before max length.
-				break;
+				// Hexadecimal string end reached before ending character.
+				status = STRING_ERROR_HEXADECIMAL_INVALID;
+				goto errors;
 			}
 		}
 		else {

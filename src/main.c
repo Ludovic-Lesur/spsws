@@ -1135,14 +1135,11 @@ int main (void) {
  * @return: 0.
  */
 int main (void) {
-	// Local variables.
-	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Init board.
 	SPSWS_init_context();
 	SPSWS_init_hw();
 	// Turn RF TCXO on.
-	sx1232_status = SX1232_tcxo(1);
-	SX1232_error_check();
+	SPSWS_rf_clock_wake_up();
 	// Enable alarm interrupt to wake-up every seconds to clear watchdog.
 	RTC_clear_alarm_b_flag();
 	RTC_enable_alarm_b_interrupt();
