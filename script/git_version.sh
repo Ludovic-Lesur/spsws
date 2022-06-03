@@ -15,7 +15,7 @@ date=`date -R`
 
 # Execute git commands.
 git_version=`git describe --long --always`
-diff=`git diff ':(exclude)../inc/mode.h'`
+diff=`git diff ':(exclude)../inc/mode.h' ':(exclude)../.settings' ':(exclude)../script'`
 
 # Extract fields
 sscanf $git_version "SW(.+).(.+)-(.+)-g(.+)"
