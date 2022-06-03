@@ -32,6 +32,7 @@ typedef enum {
 
 /*** DPS310 functions ***/
 
+void DPS310_init(void);
 DPS310_status_t DPS310_perform_measurements(unsigned char i2c_address);
 void DPS310_get_pressure(unsigned int* pressure_pa);
 void DPS310_get_temperature(signed char* temperature_degrees);

@@ -402,6 +402,7 @@ static void SPSWS_init_hw(void) {
 	USART1_init();
 #endif
 	// Init components.
+	DPS310_init();
 	SX1232_init();
 	SKY13317_init();
 	NEOM8N_init();
@@ -624,7 +625,6 @@ int main (void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
-
 	ADC_status_t adc_status = ADC_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	I2C_status_t i2c_status = I2C_SUCCESS;

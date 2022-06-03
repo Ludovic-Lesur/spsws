@@ -35,6 +35,7 @@ typedef struct {
 	signed int coef_c20;
 	signed int coef_c21;
 	signed int coef_c30;
+	unsigned char coef_ready;
 } DPS310_context_t;
 
 /*** DPS310 local global variables ***/
@@ -177,6 +178,8 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	MATH_status_check(DPS310_ERROR_BASE_MATH);
 	math_status = MATH_two_complement(c30, 15, &dps310_ctx.coef_c30);
 	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	// Set flag.
+	dps310_ctx.coef_ready = 1;
 errors:
 	return status;
 }
@@ -265,6 +268,15 @@ errors:
 
 /*** DPS310 functions ***/
 
+/* INIT DPS310 MODULE.
+ * @param:	None.
+ * @return:	None.
+ */
+void DPS310_init(void) {
+	// Init context.
+	dps310_ctx.coef_ready = 0;
+}
+
 /* PERFORM PRESSURE AND TEMPERATURE MEASUREMENT.
  * @param i2c_address:	Sensor address.
  * @return status :		Function execution status.
@@ -280,8 +292,10 @@ DPS310_status_t DPS310_perform_measurements(unsigned char i2c_address) {
 	if (status != DPS310_SUCCESS) goto errors;
 	status = DPS310_compute_raw_pressure(i2c_address);
 	if (status != DPS310_SUCCESS) goto errors;
-	// Read calibration coefficients.
-	status = DPS310_read_calibration_coefficients(i2c_address);
+	// Read calibration coefficients if needed.
+	if (dps310_ctx.coef_ready == 0) {
+		status = DPS310_read_calibration_coefficients(i2c_address);
+	}
 errors:
 	return status;
 }
