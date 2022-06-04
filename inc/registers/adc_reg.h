@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef ADC_REG_H
-#define ADC_REG_H
+#ifndef __ADC_REG_H__
+#define __ADC_REG_H__
 
 /*** ADC registers ***/
 
@@ -51,4 +51,4 @@ typedef struct {
 #define VREFINT_CAL_ADDR		((unsigned short*) ((unsigned int) 0x1FF80078))
 #define VREFINT_CAL				((unsigned int) (*VREFINT_CAL_ADDR)) // Raw ADC output value on 12 bits.
 
-#endif /* ADC_REG_H */
+#endif /* __ADC_REG_H__ */

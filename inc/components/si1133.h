@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SI1133_H
-#define SI1133_H
+#ifndef __SI1133_H__
+#define __SI1133_H__
 
 #include "i2c.h"
 
@@ -39,4 +39,4 @@ void SI1133_get_uv_index(unsigned char* uv_index);
 #define SI1133_error_check() { ERROR_status_check(si1133_status, SI1133_SUCCESS, ERROR_BASE_SI1133); }
 #define SI1133_error_check_print() { ERROR_status_check_print(si1133_status, SI1133_SUCCESS, ERROR_BASE_SI1133); }
 
-#endif /* SI1133_H */
+#endif /* __SI1133_H__ */

@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef NVIC_H
-#define NVIC_H
+#ifndef __NVIC_H__
+#define __NVIC_H__
 
 /*** NVIC interrupts vector ***/
 
@@ -57,4 +57,4 @@ void NVIC_enable_interrupt(NVIC_interrupt_t it_num);
 void NVIC_disable_interrupt(NVIC_interrupt_t it_num);
 void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority);
 
-#endif /* NVIC_H */
+#endif /* __NVIC_H__ */

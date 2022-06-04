@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef AES_H
-#define AES_H
+#ifndef __AES_H__
+#define __AES_H__
 
 /*** AES macros ***/
 
@@ -29,4 +29,4 @@ AES_status_t AES_encrypt(unsigned char data_in[AES_BLOCK_SIZE], unsigned char da
 #define AES_error_check() { ERROR_status_check(aes_status, AES_SUCCESS, ERROR_BASE_AES); }
 #define AES_error_check_print() { ERROR_status_check_print(aes_status, AES_SUCCESS, ERROR_BASE_AES); }
 
-#endif /* AES_H_ */
+#endif /* __AES_H__ */

@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SI1133_REG_H
-#define SI1133_REG_H
+#ifndef __SI1133_REG_H__
+#define __SI1133_REG_H__
 
 /*** SI1133 register map ***/
 
@@ -98,4 +98,4 @@
 #define SI1133_CMD_RESET_CMD_CTR   	0x00
 #define SI1133_CMD_START   			0x13
 
-#endif /* SI1133_REG_H */
+#endif /* __SI1133_REG_H__ */

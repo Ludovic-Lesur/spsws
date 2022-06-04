@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MAX11136_REG_H
-#define MAX11136_REG_H
+#ifndef __MAX11136_REG_H__
+#define __MAX11136_REG_H__
 
 /*** MAX11136 register map ***/
 
@@ -19,4 +19,4 @@
 #define MAX11136_REG_CUSTOM_SCAN1		0b10101
 #define MAX11136_REG_SAMPLE_SET			0b10110
 
-#endif /* MAX11136_REG_H */
+#endif /* __MAX11136_REG_H__ */

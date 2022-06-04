@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MAPPING_H
-#define MAPPING_H
+#ifndef __MAPPING_H__
+#define __MAPPING_H__
 
 #include "gpio.h"
 #include "gpio_reg.h"
@@ -162,4 +162,4 @@ static const GPIO_pin_t GPIO_TCXO32_POWER_ENABLE =	(GPIO_pin_t) {GPIOA, 0, 11, 0
 static const GPIO_pin_t GPIO_TCXO32_POWER_ENABLE =	(GPIO_pin_t) {GPIOA, 0, 3, 0};
 #endif
 
-#endif /* MAPPING_H */
+#endif /* __MAPPING_H__ */

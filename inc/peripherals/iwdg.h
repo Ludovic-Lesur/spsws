@@ -2,11 +2,11 @@
  * iwdg.h
  *
  *  Created on: 30 march 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef IWDG_H
-#define IWDG_H
+#ifndef __IWDG_H__
+#define __IWDG_H__
 
 /*** IWDG macros ***/
 
@@ -29,4 +29,4 @@ void IWDG_reload(void);
 #define IWDG_error_check() { ERROR_status_check(iwdg_status, IWDG_SUCCESS, ERROR_BASE_IWDG); }
 #define IWDG_error_check_print() { ERROR_status_check_print(iwdg_status, IWDG_SUCCESS, ERROR_BASE_IWDG); }
 
-#endif /* IWDG_H */
+#endif /* __IWDG_H__ */

@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SCB_REG_H
-#define SCB_REG_H
+#ifndef __SCB_REG_H__
+#define __SCB_REG_H__
 
 /*** SCB registers ***/
 
@@ -25,4 +25,4 @@ typedef struct {
 
 #define SCB		((SCB_base_address_t*) ((unsigned int) 0xE000ED00))
 
-#endif /* SCB_REG_H */
+#endif /* __SCB_REG_H__ */

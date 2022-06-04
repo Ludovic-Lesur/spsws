@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef ADC_H
-#define ADC_H
+#ifndef __ADC_H__
+#define __ADC_H__
 
 #include "lptim.h"
 
@@ -37,4 +37,4 @@ void ADC1_get_tmcu(signed char* tmcu_degrees);
 #define ADC1_error_check() { ERROR_status_check(adc_status, ADC_SUCCESS, ERROR_BASE_ADC1); }
 #define ADC1_error_check_print() { ERROR_status_check_print(adc_status, ADC_SUCCESS, ERROR_BASE_ADC1); }
 
-#endif /* ADC_H */
+#endif /* __ADC_H__ */

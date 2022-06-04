@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SKY13317_H
-#define SKY13317_H
+#ifndef __SKY13317_H__
+#define __SKY13317_H__
 
 /*** SKY13317 structures ***/
 
@@ -24,4 +24,4 @@ void SKY13317_init(void);
 void SKY13317_disable(void);
 void SKY13317_set_channel(SKY13317_channel_t channel);
 
-#endif /* SKY13317_H */
+#endif /* __SKY13317_H__ */

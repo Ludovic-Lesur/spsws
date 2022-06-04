@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef DMA_REG_H
-#define DMA_REG_H
+#ifndef __DMA_REG_H__
+#define __DMA_REG_H__
 
 /*** DMA registers ***/
 
@@ -55,4 +55,4 @@ typedef struct {
 
 #define DMA1	((DMA_base_address_t*) ((unsigned int) 0x40020000))
 
-#endif /* DMA_REG_H */
+#endif /* __DMA_REG_H__ */

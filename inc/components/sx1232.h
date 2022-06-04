@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SX1232_H
-#define SX1232_H
+#ifndef __SX1232_H__
+#define __SX1232_H__
 
 #include "spi.h"
 
@@ -179,4 +179,4 @@ SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_da
 #define SX1232_error_check() { ERROR_status_check(sx1232_status, SX1232_SUCCESS, ERROR_BASE_SX1232); }
 #define SX1232_error_check_print() { ERROR_status_check_print(sx1232_status, SX1232_SUCCESS, ERROR_BASE_SX1232); }
 
-#endif /* SX1232_H */
+#endif /* __SX1232_H__ */

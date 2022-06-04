@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef EXTI_REG_H_
-#define EXTI_REG_H_
+#ifndef __EXTI_REG_H__
+#define __EXTI_REG_H__
 
 /*** EXTI registers ***/
 
@@ -23,4 +23,4 @@ typedef struct {
 
 #define EXTI	((EXTI_base_address_t*) ((unsigned int) 0x40010400))
 
-#endif /* EXTI_REG_H_ */
+#endif /* __EXTI_REG_H__ */

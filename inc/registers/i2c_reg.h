@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef I2C_REG_H
-#define I2C_REG_H
+#ifndef __I2C_REG_H__
+#define __I2C_REG_H__
 
 /*** I2C registers ***/
 
@@ -30,4 +30,4 @@ typedef struct {
 //#define I2C2	((I2C_base_address_t*) ((unsigned int) 0x40005800))
 //#define I2C3	((I2C_base_address_t*) ((unsigned int) 0x40007800))
 
-#endif /* I2C_REG_H */
+#endif /* __I2C_REG_H__ */

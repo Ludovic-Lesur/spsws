@@ -72,7 +72,7 @@ void __attribute__((optimize("-O0"))) USART1_IRQHandler(void) {
  * @param tx_byte:	Byte to append.
  * @return status:	Function execution status.
  */
-static USART_status_t USARTx_FillTxBuffer(unsigned char tx_byte) {
+static USART_status_t USARTx_fill_tx_buffer(unsigned char tx_byte) {
 	// Local variables.
 	USART_status_t status = USART_SUCCESS;
 	unsigned int loop_count = 0;
@@ -207,12 +207,10 @@ USART_status_t USARTx_send_string(char* tx_string) {
 	// Local variables.
 	USART_status_t status = USART_SUCCESS;
 	unsigned int char_count = 0;
-	// Disable interrupt.
-	USARTx_disable_interrupt();
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
-		status = USARTx_FillTxBuffer((unsigned char) *(tx_string++));
+		status = USARTx_fill_tx_buffer((unsigned char) *(tx_string++));
 		if (status != USART_SUCCESS) break;
 		// Check char count.
 		char_count++;
@@ -221,8 +219,6 @@ USART_status_t USARTx_send_string(char* tx_string) {
 			break;
 		}
 	}
-	// Enable interrupt.
-	USARTx_enable_interrupt();
 	return status;
 }
 #endif

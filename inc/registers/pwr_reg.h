@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef PWR_REG_H
-#define PWR_REG_H
+#ifndef __PWR_REG_H__
+#define __PWR_REG_H__
 
 /*** PWR registers ***/
 
@@ -19,4 +19,4 @@ typedef struct {
 
 #define PWR		((PWR_base_address_t*) ((unsigned int) 0x40007000))
 
-#endif /* PWR_REG_H */
+#endif /* __PWR_REG_H__ */

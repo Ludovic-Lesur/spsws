@@ -224,7 +224,7 @@ STRING_status_t STRING_byte_array_to_hexadecimal_string(unsigned char* data, uns
 		if (status != STRING_SUCCESS) goto errors;
 	}
 errors:
-	str[idx] = STRING_CHAR_NULL; // End string.
+	str[2 * idx] = STRING_CHAR_NULL; // End string.
 	return status;
 }
 

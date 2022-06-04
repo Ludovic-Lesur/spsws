@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef RTC_H
-#define RTC_H
+#ifndef __RTC_H__
+#define __RTC_H__
 
 #include "mode.h"
 
@@ -64,4 +64,4 @@ void RTC_clear_wakeup_timer_flag(void);
 #define RTC_error_check() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
 #define RTC_error_check_print() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
 
-#endif /* RTC_H */
+#endif /* __RTC_H__ */

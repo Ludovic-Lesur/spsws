@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MODE_H
-#define MODE_H
+#ifndef __MODE_H__
+#define __MODE_H__
 
 /*** Wheather station mode ***/
 
@@ -50,4 +50,4 @@
 #error "Only one wind vane type must be selected"
 #endif
 
-#endif /* MODE_H */
+#endif /* __MODE_H__ */

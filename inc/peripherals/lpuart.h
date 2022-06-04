@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef LPUART_H
-#define LPUART_H
+#ifndef __LPUART_H__
+#define __LPUART_H__
 
 #include "lptim.h"
 
@@ -30,4 +30,4 @@ LPUART_status_t LPUART1_send_byte(unsigned char tx_byte);
 #define LPUART1_error_check() { ERROR_status_check(lpuart_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
 #define LPUART1_error_check_print() { ERROR_status_check_print(lpuart_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
 
-#endif /* LPUART_H */
+#endif /* __LPUART_H__ */

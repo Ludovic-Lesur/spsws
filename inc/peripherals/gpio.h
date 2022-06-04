@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef GPIO_H
-#define GPIO_H
+#ifndef __GPIO_H__
+#define __GPIO_H__
 
 #include "gpio_reg.h"
 
@@ -56,4 +56,4 @@ void GPIO_write(const GPIO_pin_t* gpio, unsigned char state);
 unsigned char GPIO_read(const GPIO_pin_t* gpio);
 void GPIO_toggle(const GPIO_pin_t* gpio);
 
-#endif /* GPIO_H */
+#endif /* __GPIO_H__ */

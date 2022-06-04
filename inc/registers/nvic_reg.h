@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef NVIC_REG_H
-#define NVIC_REG_H
+#ifndef __NVIC_REG_H__
+#define __NVIC_REG_H__
 
 /*** NVIC registers ***/
 
@@ -26,4 +26,4 @@ typedef struct {
 
 #define NVIC	((NVIC_base_address_t*) ((unsigned int) 0xE000E100))
 
-#endif /* NVIC_REG_H_ */
+#endif /* __NVIC_REG_H___ */

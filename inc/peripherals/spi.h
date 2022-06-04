@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SPI_H
-#define SPI_H
+#ifndef __SPI_H__
+#define __SPI_H__
 
 #include "lptim.h"
 
@@ -53,4 +53,4 @@ SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data);
 
 
 
-#endif /* SPI_H_ */
+#endif /* __SPI_H__ */

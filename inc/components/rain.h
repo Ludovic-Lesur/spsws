@@ -2,11 +2,11 @@
  * rain.h
  *
  *  Created on: 5 may 2019
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef RAIN_H
-#define RAIN_H
+#ifndef __RAIN_H__
+#define __RAIN_H__
 
 #include "gpio.h"
 #include "mode.h"
@@ -27,4 +27,4 @@ void RAIN_edge_callback(void);
 
 #endif
 
-#endif /* RAIN_H */
+#endif /* __RAIN_H__ */

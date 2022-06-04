@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SHT3X_H
-#define SHT3X_H
+#ifndef __SHT3X_H__
+#define __SHT3X_H__
 
 #include "i2c.h"
 #include "lptim.h"
@@ -39,4 +39,4 @@ void SHT3X_get_humidity(unsigned char* humidity_percent);
 #define SHT3X_EXT_error_check() { ERROR_status_check(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_EXT); }
 #define SHT3X_EXT_error_check_print() { ERROR_status_check_print(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_EXT); }
 
-#endif /* SHT3X_H */
+#endif /* __SHT3X_H__ */

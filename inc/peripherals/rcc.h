@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef RCC_H
-#define RCC_H
+#ifndef __RCC_H__
+#define __RCC_H__
 
 #include "flash.h"
 #include "tim.h"
@@ -50,4 +50,4 @@ RCC_status_t RCC_enable_lse(void);
 #define RCC_error_check() { ERROR_status_check(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC); }
 #define RCC_error_check_print() { ERROR_status_check_print(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC); }
 
-#endif /* RCC_H */
+#endif /* __RCC_H__ */

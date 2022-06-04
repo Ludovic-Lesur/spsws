@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef __ERROR_H__
+#define __ERROR_H__
 
 // Peripherals.
 #include "adc.h"
@@ -100,4 +100,4 @@ unsigned char ERROR_stack_is_empty(void);
 	} \
 }
 
-#endif /* ERROR_H */
+#endif /* __ERROR_H__ */

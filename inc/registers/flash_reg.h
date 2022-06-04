@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef FLASH_REG_H
-#define FLASH_REG_H
+#ifndef __FLASH_REG_H__
+#define __FLASH_REG_H__
 
 /*** FLASH registers ***/
 
@@ -40,4 +40,4 @@ typedef struct {
 #define EEPROM_SIZE				6144 // In bytes.
 #endif
 
-#endif /* FLASH_REG_H */
+#endif /* __FLASH_REG_H__ */

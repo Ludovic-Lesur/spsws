@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef USART_H
-#define USART_H
+#ifndef __USART_H__
+#define __USART_H__
 
 #include "mode.h"
 
@@ -37,4 +37,4 @@ USART_status_t USARTx_send_string(char* tx_string);
 #define USART_error_check() { ERROR_status_check(usart_status, USART_SUCCESS, ERROR_BASE_USART); }
 #define USART_error_check_print() { ERROR_status_check_print(usart_status, USART_SUCCESS, ERROR_BASE_USART); }
 
-#endif /* USART_H */
+#endif /* __USART_H__ */

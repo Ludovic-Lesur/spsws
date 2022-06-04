@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MATH_H
-#define MATH_H
+#ifndef __MATH_H__
+#define __MATH_H__
 
 #include "mode.h"
 
@@ -136,4 +136,4 @@ MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_posit
 #define MATH_error_check() { ERROR_status_check(math_status, MATH_SUCCESS, ERROR_BASE_MATH); }
 #define MATH_error_check_print() { ERROR_status_check_print(math_status, MATH_SUCCESS, ERROR_BASE_MATH); }
 
-#endif /* MATH_H */
+#endif /* __MATH_H__ */

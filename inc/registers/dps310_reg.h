@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef DPS310_REG_H
-#define DPS310_REG_H
+#ifndef __DPS310_REG_H__
+#define __DPS310_REG_H__
 
 /*** DPS310 register map ***/
 
@@ -44,4 +44,4 @@
 #define DPS310_REG_COEF_C30A		0x21
 #define DPS310_REG_COEF_COEF_SRCE	0x28
 
-#endif /* DPS310_REG_H */
+#endif /* __DPS310_REG_H__ */

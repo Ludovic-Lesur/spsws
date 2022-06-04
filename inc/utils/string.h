@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef STRING_H
-#define STRING_H
+#ifndef __STRING_H__
+#define __STRING_H__
 
 #include "math.h"
 
@@ -53,4 +53,4 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char
 #define STRING_error_check() { ERROR_status_check(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }
 #define STRING_error_check_print() { ERROR_status_check_print(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }
 
-#endif /* STRING_H */
+#endif /* __STRING_H__ */

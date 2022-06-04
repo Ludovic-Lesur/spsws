@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SX1232_REG_H_
-#define SX1232_REG_H_
+#ifndef __SX1232_REG_H__
+#define __SX1232_REG_H__
 
 /*** SX1232 register map ***/
 
@@ -94,4 +94,4 @@
 // 0x6D-0x6F = reserved.
 #define SX1232_REG_BITRATEFRAC		0x70
 
-#endif /* SX1232_REG_H_ */
+#endif /* __SX1232_REG_H__ */

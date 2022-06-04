@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MAX11136_H
-#define MAX11136_H
+#ifndef __MAX11136_H__
+#define __MAX11136_H__
 
 #include "lptim.h"
 #include "mode.h"
@@ -45,4 +45,4 @@ MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, unsigned int
 #define MAX11136_error_check() { ERROR_status_check(max11136_status, MAX11136_SUCCESS, ERROR_BASE_MAX11136); }
 #define MAX11136_error_check_print() { ERROR_status_check_print(max11136_status, MAX11136_SUCCESS, ERROR_BASE_MAX11136); }
 
-#endif /* MAX11136_H */
+#endif /* __MAX11136_H__ */

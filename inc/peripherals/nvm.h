@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef NVM_H
-#define NVM_H
+#ifndef __NVM_H__
+#define __NVM_H__
 
 /*** NVM macros ***/
 
@@ -48,4 +48,4 @@ NVM_status_t NVM_reset_default(void);
 #define NVM_error_check() { ERROR_status_check(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM); }
 #define NVM_error_check_print() { ERROR_status_check_print(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM); }
 
-#endif /* NVM_H */
+#endif /* __NVM_H__ */

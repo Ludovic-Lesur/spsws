@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SYSCFG_REG_H_
-#define SYSCFG_REG_H_
+#ifndef __SYSCFG_REG_H__
+#define __SYSCFG_REG_H__
 
 /*** SYSCFG registers ***/
 
@@ -23,4 +23,4 @@ typedef struct {
 
 #define SYSCFG	((SYSCFG_base_address_t*) ((unsigned int) 0x40010000))
 
-#endif /* SYSCFG_REG_H_ */
+#endif /* __SYSCFG_REG_H__ */

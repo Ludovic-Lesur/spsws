@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef RCC_REG_H
-#define RCC_REG_H
+#ifndef __RCC_REG_H__
+#define __RCC_REG_H__
 
 /*** RCC registers ***/
 
@@ -38,4 +38,4 @@ typedef struct {
 
 #define RCC		((RCC_base_address_t*) ((unsigned int) 0x40021000))
 
-#endif /* RCC_REG_H */
+#endif /* __RCC_REG_H__ */

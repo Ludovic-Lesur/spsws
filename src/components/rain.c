@@ -2,7 +2,7 @@
  * rain.c
  *
  *  Created on: 5 mai 2019
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "rain.h"

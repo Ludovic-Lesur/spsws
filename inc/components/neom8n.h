@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef NEOM8N_H
-#define NEOM8N_H
+#ifndef __NEOM8N_H__
+#define __NEOM8N_H__
 
 #include "lptim.h"
 #include "lpuart.h"
@@ -63,4 +63,4 @@ NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned in
 #define NEOM8N_error_check() { ERROR_status_check(neom8n_status, NEOM8N_SUCCESS, ERROR_BASE_NEOM8N); }
 #define NEOM8N_error_check_print() { ERROR_status_check_print(neom8n_status, NEOM8N_SUCCESS, ERROR_BASE_NEOM8N); }
 
-#endif /* NEOM8N_H */
+#endif /* __NEOM8N_H__ */

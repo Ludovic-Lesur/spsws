@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef RTC_REG_H
-#define RTC_REG_H
+#ifndef __RTC_REG_H__
+#define __RTC_REG_H__
 
 /*** RTC registers ***/
 
@@ -42,4 +42,4 @@ typedef struct {
 
 #define RTC		((RTC_base_address_t*) ((unsigned int) 0x40002800))
 
-#endif /* RTC_REG_H */
+#endif /* __RTC_REG_H__ */

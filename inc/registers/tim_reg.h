@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef TIM_REG_H
-#define TIM_REG_H
+#ifndef __TIM_REG_H__
+#define __TIM_REG_H__
 
 /*** TIMx registers ***/
 
@@ -47,4 +47,4 @@ typedef struct {
 #define TIM7	((TIM_base_address_t*) ((unsigned int) 0x40001400)) // Not present on STM32L041K6xx.
 #endif
 
-#endif /* TIM_REG_H */
+#endif /* __TIM_REG_H__ */

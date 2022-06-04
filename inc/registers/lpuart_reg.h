@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef LPUART_REG_H
-#define LPUART_REG_H
+#ifndef __LPUART_REG_H__
+#define __LPUART_REG_H__
 
 /*** LPUART registers ***/
 
@@ -27,4 +27,4 @@ typedef struct {
 
 #define LPUART1	((LPUART_base_address_t*) ((unsigned int) 0x40004800))
 
-#endif /* LPUART_REG_H */
+#endif /* __LPUART_REG_H__ */

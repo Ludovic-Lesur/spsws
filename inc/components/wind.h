@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef WIND_H
-#define WIND_H
+#ifndef __WIND_H__
+#define __WIND_H__
 
 #include "gpio.h"
 #include "lptim.h"
@@ -55,4 +55,4 @@ WIND_status_t WIND_measurement_period_callback(void);
 #define WIND_error_check() { ERROR_status_check(wind_status, WIND_SUCCESS, ERROR_BASE_WIND); }
 #define WIND_error_check_print() { ERROR_status_check(wind_status, WIND_SUCCESS, ERROR_BASE_WIND); }
 
-#endif  /* WIND_H */
+#endif  /* __WIND_H__ */

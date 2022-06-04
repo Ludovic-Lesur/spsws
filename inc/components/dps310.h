@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef DPS310_H
-#define DPS310_H
+#ifndef __DPS310_H__
+#define __DPS310_H__
 
 #include "i2c.h"
 #include "lptim.h"
@@ -41,4 +41,4 @@ void DPS310_get_temperature(signed char* temperature_degrees);
 #define DPS310_error_check() { ERROR_status_check(dps310_status, DPS310_SUCCESS, ERROR_BASE_DPS310); }
 #define DPS310_error_check_print() { ERROR_status_check_print(dps310_status, DPS310_SUCCESS, ERROR_BASE_DPS310); }
 
-#endif /* DPS310_H */
+#endif /* __DPS310_H__ */

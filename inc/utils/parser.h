@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef PARSER_H
-#define	PARSER_H
+#ifndef __PARSER_H__
+#define __PARSER_H__
 
 #include "string.h"
 
@@ -47,5 +47,5 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separat
 #define PARSER_error_check() { ERROR_status_check(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }
 #define PARSER_error_check_print() { ERROR_status_check_print(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }
 
-#endif	/* PARSER_H */
+#endif	/* __PARSER_H__ */
 

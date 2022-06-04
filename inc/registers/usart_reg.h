@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef USART_REG_H_
-#define USART_REG_H_
+#ifndef __USART_REG_H__
+#define __USART_REG_H__
 
 /*** USART registers ***/
 
@@ -29,4 +29,4 @@ typedef struct {
 #define USART1	((USART_base_address_t*) ((unsigned int) 0x40013800))
 #define USART2	((USART_base_address_t*) ((unsigned int) 0x40004400))
 
-#endif /* USART_REG_H_ */
+#endif /* __USART_REG_H__ */

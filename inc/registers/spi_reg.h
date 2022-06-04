@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef SPI_REG_H_
-#define SPI_REG_H_
+#ifndef __SPI_REG_H__
+#define __SPI_REG_H__
 
 /*** SPI registers ***/
 
@@ -27,4 +27,4 @@ typedef struct {
 #define SPI1	((SPI_base_address_t*) ((unsigned int) 0x40013000))
 #define SPI2	((SPI_base_address_t*) ((unsigned int) 0x40003800))
 
-#endif /* SPI_REG_H_ */
+#endif /* __SPI_REG_H__ */

@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef GPIO_REG_H
-#define GPIO_REG_H
+#ifndef __GPIO_REG_H__
+#define __GPIO_REG_H__
 
 /*** GPIO registers ***/
 
@@ -33,4 +33,4 @@ typedef struct {
 #define GPIOE	((GPIO_base_address_t*) ((unsigned int) 0x50001000))
 #define GPIOH	((GPIO_base_address_t*) ((unsigned int) 0x50001C00))
 
-#endif /* GPIO_REG_H */
+#endif /* __GPIO_REG_H__ */

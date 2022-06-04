@@ -2,11 +2,11 @@
  * flash.h
  *
  *  Created on: 31 march 2019
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef FLASH_H
-#define FLASH_H
+#ifndef __FLASH_H__
+#define __FLASH_H__
 
 /*** FLASH structures ***/
 
@@ -25,4 +25,4 @@ FLASH_status_t FLASH_set_latency(unsigned char wait_states);
 #define FLASH_error_check() { ERROR_status_check(flash_status, FLASH_SUCCESS, ERROR_BASE_FLASH); }
 #define FLASH_error_check_print() { ERROR_status_check_print(flash_status, FLASH_SUCCESS, ERROR_BASE_FLASH); }
 
-#endif /* FLASH_H */
+#endif /* __FLASH_H__ */
