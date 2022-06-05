@@ -20,7 +20,7 @@
 
 /* SET THE MODE OF A GPIO PIN.
  * @param gpio:	GPIO structure.
- * @param mode: Mode (see enum defined in gpio.h).
+ * @param mode:	Mode (see enum defined in gpio.h).
  * @return:		None.
  */
 static void GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
@@ -112,7 +112,7 @@ static void GPIO_set_output_speed(const GPIO_pin_t* gpio, GPIO_output_speed_t ou
 /* ENABLE OR DISABLE PULL-UP AND PULL-DOWN RESISTORS ON A GPIO PIN.
  * @param gpio:				GPIO structure.
  * @param pull_resistor: 	Resistor configuration (see enum defined in gpio.h).
- * @return status:			Function execution status.
+ * @return:					None.
  */
 static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t pull_resistor) {
 	// Disable resistors during transition.
@@ -138,7 +138,7 @@ static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t 
 /* SELECT THE ALTERNATE FUNCTION OF A GPIO PIN (REQUIRES THE MODE 'GPIO_MODE_ALTERNATE_FUNCTION').
  * @param gpio:						GPIO structure.
  * @param alternate_function_index:	Alternate function number (0 to 15).
- * @return: 						None.
+ * @return:							None.
  */
 static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, unsigned int alternate_function_index) {
 	// Clamp AF number.
@@ -180,7 +180,7 @@ void GPIO_configure(const GPIO_pin_t* gpio, GPIO_mode_t mode, GPIO_output_type_t
  * @return: None.
  */
 void GPIO_init(void) {
-	// Enable GPIOA, GPIOB and GPIOC clocks.
+	// Enable all GPIOx clocks.
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
 	// Configure LED pin.
 	GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);

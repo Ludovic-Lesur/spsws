@@ -9,7 +9,7 @@
 
 #include "iwdg_reg.h"
 
-/*** FLASH local macros ***/
+/*** IWDG local macros ***/
 
 #define IWDG_TIMEOUT_COUNT		100000
 

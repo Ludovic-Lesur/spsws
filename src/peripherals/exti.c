@@ -22,22 +22,6 @@
 
 /*** EXTI local functions ***/
 
-/* EXTI LINES 0-1 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void __attribute__((optimize("-O0"))) EXTI0_1_IRQHandler(void) {
-	// Unused.
-}
-
-/* EXTI LINES 2-3 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void __attribute__((optimize("-O0"))) EXTI2_3_IRQHandler(void) {
-	// Unused.
-}
-
 /* EXTI LINES 4-15 INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -78,7 +62,7 @@ void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 
 /* SET EXTI TRIGGER.
  * @param bit_idx:	Interrupt index.
- * @return status:	Function execution status.
+ * @return:			None.
  */
 static void EXTI_set_trigger(EXTI_trigger_t trigger, unsigned char bit_idx) {
 	// Check index.
@@ -127,9 +111,9 @@ void EXTI_init(void) {
 }
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
- * @param gpio:		GPIO to be attached to EXTI peripheral.
- * @edge_trigger:	Interrupt edge trigger (see EXTI_trigger_t epin_indexeration in exti.h).
- * @return:			None.
+ * @param gpio:	GPIO to be attached to EXTI peripheral.
+ * @trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
+ * @return:		None.
  */
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 	// Select GPIO port.
