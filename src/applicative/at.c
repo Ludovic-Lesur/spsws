@@ -333,7 +333,7 @@ static void AT_print_error_stack(void) {
  */
 static void AT_adc_callback(void) {
 	// Local variables.
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 	unsigned int vmcu_mv = 0;
 	signed char tmcu_degrees = 0;
 	// Check if wind measurement is not running.
@@ -345,11 +345,11 @@ static void AT_adc_callback(void) {
 	AT_response_add_string("ADC running...");
 	AT_response_add_string(AT_RESPONSE_END);
 	AT_response_send();
-	adc_status = ADC1_perform_measurements();
+	adc1_status = ADC1_perform_measurements();
 	ADC1_error_check_print();
 	// Read data.
 	ADC1_get_tmcu(&tmcu_degrees);
-	adc_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
 	ADC1_error_check_print();
 	// Print results.
 	AT_response_add_string("Vmcu=");
@@ -669,7 +669,7 @@ static void AT_time_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
-	LPUART_status_t lpuart_status = LPUART_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	int timeout_seconds = 0;
 	RTC_time_t gps_time;
 	// Check if wind measurement is not running.
@@ -681,7 +681,7 @@ static void AT_time_callback(void) {
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
 	PARSER_error_check_print();
 	// Power on GPS.
-	lpuart_status = LPUART1_power_on();
+	lpuart1_status = LPUART1_power_on();
 	LPUART1_error_check_print();
 	// Start time aquisition.
 	AT_response_add_string("GPS running...");
@@ -736,7 +736,7 @@ static void AT_gps_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
-	LPUART_status_t lpuart_status = LPUART_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	int timeout_seconds = 0;
 	unsigned int fix_duration_seconds = 0;
 	NEOM8N_position_t gps_position;
@@ -749,7 +749,7 @@ static void AT_gps_callback(void) {
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
 	PARSER_error_check_print();
 	// Power on GPS.
-	lpuart_status = LPUART1_power_on();
+	lpuart1_status = LPUART1_power_on();
 	LPUART1_error_check_print();
 	// Start GPS fix.
 	AT_response_add_string("GPS running...");
@@ -1232,7 +1232,7 @@ static void AT_rssi_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
 	int frequency_hz = 0;
 	int duration_s = 0;
@@ -1258,12 +1258,12 @@ static void AT_rssi_callback(void) {
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
 	SX1232_error_check_print();
 	// Wait TS_FS=60us typical.
-	lptim_status = LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
 	LPTIM1_error_check_print();
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
 	SX1232_error_check_print();
 	// Wait TS_TR=120us typical.
-	lptim_status = LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
 	LPTIM1_error_check_print();
 	// Measurement loop.
 	while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
@@ -1276,7 +1276,7 @@ static void AT_rssi_callback(void) {
 		AT_response_add_string("dBm\n");
 		AT_response_send();
 		// Report delay.
-		lptim_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
 		LPTIM1_error_check_print();
 		report_loop++;
 	}

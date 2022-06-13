@@ -92,7 +92,7 @@ errors:
 static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char register_address, unsigned char bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned char reg_value = 0;
 	unsigned int loop_count_ms = 0;
 	// Read register.
@@ -101,7 +101,7 @@ static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
-		lptim_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, 1);
 		LPTIM1_status_check(DPS310_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += DPS310_SUB_DELAY_MS;

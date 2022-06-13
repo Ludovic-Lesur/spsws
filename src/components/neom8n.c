@@ -525,8 +525,8 @@ errors:
 static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_mask) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
-	LPUART_status_t lpuart_status = LPUART_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// See p.110 for NMEA messages ID.
 	char nmea_message_id[18] = {0x0A, 0x44, 0x09, 0x00, 0x01, 0x43, 0x42, 0x0D, 0x40, 0x06, 0x02, 0x07, 0x03, 0x04, 0x41, 0x0F, 0x05, 0x08};
 	unsigned char nmea_message_id_idx = 0;
@@ -544,10 +544,10 @@ static NEOM8N_status_t NEOM8N_select_nmea_messages(unsigned int nmea_message_id_
 		// Bytes 14-15 = NEOM8N checksum (CK_A and CK_B).
 		NEOM8N_compute_ubx_checksum(neom8n_cfg_msg, NEOM8N_CFG_MSG_PAYLOAD_LENGTH);
 		for (neom8n_cfg_msg_idx=0 ; neom8n_cfg_msg_idx<(NEOM8N_MSG_OVERHEAD_LENGTH+NEOM8N_CFG_MSG_PAYLOAD_LENGTH) ; neom8n_cfg_msg_idx++) {
-			lpuart_status = LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
+			lpuart1_status = LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 			LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 		}
-		lptim_status = LPTIM1_delay_milliseconds(100, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 		LPTIM1_status_check(NEOM8N_ERROR_BASE_LPTIM);
 	}
 errors:

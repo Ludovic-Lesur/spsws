@@ -363,7 +363,7 @@ volatile unsigned char RTC_get_wakeup_timer_flag(void) {
  * @return:	None.
  */
 void RTC_clear_wakeup_timer_flag(void) {
-	// Clear all flags.
+	// Clear flag.
 	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	rtc_wakeup_timer_flag = 0;

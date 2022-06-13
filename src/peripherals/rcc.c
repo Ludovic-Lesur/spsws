@@ -9,13 +9,8 @@
 
 #include "flash.h"
 #include "gpio.h"
-#include "lptim.h"
-#include "lptim_reg.h"
 #include "mapping.h"
-#include "nvic.h"
-#include "pwr_reg.h"
 #include "rcc_reg.h"
-#include "scb_reg.h"
 #include "tim.h"
 
 /*** RCC local macros ***/
@@ -232,6 +227,7 @@ RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 		status = RCC_ERROR_LSI_MEASUREMENT;
 	}
 errors:
+	TIM21_disable();
 	return status;
 }
 

@@ -30,8 +30,8 @@ void LPTIM1_stop(void);
 unsigned int LPTIM1_get_counter(void);
 #endif
 
-#define LPTIM1_status_check(error_base) { if (lptim_status != LPTIM_SUCCESS) { status = error_base + lptim_status; goto errors; }}
-#define LPTIM1_error_check() { ERROR_status_check(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
-#define LPTIM1_error_check_print() { ERROR_status_check_print(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
+#define LPTIM1_status_check(error_base) { if (lptim1_status != LPTIM_SUCCESS) { status = error_base + lptim1_status; goto errors; }}
+#define LPTIM1_error_check() { ERROR_status_check(lptim1_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
+#define LPTIM1_error_check_print() { ERROR_status_check_print(lptim1_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
 
 #endif /* __LPTIM_H__ */

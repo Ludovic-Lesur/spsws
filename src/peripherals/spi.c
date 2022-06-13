@@ -67,18 +67,18 @@ void SPI1_set_clock_polarity(unsigned char polarity) {
 SPI_status_t SPI1_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI1_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI1_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #endif
 	// Chip select high by default.
@@ -275,7 +275,7 @@ void SPI2_init(void) {
 SPI_status_t SPI2_power_on(void) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_SPI2_SCK, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SPI2_MOSI, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -283,7 +283,7 @@ SPI_status_t SPI2_power_on(void) {
 	// Turn MAX11136 on.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 	// Warm-up delay.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 	// Chip select high by default.
 	GPIO_write(&GPIO_MAX11136_CS, 1);

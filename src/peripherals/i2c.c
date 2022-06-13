@@ -25,10 +25,10 @@
 static I2C_status_t I2C1_clear(void) {
 	// Local variables.
 	I2C_status_t status = I2C_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Disable peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
-	lptim_status = LPTIM1_delay_milliseconds(1, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(1, 0);
 	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 	// Enable peripheral and clear all flags.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
@@ -64,14 +64,14 @@ void I2C1_init(void) {
 I2C_status_t I2C1_power_on(void) {
 	// Local variables.
 	I2C_status_t status = I2C_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Enable GPIOs.
 	GPIO_configure(&GPIO_I2C1_SCL, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_I2C1_SDA, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Turn sensors and pull-up resistors on.
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 	// Warm-up delay.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(I2C_ERROR_BASE_LPTIM);
 errors:
 	return status;

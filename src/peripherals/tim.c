@@ -9,11 +9,9 @@
 
 #include "mode.h"
 #include "nvic.h"
-#include "pwr.h"
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "tim_reg.h"
-#include "usart.h"
 #include "wind.h"
 
 /*** TIM local macros ***/
@@ -102,15 +100,25 @@ TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 			tim21_ccr1_edge8 = (TIM21 -> CCR1);
 		}
 	}
+	// Compute LSI frequency.
+	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
+errors:
 	// Disable interrupt.
 	NVIC_disable_interrupt(NVIC_IT_TIM21);
 	// Stop counter.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
-	// Compute LSI frequency.
-	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
-errors:
 	return status;
+}
+
+/* DISABLE TIM21 PERIPHERAL.
+ * @param:	None.
+ * @return:	None.
+ */
+void TIM21_disable(void) {
+	// Disable TIM21 peripheral.
+	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
+	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
 }
 
 /* CONFIGURE TIM2 FOR SIGFOX BPSK MODULATION.

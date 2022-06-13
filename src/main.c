@@ -331,7 +331,7 @@ static void SPSWS_init_hw(void) {
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
@@ -386,7 +386,7 @@ static void SPSWS_init_hw(void) {
 	DMA1_init_channel6();
 	LPTIM1_init(spsws_ctx.lsi_frequency_hz);
 	// Analog.
-	adc_status = ADC1_init();
+	adc1_status = ADC1_init();
 	ADC1_error_check();
 	// Communication interfaces.
 	LPUART1_init(spsws_ctx.lse_running);
@@ -625,7 +625,7 @@ int main (void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	I2C_status_t i2c_status = I2C_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
@@ -633,7 +633,7 @@ int main (void) {
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
-	LPUART_status_t lpuart_status = LPUART_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
 	unsigned char idx = 0;
@@ -720,7 +720,7 @@ int main (void) {
 		case SPSWS_STATE_RTC_CALIBRATION:
 			IWDG_reload();
 			// Get current time from GPS.
-			lpuart_status = LPUART1_power_on();
+			lpuart1_status = LPUART1_power_on();
 			LPUART1_error_check();
 			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS);
 			NEOM8N_error_check();
@@ -748,17 +748,17 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			IWDG_reload();
 			// Retrieve internal ADC data.
-			adc_status = ADC1_perform_measurements();
+			adc1_status = ADC1_perform_measurements();
 			ADC1_error_check();
 			// Check status.
-			if (adc_status == ADC_SUCCESS) {
+			if (adc1_status == ADC_SUCCESS) {
 				// Read data.
 				ADC1_get_tmcu(&temperature);
 				math_status = MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				MATH_error_check();
 				spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (unsigned char) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
-				adc_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
+				adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
 				ADC1_error_check();
 				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
@@ -972,7 +972,7 @@ int main (void) {
 		case SPSWS_STATE_GEOLOC:
 			IWDG_reload();
 			// Get position from GPS.
-			lpuart_status = LPUART1_power_on();
+			lpuart1_status = LPUART1_power_on();
 			LPUART1_error_check();
 			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &spsws_ctx.geoloc_fix_duration_seconds);
 			NEOM8N_error_check();

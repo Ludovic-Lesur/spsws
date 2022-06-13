@@ -148,11 +148,11 @@ void SX1232_disable(void) {
 SX1232_status_t SX1232_tcxo(unsigned char tcxo_enable) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Update power control.
 	GPIO_write(&GPIO_TCXO32_POWER_ENABLE, tcxo_enable);
 	// Wait for TCXO to warm-up.
-	lptim_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -165,7 +165,7 @@ errors:
 SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Select oscillator.
 	switch (oscillator) {
 	case SX1232_OSCILLATOR_QUARTZ:
@@ -181,7 +181,7 @@ SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 		goto errors;
 	}
 	// Wait TS_OSC = 250us typical.
-	lptim_status = LPTIM1_delay_milliseconds(5, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 1);
 	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// Trigger RC oscillator calibration.
 	status = SX1232_write_register(SX1232_REG_OSC, 0x0F);
@@ -618,20 +618,20 @@ errors:
 SX1232_status_t SX1232_start_cw(void) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Start data signal.
 	GPIO_write(&GPIO_SX1232_DIO2, 1);
 	// Start radio.
 	status = SX1232_set_mode(SX1232_MODE_FSTX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
-	lptim_status = LPTIM1_delay_milliseconds(2, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
 	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_TX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
-	lptim_status = LPTIM1_delay_milliseconds(2, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
 	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -644,11 +644,11 @@ errors:
 SX1232_status_t SX1232_stop_cw(void) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Stop data signal.
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
 	// Wait ramp down.
-	lptim_status = LPTIM1_delay_milliseconds(2, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(2, 1);
 	LPTIM1_status_check(SX1232_ERROR_BASE_LPTIM);
 	// Stop radio.
 	status = SX1232_set_mode(SX1232_MODE_STANDBY);

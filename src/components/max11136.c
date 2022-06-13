@@ -109,7 +109,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned short max11136_dout = 0;
 	unsigned char channel = 0;
 	unsigned char channel_idx = 0;
@@ -132,7 +132,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	// Wait for EOC to be pulled low.
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
 		// Low power delay.
-		lptim_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, 1);
 		LPTIM1_status_check(MAX11136_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += MAX11136_SUB_DELAY_MS;
