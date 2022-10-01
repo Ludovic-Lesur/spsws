@@ -16,6 +16,7 @@
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "string.h"
+#include "types.h"
 
 /*** LPUART local macros ***/
 
@@ -51,10 +52,10 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
  * @param lpuart_use_lse:	Use LSE as clock source if non zero, HSI otherwise.
  * @return:					None.
  */
-void LPUART1_init(unsigned char lpuart_use_lse) {
+void LPUART1_init(uint8_t lpuart_use_lse) {
 	// Local variables.
-	unsigned int lpuart_clock_hz = 0;
-	unsigned int brr = 0;
+	uint32_t lpuart_clock_hz = 0;
+	uint32_t brr = 0;
 	// Select peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 10); // Reset bits 10-11.
 	if (lpuart_use_lse == 0) {
@@ -126,10 +127,10 @@ void LPUART1_power_off(void) {
  * @param tx_byte:	Byte to send.
  * @return status:	Function execution status.
  */
-LPUART_status_t LPUART1_send_byte(unsigned char tx_byte) {
+LPUART_status_t LPUART1_send_byte(uint8_t tx_byte) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Fill transmit register.
 	LPUART1 -> TDR = tx_byte;
 	// Wait for transmission to complete.

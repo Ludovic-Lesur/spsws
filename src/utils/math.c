@@ -6,11 +6,12 @@
  */
 
 #include "math.h"
+#include "types.h"
 
 /*** MATH local macros ***/
 
 #define MATH_MEDIAN_FILTER_LENGTH_MAX	0xFF
-static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 
 /*** MATH local functions ***/
 
@@ -20,7 +21,7 @@ static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 100
  * @return min:			Minimum value of the buffer.
  */
 #define MATH_min(data, data_length) { \
-	unsigned char idx = 0; \
+	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		if (data[idx] < min) { \
 			min = data[idx]; \
@@ -35,7 +36,7 @@ static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 100
  * @return min:			Minimum value of the buffer.
  */
 #define MATH_max(data, data_length) { \
-	unsigned char idx = 0; \
+	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		if (data[idx] > max) { \
 			max = data[idx]; \
@@ -50,7 +51,7 @@ static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 100
  * @return average:		Mean value of the buffer.
  */
 #define MATH_average(data, data_length) { \
-	unsigned char idx = 0; \
+	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		average = ((average * idx) + data[idx]) / (idx + 1); \
 	} \
@@ -64,9 +65,9 @@ static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 100
  * @return filter_out:		Output value of the median filter.
  */
 #define MATH_median_filter(data, median_length, average_length) { \
-	unsigned char buffer_sorted = 0; \
-	unsigned char idx1 = 0; \
-	unsigned char idx2 = 0; \
+	uint8_t buffer_sorted = 0; \
+	uint8_t idx1 = 0; \
+	uint8_t idx2 = 0; \
 	/* Copy input buffer into local buffer */ \
 	for (idx1=0 ; idx1<median_length ; idx1++) { \
 		local_buf[idx1] = data[idx1]; \
@@ -105,7 +106,7 @@ static const unsigned int MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 100
  * @param result:	Pointer to the result.
  * @return status:	Function execution status.
  */
-MATH_status_t MATH_pow_10(unsigned char power, unsigned int* result) {
+MATH_status_t MATH_pow_10(uint8_t power, uint32_t* result) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
 	// Check power.
@@ -123,9 +124,9 @@ errors:
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned char MATH_min_u8(unsigned char* data, unsigned char data_length) {
+uint8_t MATH_min_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned char min = 0xFF;
+	uint8_t min = 0xFF;
 	// Compute minimum value.
 	MATH_min(data, data_length);
 }
@@ -135,9 +136,9 @@ unsigned char MATH_min_u8(unsigned char* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned short MATH_min_u16(unsigned short* data, unsigned char data_length) {
+uint16_t MATH_min_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned short min = 0xFFFF;
+	uint16_t min = 0xFFFF;
 	// Compute minimum value.
 	MATH_min(data, data_length);
 }
@@ -147,9 +148,9 @@ unsigned short MATH_min_u16(unsigned short* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned int MATH_min_u32(unsigned int* data, unsigned char data_length) {
+uint32_t MATH_min_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned int min = 0xFFFFFFFF;
+	uint32_t min = 0xFFFFFFFF;
 	// Compute minimum value.
 	MATH_min(data, data_length);
 }
@@ -159,9 +160,9 @@ unsigned int MATH_min_u32(unsigned int* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned char MATH_max_u8(unsigned char* data, unsigned char data_length) {
+uint8_t MATH_max_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned char max = 0;
+	uint8_t max = 0;
 	// Compute minimum value.
 	MATH_max(data, data_length);
 }
@@ -171,9 +172,9 @@ unsigned char MATH_max_u8(unsigned char* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned short MATH_max_u16(unsigned short* data, unsigned char data_length) {
+uint16_t MATH_max_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned short max = 0;
+	uint16_t max = 0;
 	// Compute minimum value.
 	MATH_max(data, data_length);
 }
@@ -183,9 +184,9 @@ unsigned short MATH_max_u16(unsigned short* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return min: 		Minimum value of the input buffer.
  */
-unsigned int MATH_max_u32(unsigned int* data, unsigned char data_length) {
+uint32_t MATH_max_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned int max = 0;
+	uint32_t max = 0;
 	// Compute minimum value.
 	MATH_max(data, data_length);
 }
@@ -195,9 +196,9 @@ unsigned int MATH_max_u32(unsigned int* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return average: 	Average value of the input buffer.
  */
-unsigned char MATH_average_u8(unsigned char* data, unsigned char data_length) {
+uint8_t MATH_average_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned char average = 0;
+	uint8_t average = 0;
 	// Compute average.
 	MATH_average(data, data_length);
 }
@@ -207,9 +208,9 @@ unsigned char MATH_average_u8(unsigned char* data, unsigned char data_length) {
  * @param data_length:	Input buffer length.
  * @return average: 	Average value of the input buffer.
  */
-unsigned short MATH_average_u16(unsigned short* data, unsigned char data_length) {
+uint16_t MATH_average_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned short average = 0;
+	uint16_t average = 0;
 	// Compute average.
 	MATH_average(data, data_length);
 }
@@ -219,9 +220,9 @@ unsigned short MATH_average_u16(unsigned short* data, unsigned char data_length)
  * @param data_length:	Input buffer length.
  * @return average: 	Average value of the input buffer.
  */
-unsigned int MATH_average_u32(unsigned int* data, unsigned char data_length) {
+uint32_t MATH_average_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
-	unsigned int average = 0;
+	uint32_t average = 0;
 	// Compute average.
 	MATH_average(data, data_length);
 }
@@ -232,13 +233,13 @@ unsigned int MATH_average_u32(unsigned int* data, unsigned char data_length) {
  * @param average_length:	Number of center elements taken for final average.
  * @return filter_out:		Output value of the median filter.
  */
-unsigned char MATH_median_filter_u8(unsigned char* data, unsigned char median_length, unsigned char average_length) {
+uint8_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t average_length) {
 	// Local variables.
-	unsigned char filter_out = 0;
-	unsigned char local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
-	unsigned char temp = 0;
-	unsigned char start_idx = 0;
-	unsigned char end_idx = 0;
+	uint8_t filter_out = 0;
+	uint8_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
+	uint8_t temp = 0;
+	uint8_t start_idx = 0;
+	uint8_t end_idx = 0;
 	// Compute median filter.
 	MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
@@ -252,13 +253,13 @@ unsigned char MATH_median_filter_u8(unsigned char* data, unsigned char median_le
  * @param average_length:	Number of center elements taken for final average.
  * @return filter_out:		Output value of the median filter.
  */
-unsigned short MATH_median_filter_u16(unsigned short* data, unsigned char median_length, unsigned char average_length) {
+uint16_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t average_length) {
 	// Local variables.
-	unsigned short filter_out = 0;
-	unsigned short local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
-	unsigned short temp = 0;
-	unsigned char start_idx = 0;
-	unsigned char end_idx = 0;
+	uint16_t filter_out = 0;
+	uint16_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
+	uint16_t temp = 0;
+	uint8_t start_idx = 0;
+	uint8_t end_idx = 0;
 	// Compute median filter.
 	MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
@@ -272,13 +273,13 @@ unsigned short MATH_median_filter_u16(unsigned short* data, unsigned char median
  * @param average_length:	Number of center elements taken for final average.
  * @return filter_out:		Output value of the median filter.
  */
-unsigned int MATH_median_filter_u32(unsigned int* data, unsigned char median_length, unsigned char average_length) {
+uint32_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t average_length) {
 	// Local variables.
-	unsigned int filter_out = 0;
-	unsigned int local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
-	unsigned int temp = 0;
-	unsigned char start_idx = 0;
-	unsigned char end_idx = 0;
+	uint32_t filter_out = 0;
+	uint32_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
+	uint32_t temp = 0;
+	uint8_t start_idx = 0;
+	uint8_t end_idx = 0;
 	// Compute median filter.
 	MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
@@ -290,9 +291,9 @@ unsigned int MATH_median_filter_u32(unsigned int* data, unsigned char median_len
  * @param x:	Parameter.
  * @return:		|x|.
  */
-unsigned int MATH_abs(signed int x) {
+uint32_t MATH_abs(int32_t x) {
 	// Local variables.
-	unsigned int result = 0;
+	uint32_t result = 0;
 	// Check sign.
 	if (x > 0) result = x;
 	if (x < 0) result = (-1) * x;
@@ -305,13 +306,13 @@ unsigned int MATH_abs(signed int x) {
  * @param alpha:	Pointer to the angle of the point (x,y).
  * @return status:	Function execution status.
  */
-MATH_status_t MATH_atan2(signed int x, signed int y, unsigned int* alpha) {
+MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
-	signed int local_x = x;
-	signed int local_y = y;
-	unsigned int abs_x = 0;
-	unsigned int abs_y = 0;
+	int32_t local_x = x;
+	int32_t local_y = y;
+	uint32_t abs_x = 0;
+	uint32_t abs_y = 0;
 	// Check x and y are not null.
 	if ((x == 0) && (y == 0)) {
 		status = MATH_ERROR_UNDEFINED;
@@ -375,12 +376,12 @@ errors:
  * @param result:				Pointer to the result.
  * @return status:				Function execution status.
  */
-MATH_status_t MATH_two_complement(unsigned int value, unsigned char sign_bit_position, signed int* result) {
+MATH_status_t MATH_two_complement(uint32_t value, uint8_t sign_bit_position, int32_t* result) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
-	unsigned char bit_idx = 0;
-	unsigned int not_value = 0;
-	unsigned int absolute_value = 0;
+	uint8_t bit_idx = 0;
+	uint32_t not_value = 0;
+	uint32_t absolute_value = 0;
 	// Check parameters.
 	if (sign_bit_position > (MATH_BINARY_MAX_LENGTH - 1)) {
 		status = MATH_ERROR_SIGN_BIT;
@@ -389,7 +390,7 @@ MATH_status_t MATH_two_complement(unsigned int value, unsigned char sign_bit_pos
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
-		(*result) = (int) value;
+		(*result) = (int32_t) value;
 	}
 	else {
 		// Value is negative.
@@ -410,11 +411,11 @@ errors:
  * @param sign_bit_position:	Position of the sign bit in the output.
  * @return result:				Result of computation.
  */
-MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_position, unsigned int* result) {
+MATH_status_t MATH_one_complement(int32_t value, uint8_t sign_bit_position, uint32_t* result) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
-	unsigned int absolute_value = 0;
-	unsigned int absolute_mask = ((0b1 << sign_bit_position) - 1);
+	uint32_t absolute_value = 0;
+	uint32_t absolute_mask = ((0b1 << sign_bit_position) - 1);
 	// Check parameters.
 	if (sign_bit_position > (MATH_BINARY_MAX_LENGTH - 1)) {
 		status = MATH_ERROR_SIGN_BIT;
@@ -423,11 +424,11 @@ MATH_status_t MATH_one_complement(signed int value, unsigned char sign_bit_posit
 	// Check value sign.
 	if (value >= 0) {
 		// Value is positive: nothing to do.
-		(*result) = ((unsigned int) value) & absolute_mask;
+		(*result) = ((uint32_t) value) & absolute_mask;
 	}
 	else {
 		// Set sign bit.
-		absolute_value = (unsigned int) ((-1) * value);
+		absolute_value = (uint32_t) ((-1) * value);
 		(*result) = (0b1 << sign_bit_position) | (absolute_value & absolute_mask);
 	}
 errors:

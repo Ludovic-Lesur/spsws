@@ -7,10 +7,12 @@
 
 #include "error.h"
 
+#include "types.h"
+
 /*** ERROR local global variables ***/
 
 static ERROR_t error_stack[ERROR_STACK_DEPTH];
-static unsigned int error_stack_idx = 0;
+static uint32_t error_stack_idx = 0;
 
 /*** ERROR functions ***/
 
@@ -44,8 +46,8 @@ void ERROR_stack_add(ERROR_t status) {
  */
 void ERROR_stack_read(ERROR_t* error_stack_ptr) {
 	// Local variables.
-	unsigned int idx = 0;
-	unsigned int chrono_idx = error_stack_idx;
+	uint32_t idx = 0;
+	uint32_t chrono_idx = error_stack_idx;
 	// Fill table in chronological order.
 	for (idx=0 ; idx<ERROR_STACK_DEPTH ; idx++) {
 		// Compute previous index.
@@ -58,10 +60,10 @@ void ERROR_stack_read(ERROR_t* error_stack_ptr) {
  * @param:	None.
  * @return:	1 if the stack is empty (no error), 0 otherwise.
  */
-unsigned char ERROR_stack_is_empty(void) {
+uint8_t ERROR_stack_is_empty(void) {
 	// Local variables.
-	unsigned char is_empty = 1;
-	unsigned char idx = 0;
+	uint8_t is_empty = 1;
+	uint8_t idx = 0;
 	// Loop on stack.
 	for (idx=0 ; idx<ERROR_STACK_DEPTH ; idx++) {
 		if (error_stack[idx] != SUCCESS) {

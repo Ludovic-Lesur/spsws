@@ -9,6 +9,7 @@
 
 #include "i2c.h"
 #include "lptim.h"
+#include "types.h"
 
 /*** SHT3x local macros ***/
 
@@ -17,8 +18,8 @@
 /*** SHT3x local structures ***/
 
 typedef struct {
-	signed char temperature_degrees;
-	unsigned char humidity_percent;
+	int8_t temperature_degrees;
+	uint8_t humidity_percent;
 } SHT3X_context_t;
 
 /*** SHT3x local global variables ***/
@@ -31,14 +32,14 @@ static SHT3X_context_t sht3x_ctx;
  * @param i2c_address:	Sensor address.
  * @return status:		Function execution status.
  */
-SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
+SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
 	SHT3X_status_t status = SHT3X_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-	unsigned char measure_command[2] = {0x24, 0x00};
-	unsigned char measure_buf[6];
-	unsigned int data_16bits = 0;
+	uint8_t measure_command[2] = {0x24, 0x00};
+	uint8_t measure_buf[6];
+	uint32_t data_16bits = 0;
 	// Reset results.
 	sht3x_ctx.temperature_degrees = 0;
 	sht3x_ctx.humidity_percent = 0;
@@ -65,16 +66,16 @@ errors:
  * @param temperature_degrees:	Pointer to signed byte that will contain temperature result (2-complement).
  * @return:						None.
  */
-void SHT3X_get_temperature(signed char* temperature_degrees) {
+void SHT3X_get_temperature(int8_t* temperature_degrees) {
 	// Get result.
 	(*temperature_degrees) = sht3x_ctx.temperature_degrees;
 }
 
 /* READ HUMIDTY FROM SHT3X SENSOR.
- * @param humidity_percent:		Pointer to byte that will contain humidity result (%).
+ * @param humidity_percent:		Pointer to 8-bits value that will contain humidity result (%).
  * @return:						None.
  */
-void SHT3X_get_humidity(unsigned char* humidity_percent) {
+void SHT3X_get_humidity(uint8_t* humidity_percent) {
 	// Get result.
 	(*humidity_percent) = sht3x_ctx.humidity_percent;
 }

@@ -9,6 +9,7 @@
 #define __SI1133_H__
 
 #include "i2c.h"
+#include "types.h"
 
 /*** SI1133 macros ***/
 
@@ -32,8 +33,8 @@ typedef enum {
 
 /*** SI1133 functions ***/
 
-SI1133_status_t SI1133_perform_measurements(unsigned char si1133_i2c_address);
-void SI1133_get_uv_index(unsigned char* uv_index);
+SI1133_status_t SI1133_perform_measurements(uint8_t si1133_i2c_address);
+void SI1133_get_uv_index(uint8_t* uv_index);
 
 #define SI1133_status_check(error_base) { if (si1133_status != SI1133_SUCCESS) { status = error_base + si1133_status; goto errors; }}
 #define SI1133_error_check() { ERROR_status_check(si1133_status, SI1133_SUCCESS, ERROR_BASE_SI1133); }

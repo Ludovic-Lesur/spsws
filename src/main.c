@@ -40,6 +40,7 @@
 #include "wind.h"
 // Utils.
 #include "math.h"
+#include "types.h"
 // Applicative.
 #include "at.h"
 #include "error.h"
@@ -111,7 +112,7 @@ typedef union {
 		unsigned mcu_clock_source : 1;
 		unsigned station_mode : 1;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
-	unsigned char all;
+	uint8_t all;
 } SPSWS_status_t;
 
 typedef union {
@@ -127,19 +128,19 @@ typedef union {
 		unsigned flood_alarm : 1;
 #endif
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
-	unsigned char all;
+	uint8_t all;
 } SPSWS_flags_t;
 
 typedef struct {
-	unsigned char data[MEASUREMENT_BUFFER_LENGTH];
-	unsigned char count;
-	unsigned char full_flag;
+	uint8_t data[MEASUREMENT_BUFFER_LENGTH];
+	uint8_t count;
+	uint8_t full_flag;
 } SPSWS_measurement_u8_t;
 
 typedef struct {
-	unsigned short data[MEASUREMENT_BUFFER_LENGTH];
-	unsigned char count;
-	unsigned char full_flag;
+	uint16_t data[MEASUREMENT_BUFFER_LENGTH];
+	uint8_t count;
+	uint8_t full_flag;
 } SPSWS_measurement_u16_t;
 
 typedef struct {
@@ -158,7 +159,7 @@ typedef struct {
 
 // Sigfox start-up frame data format.
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_STARTUP_DATA_LENGTH];
+	uint8_t frame[SPSWS_SIGFOX_STARTUP_DATA_LENGTH];
 	struct {
 		unsigned reset_reason : 8;
 		unsigned major_version : 8;
@@ -171,7 +172,7 @@ typedef union {
 
 // Sigfox weather frame data format.
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
+	uint8_t frame[SPSWS_SIGFOX_WEATHER_DATA_LENGTH];
 	struct {
 		unsigned tamb_degrees : 8;
 		unsigned hamb_percent : 8;
@@ -189,7 +190,7 @@ typedef union {
 
 // Sigfox monitoring frame data format.
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_MONITORING_DATA_LENGTH];
+	uint8_t frame[SPSWS_SIGFOX_MONITORING_DATA_LENGTH];
 	struct {
 		unsigned tmcu_degrees : 8;
 		unsigned tpcb_degrees : 8;
@@ -203,7 +204,7 @@ typedef union {
 
 // Sigfox geolocation frame data format.
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_GEOLOC_DATA_LENGTH];
+	uint8_t frame[SPSWS_SIGFOX_GEOLOC_DATA_LENGTH];
 	struct {
 		unsigned latitude_degrees : 8;
 		unsigned latitude_minutes : 6;
@@ -220,7 +221,7 @@ typedef union {
 
 #ifdef FLOOD_DETECTION
 typedef union {
-	unsigned char frame[SPSWS_SIGFOX_FLOOD_DATA_LENGTH];
+	uint8_t frame[SPSWS_SIGFOX_FLOOD_DATA_LENGTH];
 	struct {
 		unsigned level : 8;
 		unsigned rain_mm : 8;
@@ -233,14 +234,14 @@ typedef struct {
 	SPSWS_state_t state;
 	SPSWS_flags_t flags;
 	// Clocks.
-	unsigned int lsi_frequency_hz;
-	unsigned char lse_running;
+	uint32_t lsi_frequency_hz;
+	uint8_t lse_running;
 	// Wake-up management.
 	RTC_time_t current_time;
 	RTC_time_t previous_wake_up_time;
 	// Measurements buffers.
 	SPSWS_measurements_t measurements;
-	unsigned int seconds_counter;
+	uint32_t seconds_counter;
 	// SW version.
 	SPSWS_sigfox_startup_data_t sigfox_startup_data;
 	// Monitoring.
@@ -249,17 +250,17 @@ typedef struct {
 	// Weather data.
 	SPSWS_sigfox_weather_data_t sigfox_weather_data;
 #ifdef FLOOD_DETECTION
-	unsigned char flood_level;
-	unsigned char flood_level_change_count;
+	uint8_t flood_level;
+	uint8_t flood_level_change_count;
 	SPSWS_sigfox_flood_data_t sigfox_flood_data;
 #endif
 	// Geoloc.
 	NEOM8N_position_t position;
-	unsigned int geoloc_fix_duration_seconds;
+	uint32_t geoloc_fix_duration_seconds;
 	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
 	// Error stack.
 	ERROR_t error_stack[ERROR_STACK_DEPTH];
-	unsigned char sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH];
+	uint8_t sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH];
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
 	sfx_u8 sigfox_downlink_data[SIGFOX_DOWNLINK_DATA_SIZE_BYTES];
@@ -401,7 +402,7 @@ static void SPSWS_init_hw(void) {
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
-	unsigned char device_id_lsbyte = 0;
+	uint8_t device_id_lsbyte = 0;
 	// Init error stack
 	ERROR_stack_init();
 	// Init memory.
@@ -501,9 +502,9 @@ static void SPSWS_init_hw(void) {
 static void SPSWS_update_time_flags(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
-	unsigned char nvm_byte = 0;
-	unsigned char local_utc_offset = 0;
-	signed char local_hour = 0;
+	uint8_t nvm_byte = 0;
+	uint8_t local_utc_offset = 0;
+	int8_t local_hour = 0;
 	// Retrieve current time from RTC.
 	RTC_get_time(&spsws_ctx.current_time);
 	// Retrieve previous wake-up time from NVM.
@@ -577,7 +578,7 @@ static void SPSWS_update_pwut(void) {
  */
 static void SPSWS_compute_final_measurements(void) {
 	// Local variables.
-	unsigned char data_length = 0;
+	uint8_t data_length = 0;
 	// Temperature
 	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
 	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length);
@@ -618,7 +619,7 @@ static void SPSWS_compute_final_measurements(void) {
  * @param: 	None.
  * @return: 0.
  */
-int main (void) {
+int32_t main (void) {
 	// Init board.
 	SPSWS_init_context();
 	SPSWS_init_hw();
@@ -636,12 +637,12 @@ int main (void) {
 	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
-	unsigned char idx = 0;
-	signed char temperature = 0;
-	unsigned char generic_data_u8 = 0;
-	unsigned int generic_data_u32_1 = 0;
+	uint8_t idx = 0;
+	int8_t temperature = 0;
+	uint8_t generic_data_u8 = 0;
+	uint32_t generic_data_u32_1 = 0;
 #ifdef CM
-	unsigned int generic_data_u32_2 = 0;
+	uint32_t generic_data_u32_2 = 0;
 	WIND_status_t wind_status = WIND_SUCCESS;
 #endif
 	// Main loop.
@@ -756,7 +757,7 @@ int main (void) {
 				ADC1_get_tmcu(&temperature);
 				math_status = MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				MATH_error_check();
-				spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (unsigned char) generic_data_u32_1;
+				spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
 				adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32_1);
 				ADC1_error_check();
@@ -788,14 +789,14 @@ int main (void) {
 				// Read data.
 				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &generic_data_u32_1);
 				MAX11136_error_check();
-				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (unsigned short) generic_data_u32_1;
+				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
 				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &generic_data_u32_1);
 				MAX11136_error_check();
-				spsws_ctx.sigfox_monitoring_data.vcap_mv = (unsigned short) generic_data_u32_1;
+				spsws_ctx.sigfox_monitoring_data.vcap_mv = (uint16_t) generic_data_u32_1;
 				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &generic_data_u32_1);
 				MAX11136_error_check();
-				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (unsigned char) generic_data_u32_1;
+				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
 			}
 			else {
@@ -817,7 +818,7 @@ int main (void) {
 				SHT3X_get_temperature(&temperature);
 				math_status = MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				MATH_error_check();
-				spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (unsigned char) generic_data_u32_1;
+				spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
 				SHT3X_get_humidity(&generic_data_u8);
 				spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = generic_data_u8;
@@ -826,7 +827,7 @@ int main (void) {
 			// External temperature/humidity sensor.
 #ifdef HW1_0
 			if (sht3x_status == SHT3X_SUCCESS) {
-				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (unsigned char) generic_data_u32_1;
+				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_data_u8;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
@@ -840,7 +841,7 @@ int main (void) {
 			if (sht3x_status == SHT3X_SUCCESS) {
 				SHT3X_get_temperature(&temperature);
 				MATH_one_complement(temperature, 7, &generic_data_u32_1);
-				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (unsigned char) generic_data_u32_1;
+				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 				SHT3X_get_humidity(&generic_data_u8);
 				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_data_u8;
@@ -1134,7 +1135,7 @@ int main (void) {
  * @param: 	None.
  * @return: 0.
  */
-int main (void) {
+int32_t main (void) {
 	// Init board.
 	SPSWS_init_context();
 	SPSWS_init_hw();

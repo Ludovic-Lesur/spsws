@@ -9,6 +9,7 @@
 #define __SX1232_H__
 
 #include "spi.h"
+#include "types.h"
 
 /*** SX1232 structures ***/
 
@@ -146,34 +147,34 @@ typedef enum {
 
 void SX1232_init(void);
 void SX1232_disable(void);
-SX1232_status_t SX1232_tcxo(unsigned char tcxo_enable);
+SX1232_status_t SX1232_tcxo(uint8_t tcxo_enable);
 // Common settings.
 SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator);
 SX1232_status_t SX1232_set_mode(SX1232_mode_t mode);
 SX1232_status_t SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_modulation_shaping_t modulation_shaping);
-SX1232_status_t SX1232_set_rf_frequency(unsigned int rf_frequency_hz);
-SX1232_status_t SX1232_get_rf_frequency(unsigned int* rf_frequency_hz);
+SX1232_status_t SX1232_set_rf_frequency(uint32_t rf_frequency_hz);
+SX1232_status_t SX1232_get_rf_frequency(uint32_t* rf_frequency_hz);
 SX1232_status_t SX1232_enable_fast_frequency_hopping(void);
-SX1232_status_t SX1232_set_fsk_deviation(unsigned int fsk_deviation_hz);
-SX1232_status_t SX1232_set_bitrate(unsigned int bit_rate_bps);
+SX1232_status_t SX1232_set_fsk_deviation(uint32_t fsk_deviation_hz);
+SX1232_status_t SX1232_set_bitrate(uint32_t bit_rate_bps);
 SX1232_status_t SX1232_set_data_mode(SX1232_data_mode_t data_mode);
 SX1232_status_t SX1232_set_dio_mapping(SX1232_dio_t dio, SX1232_dio_mapping_t dio_mapping);
-SX1232_status_t SX1232_get_irq_flags(unsigned int* irq_flags);
+SX1232_status_t SX1232_get_irq_flags(uint32_t* irq_flags);
 // TX functions.
 SX1232_status_t SX1232_set_rf_output_pin(SX1232_rf_output_pin_t rf_output_pin);
-SX1232_status_t SX1232_set_rf_output_power(unsigned char rf_output_power_dbm);
+SX1232_status_t SX1232_set_rf_output_power(uint8_t rf_output_power_dbm);
 SX1232_status_t SX1232_enable_low_phase_noise_pll(void);
 SX1232_status_t SX1232_start_cw(void);
 SX1232_status_t SX1232_stop_cw(void);
 // RX functions.
 SX1232_status_t SX1232_set_rx_bandwidth(SX1232_rxbw_mantissa_t rxbw_mantissa, SX1232_rxbw_exponent_t rxbw_exponent);
-SX1232_status_t SX1232_enable_lna_boost(unsigned char lna_boost_enable);
-SX1232_status_t SX1232_set_preamble_detector(unsigned char preamble_length_bytes, unsigned char preamble_polarity);
-SX1232_status_t SX1232_set_sync_word(unsigned char* sync_word, unsigned char sync_word_length_bytes);
-SX1232_status_t SX1232_set_data_length(unsigned char data_length_bytes);
+SX1232_status_t SX1232_enable_lna_boost(uint8_t lna_boost_enable);
+SX1232_status_t SX1232_set_preamble_detector(uint8_t preamble_length_bytes, uint8_t preamble_polarity);
+SX1232_status_t SX1232_set_sync_word(uint8_t* sync_word, uint8_t sync_word_length_bytes);
+SX1232_status_t SX1232_set_data_length(uint8_t data_length_bytes);
 SX1232_status_t SX1232_configure_rssi(SX1232_rssi_sampling_t rssi_sampling);
-SX1232_status_t SX1232_get_rssi(signed short* rssi_dbm);
-SX1232_status_t SX1232_read_fifo(unsigned char* fifo_data, unsigned char fifo_data_length);
+SX1232_status_t SX1232_get_rssi(int16_t* rssi_dbm);
+SX1232_status_t SX1232_read_fifo(uint8_t* fifo_data, uint8_t fifo_data_length);
 
 #define SX1232_status_check(error_base) { if (sx1232_status != SX1232_SUCCESS) { status = error_base + sx1232_status; goto errors; }}
 #define SX1232_error_check() { ERROR_status_check(sx1232_status, SX1232_SUCCESS, ERROR_BASE_SX1232); }

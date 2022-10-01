@@ -8,6 +8,8 @@
 #ifndef __NVM_H__
 #define __NVM_H__
 
+#include "types.h"
+
 /*** NVM macros ***/
 
 typedef enum {
@@ -40,8 +42,8 @@ typedef enum {
 /*** NVM functions ***/
 
 void NVM_init(void);
-NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data);
-NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data);
+NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data);
+NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data);
 NVM_status_t NVM_reset_default(void);
 
 #define NVM_status_check(error_base) { if (nvm_status != NVM_SUCCESS) { status = error_base + nvm_status; goto errors; }}

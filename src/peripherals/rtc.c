@@ -13,6 +13,7 @@
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
+#include "types.h"
 
 /*** RTC local macros ***/
 
@@ -21,8 +22,8 @@
 
 /*** RTC local global variables ***/
 
-static volatile unsigned char rtc_alarm_b_flag = 0;
-static volatile unsigned char rtc_wakeup_timer_flag = 0;
+static volatile uint8_t rtc_alarm_b_flag = 0;
+static volatile uint8_t rtc_wakeup_timer_flag = 0;
 
 /*** RTC local functions ***/
 
@@ -60,7 +61,7 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mode(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Enter key.
 	RTC -> WPR = 0xCA;
 	RTC -> WPR = 0x53;
@@ -93,7 +94,7 @@ static void __attribute__((optimize("-O0"))) RTC_exit_initialization_mode(void) 
  */
 void __attribute__((optimize("-O0"))) RTC_reset(void) {
 	// Local variables.
-	unsigned char j = 0;
+	uint8_t j = 0;
 	// Reset RTC peripheral.
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
 	for (j=0 ; j<100 ; j++);
@@ -106,11 +107,11 @@ void __attribute__((optimize("-O0"))) RTC_reset(void) {
  * @param alarm_offset_seconds:	Offset added to the alarm A in seconds.
  * @return status:				Function execution status.
  */
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz, unsigned char alarm_offset_seconds) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uint32_t lsi_freq_hz, uint8_t alarm_offset_seconds) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
-	unsigned char tens = 0;
-	unsigned char units = 0;
+	uint8_t tens = 0;
+	uint8_t units = 0;
 	// Manage RTC clock source.
 	if ((*rtc_use_lse) != 0) {
 		RCC -> CSR |= (0b01 << 16); // RTCSEL='01' (LSE).
@@ -181,10 +182,10 @@ errors:
 RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
-	unsigned int tr_value = 0;
-	unsigned int dr_value = 0;
-	unsigned char tens = 0;
-	unsigned char units = 0;
+	uint32_t tr_value = 0;
+	uint32_t dr_value = 0;
+	uint8_t tens = 0;
+	uint8_t units = 0;
 	// Year.
 	tens = ((time -> year) - 2000) / 10;
 	units = ((time -> year) - 2000) - (tens * 10);
@@ -227,8 +228,8 @@ errors:
  */
 void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
 	// Read registers.
-	unsigned int dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
-	unsigned int tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
+	uint32_t dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
+	uint32_t tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
 	// Parse registers into time structure.
 	time -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
 	time -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
@@ -242,9 +243,9 @@ void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
-volatile unsigned char RTC_get_alarm_a_flag(void) {
+volatile uint8_t RTC_get_alarm_a_flag(void) {
 	// Local variables.
-	volatile unsigned char rtc_alarm_a_flag = 0;
+	volatile uint8_t rtc_alarm_a_flag = 0;
 	// Read register.
 	rtc_alarm_a_flag = (((RTC -> ISR) & (0b1 << 8)) != 0) ? 1 : 0;
 	return rtc_alarm_a_flag;
@@ -282,7 +283,7 @@ void RTC_disable_alarm_b_interrupt(void) {
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
-volatile unsigned char RTC_get_alarm_b_flag(void) {
+volatile uint8_t RTC_get_alarm_b_flag(void) {
 	return rtc_alarm_b_flag;
 }
 
@@ -301,7 +302,7 @@ void RTC_clear_alarm_b_flag(void) {
  * @param delay_seconds:	Delay in seconds.
  * @return status:			Function execution status.
  */
-RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds) {
+RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Check parameter.
@@ -353,7 +354,7 @@ errors:
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
-volatile unsigned char RTC_get_wakeup_timer_flag(void) {
+volatile uint8_t RTC_get_wakeup_timer_flag(void) {
 	return rtc_wakeup_timer_flag;
 }
 

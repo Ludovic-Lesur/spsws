@@ -16,6 +16,7 @@
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "usart_reg.h"
+#include "types.h"
 
 /*** USART local macros ***/
 
@@ -72,10 +73,10 @@ void __attribute__((optimize("-O0"))) USART1_IRQHandler(void) {
  * @param tx_byte:	Byte to append.
  * @return status:	Function execution status.
  */
-static USART_status_t USARTx_fill_tx_buffer(unsigned char tx_byte) {
+static USART_status_t USARTx_fill_tx_buffer(uint8_t tx_byte) {
 	// Local variables.
 	USART_status_t status = USART_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Fill transmit register.
 #ifdef HW1_0
 	USART2 -> TDR = tx_byte;
@@ -203,16 +204,16 @@ void USARTx_disable_interrupt(void) {
  * @param tx_string:	Byte array to send.
  * @return status:		Function execution status.
  */
-USART_status_t USARTx_send_string(char* tx_string) {
+USART_status_t USARTx_send_string(int8_t* tx_string) {
 	// Local variables.
 	USART_status_t status = USART_SUCCESS;
-	unsigned int char_count = 0;
+	uint32_t char_count = 0;
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
-		status = USARTx_fill_tx_buffer((unsigned char) *(tx_string++));
+		status = USARTx_fill_tx_buffer((uint8_t) *(tx_string++));
 		if (status != USART_SUCCESS) break;
-		// Check char count.
+		// Check character count.
 		char_count++;
 		if (char_count > USART_STRING_LENGTH_MAX) {
 			status = USART_ERROR_STRING_LENGTH;

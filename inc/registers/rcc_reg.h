@@ -8,34 +8,36 @@
 #ifndef __RCC_REG_H__
 #define __RCC_REG_H__
 
+#include "types.h"
+
 /*** RCC registers ***/
 
 typedef struct {
-	volatile unsigned int CR;			// RCC clock control register.
-	volatile unsigned int ICSCR;		// RCC internal clock sources calibration register.
-	unsigned int RESERVED0;				// Reserved 0x08.
-	volatile unsigned int CFGR;			// RCC clock configuration register.
-	volatile unsigned int CIER;			// RCC clock interrupt enable register.
-	volatile unsigned int CIFR;			// RCC clock interrupt flag register.
-	volatile unsigned int CICR;			// RCC clock interrupt clear register.
-	volatile unsigned int IOPRSTR;		// RCC GPIO reset register.
-	volatile unsigned int AHBRSTR;		// RCC AHB peripheral reset register.
-	volatile unsigned int APB2RSTR;		// RCC APB2 peripheral reset register.
-	volatile unsigned int APB1RSTR;		// RCC APB1 peripheral reset register.
-	volatile unsigned int IOPENR;		// RCC GPIO clock enable register.
-	volatile unsigned int AHBENR;		// RCC AHB peripheral clock enable register.
-	volatile unsigned int APB2ENR;		// RCC APB2 peripheral clock enable register.
-	volatile unsigned int APB1ENR;		// RCC APB1 peripheral clock enable register.
-	volatile unsigned int IOPSMENR;		// RCC GPIO clock enable in sleep mode register.
-	volatile unsigned int AHBSMENR;		// RCC AHB peripheral clock enable in sleep mode register.
-	volatile unsigned int APB2SMENR;	// RCC APB2 peripheral clock enable in sleep mode register.
-	volatile unsigned int APB1SMENR;	// RCC APB1 peripheral clock enable in sleep mode register.
-	volatile unsigned int CCIPR;		// RCC clock configuration register.
-	volatile unsigned int CSR;			// RCC control and status register.
+	volatile uint32_t CR;			// RCC clock control register.
+	volatile uint32_t ICSCR;		// RCC internal clock sources calibration register.
+	volatile uint32_t RESERVED0;	// Reserved 0x08.
+	volatile uint32_t CFGR;			// RCC clock configuration register.
+	volatile uint32_t CIER;			// RCC clock interrupt enable register.
+	volatile uint32_t CIFR;			// RCC clock interrupt flag register.
+	volatile uint32_t CICR;			// RCC clock interrupt clear register.
+	volatile uint32_t IOPRSTR;		// RCC GPIO reset register.
+	volatile uint32_t AHBRSTR;		// RCC AHB peripheral reset register.
+	volatile uint32_t APB2RSTR;		// RCC APB2 peripheral reset register.
+	volatile uint32_t APB1RSTR;		// RCC APB1 peripheral reset register.
+	volatile uint32_t IOPENR;		// RCC GPIO clock enable register.
+	volatile uint32_t AHBENR;		// RCC AHB peripheral clock enable register.
+	volatile uint32_t APB2ENR;		// RCC APB2 peripheral clock enable register.
+	volatile uint32_t APB1ENR;		// RCC APB1 peripheral clock enable register.
+	volatile uint32_t IOPSMENR;		// RCC GPIO clock enable in sleep mode register.
+	volatile uint32_t AHBSMENR;		// RCC AHB peripheral clock enable in sleep mode register.
+	volatile uint32_t APB2SMENR;	// RCC APB2 peripheral clock enable in sleep mode register.
+	volatile uint32_t APB1SMENR;	// RCC APB1 peripheral clock enable in sleep mode register.
+	volatile uint32_t CCIPR;		// RCC clock configuration register.
+	volatile uint32_t CSR;			// RCC control and status register.
 } RCC_base_address_t;
 
 /*** RCC base address ***/
 
-#define RCC		((RCC_base_address_t*) ((unsigned int) 0x40021000))
+#define RCC		((RCC_base_address_t*) ((uint32_t) 0x40021000))
 
 #endif /* __RCC_REG_H__ */

@@ -12,6 +12,7 @@
 #include "mapping.h"
 #include "rcc_reg.h"
 #include "tim.h"
+#include "types.h"
 
 /*** RCC local macros ***/
 
@@ -24,7 +25,7 @@
 
 /*** RCC local global variables ***/
 
-static unsigned int rcc_sysclk_khz;
+static uint32_t rcc_sysclk_khz;
 
 /*** RCC functions ***/
 
@@ -53,7 +54,7 @@ RCC_status_t RCC_switch_to_hsi(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
 	FLASH_status_t flash_status = FLASH_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Set flash latency.
 	flash_status = FLASH_set_latency(1);
 	FLASH_status_check(RCC_ERROR_BASE_FLASH);
@@ -100,7 +101,7 @@ RCC_status_t RCC_switch_to_hse(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
 	FLASH_status_t flash_status = FLASH_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Set flash latency.
 	flash_status = FLASH_set_latency(1);
 	FLASH_status_check(RCC_ERROR_BASE_FLASH);
@@ -150,7 +151,7 @@ errors:
  * @param:					None.
  * @return rcc_sysclk_khz:	Current system clock frequency in kHz.
  */
-unsigned int RCC_get_sysclk_khz(void) {
+uint32_t RCC_get_sysclk_khz(void) {
 	return rcc_sysclk_khz;
 }
 
@@ -161,7 +162,7 @@ unsigned int RCC_get_sysclk_khz(void) {
 RCC_status_t RCC_enable_lsi(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Enable LSI.
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
 	// Wait for LSI to be stable.
@@ -180,12 +181,12 @@ RCC_status_t RCC_enable_lsi(void) {
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
  * @return status:				Function execution status.
  */
-RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
+RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
 	TIM_status_t tim21_status = TIM_SUCCESS;
-	unsigned int lsi_frequency_sample = 0;
-	unsigned char sample_idx = 0;
+	uint32_t lsi_frequency_sample = 0;
+	uint8_t sample_idx = 0;
 	// Reset result.
 	(*lsi_frequency_hz) = 0;
 	// Init measurement timer.
@@ -215,7 +216,7 @@ errors:
 RCC_status_t RCC_enable_lse(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Configure drive level.
 	//RCC -> CSR |= (0b11 << 11);
 	// Enable LSE (32.768kHz crystal).

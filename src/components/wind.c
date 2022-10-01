@@ -17,6 +17,7 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "spi.h"
+#include "types.h"
 
 #if (defined CM || defined ATM)
 
@@ -35,22 +36,22 @@
 
 typedef struct {
 	// Measurements period.
-	unsigned char speed_seconds_count;
-	unsigned char direction_seconds_count;
+	uint8_t speed_seconds_count;
+	uint8_t direction_seconds_count;
 	// Wind speed.
-	unsigned int speed_edge_count;
-	unsigned int speed_data_count;
-	unsigned int speed_mh; // Current value.
-	unsigned int speed_mh_average; // Average wind speed (m/h).
-	unsigned int speed_mh_peak; // Peak wind speed (m/h).
+	uint32_t speed_edge_count;
+	uint32_t speed_data_count;
+	uint32_t speed_mh; // Current value.
+	uint32_t speed_mh_average; // Average wind speed (m/h).
+	uint32_t speed_mh_peak; // Peak wind speed (m/h).
 	// Wind direction.
-	unsigned int direction_degrees; // Current value.
+	uint32_t direction_degrees; // Current value.
 #ifdef WIND_VANE_ULTIMETER
-	unsigned int direction_pwm_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
-	unsigned int direction_pwm_duty_cycle; // TIM2 counter value when edge interrupt detected on wind direction input.
+	uint32_t direction_pwm_period; // TIM2 counter value between 2 edge interrupts on wind speed input.
+	uint32_t direction_pwm_duty_cycle; // TIM2 counter value when edge interrupt detected on wind direction input.
 #endif
-	signed int direction_x; // x coordinate of wind direction trend point.
-	signed int direction_y; // y coordinate of wind direction trend point.
+	int32_t direction_x; // x coordinate of wind direction trend point.
+	int32_t direction_y; // y coordinate of wind direction trend point.
 } WIND_context_t;
 
 /*** WIND local global variables ***/
@@ -61,9 +62,9 @@ static volatile WIND_context_t wind_ctx;
 // Rw = 688, 891, 1000, 1410, 2200, 3140, 3900, 6570, 8200, 14120, 16000, 21880, 33000, 42120, 64900 and 120000.
 // Resistor divider ratio values = 1000 * ((Rw) / (Rw + Rp)).
 // The following table gives the mean between two consecutive ratios (used as threshold). It must be sorted in ascending order.
-static const unsigned int WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {73, 86, 107, 152, 210, 260, 338, 424, 518, 600, 651, 727, 788, 837, 895, 1000};
+static const uint32_t WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {73, 86, 107, 152, 210, 260, 338, 424, 518, 600, 651, 727, 788, 837, 895, 1000};
 // Angle table (must be mapped on the ratio table: angle[i] = angle for ratio[i]).
-static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {112, 67, 90, 157, 135, 202, 180, 22, 45, 247, 225, 337, 0, 292, 315, 270};
+static const uint32_t WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {112, 67, 90, 157, 135, 202, 180, 22, 45, 247, 225, 337, 0, 292, 315, 270};
 #endif
 
 /*** WIND local functions ***/
@@ -74,9 +75,9 @@ static const unsigned int WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] 
  * @param direction_mv:	Voltage divider output voltage in mV.
  * @return:				None.
  */
-static void WIND_voltage_to_angle(unsigned int ratio) {
+static void WIND_voltage_to_angle(uint32_t ratio) {
 	// Local variables.
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Get corresponding angle.
 	for (idx=0 ; idx<WIND_NUMBER_OF_DIRECTIONS ; idx++) {
 		if (ratio < WIND_DIRECTION_RESISTOR_DIVIDER_RATIO_THRESHOLD_TABLE[idx]) {
@@ -145,20 +146,20 @@ void WIND_stop_continuous_measure(void) {
 }
 
 /* GET AVERAGE AND PEAK WIND SPEED VALUES SINCE LAST MEASUREMENT START.
- * @param average_speed_mh:	Pointer to int that will contain average wind speed value in m/h.
- * @param peak_speed_mh:		Pointer to int that will contain peak wind speed value in m/h.
+ * @param average_speed_mh:	Pointer to 32-bits value that will contain average wind speed value in m/h.
+ * @param peak_speed_mh:		Pointer to 32-bits value that will contain peak wind speed value in m/h.
  * @return:							None.
  */
-void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh) {
+void WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh) {
 	(*average_speed_mh) = wind_ctx.speed_mh_average;
 	(*peak_speed_mh) = wind_ctx.speed_mh_peak;
 }
 
 /* GET AVERAGE AVERAGE WIND DIRECTION VALUE SINCE LAST MEASUREMENT START.
- * @param average_direction_degrees:	Pointer to int that will contain average wind direction value in degrees.
+ * @param average_direction_degrees:	Pointer to 32-bits value that will contain average wind direction value in degrees.
  * @return status:						Function execution status.
  */
-WIND_status_t WIND_get_direction(unsigned int* average_direction_degrees) {
+WIND_status_t WIND_get_direction(uint32_t* average_direction_degrees) {
 	// Local variables.
 	WIND_status_t status = WIND_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
@@ -240,7 +241,7 @@ WIND_status_t WIND_measurement_period_callback(void) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	SPI_status_t spi_status = SPI_SUCCESS;
 	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
-	unsigned int wind_direction_ratio = 0;
+	uint32_t wind_direction_ratio = 0;
 #endif
 	// Update counters.
 	wind_ctx.speed_seconds_count++;
@@ -294,8 +295,8 @@ WIND_status_t WIND_measurement_period_callback(void) {
 			WIND_voltage_to_angle(wind_direction_ratio);
 #endif
 			// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
-			wind_ctx.direction_x += (wind_ctx.speed_mh / 1000) * (signed int) MATH_COS_TABLE[wind_ctx.direction_degrees];
-			wind_ctx.direction_y += (wind_ctx.speed_mh / 1000) * (signed int) MATH_SIN_TABLE[wind_ctx.direction_degrees];
+			wind_ctx.direction_x += (wind_ctx.speed_mh / 1000) * (int32_t) MATH_COS_TABLE[wind_ctx.direction_degrees];
+			wind_ctx.direction_y += (wind_ctx.speed_mh / 1000) * (int32_t) MATH_SIN_TABLE[wind_ctx.direction_degrees];
 #ifdef ATM
 			AT_print_wind_direction(wind_ctx.direction_degrees, wind_ctx.direction_x, wind_ctx.direction_y);
 #endif

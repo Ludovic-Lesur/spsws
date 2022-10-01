@@ -21,6 +21,7 @@
 #include "sx1232.h"
 #include "tim.h"
 #include "tim_reg.h"
+#include "types.h"
 #include "usart.h"
 
 /*** RF API local macros ***/
@@ -37,16 +38,16 @@
 // Sigfox uplink modulation parameters.
 typedef struct {
 	// Uplink message frequency.
-	unsigned int rf_frequency_hz;
+	uint32_t rf_frequency_hz;
 	// Modulation parameters.
-	unsigned short symbol_duration_us;
-	volatile unsigned char tim2_arr_flag;
-	unsigned short ramp_duration_us;
-	volatile unsigned char phase_shift_required;
-	unsigned int frequency_shift_hz;
-	volatile unsigned char frequency_shift_direction;
+	uint16_t symbol_duration_us;
+	volatile uint8_t tim2_arr_flag;
+	uint16_t ramp_duration_us;
+	volatile uint8_t phase_shift_required;
+	uint32_t frequency_shift_hz;
+	volatile uint8_t frequency_shift_direction;
 	// Output power range.
-	signed char output_power_max;
+	sfx_s8 output_power_max;
 } RF_api_context_t;
 
 /*** RF API local global variables ***/
@@ -215,7 +216,7 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	// Configure switch.
 	RF_API_set_rf_path(rf_mode);
 	// Configure transceiver.
-	unsigned char downlink_sync_word[2] = {0xB2, 0x27};
+	uint8_t downlink_sync_word[2] = {0xB2, 0x27};
 	switch (rf_mode) {
 	// Uplink.
 	case SFX_RF_MODE_TX:
@@ -314,18 +315,18 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Local variables.
 	sfx_u8 rf_api_status = SFX_ERR_NONE;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	unsigned char stream_byte_idx = 0;
-	unsigned char stream_bit_idx = 0;
-	unsigned int effective_uplink_frequency_hz = 0;
-	unsigned int effective_high_shifted_frequency_hz = 0;
-	unsigned int effective_low_shifted_frequency_hz = 0;
-	unsigned short high_shifted_frequency_duration_us = 0;
-	unsigned short low_shifted_frequency_duration_us = 0;
-	unsigned short frequency_shift_duration_us = 0;
-	unsigned short high_shifted_idle_duration_us = 0;
-	unsigned short low_shifted_idle_duration_us = 0;
-	unsigned short idle_duration_us = 0;
-	unsigned short dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
+	uint8_t stream_byte_idx = 0;
+	uint8_t stream_bit_idx = 0;
+	uint32_t effective_uplink_frequency_hz = 0;
+	uint32_t effective_high_shifted_frequency_hz = 0;
+	uint32_t effective_low_shifted_frequency_hz = 0;
+	uint16_t high_shifted_frequency_duration_us = 0;
+	uint16_t low_shifted_frequency_duration_us = 0;
+	uint16_t frequency_shift_duration_us = 0;
+	uint16_t high_shifted_idle_duration_us = 0;
+	uint16_t low_shifted_idle_duration_us = 0;
+	uint16_t idle_duration_us = 0;
+	uint16_t dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
 	// Disable RTC interrupt during radio processing.
 	NVIC_disable_interrupt(NVIC_IT_RTC);
 	// Set modulation parameters.
@@ -501,10 +502,10 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	unsigned char rssi_retrieved = 0;
-	unsigned int remaining_delay = RF_API_DOWNLINK_TIMEOUT_SECONDS;
-	unsigned int sub_delay = 0;
-	unsigned int irq_flags = 0;
+	uint8_t rssi_retrieved = 0;
+	uint32_t remaining_delay = RF_API_DOWNLINK_TIMEOUT_SECONDS;
+	uint32_t sub_delay = 0;
+	uint32_t irq_flags = 0;
 	// Init state.
 	(*state) = DL_TIMEOUT;
 	// Go to FSRX state.

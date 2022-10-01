@@ -10,6 +10,7 @@
 
 #include "i2c.h"
 #include "lptim.h"
+#include "types.h"
 
 /*** SHT3x macros ***/
 
@@ -27,9 +28,9 @@ typedef enum {
 
 /*** SHT3x functions ***/
 
-SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address);
-void SHT3X_get_temperature(signed char* temperature_degrees);
-void SHT3X_get_humidity(unsigned char* humidity_percent);
+SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address);
+void SHT3X_get_temperature(int8_t* temperature_degrees);
+void SHT3X_get_humidity(uint8_t* humidity_percent);
 
 #define SHT3X_INT_status_check(error_base) { if (sht3x_status != SHT3X_SUCCESS) { status = error_base + sht3x_status; goto errors; }}
 #define SHT3X_INT_error_check() { ERROR_status_check(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT3X_INT); }

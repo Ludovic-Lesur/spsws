@@ -8,6 +8,8 @@
 #ifndef __NVIC_H__
 #define __NVIC_H__
 
+#include "types.h"
+
 /*** NVIC interrupts vector ***/
 
 typedef enum {
@@ -55,6 +57,6 @@ typedef enum {
 void NVIC_init(void);
 void NVIC_enable_interrupt(NVIC_interrupt_t it_num);
 void NVIC_disable_interrupt(NVIC_interrupt_t it_num);
-void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority);
+void NVIC_set_priority(NVIC_interrupt_t it_num, uint8_t priority);
 
 #endif /* __NVIC_H__ */

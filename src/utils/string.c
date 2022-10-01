@@ -8,6 +8,7 @@
 #include "string.h"
 
 #include "math.h"
+#include "types.h"
 
 /*** STRING local macros ***/
 
@@ -22,18 +23,18 @@
  * @param chr:		Character to analyse.
  * @return status:	Function execution status.
  */
-static STRING_status_t STRING_is_decimal_char(char chr) {
+static STRING_status_t STRING_is_decimal_char(int8_t chr) {
 	// Local variables.
 	STRING_status_t status = ((chr >= '0') && (chr <= '9')) ? STRING_SUCCESS : STRING_ERROR_DECIMAL_INVALID;
 	return status;
 }
 
 /* CONVERTS THE ASCII CODE OF A DECIMAL CHARACTER TO THE CORRESPONDING 4-BIT VALUE.
- * @param chr:		Decimal ASCII char to convert.
+ * @param chr:		Decimal ASCII character to convert.
  * @param value:	Pointer to the corresponding value.
  * @return status:	Function executions status.
  */
-static STRING_status_t STRING_decimal_char_to_value(char chr, unsigned char* value) {
+static STRING_status_t STRING_decimal_char_to_value(int8_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	// Check ranges.
@@ -49,14 +50,14 @@ errors:
  * @param value:	Decimal digit.
  * @return chr:		Corresponding ASCII code.
  */
-static STRING_status_t STRING_decimal_value_to_char(unsigned char value, char* chr) {
+static STRING_status_t STRING_decimal_value_to_char(uint8_t value, int8_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	if (value > STRING_DIGIT_DECIMAL_MAX) {
 		status = STRING_ERROR_DECIMAL_OVERFLOW;
 		goto errors;
 	}
-	// Convert to char.
+	// Convert to character.
 	(*chr) = (value + '0');
 errors:
 	return status;
@@ -66,7 +67,7 @@ errors:
  * @param chr:		Character to analyse.
  * @return status:	Function execution status.
  */
-static STRING_status_t STRING_is_hexadecimal_char(char chr) {
+static STRING_status_t STRING_is_hexadecimal_char(int8_t chr) {
 	// Local variables.
 	STRING_status_t status = (((chr >= '0') && (chr <= '9')) || ((chr >= 'A') && (chr <= 'F')) || ((chr >= 'a') && (chr <= 'f'))) ? STRING_SUCCESS : STRING_ERROR_HEXADECIMAL_INVALID;
 	return status;
@@ -77,7 +78,7 @@ static STRING_status_t STRING_is_hexadecimal_char(char chr) {
  * @param value:	Pointer to the corresponding value.
  * @return status:	Function executions status.
  */
-static STRING_status_t STRING_hexadecimal_char_to_value(char chr, unsigned char* value) {
+static STRING_status_t STRING_hexadecimal_char_to_value(int8_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_ERROR_HEXADECIMAL_INVALID;
 	// Check ranges.
@@ -100,7 +101,7 @@ static STRING_status_t STRING_hexadecimal_char_to_value(char chr, unsigned char*
  * @param value:	Decimal digit.
  * @return chr:		Corresponding ASCII code.
  */
-static STRING_status_t STRING_hexadecimal_value_to_char(unsigned char value, char* chr) {
+static STRING_status_t STRING_hexadecimal_value_to_char(uint8_t value, int8_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	// Check overflow.
@@ -122,16 +123,16 @@ errors:
  * @param str:       	Output string.
  * @return status:		Function execution status.
  */
-STRING_status_t STRING_value_to_string(int value, STRING_format_t format, unsigned char print_prefix, char* str) {
+STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, uint8_t print_prefix, int8_t* str) {
     // Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char first_non_zero_found = 0;
-	unsigned int str_idx = 0;
-    unsigned int idx = 0;
-	unsigned char generic_byte = 0;
-	unsigned int current_power = 0;
-	unsigned int previous_decade = 0;
+	uint8_t first_non_zero_found = 0;
+	uint32_t str_idx = 0;
+	uint32_t idx = 0;
+	uint8_t generic_byte = 0;
+	uint32_t current_power = 0;
+	uint32_t previous_decade = 0;
 	// Manage negative numbers.
 	if (value < 0) {
 		str[str_idx++] = STRING_CHAR_MINUS;
@@ -214,13 +215,13 @@ errors:
  * @param str:       	Output string.
  * @return status:		Function execution status.
  */
-STRING_status_t STRING_byte_array_to_hexadecimal_string(unsigned char* data, unsigned char data_length, unsigned char print_prefix, char* str) {
+STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t data_length, uint8_t print_prefix, int8_t* str) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Build string.
 	for (idx=0 ; idx<data_length ; idx++) {
-		status = STRING_value_to_string((int) data[idx], STRING_FORMAT_HEXADECIMAL, print_prefix, &(str[2 * idx]));
+		status = STRING_value_to_string((int32_t) data[idx], STRING_FORMAT_HEXADECIMAL, print_prefix, &(str[2 * idx]));
 		if (status != STRING_SUCCESS) goto errors;
 	}
 errors:
@@ -235,15 +236,15 @@ errors:
  * @param value:			Pointer to the result.
  * @return status:			Function execution status.
  */
-STRING_status_t STRING_string_to_value(char* str, STRING_format_t format, unsigned char number_of_digits, int* value) {
+STRING_status_t STRING_string_to_value(int8_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char char_idx = 0;
-	unsigned char start_idx = 0;
-	unsigned char negative_flag = 0;
-	unsigned char digit_value = 0;
-	unsigned int math_power10 = 0;
+	uint8_t char_idx = 0;
+	uint8_t start_idx = 0;
+	uint8_t negative_flag = 0;
+	uint8_t digit_value = 0;
+	uint32_t math_power10 = 0;
 	// Reset result.
 	(*value) = 0;
 	// Manage negative numbers.
@@ -332,11 +333,11 @@ errors:
  * @param extracted_length:	Pointer to the effective extracted length.
  * @return status:			Function execution status.
  */
-STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char, unsigned char* data, unsigned char* extracted_length) {
+STRING_status_t STRING_hexadecimal_string_to_byte_array(int8_t* str, int8_t end_char, uint8_t* data, uint8_t* extracted_length) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	unsigned char char_idx = 0;
-	int value = 0;
+	uint8_t char_idx = 0;
+	int32_t value = 0;
 	// Reset extracted length.
 	(*extracted_length) = 0;
 	// Char loop.
@@ -359,7 +360,7 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char* str, char end_char
 			status = STRING_string_to_value(&(str[char_idx - 1]), STRING_FORMAT_HEXADECIMAL, 2, &value);
 			if (status !=  STRING_SUCCESS) goto errors;
 			// Append byte.
-			data[char_idx / 2] = (unsigned char) value;
+			data[char_idx / 2] = (uint8_t) value;
 			(*extracted_length)++;
 		}
 		char_idx++;

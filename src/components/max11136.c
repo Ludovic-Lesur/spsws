@@ -13,6 +13,7 @@
 #include "max11136_reg.h"
 #include "mode.h"
 #include "spi.h"
+#include "types.h"
 
 /*** MAX11136 local macros ***/
 
@@ -51,9 +52,9 @@
 /*** MAX11136 local structures ***/
 
 typedef struct {
-	unsigned short data_12bits[MAX11136_NUMBER_OF_CHANNELS];
-	unsigned int data[MAX11136_DATA_INDEX_LAST];
-	unsigned char status; // Bit 'i' indicates if a result was successfully retrieved for channel 'i'.
+	uint16_t data_12bits[MAX11136_NUMBER_OF_CHANNELS];
+	uint32_t data[MAX11136_DATA_INDEX_LAST];
+	uint8_t status; // Bit 'i' indicates if a result was successfully retrieved for channel 'i'.
 } MAX11136_context_t;
 
 /*** MAX11136 local global variables ***/
@@ -67,11 +68,11 @@ static MAX11136_context_t max11136_ctx;
  * @param valie:	Value to write in register.
  * @return status:	Function execution status.
  */
-static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_register(unsigned char addr, unsigned short value) {
+static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_register(uint8_t addr, uint16_t value) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
-	unsigned short spi_command = 0;
+	uint16_t spi_command = 0;
 	// Build SPI command.
 	if (addr == MAX11136_REG_ADC_MODE_CONTROL) {
 		// Data is 15-bits length.
@@ -110,10 +111,10 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-	unsigned short max11136_dout = 0;
-	unsigned char channel = 0;
-	unsigned char channel_idx = 0;
-	unsigned int loop_count_ms = 0;
+	uint16_t max11136_dout = 0;
+	uint8_t channel = 0;
+	uint8_t channel_idx = 0;
+	uint32_t loop_count_ms = 0;
 #ifdef HW1_0
 	SPI1_set_clock_polarity(1);
 #endif
@@ -179,7 +180,7 @@ errors:
  */
 void MAX11136_init(void) {
 	// Local variables.
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Init context.
 	max11136_ctx.status = 0;
 	for (idx=0 ; idx<MAX11136_DATA_INDEX_LAST ; idx++) max11136_ctx.data[idx] = 0;
@@ -204,7 +205,7 @@ void MAX11136_disable(void) {
 MAX11136_status_t MAX11136_perform_measurements(void) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Reset results.
 	max11136_ctx.status = 0;
 	for (idx=0 ; idx<MAX11136_DATA_INDEX_LAST ; idx++) max11136_ctx.data[idx] = 0;
@@ -242,7 +243,7 @@ errors:
  * @param data:			Pointer that will contain ADC data.
  * @return status:		Function execution status.
  */
-MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, unsigned int* data) {
+MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, uint32_t* data) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	// Check index.

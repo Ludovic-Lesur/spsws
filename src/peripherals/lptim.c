@@ -16,6 +16,7 @@
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "wind.h"
+#include "types.h"
 
 /*** LPTIM local macros ***/
 
@@ -25,8 +26,8 @@
 
 /*** LPTIM local global variables ***/
 
-static unsigned int lptim_clock_frequency_hz = 0;
-static volatile unsigned char lptim_wake_up = 0;
+static uint32_t lptim_clock_frequency_hz = 0;
+static volatile uint8_t lptim_wake_up = 0;
 
 /*** LPTIM local functions ***/
 
@@ -50,10 +51,10 @@ void __attribute__((optimize("-O0"))) LPTIM1_IRQHandler(void) {
  * @param arr_value:	ARR register value to write.
  * @return status:		Function execution status.
  */
-static LPTIM_status_t LPTIM1_write_arr(unsigned int arr_value) {
+static LPTIM_status_t LPTIM1_write_arr(uint32_t arr_value) {
 	// Local variables.
 	LPTIM_status_t status = LPTIM_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Reset bits.
 	LPTIM1 -> ICR |= (0b1 << 4);
 	LPTIM1 -> ARR &= 0xFFFF0000;
@@ -87,7 +88,7 @@ errors:
  * @param lsi_freq_hz:	Effective LSI oscillator frequency.
  * @return:				None.
  */
-void LPTIM1_init(unsigned int lsi_freq_hz) {
+void LPTIM1_init(uint32_t lsi_freq_hz) {
 	// Configure clock source.
 	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
 	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
@@ -108,10 +109,10 @@ void LPTIM1_init(unsigned int lsi_freq_hz) {
  * @param stop_mode:	Enter stop mode during delay if non zero, block without interrupt otherwise.
  * @return status:		Function execution status.
  */
-LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode) {
+LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode) {
 	// Local variables.
 	LPTIM_status_t status = LPTIM_SUCCESS;
-	unsigned int arr = 0;
+	uint32_t arr = 0;
 	// Check delay.
 	if ((delay_ms > LPTIM_DELAY_MS_MAX) || ((delay_ms > (IWDG_REFRESH_PERIOD_SECONDS * 1000)) && (stop_mode != 0))) {
 		status = LPTIM_ERROR_DELAY_OVERFLOW;
@@ -190,7 +191,7 @@ void LPTIM1_stop(void) {
  * @param:	None.
  * @return:	LPTIM1 counter value.
  */
-unsigned int LPTIM1_get_counter(void) {
+uint32_t LPTIM1_get_counter(void) {
 	return (LPTIM1 -> CNT);
 }
 #endif

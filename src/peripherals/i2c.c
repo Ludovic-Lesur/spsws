@@ -13,6 +13,7 @@
 #include "i2c_reg.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "types.h"
 
 /*** I2C local macros ***/
 
@@ -98,11 +99,11 @@ void I2C1_power_off(void) {
  * @param stop_flag:		Generate stop condition at the end of the transfer if non zero.
  * @return status:			Function execution status.
  */
-I2C_status_t I2C1_write(unsigned char slave_address, unsigned char* tx_buf, unsigned char tx_buf_length, unsigned char stop_flag) {
+I2C_status_t I2C1_write(uint8_t slave_address, uint8_t* tx_buf, uint8_t tx_buf_length, uint8_t stop_flag) {
 	// Local variables.
 	I2C_status_t status = I2C_SUCCESS;
-	unsigned int loop_count = 0;
-	unsigned char idx = 0;
+	uint32_t loop_count = 0;
+	uint8_t idx = 0;
 	// Clear peripheral.
 	I2C1_clear();
 	// Wait for I2C bus to be ready.
@@ -183,11 +184,11 @@ errors:
  * @param rx_buf_length:	Number of bytes to receive (length of 'rx_buf').
  * @return status:			Function execution status.
  */
-I2C_status_t I2C1_read(unsigned char slave_address, unsigned char* rx_buf, unsigned char rx_buf_length) {
+I2C_status_t I2C1_read(uint8_t slave_address, uint8_t* rx_buf, uint8_t rx_buf_length) {
 	// Local variables.
 	I2C_status_t status = I2C_SUCCESS;
-	unsigned int loop_count = 0;
-	unsigned char idx = 0;
+	uint32_t loop_count = 0;
+	uint8_t idx = 0;
 	// Clear peripheral.
 	I2C1_clear();
 	// Wait for I2C bus to be ready.

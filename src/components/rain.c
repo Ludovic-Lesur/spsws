@@ -13,6 +13,7 @@
 #include "mapping.h"
 #include "mode.h"
 #include "nvic.h"
+#include "types.h"
 
 #if (defined CM || defined ATM)
 
@@ -28,7 +29,7 @@
 
 /*** RAIN local global variables ***/
 
-volatile unsigned int rain_edge_count;
+volatile uint32_t rain_edge_count;
 
 /*** RAIN functions ***/
 
@@ -67,15 +68,15 @@ void RAIN_stop_continuous_measure(void) {
 }
 
 /* GET PLUVIOMETRY SINCE LAST MEASUREMENT START.
- * @param rain_pluviometry_mm:	Pointer to char that will contain pluviometry in mm.
+ * @param rain_pluviometry_mm:	Pointer to 8-bits value that will contain pluviometry in mm.
  * @return:						None.
  */
-void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm) {
+void RAIN_get_pluviometry(uint8_t* rain_pluviometry_mm) {
 	// Convert edge count to mm of rain.
-	unsigned int rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
-	unsigned int rain_mm = (rain_um / 1000);
+	uint32_t rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
+	uint32_t rain_mm = (rain_um / 1000);
 	// Rounding operation.
-	unsigned int remainder = rain_um - (rain_mm * 1000);
+	uint32_t remainder = rain_um - (rain_mm * 1000);
 	if (remainder >= 500) {
 		rain_mm++;
 	}
@@ -84,16 +85,16 @@ void RAIN_get_pluviometry(unsigned char* rain_pluviometry_mm) {
 		(*rain_pluviometry_mm) = RAIN_MAX_VALUE_MM;
 	}
 	else {
-		(*rain_pluviometry_mm) = (unsigned char) rain_mm;
+		(*rain_pluviometry_mm) = (uint8_t) rain_mm;
 	}
 }
 
 #ifdef FLOOD_DETECTION
 /* GET CURRENT FLOOD LEVEL.
- * @param flood_level:	Pointer to char that will current flood level.
+ * @param flood_level:	Pointer to 8-bits value that will current flood level.
  * @return:				None.
  */
-void RAIN_get_flood_level(unsigned char* flood_level) {
+void RAIN_get_flood_level(uint8_t* flood_level) {
 	// Read inputs.
 	if (GPIO_read(&RAIN_GPIO_FLOOD_LEVEL_3) == 0) {
 		(*flood_level) = 3;

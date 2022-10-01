@@ -15,6 +15,7 @@
 #include "max11136.h"
 #include "mode.h"
 #include "spi.h"
+#include "types.h"
 
 /*** WIND macros ***/
 
@@ -41,8 +42,8 @@ typedef enum {
 void WIND_init(void);
 void WIND_start_continuous_measure(void);
 void WIND_stop_continuous_measure(void);
-void WIND_get_speed(unsigned int* average_speed_mh, unsigned int* peak_speed_mh);
-WIND_status_t WIND_get_direction(unsigned int* average_direction_degrees);
+void WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh);
+WIND_status_t WIND_get_direction(uint32_t* average_direction_degrees);
 void WIND_reset_data(void);
 WIND_status_t WIND_speed_edge_callback(void);
 #ifdef WIND_VANE_ULTIMETER

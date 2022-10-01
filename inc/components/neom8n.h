@@ -13,6 +13,7 @@
 #include "math.h"
 #include "rtc.h"
 #include "string.h"
+#include "types.h"
 
 /*** NEOM8N structures ***/
 
@@ -39,25 +40,25 @@ typedef enum {
 
 typedef struct {
 	// Latitude.
-	unsigned char lat_degrees;
-	unsigned char lat_minutes;
-	unsigned int lat_seconds; // = (fractionnal part of minutes * 100000).
-	unsigned char lat_north_flag; // 0='S', 1='N'.
+	uint8_t lat_degrees;
+	uint8_t lat_minutes;
+	uint32_t lat_seconds; // = (fractionnal part of minutes * 100000).
+	uint8_t lat_north_flag; // 0='S', 1='N'.
 	// Longitude.
-	unsigned char long_degrees;
-	unsigned char long_minutes;
-	unsigned int long_seconds; // = (fractionnal part of minutes * 100000).
-	unsigned char long_east_flag; // 0='W', 1='E'.
+	uint8_t long_degrees;
+	uint8_t long_minutes;
+	uint32_t long_seconds; // = (fractionnal part of minutes * 100000).
+	uint8_t long_east_flag; // 0='W', 1='E'.
 	// Altitude.
-	unsigned int altitude;
+	uint32_t altitude;
 } NEOM8N_position_t;
 
 /*** NEOM8N user functions ***/
 
 void NEOM8N_init(void);
-void NEOM8N_switch_dma_buffer(unsigned char line_end_flag);
-NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, unsigned int timeout_seconds);
-NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds);
+void NEOM8N_switch_dma_buffer(uint8_t line_end_flag);
+NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, uint32_t timeout_seconds);
+NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, uint32_t timeout_seconds, uint32_t* fix_duration_seconds);
 
 #define NEOM8N_status_check(error_base) { if (neom8n_status != NEOM8N_SUCCESS) { status = error_base + neom8n_status; goto errors; }}
 #define NEOM8N_error_check() { ERROR_status_check(neom8n_status, NEOM8N_SUCCESS, ERROR_BASE_NEOM8N); }

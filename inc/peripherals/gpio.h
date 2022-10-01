@@ -9,14 +9,15 @@
 #define __GPIO_H__
 
 #include "gpio_reg.h"
+#include "types.h"
 
 /*** GPIO structures ***/
 
 typedef struct {
 	GPIO_base_address_t* port_address; // GPIOA to GPIOC.
-	unsigned char port_index; // 0 for GPIOA, 1 for GPIOB, etc.
-	unsigned char pin_index; // 0 to 15.
-	unsigned char alternate_function_index; // Alternate function number if used.
+	uint8_t port_index; // 0 for GPIOA, 1 for GPIOB, etc.
+	uint8_t pin_index; // 0 to 15.
+	uint8_t alternate_function_index; // Alternate function number if used.
 } GPIO_pin_t;
 
 typedef enum {
@@ -52,8 +53,8 @@ typedef enum {
 
 void GPIO_init(void);
 void GPIO_configure(const GPIO_pin_t* gpio, GPIO_mode_t mode, GPIO_output_type_t output_type, GPIO_output_speed_t output_speed, GPIO_pull_resistor_t pull_resistor);
-void GPIO_write(const GPIO_pin_t* gpio, unsigned char state);
-unsigned char GPIO_read(const GPIO_pin_t* gpio);
+void GPIO_write(const GPIO_pin_t* gpio, uint8_t state);
+uint8_t GPIO_read(const GPIO_pin_t* gpio);
 void GPIO_toggle(const GPIO_pin_t* gpio);
 
 #endif /* __GPIO_H__ */

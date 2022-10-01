@@ -9,6 +9,7 @@
 #define __LPTIM_H__
 
 #include "mode.h"
+#include "types.h"
 
 /*** LPTIM structures ***/
 
@@ -22,12 +23,12 @@ typedef enum {
 
 /*** LPTIM functions ***/
 
-void LPTIM1_init(unsigned int lsi_freq_hz);
-LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode);
+void LPTIM1_init(uint32_t lsi_freq_hz);
+LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode);
 #ifdef WIND_VANE_ULTIMETER
 LPTIM_status_t LPTIM1_start(void);
 void LPTIM1_stop(void);
-unsigned int LPTIM1_get_counter(void);
+uint32_t LPTIM1_get_counter(void);
 #endif
 
 #define LPTIM1_status_check(error_base) { if (lptim1_status != LPTIM_SUCCESS) { status = error_base + lptim1_status; goto errors; }}

@@ -8,27 +8,29 @@
 #ifndef __USART_REG_H__
 #define __USART_REG_H__
 
+#include "types.h"
+
 /*** USART registers ***/
 
 typedef struct {
-	volatile unsigned int CR1;    	// USART control register 1.
-	volatile unsigned int CR2;   	// USART control register 2.
-	volatile unsigned int CR3;  	// USART control register 3.
-	volatile unsigned int BRR;    	// USART baud rate register.
-	volatile unsigned int GTPR;		// USART guard time and prescaler register.
-	volatile unsigned int RTOR;		// USART receiver timeout register.
-	volatile unsigned int RQR;      // USART request register.
-	volatile unsigned int ISR;      // USART interrupt and status register.
-	volatile unsigned int ICR;    	// USART interrupt flag clear register.
-	volatile unsigned int RDR;     	// USART receive data register.
-	volatile unsigned int TDR;   	// USART transmit data register.
+	volatile uint32_t CR1;    	// USART control register 1.
+	volatile uint32_t CR2;   	// USART control register 2.
+	volatile uint32_t CR3;  	// USART control register 3.
+	volatile uint32_t BRR;    	// USART baud rate register.
+	volatile uint32_t GTPR;		// USART guard time and prescaler register.
+	volatile uint32_t RTOR;		// USART receiver timeout register.
+	volatile uint32_t RQR;      // USART request register.
+	volatile uint32_t ISR;      // USART interrupt and status register.
+	volatile uint32_t ICR;    	// USART interrupt flag clear register.
+	volatile uint32_t RDR;     	// USART receive data register.
+	volatile uint32_t TDR;   	// USART transmit data register.
 } USART_base_address_t;
 
 /*** USART base address ***/
 
 #ifdef HW2_0
-#define USART1	((USART_base_address_t*) ((unsigned int) 0x40013800))
+#define USART1	((USART_base_address_t*) ((uint32_t) 0x40013800))
 #endif
-#define USART2	((USART_base_address_t*) ((unsigned int) 0x40004400))
+#define USART2	((USART_base_address_t*) ((uint32_t) 0x40004400))
 
 #endif /* __USART_REG_H__ */

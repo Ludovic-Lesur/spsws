@@ -9,10 +9,11 @@
 
 #include "nvic_reg.h"
 #include "scb_reg.h"
+#include "types.h"
 
 /*** NVIC local global variables ***/
 
-extern unsigned int __Vectors;
+extern uint32_t __Vectors;
 
 /*** NVIC functions ***/
 
@@ -21,7 +22,7 @@ extern unsigned int __Vectors;
  * @return:	None.
  */
 void NVIC_init(void) {
-	SCB -> VTOR = (unsigned int) &__Vectors;
+	SCB -> VTOR = (uint32_t) &__Vectors;
 }
 
 /* ENABLE AN INTERRUPT LINE.
@@ -44,7 +45,7 @@ void NVIC_disable_interrupt(NVIC_interrupt_t it_num) {
  * @param it_num:	Interrupt number (use enum defined in 'nvic.h').
  * @param priority:	Interrupt priority (0 to 3).
  */
-void NVIC_set_priority(NVIC_interrupt_t it_num, unsigned char priority) {
+void NVIC_set_priority(NVIC_interrupt_t it_num, uint8_t priority) {
 	// Check parameter.
 	if (priority > NVIC_PRIORITY_MIN) return;
 	// Reset bits.

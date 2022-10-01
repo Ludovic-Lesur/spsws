@@ -8,15 +8,17 @@
 #ifndef __PWR_REG_H__
 #define __PWR_REG_H__
 
+#include "types.h"
+
 /*** PWR registers ***/
 
 typedef struct {
-	volatile unsigned int CR;	// Power control register.
-	volatile unsigned int CSR;	// Power control and status register.
+	volatile uint32_t CR;	// Power control register.
+	volatile uint32_t CSR;	// Power control and status register.
 } PWR_base_address_t;
 
 /*** PWR base address ***/
 
-#define PWR		((PWR_base_address_t*) ((unsigned int) 0x40007000))
+#define PWR		((PWR_base_address_t*) ((uint32_t) 0x40007000))
 
 #endif /* __PWR_REG_H__ */

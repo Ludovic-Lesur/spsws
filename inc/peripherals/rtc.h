@@ -8,6 +8,8 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
+#include "types.h"
+
 /*** RTC macros ***/
 
 #define RTC_LOCAL_UTC_OFFSET_WINTER		1
@@ -29,33 +31,33 @@ typedef enum {
 
 typedef struct {
 	// Date.
-	unsigned short year;
-	unsigned char month;
-	unsigned char date;
+	uint16_t year;
+	uint8_t month;
+	uint8_t date;
 	// Time.
-	unsigned char hours;
-	unsigned char minutes;
-	unsigned char seconds;
+	uint8_t hours;
+	uint8_t minutes;
+	uint8_t seconds;
 } RTC_time_t;
 
 /*** RTC functions ***/
 
 void RTC_reset(void);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned char* rtc_use_lse, unsigned int lsi_freq_hz, unsigned char alarm_offset_seconds);
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uint32_t lsi_freq_hz, uint8_t alarm_offset_seconds);
 RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time);
 void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time);
 
-volatile unsigned char RTC_get_alarm_a_flag(void);
+volatile uint8_t RTC_get_alarm_a_flag(void);
 void RTC_clear_alarm_a_flag(void);
 
 void RTC_enable_alarm_b_interrupt(void);
 void RTC_disable_alarm_b_interrupt(void);
-volatile unsigned char RTC_get_alarm_b_flag(void);
+volatile uint8_t RTC_get_alarm_b_flag(void);
 void RTC_clear_alarm_b_flag(void);
 
-RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds);
+RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds);
 RTC_status_t RTC_stop_wakeup_timer(void);
-volatile unsigned char RTC_get_wakeup_timer_flag(void);
+volatile uint8_t RTC_get_wakeup_timer_flag(void);
 void RTC_clear_wakeup_timer_flag(void);
 
 #define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}

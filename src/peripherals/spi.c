@@ -12,6 +12,7 @@
 #include "mapping.h"
 #include "rcc_reg.h"
 #include "spi_reg.h"
+#include "types.h"
 
 /*** SPI local macros ***/
 
@@ -50,7 +51,7 @@ void SPI1_init(void) {
  * @param polarity:	Clock polarity (0 = SCLK idle high, otherwise SCLK idle low).
  * @return:			None.
  */
-void SPI1_set_clock_polarity(unsigned char polarity) {
+void SPI1_set_clock_polarity(uint8_t polarity) {
 	if (polarity == 0) {
 		SPI1 -> CR1 &= ~(0b11 << 0); // CPOL='0' and CPHA='0'.
 	}
@@ -114,13 +115,13 @@ void SPI1_power_off(void) {
 }
 
 /* SEND A BYTE THROUGH SPI1.
- * @param tx_data:	Data to send (8-bits).
+ * @param tx_data:	8-bits data to send.
  * @return status:	Function execution status.
  */
-SPI_status_t SPI1_write_byte(unsigned char tx_data) {
+SPI_status_t SPI1_write_byte(uint8_t tx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 #ifdef HW1_0
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
@@ -135,25 +136,25 @@ SPI_status_t SPI1_write_byte(unsigned char tx_data) {
 		}
 	}
 	// Send data.
-	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
+	*((volatile uint8_t*) &(SPI1 -> DR)) = tx_data;
 errors:
 	return status;
 }
 
 /* READ A BYTE FROM SPI1.
- * @param rx_data:	Pointer to byte that will contain the data to read (8-bits).
+ * @param rx_data:	Pointer to 8-bits value that will contain the data to read.
  * @return status:	Function execution status.
  */
-SPI_status_t SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
+SPI_status_t SPI1_read_byte(uint8_t tx_data, uint8_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 #ifdef HW1_0
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
 #endif
 	// Dummy read to DR to clear RXNE flag.
-	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
+	(*rx_data) = *((volatile uint8_t*) &(SPI1 -> DR));
 	// Wait for TXE flag.
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
@@ -164,7 +165,7 @@ SPI_status_t SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
 		}
 	}
 	// Send dummy data on MOSI to generate clock.
-	*((volatile unsigned char*) &(SPI1 -> DR)) = tx_data;
+	*((volatile uint8_t*) &(SPI1 -> DR)) = tx_data;
 	// Wait for incoming data.
 	loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
@@ -175,20 +176,20 @@ SPI_status_t SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data) {
 			goto errors;
 		}
 	}
-	(*rx_data) = *((volatile unsigned char*) &(SPI1 -> DR));
+	(*rx_data) = *((volatile uint8_t*) &(SPI1 -> DR));
 errors:
 	return status;
 }
 
 #ifdef HW1_0
 /* SEND A SHORT THROUGH SPI1.
- * @param tx_data:	Data to send (16-bits).
+ * @param tx_data:	16-bits data to send.
  * @return status:	Function execution status.
  */
-SPI_status_t SPI1_write_short(unsigned short tx_data) {
+SPI_status_t SPI1_write_short(uint16_t tx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Wait for TXE flag.
@@ -201,23 +202,23 @@ SPI_status_t SPI1_write_short(unsigned short tx_data) {
 		}
 	}
 	// Send data.
-	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
+	*((volatile uint16_t*) &(SPI1 -> DR)) = tx_data;
 errors:
 	return status;
 }
 
 /* READ A SHORT FROM SPI1.
- * @param rx_data:	Pointer to short that will contain the data to read (16-bits).
+ * @param rx_data:	Pointer to 16-bits value that will contain the data to read.
  * @return status:	Function execution status.
  */
-SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
+SPI_status_t SPI1_read_short(uint16_t tx_data, uint16_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Dummy read to DR to clear RXNE flag.
-	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
+	(*rx_data) = *((volatile uint16_t*) &(SPI1 -> DR));
 	// Wait for TXE flag.
 	while (((SPI1 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
@@ -228,7 +229,7 @@ SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
 		}
 	}
 	// Send dummy data on MOSI to generate clock.
-	*((volatile unsigned short*) &(SPI1 -> DR)) = tx_data;
+	*((volatile uint16_t*) &(SPI1 -> DR)) = tx_data;
 	// Wait for incoming data.
 	loop_count = 0;
 	while (((SPI1 -> SR) & (0b1 << 0)) == 0) {
@@ -239,7 +240,7 @@ SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data) {
 			goto errors;
 		}
 	}
-	(*rx_data) = *((volatile unsigned short*) &(SPI1 -> DR));
+	(*rx_data) = *((volatile uint16_t*) &(SPI1 -> DR));
 errors:
 	return status;
 }
@@ -311,10 +312,10 @@ void SPI2_power_off(void) {
  * @param tx_data:	Data to send (16-bits).
  * @return status:	Function execution status.
  */
-SPI_status_t SPI2_write_short(unsigned short tx_data) {
+SPI_status_t SPI2_write_short(uint16_t tx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Wait for TXE flag.
 	while (((SPI2 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
@@ -325,21 +326,21 @@ SPI_status_t SPI2_write_short(unsigned short tx_data) {
 		}
 	}
 	// Send data.
-	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
+	*((volatile uint16_t*) &(SPI2 -> DR)) = tx_data;
 errors:
 	return status;
 }
 
 /* READ A SHORT FROM SPI2.
- * @param rx_data:	Pointer to short that will contain the data to read (16-bits).
+ * @param rx_data:	Pointer to 16-bits value that will contain the data to read.
  * @return status:	Function execution status.
  */
-SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
+SPI_status_t SPI2_read_short(uint16_t tx_data, uint16_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Dummy read to DR to clear RXNE flag.
-	(*rx_data) = *((volatile unsigned short*) &(SPI2 -> DR));
+	(*rx_data) = *((volatile uint16_t*) &(SPI2 -> DR));
 	// Wait for TXE flag.
 	while (((SPI2 -> SR) & (0b1 << 1)) == 0) {
 		// Wait for TXE='1' or timeout.
@@ -350,7 +351,7 @@ SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
 		}
 	}
 	// Send dummy data on MOSI to generate clock.
-	*((volatile unsigned short*) &(SPI2 -> DR)) = tx_data;
+	*((volatile uint16_t*) &(SPI2 -> DR)) = tx_data;
 	// Wait for incoming data.
 	loop_count = 0;
 	while (((SPI2 -> SR) & (0b1 << 0)) == 0) {
@@ -361,7 +362,7 @@ SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data) {
 			goto errors;
 		}
 	}
-	(*rx_data) = *((volatile unsigned short*) &(SPI2 -> DR));
+	(*rx_data) = *((volatile uint16_t*) &(SPI2 -> DR));
 errors:
 	return status;
 }

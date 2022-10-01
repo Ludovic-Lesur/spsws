@@ -9,6 +9,7 @@
 #define __SPI_H__
 
 #include "lptim.h"
+#include "types.h"
 
 /*** SPI structures ***/
 
@@ -26,13 +27,13 @@ void SPI1_init(void);
 SPI_status_t SPI1_power_on(void);
 void SPI1_power_off(void);
 #ifdef HW1_0
-void SPI1_set_clock_polarity(unsigned char polarity);
+void SPI1_set_clock_polarity(uint8_t polarity);
 #endif
-SPI_status_t SPI1_write_byte(unsigned char tx_data);
-SPI_status_t SPI1_read_byte(unsigned char tx_data, unsigned char* rx_data);
+SPI_status_t SPI1_write_byte(uint8_t tx_data);
+SPI_status_t SPI1_read_byte(uint8_t tx_data, uint8_t* rx_data);
 #ifdef HW1_0
-SPI_status_t SPI1_write_short(unsigned short tx_data);
-SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data);
+SPI_status_t SPI1_write_short(uint16_t tx_data);
+SPI_status_t SPI1_read_short(uint16_t tx_data, uint16_t* rx_data);
 #endif
 
 #define SPI1_status_check(error_base) { if (spi_status != SPI_SUCCESS) { status = error_base + spi_status; goto errors; }}
@@ -43,8 +44,8 @@ SPI_status_t SPI1_read_short(unsigned short tx_data, unsigned short* rx_data);
 void SPI2_init(void);
 SPI_status_t SPI2_power_on(void);
 void SPI2_power_off(void);
-SPI_status_t SPI2_write_short(unsigned short tx_data);
-SPI_status_t SPI2_read_short(unsigned short tx_data, unsigned short* rx_data);
+SPI_status_t SPI2_write_short(uint16_t tx_data);
+SPI_status_t SPI2_read_short(uint16_t tx_data, uint16_t* rx_data);
 
 #define SPI2_status_check(error_base) { if (spi_status != SPI_SUCCESS) { status = error_base + spi_status; goto errors; }}
 #define SPI2_error_check() { ERROR_status_check(spi_status, SPI_SUCCESS, ERROR_BASE_SPI2); }

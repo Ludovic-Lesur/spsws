@@ -8,6 +8,8 @@
 #ifndef __TIM_H__
 #define __TIM_H__
 
+#include "types.h"
+
 /*** TIM macros ***/
 
 #define TIM2_TIMINGS_ARRAY_LENGTH		5
@@ -28,13 +30,13 @@ typedef enum {
 /*** TIM functions ***/
 
 void TIM21_init(void);
-TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz);
 void TIM21_disable(void);
 
-void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]);
+void TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]);
 void TIM2_start(void);
 void TIM2_stop(void);
-volatile unsigned int TIM2_get_counter(void);
+volatile uint32_t TIM2_get_counter(void);
 
 #define TIM21_status_check(error_base) { if (tim21_status != TIM_SUCCESS) { status = error_base + tim21_status; goto errors; }}
 #define TIM21_error_check() { ERROR_status_check(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }

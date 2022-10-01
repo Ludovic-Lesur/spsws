@@ -13,6 +13,7 @@
 #include "rcc_reg.h"
 #include "tim_reg.h"
 #include "wind.h"
+#include "types.h"
 
 /*** TIM local macros ***/
 
@@ -20,7 +21,7 @@
 
 /*** TIM local global variables ***/
 
-static volatile unsigned char tim21_flag = 0;
+static volatile uint8_t tim21_flag = 0;
 
 /*** TIM local functions ***/
 
@@ -64,13 +65,13 @@ void TIM21_init(void) {
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
  * @return status:				Function execution status.
  */
-TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
+TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
-	unsigned char tim21_interrupt_count = 0;
-	unsigned int tim21_ccr1_edge1 = 0;
-	unsigned int tim21_ccr1_edge8 = 0;
-	unsigned int loop_count = 0;
+	uint8_t tim21_interrupt_count = 0;
+	uint32_t tim21_ccr1_edge1 = 0;
+	uint32_t tim21_ccr1_edge8 = 0;
+	uint32_t loop_count = 0;
 	// Reset counter.
 	TIM21 -> CNT = 0;
 	TIM21 -> CCR1 = 0;
@@ -125,7 +126,7 @@ void TIM21_disable(void) {
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
  * @return:			None.
  */
-void TIM2_init(unsigned short timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
+void TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Configure TIM2 to overflow every timing[0] microseconds.
@@ -177,6 +178,6 @@ void TIM2_stop(void) {
  * @param:	None.
  * @return:	Current TIM2 counter value.
  */
-volatile unsigned int TIM2_get_counter(void) {
+volatile uint32_t TIM2_get_counter(void) {
 	return (TIM2 -> CNT);
 }

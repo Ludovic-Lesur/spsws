@@ -10,6 +10,7 @@
 #include "dps310_reg.h"
 #include "i2c.h"
 #include "math.h"
+#include "types.h"
 
 /*** DPS310 local macros ***/
 
@@ -23,19 +24,19 @@
 
 typedef struct {
 	// Measurements.
-	signed int tmp_raw;
-	signed int prs_raw;
+	int32_t tmp_raw;
+	int32_t prs_raw;
 	// Calibration coefficients.
-	signed int coef_c0;
-	signed int coef_c1;
-	signed int coef_c00;
-	signed int coef_c10;
-	signed int coef_c01;
-	signed int coef_c11;
-	signed int coef_c20;
-	signed int coef_c21;
-	signed int coef_c30;
-	unsigned char coef_ready;
+	int32_t coef_c0;
+	int32_t coef_c1;
+	int32_t coef_c00;
+	int32_t coef_c10;
+	int32_t coef_c01;
+	int32_t coef_c11;
+	int32_t coef_c20;
+	int32_t coef_c21;
+	int32_t coef_c30;
+	uint8_t coef_ready;
 } DPS310_context_t;
 
 /*** DPS310 local global variables ***/
@@ -50,11 +51,11 @@ static DPS310_context_t dps310_ctx;
  * @param value:			Value to write in the selected register.
  * @return status			Function execution status.
  */
-static DPS310_status_t DPS310_write_register(unsigned char i2c_address, unsigned char register_address, unsigned char value) {
+static DPS310_status_t DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
-	unsigned char register_write_command[2] = {register_address, value};
+	uint8_t register_write_command[2] = {register_address, value};
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
@@ -65,14 +66,14 @@ errors:
 /* READ A REGISTER OF DPS310.
  * @param i2c_address:		Sensor address
  * @param register_address:	Address of the register to read.
- * @param value:			Pointer to byte that will contain the current value of the selected register.
+ * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
  * @return status			Function execution status.
  */
-static DPS310_status_t DPS310_read_register(unsigned char i2c_address, unsigned char register_address, unsigned char* value) {
+static DPS310_status_t DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
-	unsigned char local_addr = register_address;
+	uint8_t local_addr = register_address;
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
@@ -89,12 +90,12 @@ errors:
  * @param timeout_error:	Error to return in case of timeout.
  * @return:					Function execution status.
  */
-static DPS310_status_t DPS310_wait_flag(unsigned char i2c_address, unsigned char register_address, unsigned char bit_index, DPS310_status_t timeout_error) {
+static DPS310_status_t DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-	unsigned char reg_value = 0;
-	unsigned int loop_count_ms = 0;
+	uint8_t reg_value = 0;
+	uint32_t loop_count_ms = 0;
 	// Read register.
 	status = DPS310_read_register(i2c_address, register_address, &reg_value);
 	if (status != DPS310_SUCCESS) goto errors;
@@ -121,25 +122,25 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return status		Function execution status.
  */
-static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_address) {
+static DPS310_status_t DPS310_read_calibration_coefficients(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char local_addr = DPS310_REG_COEF_C0B;
-	unsigned char idx = 0;
-	unsigned char coef_registers[DPS310_NUMBER_OF_COEF_REGISTERS];
+	uint8_t local_addr = DPS310_REG_COEF_C0B;
+	uint8_t idx = 0;
+	uint8_t coef_registers[DPS310_NUMBER_OF_COEF_REGISTERS];
 	// Reset all coefficients.
 	for (idx=0 ; idx<DPS310_NUMBER_OF_COEF_REGISTERS ; idx++) coef_registers[idx] = 0;
-	unsigned int c0 = 0;
-	unsigned int c1 = 0;
-	unsigned int c00 = 0;
-	unsigned int c10 = 0;
-	unsigned int c01 = 0;
-	unsigned int c11 = 0;
-	unsigned int c20 = 0;
-	unsigned int c21 = 0;
-	unsigned int c30 = 0;
+	uint32_t c0 = 0;
+	uint32_t c1 = 0;
+	uint32_t c00 = 0;
+	uint32_t c10 = 0;
+	uint32_t c01 = 0;
+	uint32_t c11 = 0;
+	uint32_t c20 = 0;
+	uint32_t c21 = 0;
+	uint32_t c30 = 0;
 	// Wait for coefficients to be ready for reading.
 	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
@@ -188,12 +189,12 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return status		Function execution status.
  */
-static DPS310_status_t DPS310_compute_raw_temperature(unsigned char i2c_address) {
+static DPS310_status_t DPS310_compute_raw_temperature(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char read_byte = 0;
-	unsigned int tmp_raw = 0;
+	uint8_t read_byte = 0;
+	uint32_t tmp_raw = 0;
 	// Wait for sensor to be ready.
 	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
@@ -229,12 +230,12 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return:				Function execution status.
  */
-static DPS310_status_t DPS310_compute_raw_pressure(unsigned char i2c_address) {
+static DPS310_status_t DPS310_compute_raw_pressure(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	unsigned char read_byte = 0;
-	unsigned int prs_raw = 0;
+	uint8_t read_byte = 0;
+	uint32_t prs_raw = 0;
 	// Wait for sensor to be ready.
 	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
@@ -281,7 +282,7 @@ void DPS310_init(void) {
  * @param i2c_address:	Sensor address.
  * @return status :		Function execution status.
  */
-DPS310_status_t DPS310_perform_measurements(unsigned char i2c_address) {
+DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	// Reset result.
@@ -301,13 +302,13 @@ errors:
 }
 
 /* READ PRESSURE FROM DPS310 SENSOR.
- * @param pressure_pa:	Pointer to integer that will contain pressure result (Pa).
+ * @param pressure_pa:	Pointer to 32-bits value that will contain pressure result (Pa).
  * @return:				None.
  */
-void DPS310_get_pressure(unsigned int* pressure_pa) {
+void DPS310_get_pressure(uint32_t* pressure_pa) {
 	// Local variables.
-	signed long long psr_temp = 0;
-	signed long long last_term = 0;
+	int64_t psr_temp = 0;
+	int64_t last_term = 0;
 	// Compute pressure in Pa.
 	psr_temp = dps310_ctx.coef_c20 + (dps310_ctx.prs_raw * dps310_ctx.coef_c30) / DPS310_SAMPLING_FACTOR_KP;
 	psr_temp = dps310_ctx.coef_c10 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
@@ -317,18 +318,17 @@ void DPS310_get_pressure(unsigned int* pressure_pa) {
 	last_term = (dps310_ctx.prs_raw * last_term) / DPS310_SAMPLING_FACTOR_KP;
 	last_term = (dps310_ctx.tmp_raw * last_term) / DPS310_SAMPLING_FACTOR_KT;
 	psr_temp += last_term;
-	(*pressure_pa) = (unsigned int) psr_temp;
+	(*pressure_pa) = (uint32_t) psr_temp;
 }
 
 /* READ TEMPERATURE FROM DPS310 SENSOR.
- * @param temperature_degrees:	Pointer to byte that will contain temperature result (degrees).
+ * @param temperature_degrees:	Pointer to 8-bits value that will contain temperature result (degrees).
  * @return:						None.
  */
-void DPS310_get_temperature(signed char* temperature_degrees) {
+void DPS310_get_temperature(int8_t* temperature_degrees) {
 	// Local variables.
-	signed long long tmp_temp = 0;
-
+	int64_t tmp_temp = 0;
 	// Compute temperature in degrees.
 	tmp_temp = (dps310_ctx.coef_c0 / 2) + (dps310_ctx.coef_c1 * dps310_ctx.tmp_raw) / DPS310_SAMPLING_FACTOR_KT;
-	(*temperature_degrees) = (unsigned char) tmp_temp;
+	(*temperature_degrees) = (uint8_t) tmp_temp;
 }

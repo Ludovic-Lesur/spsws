@@ -8,6 +8,7 @@
 #include "flash.h"
 
 #include "flash_reg.h"
+#include "types.h"
 
 /*** FLASH local macros ***/
 
@@ -20,10 +21,10 @@
  * @param wait_states:	Number of wait states.
  * @return status:		Function execution status.
  */
-FLASH_status_t FLASH_set_latency(unsigned char wait_states) {
+FLASH_status_t FLASH_set_latency(uint8_t wait_states) {
 	// Local variables.
 	FLASH_status_t status = FLASH_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Check parameter.
 	if (wait_states > FLASH_WAIT_STATES_MAX) {
 		status = FLASH_ERROR_LATENCY;

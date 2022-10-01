@@ -64,7 +64,7 @@ void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
  * @param bit_idx:	Interrupt index.
  * @return:			None.
  */
-static void EXTI_set_trigger(EXTI_trigger_t trigger, unsigned char bit_idx) {
+static void EXTI_set_trigger(EXTI_trigger_t trigger, uint8_t bit_idx) {
 	// Check index.
 	if (bit_idx > EXTI_RTSR_FTSR_MAX_INDEX) return;
 	// Select triggers.

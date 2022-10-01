@@ -9,6 +9,7 @@
 #include "gpio.h"
 #include "mapping.h"
 #include "mode.h"
+#include "types.h"
 
 /* NON MASKABLE INTERRUPT HANDLER.
  * @param:	None.
@@ -17,7 +18,7 @@
 void __attribute__((optimize("-O0"))) NMI_Handler(void) {
 #ifdef DEBUG
 	// Blink LED.
-	unsigned int k = 0;
+	uint32_t k = 0;
 	while(1) {
 		GPIO_write(&GPIO_LED, 1);
 		for (k=0 ; k<500000 ; k++);
@@ -37,7 +38,7 @@ void __attribute__((optimize("-O0"))) NMI_Handler(void) {
 void __attribute__((optimize("-O0"))) HardFault_Handler(void) {
 #ifdef DEBUG
 	// Blink LED.
-	unsigned int k = 0;
+	uint32_t k = 0;
 	while(1) {
 		GPIO_write(&GPIO_LED, 1);
 		for (k=0 ; k<100000 ; k++);

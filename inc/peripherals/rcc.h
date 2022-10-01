@@ -10,6 +10,7 @@
 
 #include "flash.h"
 #include "tim.h"
+#include "types.h"
 
 /*** RCC macros ***/
 
@@ -41,9 +42,9 @@ typedef enum {
 void RCC_init(void);
 RCC_status_t RCC_switch_to_hsi(void);
 RCC_status_t RCC_switch_to_hse(void);
-unsigned int RCC_get_sysclk_khz(void);
+uint32_t RCC_get_sysclk_khz(void);
 RCC_status_t RCC_enable_lsi(void);
-RCC_status_t RCC_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz);
 RCC_status_t RCC_enable_lse(void);
 
 #define RCC_status_check(error_base) { if (rcc_status != RCC_SUCCESS) { status = error_base + rcc_status; goto errors; }}

@@ -9,6 +9,7 @@
 
 #include "string.h"
 #include "math.h"
+#include "types.h"
 
 /*** PARSER local functions ***/
 
@@ -17,11 +18,11 @@
  * @param separator:    Reference separator.
  * @return status:      Comparison result.
  */
-static PARSER_status_t PARSER_search_separator(PARSER_context_t* parser_ctx, char separator) {
+static PARSER_status_t PARSER_search_separator(PARSER_context_t* parser_ctx, int8_t separator) {
 	// Local variables.
 	PARSER_status_t status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
-	unsigned char idx = 0;
-	// Starting from char following the current separator (which is the start of buffer in case of first call).
+	uint8_t idx = 0;
+	// Starting from int8_t following the current separator (which is the start of buffer in case of first call).
 	for (idx=(parser_ctx -> start_idx) ; idx<(parser_ctx -> rx_buf_length) ; idx++) {
 		if ((parser_ctx -> rx_buf)[idx] == separator) {
 			(parser_ctx -> separator_idx) = idx;
@@ -40,10 +41,10 @@ static PARSER_status_t PARSER_search_separator(PARSER_context_t* parser_ctx, cha
  * @param ref:			Reference string to compare with the buffer.
  * @return status:      Comparison result.
  */
-PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char* ref) {
+PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, int8_t* ref) {
 	// Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
-	unsigned int idx = 0;
+	uint32_t idx = 0;
 	// Compare all characters.
 	while (ref[idx] != STRING_CHAR_NULL) {
 		// Compare current character.
@@ -83,12 +84,12 @@ errors:
  * @param param_value:  Pointer hat will contain extracted parameter value.
  * @return status:      Searching result.
  */
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char separator, int* param) {
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, int8_t separator, int32_t* param) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	unsigned char end_idx = 0;
-	unsigned char param_length_char = 0;
+	uint8_t end_idx = 0;
+	uint8_t param_length_char = 0;
 	// Compute end index.
 	if (separator != STRING_CHAR_NULL) {
 		// Search separator.
@@ -125,12 +126,12 @@ errors:
  * @param extracted_length:	Length of the extracted buffer.
  * @return status:          Searching result.
  */
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char separator, unsigned char max_length, unsigned char exact_length, unsigned char* param, unsigned char* extracted_length) {
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, int8_t separator, uint8_t max_length, uint8_t exact_length, uint8_t* param, uint8_t* extracted_length) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	unsigned char param_length_char = 0;
-    unsigned char end_idx = 0;
+	uint8_t param_length_char = 0;
+    uint8_t end_idx = 0;
     // Compute end index.
 	if (separator != STRING_CHAR_NULL) {
 		// Search separator.

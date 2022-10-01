@@ -9,6 +9,7 @@
 
 #include "flash_reg.h"
 #include "rcc_reg.h"
+#include "types.h"
 
 /*** NVM local macros ***/
 
@@ -23,7 +24,7 @@
 static NVM_status_t NVM_unlock(void) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
 		// Wait till BSY='1' or timeout.
@@ -50,7 +51,7 @@ errors:
 static NVM_status_t NVM_lock(void) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Check no write/erase operation is running.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
 		// Wait till BSY='1' or timeout.
@@ -79,10 +80,10 @@ void NVM_init(void) {
 
 /* READ A BYTE STORED IN NVM.
  * @param address_offset:	Address offset starting from NVM start address (expressed in bytes).
- * @param data:				Pointer to byte that will contain the value to read.
+ * @param data:				Pointer to 8-bits value that will contain the value to read.
  * @return status:			Function execution status.
  */
-NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data) {
+NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
 	// Check address.
@@ -94,7 +95,7 @@ NVM_status_t NVM_read_byte(NVM_address_t address_offset, unsigned char* data) {
 	status = NVM_unlock();
 	if (status != NVM_SUCCESS) goto errors;
 	// Read data.
-	(*data) = *((unsigned char*) (EEPROM_START_ADDRESS + address_offset));
+	(*data) = *((uint8_t*) (EEPROM_START_ADDRESS + address_offset));
 	// Lock NVM.
 	status = NVM_lock();
 errors:
@@ -106,10 +107,10 @@ errors:
  * @param data:				Byte to store in NVM.
  * @return status:			Function execution status.
  */
-NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data) {
+NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Check address.
 	if (address_offset >= EEPROM_SIZE) {
 		status = NVM_ERROR_ADDRESS;
@@ -119,7 +120,7 @@ NVM_status_t NVM_write_byte(NVM_address_t address_offset, unsigned char data) {
 	status = NVM_unlock();
 	if (status != NVM_SUCCESS) goto errors;
 	// Write data.
-	(*((unsigned char*) (EEPROM_START_ADDRESS+address_offset))) = data;
+	(*((uint8_t*) (EEPROM_START_ADDRESS + address_offset))) = data;
 	// Wait end of operation.
 	while (((FLASH -> SR) & (0b1 << 0)) != 0) {
 		// Wait till BSY='1' or timeout.

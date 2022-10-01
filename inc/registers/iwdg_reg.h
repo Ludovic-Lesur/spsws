@@ -8,18 +8,20 @@
 #ifndef __IWDG_REG_H__
 #define __IWDG_REG_H__
 
+#include "types.h"
+
 /*** IWDG registers ***/
 
 typedef struct {
-	volatile unsigned int KR;    	// IWDG key register.
-	volatile unsigned int PR;   	// IWDG prescaler register.
-	volatile unsigned int RLR;  	// IWDG reload register.
-	volatile unsigned int SR;    	// IWDG status register.
-	volatile unsigned int WINR;		// IWDG window register.
+	volatile uint32_t KR;    	// IWDG key register.
+	volatile uint32_t PR;   	// IWDG prescaler register.
+	volatile uint32_t RLR;  	// IWDG reload register.
+	volatile uint32_t SR;    	// IWDG status register.
+	volatile uint32_t WINR;		// IWDG window register.
 } IWDG_base_address_t;
 
 /*** IWDG base address ***/
 
-#define IWDG	((IWDG_base_address_t*) ((unsigned int) 0x40003000))
+#define IWDG	((IWDG_base_address_t*) ((uint32_t) 0x40003000))
 
 #endif /* __IWDG_REG_H___ */

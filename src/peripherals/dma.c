@@ -12,6 +12,7 @@
 #include "neom8n.h"
 #include "nvic.h"
 #include "rcc_reg.h"
+#include "types.h"
 
 /*** DMA local functions ***/
 
@@ -50,7 +51,7 @@ void DMA1_init_channel6(void) {
 	// Enable transfer complete interrupt (TCIE='1').
 	DMA1 -> CCR6 |= (0b11 << 12) | (0b1 << 7) | (0b1 << 1);
 	// Configure peripheral address.
-	DMA1 -> CPAR6 = (unsigned int) &(LPUART1 -> RDR); // Peripheral address = LPUART RX register.
+	DMA1 -> CPAR6 = (uint32_t) &(LPUART1 -> RDR); // Peripheral address = LPUART RX register.
 	// Configure channel 3 for LPUART1 RX (request number 5).
 	DMA1 -> CSELR |= (0b0101 << 20); // DMA channel mapped on LPUART1_RX (C6S='0101').
 	// Set interrupt priority.
@@ -84,7 +85,7 @@ void DMA1_stop_channel6(void) {
  * @param dest_buf_size:	Size of destination buffer.
  * @return:					None.
  */
-void DMA1_set_channel6_dest_addr(unsigned int dest_buf_addr, unsigned short dest_buf_size) {
+void DMA1_set_channel6_dest_addr(uint32_t dest_buf_addr, uint16_t dest_buf_size) {
 	// Set address and buffer size.
 	DMA1 -> CMAR6 = dest_buf_addr;
 	DMA1 -> CNDTR6 = dest_buf_size;
