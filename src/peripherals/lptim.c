@@ -148,6 +148,8 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 		// Wait for flag.
 		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
+		// Clear flag.
+		LPTIM1 -> ICR |= (0b1 << 1);
 	}
 errors:
 	// Disable timer.

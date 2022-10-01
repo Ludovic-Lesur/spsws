@@ -627,7 +627,7 @@ int main (void) {
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
 	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
@@ -764,7 +764,7 @@ int main (void) {
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
 			}
 			// Retrieve external ADC data.
-			i2c_status = I2C1_power_on(); // Must be called before ADC since LDR is on the sensors module (powered by I2C supply).
+			i2c1_status = I2C1_power_on(); // Must be called before ADC since LDR is on the sensors module (powered by I2C supply).
 			I2C1_error_check();
 #ifdef HW1_0
 			spi_status = SPI1_power_on();
@@ -805,7 +805,7 @@ int main (void) {
 			// Internal temperature/humidity sensor.
 #ifdef HW1_0
 			// Must be called again because SPI1 power function turned off the sensors.
-			i2c_status = I2C1_power_on();
+			i2c1_status = I2C1_power_on();
 			I2C1_error_check();
 #endif
 			IWDG_reload();

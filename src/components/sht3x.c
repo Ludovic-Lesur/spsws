@@ -34,7 +34,7 @@ static SHT3X_context_t sht3x_ctx;
 SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
 	// Local variables.
 	SHT3X_status_t status = SHT3X_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned char measure_command[2] = {0x24, 0x00};
 	unsigned char measure_buf[6];
@@ -43,13 +43,13 @@ SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
 	sht3x_ctx.temperature_degrees = 0;
 	sht3x_ctx.humidity_percent = 0;
 	// Trigger high repeatability measurement with clock stretching disabled.
-	i2c_status = I2C1_write(i2c_address, measure_command, 2, 1);
+	i2c1_status = I2C1_write(i2c_address, measure_command, 2, 1);
 	I2C1_status_check(SHT3X_ERROR_BASE_I2C);
 	// Wait for conversion to complete (at least 15ms).
 	lptim1_status = LPTIM1_delay_milliseconds(30, 1);
 	LPTIM1_status_check(SHT3X_ERROR_BASE_LPTIM);
 	// Read data.
-	i2c_status = I2C1_read(i2c_address, measure_buf, 6);
+	i2c1_status = I2C1_read(i2c_address, measure_buf, 6);
 	I2C1_status_check(SHT3X_ERROR_BASE_I2C);
 	// Compute temperature (TBC: verify checksum).
 	data_16bits = (measure_buf[0] << 8) + measure_buf[1];

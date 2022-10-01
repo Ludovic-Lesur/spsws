@@ -426,7 +426,7 @@ errors:
  */
 static void AT_iths_callback(void) {
 	// Local variables.
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	signed char tamb_degrees = 0;
 	unsigned char hamb_percent = 0;
@@ -436,7 +436,7 @@ static void AT_iths_callback(void) {
 		goto errors;
 	}
 	// Perform measurements.
-	i2c_status = I2C1_power_on();
+	i2c1_status = I2C1_power_on();
 	I2C1_error_check_print();
 	AT_response_add_string("SHT3X running...");
 	AT_response_add_string(AT_RESPONSE_END);
@@ -465,7 +465,7 @@ errors:
  */
 static void AT_eths_callback(void) {
 	// Local variables.
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	signed char tamb_degrees = 0;
 	unsigned char hamb_percent = 0;
@@ -475,7 +475,7 @@ static void AT_eths_callback(void) {
 		goto errors;
 	}
 	// Perform measurements.
-	i2c_status = I2C1_power_on();
+	i2c1_status = I2C1_power_on();
 	I2C1_error_check_print();
 	AT_response_add_string("SHT3X running...");
 	AT_response_add_string(AT_RESPONSE_END);
@@ -504,7 +504,7 @@ errors:
  */
 static void AT_epts_callback(void) {
 	// Local variables.
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
 	unsigned int pressure_pa = 0;
 	signed char tamb_degrees = 0;
@@ -514,7 +514,7 @@ static void AT_epts_callback(void) {
 		goto errors;
 	}
 	// Perform measurements.
-	i2c_status = I2C1_power_on();
+	i2c1_status = I2C1_power_on();
 	I2C1_error_check_print();
 	AT_response_add_string("DPS310 running...");
 	AT_response_add_string(AT_RESPONSE_END);
@@ -543,7 +543,7 @@ errors:
  */
 static void AT_euvs_callback(void) {
 	// Local variables.
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
 	unsigned char uv_index = 0;
 	// Check if wind measurement is not running.
@@ -552,7 +552,7 @@ static void AT_euvs_callback(void) {
 		goto errors;
 	}
 	// Perform measurements.
-	i2c_status = I2C1_power_on();
+	i2c1_status = I2C1_power_on();
 	I2C1_error_check_print();
 	AT_response_add_string("SI1133 running...");
 	AT_response_add_string(AT_RESPONSE_END);

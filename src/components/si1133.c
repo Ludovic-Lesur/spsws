@@ -37,7 +37,7 @@ static unsigned char si1133_uv_index;
 static SI1133_status_t SI1133_write_register(unsigned char i2c_address, unsigned char register_address, unsigned char* value_buf, unsigned char value_buf_length) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	unsigned char register_write_command[SI1133_BURST_WRITE_MAX_LENGTH];
 	unsigned char tx_buf_length = value_buf_length + 1; // +1 for register address.
 	unsigned char idx = 0;
@@ -51,7 +51,7 @@ static SI1133_status_t SI1133_write_register(unsigned char i2c_address, unsigned
 		register_write_command[idx] = value_buf[idx - 1];
 	}
 	// I2C transfer.
-	i2c_status = I2C1_write(i2c_address, register_write_command, tx_buf_length, 1);
+	i2c1_status = I2C1_write(i2c_address, register_write_command, tx_buf_length, 1);
 	I2C1_status_check(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;
@@ -66,11 +66,11 @@ errors:
 static SI1133_status_t SI1133_read_register(unsigned char i2c_address, unsigned char register_address, unsigned char* value) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	// I2C transfer.
-	i2c_status = I2C1_write(i2c_address, &register_address, 1, 1);
+	i2c1_status = I2C1_write(i2c_address, &register_address, 1, 1);
 	I2C1_status_check(SI1133_ERROR_BASE_I2C);
-	i2c_status = I2C1_read(i2c_address, value, 1);
+	i2c1_status = I2C1_read(i2c_address, value, 1);
 	I2C1_status_check(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;

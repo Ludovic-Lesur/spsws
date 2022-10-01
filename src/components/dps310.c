@@ -53,10 +53,10 @@ static DPS310_context_t dps310_ctx;
 static DPS310_status_t DPS310_write_register(unsigned char i2c_address, unsigned char register_address, unsigned char value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	unsigned char register_write_command[2] = {register_address, value};
 	// I2C transfer.
-	i2c_status = I2C1_write(i2c_address, register_write_command, 2, 1);
+	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
@@ -71,12 +71,12 @@ errors:
 static DPS310_status_t DPS310_read_register(unsigned char i2c_address, unsigned char register_address, unsigned char* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	unsigned char local_addr = register_address;
 	// I2C transfer.
-	i2c_status = I2C1_write(i2c_address, &local_addr, 1, 1);
+	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
-	i2c_status = I2C1_read(i2c_address, value, 1);
+	i2c1_status = I2C1_read(i2c_address, value, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
@@ -124,7 +124,7 @@ errors:
 static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c_status = I2C_SUCCESS;
+	I2C_status_t i2c1_status = I2C_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	unsigned char local_addr = DPS310_REG_COEF_C0B;
 	unsigned char idx = 0;
@@ -144,9 +144,9 @@ static DPS310_status_t DPS310_read_calibration_coefficients(unsigned char i2c_ad
 	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients with auto-increment method.
-	i2c_status = I2C1_write(i2c_address, &local_addr, 1, 1);
+	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
-	i2c_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
+	i2c1_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Compute coefficients.
