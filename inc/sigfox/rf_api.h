@@ -28,8 +28,8 @@
  * for library usage.
  */
 
-#ifndef RF_API_H
-#define RF_API_H
+#ifndef __RF_API_H__
+#define __RF_API_H__
 
 #include "sigfox_api.h"
 #include "sigfox_types.h"
@@ -236,15 +236,4 @@ sfx_u8 RF_API_wait_for_clear_channel(sfx_u8 cs_min, sfx_s8 cs_threshold, sfx_rx_
  *******************************************************************/
 sfx_u8 RF_API_get_version(sfx_u8** version, sfx_u8* size);
 
-/*!******************************************************************
- * \fn sfx_u8 RF_API_SetIrqFlag(void)
- * \brief Set S2LP IRQ flag.
- *
- * \param[in] none
- * \param[out] none
- *
- * \retval none
- *******************************************************************/
-void RF_API_SetIrqFlag(void);
-
-#endif /* RF_API_H */
+#endif /* __RF_API_H__ */

@@ -28,12 +28,13 @@ void AES_init(void) {
 }
 
 /* COMPUTE AES-128 CBC ALGORITHME WITH HARDWARE ACCELERATOR.
- * @param data_in:		Input data (16-bits value).
- * @param init_vector:	Initialisation vector (128-bits value).
- * @param key			AES key (128-bits value).
+ * @param data_in:		Input data (16-bytes array).
+ * @param data_out:		Output data (16-bytes array).
+ * @param init_vector:	Initialisation vector (16-bytes array).
+ * @param key			AES key (16-bytes array).
  * @return status:		Function execution status.
  */
-AES_status_t AES_encrypt(unsigned char data_in[AES_BLOCK_SIZE], unsigned char data_out[AES_BLOCK_SIZE], unsigned char init_vector[AES_BLOCK_SIZE], unsigned char key[AES_BLOCK_SIZE]) {
+AES_status_t AES_encrypt(unsigned char* data_in, unsigned char* data_out, unsigned char* init_vector, unsigned char* key) {
 	// Local variables.
 	AES_status_t status = AES_SUCCESS;
 	unsigned char idx = 0;

@@ -20,7 +20,7 @@
 /*** USART local macros ***/
 
 #ifdef ATM
-#define USART_BAUD_RATE 			9600
+#define USART_BAUD_RATE				9600
 #define USART_TIMEOUT_COUNT			100000
 #define USART_STRING_LENGTH_MAX		1000
 #endif

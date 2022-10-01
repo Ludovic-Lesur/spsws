@@ -106,11 +106,11 @@ typedef struct {
 	// Buffers.
 	char rx_buf1[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 1.
 	char rx_buf2[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 2.
-	volatile unsigned char fill_buf1;			// 0/1 = buffer 2/1 is currently filled by DMA, buffer 1/2 is ready to be parsed.
-	volatile unsigned char line_end_flag;		// Set to '1' as soon as a complete NMEA message is received.
-	// GGA quality filter.
+	volatile unsigned char fill_buf1; // 0/1 = buffer 2/1 is currently filled by DMA, buffer 1/2 is ready to be parsed.
+	volatile unsigned char line_end_flag; // Set to '1' as soon as a complete NMEA message is received.
 #ifdef NMEA_GGA_ALTITUDE_STABILITY_FILTER
-	unsigned char gga_same_altitude_count;		// Number of consecutive same altitudes.
+	// GGA quality filter.
+	unsigned char gga_same_altitude_count; // Number of consecutive same altitudes.
 	unsigned int gga_previous_altitude;
 #endif
 } NEOM8N_context_t;
@@ -128,7 +128,7 @@ static NEOM8N_context_t neom8n_ctx;
 #define NEOM8N_check_field_length(field_length) { if ((char_idx - separator_idx) != (field_length + 1)) {status = NEOM8N_ERROR_NMEA_FIELD_LENGTH; goto errors;} }
 
 /* COMPUTE AND APPEND CHECKSUM TO AN NEOM8N MESSAGE.
- * @param neom8n_command:		Complete NEOM8N message for which checksum must be computed.
+ * @param neom8n_command:	Complete NEOM8N message for which checksum must be computed.
  * @param payload_length:	Length of the payload (in bytes) for this message.
  * @return:					None.
  */
@@ -149,7 +149,7 @@ static void NEOM8N_compute_ubx_checksum(char* neom8n_command, unsigned char payl
 
 /* GET THE CHECKSUM OF A GIVEN NMEA MESSAGE.
  * @param nmea_rx_buf:	NMEA RX buffer.
- * @param ck:			Pointer to the computed checksum.
+ * @param ck:			Pointer to the read checksum.
  * @return status:		Function executions status.
  */
 static NEOM8N_status_t NEOM8N_get_nmea_checksum(char* nmea_rx_buf, unsigned char* ck) {
@@ -176,12 +176,13 @@ errors:
 }
 
 /* COMPUTE THE CHECKSUM OF A GIVEN NMEA MESSAGE.
- * @param:		None;
- * @return ck:	Computed checksum.
+ * @param nmea_rx_buf:	NMEA RX buffer.
+ * @param ck:			Pointer to the computed checksum.
+ * @return status:		Function executions status.
  */
-static unsigned char NEOM8N_compute_nmea_checksum(char* nmea_rx_buf) {
+static NEOM8N_status_t NEOM8N_compute_nmea_checksum(char* nmea_rx_buf, unsigned char* ck) {
 	// Local variables.
-	unsigned char ck = 0;
+	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	unsigned char message_start_char_idx = 0;
 	unsigned char checksum_start_char_idx = 0;
 	unsigned char checksum_idx = 0;
@@ -194,12 +195,17 @@ static unsigned char NEOM8N_compute_nmea_checksum(char* nmea_rx_buf) {
 	while ((nmea_rx_buf[checksum_start_char_idx] != NMEA_CHAR_CHECKSUM_START) && (checksum_start_char_idx < NMEA_RX_BUFFER_SIZE)) {
 		checksum_start_char_idx++;
 	}
-	if (checksum_start_char_idx < NMEA_RX_BUFFER_SIZE) {
-		for (checksum_idx=(message_start_char_idx+1); checksum_idx<checksum_start_char_idx ; checksum_idx++) {
-			ck ^= nmea_rx_buf[checksum_idx]; // Exclusive OR of all characters between '$' and '*'.
-		}
+	if (checksum_start_char_idx >= NMEA_RX_BUFFER_SIZE) {
+		status = NEOM8N_ERROR_CHECKSUM_INDEX;
+		goto errors;
 	}
-	return ck;
+	// Compute checksum.
+	(*ck) = 0;
+	for (checksum_idx=(message_start_char_idx + 1); checksum_idx<checksum_start_char_idx ; checksum_idx++) {
+		(*ck) ^= nmea_rx_buf[checksum_idx]; // Exclusive OR of all characters between '$' and '*'.
+	}
+errors:
+	return status;
 }
 
 /* INDICATE IF A GPS TIMESTAMP IS VALID.
@@ -240,7 +246,8 @@ static NEOM8N_status_t NEOM8N_parse_nmea_zda(char* nmea_rx_buf, RTC_time_t* gps_
 	// Verify checksum.
 	status = NEOM8N_get_nmea_checksum(nmea_rx_buf, &received_checksum);
 	if (status != NEOM8N_SUCCESS) goto errors;
-	computed_checksum = NEOM8N_compute_nmea_checksum(nmea_rx_buf);
+	status = NEOM8N_compute_nmea_checksum(nmea_rx_buf, &computed_checksum);
+	if (status != NEOM8N_SUCCESS) goto errors;
 	if (computed_checksum != received_checksum) {
 		status = NEOM8N_ERROR_CHECKSUM;
 		goto errors;
@@ -367,7 +374,8 @@ static NEOM8N_status_t NEOM8N_parse_nmea_gga(char* nmea_rx_buf, NEOM8N_position_
 	// Verify checksum.
 	status = NEOM8N_get_nmea_checksum(nmea_rx_buf, &received_checksum);
 	if (status != NEOM8N_SUCCESS) goto errors;
-	computed_checksum = NEOM8N_compute_nmea_checksum(nmea_rx_buf);
+	status = NEOM8N_compute_nmea_checksum(nmea_rx_buf, &computed_checksum);
+	if (status != NEOM8N_SUCCESS) goto errors;
 	if (computed_checksum != received_checksum) {
 		status = NEOM8N_ERROR_CHECKSUM;
 		goto errors;
@@ -599,8 +607,9 @@ static void NEOM8N_stop(void) {
  * @return:	None.
  */
 void NEOM8N_init(void) {
-	// Init context.
+	// Local variables.
 	unsigned int idx = 0;
+	// Init context.
 	for (idx=0 ; idx<NMEA_RX_BUFFER_SIZE ; idx++) neom8n_ctx.rx_buf1[idx] = 0;
 	for (idx=0 ; idx<NMEA_RX_BUFFER_SIZE ; idx++) neom8n_ctx.rx_buf2[idx] = 0;
 	neom8n_ctx.line_end_flag = 0;
@@ -608,6 +617,28 @@ void NEOM8N_init(void) {
 	neom8n_ctx.gga_same_altitude_count = 0;
 	neom8n_ctx.gga_previous_altitude = 0;
 #endif
+}
+
+/* SWITCH DMA DESTINATION BUFFER (CALLED BY LPUART CM INTERRUPT).
+ * @param line_end_flag:	Indicates if characters match interrupt occured (LPUART).
+ * @return:					None.
+ */
+void NEOM8N_switch_dma_buffer(unsigned char line_end_flag) {
+	// Stop and start DMA transfer to switch buffer.
+	DMA1_stop_channel6();
+	// Switch buffer.
+	if (neom8n_ctx.fill_buf1 == 0) {
+		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
+		neom8n_ctx.fill_buf1 = 1;
+	}
+	else {
+		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
+		neom8n_ctx.fill_buf1 = 0;
+	}
+	// Update LF flag to start decoding or not.
+	neom8n_ctx.line_end_flag = line_end_flag;
+	// Restart DMA transfer.
+	DMA1_start_channel6();
 }
 
 /* GET GPS TIMESTAMP.
@@ -663,7 +694,7 @@ errors:
  * @param gps_position:			Pointer to GPS position structure that will contain the data.
  * @param timeout_seconds:		Timeout in seconds.
  * @param fix_duration_seconds:	Pointer that will contain effective fix duration.
- * @return return_code:			See NEOM8N_status_t structure in neom8n.h.
+ * @return status:				Function execution status.
  */
 NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds) {
 	// Local variables.
@@ -765,26 +796,4 @@ errors:
 	}
 	NEOM8N_stop();
 	return status;
-}
-
-/* SWITCH DMA DESTINATION BUFFER (CALLED BY LPUART CM INTERRUPT).
- * @param lf_flag:	Indicates if characters match interrupt occured (LPUART).
- * @return:			None.
- */
-void NEOM8N_switch_dma_buffer(unsigned char lf_flag) {
-	// Stop and start DMA transfer to switch buffer.
-	DMA1_stop_channel6();
-	// Switch buffer.
-	if (neom8n_ctx.fill_buf1 == 0) {
-		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Switch to buffer 1.
-		neom8n_ctx.fill_buf1 = 1;
-	}
-	else {
-		DMA1_set_channel6_dest_addr((unsigned int) &(neom8n_ctx.rx_buf2), NMEA_RX_BUFFER_SIZE); // Switch to buffer 2.
-		neom8n_ctx.fill_buf1 = 0;
-	}
-	// Update LF flag to start decoding or not.
-	neom8n_ctx.line_end_flag = lf_flag;
-	// Restart DMA transfer.
-	DMA1_start_channel6();
 }

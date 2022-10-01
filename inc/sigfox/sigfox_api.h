@@ -38,8 +38,8 @@
  * such as sending a bit, a frame or a sigfox out of band message.
  */
 
-#ifndef SIGFOX_API_H
-#define SIGFOX_API_H
+#ifndef __SIGFOX_API_H__
+#define __SIGFOX_API_H__
 
 #include "sigfox_types.h"
 
@@ -969,4 +969,4 @@ sfx_error_t SIGFOX_API_switch_public_key(sfx_bool use_public_key);
  *******************************************************************/
 sfx_error_t SIGFOX_API_set_rc_sync_period(sfx_u16 rc_sync_period);
 
-#endif /* SIGFOX_API_H */
+#endif /* __SIGFOX_API_H__ */

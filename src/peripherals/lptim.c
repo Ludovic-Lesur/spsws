@@ -106,7 +106,7 @@ void LPTIM1_init(unsigned int lsi_freq_hz) {
 /* DELAY FUNCTION.
  * @param delay_ms:		Number of milliseconds to wait.
  * @param stop_mode:	Enter stop mode during delay if non zero, block without interrupt otherwise.
- * @return:				None.
+ * @return status:		Function execution status.
  */
 LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode) {
 	// Local variables.
@@ -149,9 +149,9 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 		// Wait for flag.
 		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
 	}
+errors:
 	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-errors:
 	return status;
 }
 

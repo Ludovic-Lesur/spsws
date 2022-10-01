@@ -47,7 +47,7 @@ typedef struct {
 	unsigned char long_degrees;
 	unsigned char long_minutes;
 	unsigned int long_seconds; // = (fractionnal part of minutes * 100000).
-	unsigned char long_east_flag; // 0='O', 1='E'.
+	unsigned char long_east_flag; // 0='W', 1='E'.
 	// Altitude.
 	unsigned int altitude;
 } NEOM8N_position_t;
@@ -55,7 +55,7 @@ typedef struct {
 /*** NEOM8N user functions ***/
 
 void NEOM8N_init(void);
-void NEOM8N_switch_dma_buffer(unsigned char lf_flag);
+void NEOM8N_switch_dma_buffer(unsigned char line_end_flag);
 NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, unsigned int timeout_seconds);
 NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, unsigned int timeout_seconds, unsigned int* fix_duration_seconds);
 

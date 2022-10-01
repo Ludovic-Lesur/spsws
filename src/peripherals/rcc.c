@@ -33,11 +33,12 @@ static unsigned int rcc_sysclk_khz;
  * @return:	None.
  */
 static void RCC_delay(void) {
+	// Local variables.
 	unsigned int j = 0;
 	unsigned int loop_count = (19 * rcc_sysclk_khz) / 3; // Value for 100ms.
+	// Perform delay.
 	for (j=0 ; j<loop_count ; j++) {
-		// Poll a bit always read as '0'.
-		// This is required to avoid for loop removal by compiler (size optimization for HW1.0).
+		// Poll a bit always read as '0' (required to avoid compiler optimization).
 		if (((RCC -> CR) & (0b1 << 24)) != 0) {
 			break;
 		}
@@ -183,12 +184,12 @@ unsigned int RCC_get_sysclk_khz(void) {
 RCC_status_t RCC_enable_lsi(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
+	unsigned int loop_count = 0;
 	// Enable LSI.
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
 	// Wait for LSI to be stable.
-	unsigned int loop_count = 0;
 	while (((RCC -> CSR) & (0b1 << 1)) == 0) {
-		// Wait for LSIRDY='1' ir timeout.
+		// Wait for LSIRDY='1' or timeout.
 		RCC_delay();
 		loop_count++;
 		if (loop_count > RCC_TIMEOUT_COUNT) {

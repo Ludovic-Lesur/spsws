@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef SIGFOX_TYPES_H
-#define SIGFOX_TYPES_H
+#ifndef __SIGFOX_TYPES_H__
+#define __SIGFOX_TYPES_H__
 
 /****************************************************/
 /*!
@@ -72,4 +72,4 @@ typedef unsigned short      sfx_error_t;
  ***************************************************
  */
 
-#endif /* SIGFOX_TYPES_H */
+#endif /* __SIGFOX_TYPES_H__ */

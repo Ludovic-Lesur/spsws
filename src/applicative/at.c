@@ -234,10 +234,9 @@ static void AT_print_ok(void) {
 	AT_response_send();
 }
 
-/* PRINT AN ERROR THROUGH AT INTERFACE.
- * @param error_source:	8-bits error source.
- * @param error_code:	16-bits error code.
- * @return:				None.
+/* PRINT A STATUS THROUGH AT INTERFACE.
+ * @param status:	Status to print.
+ * @return:			None.
  */
 static void AT_print_status(ERROR_t status) {
 	AT_response_add_string("ERROR ");
@@ -1156,6 +1155,9 @@ static void AT_cw_callback(void) {
 			SIGFOX_API_error_check_print();
 			sx1232_status = SX1232_set_rf_output_power((unsigned char) power_dbm);
 			SX1232_error_check_print();
+			AT_response_add_string("SX1232 running...");
+			AT_response_add_string(AT_RESPONSE_END);
+			AT_response_send();
 		}
 	}
 	else {
@@ -1167,6 +1169,9 @@ static void AT_cw_callback(void) {
 		if (enable != 0) {
 			sigfox_api_status = SIGFOX_API_start_continuous_transmission((sfx_u32) frequency_hz, SFX_NO_MODULATION);
 			SIGFOX_API_error_check_print();
+			AT_response_add_string("SX1232 running...");
+			AT_response_add_string(AT_RESPONSE_END);
+			AT_response_send();
 		}
 	}
 	AT_print_ok();
@@ -1266,6 +1271,9 @@ static void AT_rssi_callback(void) {
 	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
 	LPTIM1_error_check_print();
 	// Measurement loop.
+	AT_response_add_string("SX1232 running...");
+	AT_response_add_string(AT_RESPONSE_END);
+	AT_response_send();
 	while (report_loop < ((duration_s * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
 		// Read RSSI.
 		sx1232_status = SX1232_get_rssi(&rssi_dbm);

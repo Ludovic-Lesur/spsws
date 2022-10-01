@@ -10,7 +10,6 @@
 #include "at.h"
 #include "exti.h"
 #include "exti_reg.h"
-#include "mode.h"
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"

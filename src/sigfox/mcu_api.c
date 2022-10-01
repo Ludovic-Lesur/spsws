@@ -8,7 +8,6 @@
 #include "mcu_api.h"
 
 #include "adc.h"
-#include "at.h"
 #include "aes.h"
 #include "exti.h"
 #include "iwdg.h"
@@ -18,11 +17,13 @@
 #include "pwr.h"
 #include "rtc.h"
 #include "sigfox_types.h"
-#include "spi.h"
+#ifdef ATM
+#include "at.h"
+#endif
 
 /*** MCU API local macros ***/
 
-#define MCU_API_MALLOC_BUFFER_SIZE		200
+#define MCU_API_MALLOC_BUFFER_SIZE	200
 
 /*** MCU API local structures ***/
 
@@ -77,9 +78,6 @@ errors:
  * \retval MCU_ERR_API_FREE:                     Free error
  *******************************************************************/
 sfx_u8 MCU_API_free(sfx_u8* ptr) {
-	// This is the only low level function called when library is closed.
-	// Calling power off function ensures that the radio is powered down if any error occured during Sigfox transmission.
-	SPI1_power_off();
 	return SFX_ERR_NONE;
 }
 
@@ -157,6 +155,7 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 		break;
 	default:
 		goto errors;
+		break;
 	}
 	return SFX_ERR_NONE;
 errors:
@@ -208,6 +207,7 @@ sfx_u8 MCU_API_aes_128_cbc_encrypt(sfx_u8* encrypted_data, sfx_u8* data_to_encry
 			break;
 		default:
 			goto errors;
+			break;
 	}
 	// Perform encryption.
 	for (block_idx=0; block_idx<(aes_block_len / AES_BLOCK_SIZE) ; block_idx++) {
@@ -252,19 +252,19 @@ sfx_u8 MCU_API_get_nv_mem(sfx_u8 read_data[SFX_NVMEM_BLOCK_SIZE]) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// PN.
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_PN, &(read_data[SFX_NVMEM_PN]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_PN + 0), &(read_data[SFX_NVMEM_PN + 0]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_PN + 1, &(read_data[SFX_NVMEM_PN + 1]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_PN + 1), &(read_data[SFX_NVMEM_PN + 1]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// Sequence number.
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER, &(read_data[SFX_NVMEM_MSG_COUNTER]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 0), &(read_data[SFX_NVMEM_MSG_COUNTER + 0]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 1, &(read_data[SFX_NVMEM_MSG_COUNTER + 1]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 1), &(read_data[SFX_NVMEM_MSG_COUNTER + 1]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// FH.
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_FH, &(read_data[SFX_NVMEM_FH]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_FH + 0), &(read_data[SFX_NVMEM_FH + 0]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_FH + 1, &(read_data[SFX_NVMEM_FH + 1]));
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_FH + 1), &(read_data[SFX_NVMEM_FH + 1]));
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// RL.
 	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_RL, &(read_data[SFX_NVMEM_RL]));
@@ -302,19 +302,19 @@ sfx_u8 MCU_API_set_nv_mem(sfx_u8 data_to_write[SFX_NVMEM_BLOCK_SIZE]) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// PN.
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_PN, data_to_write[SFX_NVMEM_PN]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_PN + 0), data_to_write[SFX_NVMEM_PN + 0]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_PN + 1, data_to_write[SFX_NVMEM_PN + 1]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_PN + 1), data_to_write[SFX_NVMEM_PN + 1]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// Sequence number.
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER, data_to_write[SFX_NVMEM_MSG_COUNTER]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 0), data_to_write[SFX_NVMEM_MSG_COUNTER + 0]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 1, data_to_write[SFX_NVMEM_MSG_COUNTER + 1]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER + 1), data_to_write[SFX_NVMEM_MSG_COUNTER + 1]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// FH.
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_FH, data_to_write[SFX_NVMEM_FH]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_FH + 0), data_to_write[SFX_NVMEM_FH + 0]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
-	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_FH + 1, data_to_write[SFX_NVMEM_FH + 1]);
+	nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_FH + 1), data_to_write[SFX_NVMEM_FH + 1]);
 	if (nvm_status != NVM_SUCCESS) goto errors;
 	// RL.
 	nvm_status = NVM_write_byte(NVM_ADDRESS_SIGFOX_RL, data_to_write[SFX_NVMEM_RL]);
@@ -428,6 +428,7 @@ sfx_u8 MCU_API_timer_wait_for_end(void) {
 	}
 	return SFX_ERR_NONE;
 errors:
+	RTC_stop_wakeup_timer();
 	return MCU_ERR_API_TIMER_END;
 }
 

@@ -61,7 +61,7 @@ void PWR_enter_stop_mode(void) {
 	PWR -> CR |= (0b1 << 2); // CWUF='1'.
 	// Enter stop mode when CPU enters deepsleep.
 	PWR -> CR &= ~(0b1 << 1); // PDDS='0'.
-	// Clear all EXTI line, peripherals interrupt pending bits.
+	// Clear all EXTI, RTC and peripherals interrupt pending bits.
 	RCC -> CICR |= 0x000001BF;
 	EXTI -> PR |= 0x007BFFFF; // PIFx='1'.
 	RTC -> ISR &= 0xFFFE035F; // Reset wake-up, tamper and timestamp flags.

@@ -38,8 +38,8 @@
  * This file includes the Sigfox RF and Protocol test modes functions to be used for the Sigfox RF and Protocol application
  */
 
-#ifndef ADDON_SIGFOX_RF_PROTOCOL_API_H
-#define ADDON_SIGFOX_RF_PROTOCOL_API_H
+#ifndef __ADDON_SIGFOX_RF_PROTOCOL_API_H__
+#define __ADDON_SIGFOX_RF_PROTOCOL_API_H__
 
 #include "sigfox_types.h"
 

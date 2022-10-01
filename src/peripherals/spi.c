@@ -74,6 +74,7 @@ SPI_status_t SPI1_power_on(void) {
 	GPIO_configure(&GPIO_SPI1_MISO, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
+	// Wait for power-on.
 	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0

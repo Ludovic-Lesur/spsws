@@ -18,6 +18,8 @@
 
 #define I2C_ACCESS_TIMEOUT_COUNT	1000000
 
+/*** I2C local functions ***/
+
 /* CLEAR ALL I2C PERIPHERAL FLAGS
  * @param:			None.
  * @return status:	Function execution status.

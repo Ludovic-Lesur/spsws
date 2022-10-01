@@ -111,15 +111,15 @@ void EXTI_init(void) {
 }
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
- * @param gpio:	GPIO to be attached to EXTI peripheral.
- * @trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
- * @return:		None.
+ * @param gpio:		GPIO to be attached to EXTI peripheral.
+ * @param trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
+ * @return:			None.
  */
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 	// Select GPIO port.
 	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] &= ~(0b1111 << (4 * ((gpio -> pin_index) % 4)));
 	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> pin_index) % 4)));
-	// Set mask and trigger.
+	// Set mask.
 	EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
 	// Select triggers.
 	EXTI_set_trigger(trigger, (gpio -> pin_index));
@@ -127,7 +127,7 @@ void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 
 /* CONFIGURE A LINE AS INTERNAL INTERRUPT SOURCE.
  * @param line:		Line to configure (see EXTI_line_t enum).
- * @edge_trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
+ * @param trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
  * @return:			None.
  */
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger) {

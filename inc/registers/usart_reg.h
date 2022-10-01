@@ -26,7 +26,9 @@ typedef struct {
 
 /*** USART base address ***/
 
+#ifdef HW2_0
 #define USART1	((USART_base_address_t*) ((unsigned int) 0x40013800))
+#endif
 #define USART2	((USART_base_address_t*) ((unsigned int) 0x40004400))
 
 #endif /* __USART_REG_H__ */

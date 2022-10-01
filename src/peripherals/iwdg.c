@@ -16,8 +16,8 @@
 /*** IWDG functions ***/
 
 /* INIT AND START INDEPENDENT WATCHDOG.
- * @param:				None.
- * @return status :		Function execution status.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
 IWDG_status_t IWDG_init(void) {
 	// Local variables.

@@ -28,8 +28,8 @@ static SHT3X_context_t sht3x_ctx;
 /*** SHT3x functions ***/
 
 /* PERFORM TEMPERATURE AND HUMIDITY MEASUREMENTS.
- * @param:			None.
- * @return status:	Function execution status.
+ * @param i2c_address:	Sensor address.
+ * @return status:		Function execution status.
  */
 SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address) {
 	// Local variables.

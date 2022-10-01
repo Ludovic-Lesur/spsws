@@ -27,7 +27,7 @@ typedef enum {
 
 /*** SHT3x functions ***/
 
-SHT3X_status_t SHT3X_perform_measurements(unsigned char sht3x_i2c_address);
+SHT3X_status_t SHT3X_perform_measurements(unsigned char i2c_address);
 void SHT3X_get_temperature(signed char* temperature_degrees);
 void SHT3X_get_humidity(unsigned char* humidity_percent);
 

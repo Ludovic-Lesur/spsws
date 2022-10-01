@@ -50,7 +50,7 @@ static void GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
 
 /* GET THE MODE OF A GPIO PIN.
  * @param gpio:			GPIO structure.
- * @return gpio_mode: 	Current mode (see enum defined in gpio.h).
+ * @return gpio_mode:	Current mode (see enum defined in gpio.h).
  */
 static GPIO_mode_t GPIO_get_mode(const GPIO_pin_t* gpio) {
 	// Get mode.

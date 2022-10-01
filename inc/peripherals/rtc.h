@@ -8,8 +8,6 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
-#include "mode.h"
-
 /*** RTC macros ***/
 
 #define RTC_LOCAL_UTC_OFFSET_WINTER		1

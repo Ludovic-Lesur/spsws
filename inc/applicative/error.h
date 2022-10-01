@@ -18,10 +18,14 @@
 #include "lpuart.h"
 #include "nvm.h"
 #include "rcc.h"
-#include "spi.h"
 #include "rtc.h"
+#include "spi.h"
 #include "tim.h"
 #include "usart.h"
+// Utils.
+#include "math.h"
+#include "parser.h"
+#include "string.h"
 // Components.
 #include "dps310.h"
 #include "max11136.h"
@@ -30,10 +34,6 @@
 #include "si1133.h"
 #include "sx1232.h"
 #include "wind.h"
-// Utils.
-#include "math.h"
-#include "parser.h"
-#include "string.h"
 
 /*** ERROR macros ***/
 

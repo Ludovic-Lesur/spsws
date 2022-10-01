@@ -136,8 +136,8 @@ errors:
 }
 
 /* RESET ALL NVM FIELDS TO DEFAULT VALUE.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
 NVM_status_t NVM_reset_default(void) {
 	// Local variables.

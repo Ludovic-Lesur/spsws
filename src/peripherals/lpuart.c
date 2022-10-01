@@ -13,9 +13,9 @@
 #include "mapping.h"
 #include "neom8n.h"
 #include "nvic.h"
-#include "string.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "string.h"
 
 /*** LPUART local macros ***/
 
@@ -109,8 +109,8 @@ errors:
 }
 
 /* POWER LPUART1 SLAVE OFF.
- * @param:			None.
- * @return status:	Function execution status.
+ * @param:	None.
+ * @return:	None.
  */
 void LPUART1_power_off(void) {
 	// Turn NEOM8N off.
@@ -123,8 +123,8 @@ void LPUART1_power_off(void) {
 }
 
 /* SEND A BYTE THROUGH LOW POWER UART.
- * @param byte_to_send:	Byte to send.
- * @return status:		Function execution status.
+ * @param tx_byte:	Byte to send.
+ * @return status:	Function execution status.
  */
 LPUART_status_t LPUART1_send_byte(unsigned char tx_byte) {
 	// Local variables.

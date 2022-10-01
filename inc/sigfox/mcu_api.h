@@ -28,8 +28,8 @@
  * for library usage.
  */
 
-#ifndef MCU_API_H
-#define MCU_API_H
+#ifndef __MCU_API_H__
+#define __MCU_API_H__
 
 #include "sigfox_api.h"
 #include "sigfox_types.h"
@@ -362,4 +362,4 @@ sfx_u8 MCU_API_get_msg_counter_rollover(e_sfx_msg_counter_rollover* msgCounterRo
  *******************************************************************/
 sfx_u8 MCU_API_get_initial_pac(sfx_u8 initial_pac[PAC_LENGTH]);
 
-#endif /* MCU_API_H */
+#endif /* __MCU_API_H__ */

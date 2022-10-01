@@ -70,7 +70,7 @@ errors:
 	return status;
 }
 
-/* PERFORM SEVERAL CONVERSIONS FOLLOWED BY A MEDIAN FIILTER.
+/* PERFORM SEVERAL CONVERSIONS FOLLOWED BY A MEDIAN FILTER.
  * @param adc_channel:			Channel to convert.
  * @param adc_result_12bits:	Pointer to int that will contain ADC filtered result on 12 bits.
  * @return status:				Function execution status.

@@ -16,7 +16,7 @@
 
 /*** SX1232 local macros ***/
 
-// Frequency range.
+// RF frequency range.
 #define SX1232_RF_FREQUENCY_HZ_MIN				862000000
 #define SX1232_RF_FREQUENCY_HZ_MAX				1020000000
 // TCXO and output clock frequency (DIO5).
