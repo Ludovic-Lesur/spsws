@@ -22,6 +22,7 @@
 #include "nvic.h"
 #include "nvm.h"
 #include "parser.h"
+#include "pwr.h"
 #include "rain.h"
 #include "rf_api.h"
 #include "rtc.h"
@@ -130,36 +131,37 @@ typedef struct {
 /*** AT local global variables ***/
 
 static const AT_command_t AT_COMMAND_LIST[] = {
-	{PARSER_MODE_COMMAND, "AT", "\0", "Ping command", _AT_print_ok},
-	{PARSER_MODE_COMMAND, "AT?", "\0", "List all available AT commands", _AT_print_command_list},
-	{PARSER_MODE_COMMAND, "AT$V?", "\0", "Get SW version", _AT_print_sw_version},
-	{PARSER_MODE_COMMAND, "AT$ERROR?", "\0", "Read error stack", _AT_print_error_stack},
+	{PARSER_MODE_COMMAND, "AT", STRING_NULL, "Ping command", _AT_print_ok},
+	{PARSER_MODE_COMMAND, "AT?", STRING_NULL, "List all available AT commands", _AT_print_command_list},
+	{PARSER_MODE_COMMAND, "AT$V?", STRING_NULL, "Get SW version", _AT_print_sw_version},
+	{PARSER_MODE_COMMAND, "AT$ERROR?", STRING_NULL, "Read error stack", _AT_print_error_stack},
+	{PARSER_MODE_COMMAND, "AT$RST", STRING_NULL, "Reset MCU", PWR_software_reset},
 #ifdef AT_COMMANDS_SENSORS
-	{PARSER_MODE_COMMAND, "AT$ADC?", "\0", "Get internal ADC measurements", _AT_adc_callback},
-	{PARSER_MODE_COMMAND, "AT$MAX11136?", "\0", "Get external ADC measurements (MAX11136)", _AT_max11136_callback},
+	{PARSER_MODE_COMMAND, "AT$ADC?", STRING_NULL, "Get internal ADC measurements", _AT_adc_callback},
+	{PARSER_MODE_COMMAND, "AT$MAX11136?", STRING_NULL, "Get external ADC measurements (MAX11136)", _AT_max11136_callback},
 #ifdef HW2_0
-	{PARSER_MODE_COMMAND, "AT$ITHS?", "\0", "Get internal PCB temperature and humidity (SHT30)", _AT_iths_callback},
+	{PARSER_MODE_COMMAND, "AT$ITHS?", STRING_NULL, "Get internal PCB temperature and humidity (SHT30)", _AT_iths_callback},
 #endif
-	{PARSER_MODE_COMMAND, "AT$ETHS?", "\0", "Get external temperature and humidity (SHT30)", _AT_eths_callback},
-	{PARSER_MODE_COMMAND, "AT$EPTS?", "\0", "Get pressure and temperature (DPS310)", _AT_epts_callback},
-	{PARSER_MODE_COMMAND, "AT$EUVS?", "\0", "Get UV (SI1133)", _AT_euvs_callback},
-	{PARSER_MODE_HEADER,  "AT$WIND=", "\0", "Enable or disable wind measurements", _AT_wind_callback},
-	{PARSER_MODE_HEADER,  "AT$RAIN=", "\0", "Enable or disable rain detection", _AT_rain_callback},
+	{PARSER_MODE_COMMAND, "AT$ETHS?", STRING_NULL, "Get external temperature and humidity (SHT30)", _AT_eths_callback},
+	{PARSER_MODE_COMMAND, "AT$EPTS?", STRING_NULL, "Get pressure and temperature (DPS310)", _AT_epts_callback},
+	{PARSER_MODE_COMMAND, "AT$EUVS?", STRING_NULL, "Get UV (SI1133)", _AT_euvs_callback},
+	{PARSER_MODE_HEADER,  "AT$WIND=", STRING_NULL, "Enable or disable wind measurements", _AT_wind_callback},
+	{PARSER_MODE_HEADER,  "AT$RAIN=", STRING_NULL, "Enable or disable rain detection", _AT_rain_callback},
 #endif
 #ifdef AT_COMMANDS_GPS
 	{PARSER_MODE_HEADER,  "AT$TIME=", "timeout[s]", "Get GPS time (NEOM8N)", _AT_time_callback},
 	{PARSER_MODE_HEADER,  "AT$GPS=", "timeout[s]", "Get GPS position (NEOM8N)", _AT_gps_callback},
 #endif
 #ifdef AT_COMMANDS_NVM
-	{PARSER_MODE_COMMAND, "AT$NVMR", "\0", "Reset NVM data", _AT_nvmr_callback},
+	{PARSER_MODE_COMMAND, "AT$NVMR", STRING_NULL, "Reset NVM data", _AT_nvmr_callback},
 	{PARSER_MODE_HEADER,  "AT$NVM=", "address[dec]", "Get NVM data", _AT_nvm_callback},
-	{PARSER_MODE_COMMAND, "AT$ID?", "\0", "Get Sigfox device ID", _AT_get_id_callback},
+	{PARSER_MODE_COMMAND, "AT$ID?", STRING_NULL, "Get Sigfox device ID", _AT_get_id_callback},
 	{PARSER_MODE_HEADER,  "AT$ID=", "id[hex]", "Set Sigfox device ID", _AT_set_id_callback},
-	{PARSER_MODE_COMMAND, "AT$KEY?", "\0", "Get Sigfox device key", _AT_get_key_callback},
+	{PARSER_MODE_COMMAND, "AT$KEY?", STRING_NULL, "Get Sigfox device key", _AT_get_key_callback},
 	{PARSER_MODE_HEADER,  "AT$KEY=", "key[hex]", "Set Sigfox device key", _AT_set_key_callback},
 #endif
 #ifdef AT_COMMANDS_SIGFOX
-	{PARSER_MODE_COMMAND, "AT$SO", "\0", "Sigfox send control message", _AT_so_callback},
+	{PARSER_MODE_COMMAND, "AT$SO", STRING_NULL, "Sigfox send control message", _AT_so_callback},
 	{PARSER_MODE_HEADER,  "AT$SB=", "data[bit],(bidir_flag[bit])", "Sigfox send bit", _AT_sb_callback},
 	{PARSER_MODE_HEADER,  "AT$SF=", "data[hex],(bidir_flag[bit])", "Sigfox send frame", _AT_sf_callback},
 #endif

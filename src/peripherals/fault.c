@@ -5,10 +5,10 @@
  *      Author: Ludo
  */
 
-#include "scb_reg.h"
 #include "gpio.h"
 #include "mapping.h"
 #include "mode.h"
+#include "pwr.h"
 #include "types.h"
 
 /* NON MASKABLE INTERRUPT HANDLER.
@@ -27,7 +27,7 @@ void __attribute__((optimize("-O0"))) NMI_Handler(void) {
 	}
 #else
 	// Trigger software reset.
-	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
+	PWR_software_reset();
 #endif
 }
 
@@ -47,7 +47,7 @@ void __attribute__((optimize("-O0"))) HardFault_Handler(void) {
 	}
 #else
 	// Trigger software reset.
-	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
+	PWR_software_reset();
 #endif
 }
 

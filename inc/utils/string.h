@@ -14,6 +14,7 @@
 /*** STRING macros ***/
 
 #define STRING_CHAR_NULL	'\0'
+#define STRING_NULL			"\0"
 #define STRING_CHAR_CR		'\r'
 #define STRING_CHAR_LF		'\n'
 #define STRING_CHAR_MINUS	'-'

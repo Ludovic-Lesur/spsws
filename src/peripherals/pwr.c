@@ -73,3 +73,12 @@ void PWR_enter_stop_mode(void) {
 	SCB -> SCR |= (0b1 << 2); // SLEEPDEEP='1'.
 	__asm volatile ("wfi"); // Wait For Interrupt core instruction.
 }
+
+/* FUNCTION TO FORCE A SOFTWARE RESET.
+ * @param:	None.
+ * @return:	None.
+ */
+void PWR_software_reset(void) {
+	// Trigger software reset.
+	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
+}
