@@ -21,7 +21,7 @@
  * @param:			None.
  * @return status:	Function execution status.
  */
-static NVM_status_t NVM_unlock(void) {
+static NVM_status_t _NVM_unlock(void) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
 	uint32_t loop_count = 0;
@@ -48,7 +48,7 @@ errors:
  * @param:			None.
  * @return status:	Function execution status.
  */
-static NVM_status_t NVM_lock(void) {
+static NVM_status_t _NVM_lock(void) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
 	uint32_t loop_count = 0;
@@ -92,12 +92,12 @@ NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data) {
 		goto errors;
 	}
 	// Unlock NVM.
-	status = NVM_unlock();
+	status = _NVM_unlock();
 	if (status != NVM_SUCCESS) goto errors;
 	// Read data.
 	(*data) = *((uint8_t*) (EEPROM_START_ADDRESS + address_offset));
 	// Lock NVM.
-	status = NVM_lock();
+	status = _NVM_lock();
 errors:
 	return status;
 }
@@ -117,7 +117,7 @@ NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data) {
 		goto errors;
 	}
 	// Unlock NVM.
-	status = NVM_unlock();
+	status = _NVM_unlock();
 	if (status != NVM_SUCCESS) goto errors;
 	// Write data.
 	(*((uint8_t*) (EEPROM_START_ADDRESS + address_offset))) = data;
@@ -131,7 +131,7 @@ NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data) {
 		}
 	}
 	// Lock NVM.
-	status = NVM_lock();
+	status = _NVM_lock();
 errors:
 	return status;
 }

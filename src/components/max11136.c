@@ -68,7 +68,7 @@ static MAX11136_context_t max11136_ctx;
  * @param valie:	Value to write in register.
  * @return status:	Function execution status.
  */
-static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_write_register(uint8_t addr, uint16_t value) {
+static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_register(uint8_t addr, uint16_t value) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
@@ -106,7 +106,7 @@ errors:
  * @param:			None.
  * @return status:	Function execution status.
  */
-static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_channels(void) {
+static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_channels(void) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
@@ -121,14 +121,14 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) MAX11136_convert_all_c
 	// Configure ADC.
 	// Single-ended unipolar (allready done at POR).
 	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
-	status = MAX11136_write_register(MAX11136_REG_ADC_CONFIG, 0x0200);
+	status = _MAX11136_write_register(MAX11136_REG_ADC_CONFIG, 0x0200);
 	if (status != MAX11136_SUCCESS) goto errors;
 	// Scan mode = standard internal: SCAN='0011'.
 	// Perform conversion from AIN0 to AIN7: CHSEL='0111'.
 	// Reset the FIFO: RESET='01'.
 	// Auto shutdown: PM='01'.
 	// Start conversion: SWCNV='1'.
-	status = MAX11136_write_register(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
+	status = _MAX11136_write_register(MAX11136_REG_ADC_MODE_CONTROL, 0x1BAA);
 	if (status != MAX11136_SUCCESS) goto errors;
 	// Wait for EOC to be pulled low.
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
@@ -213,7 +213,7 @@ MAX11136_status_t MAX11136_perform_measurements(void) {
 	// Perform conversion until all channels are successfully retrieved or maximum number of loops is reached.
 	idx = 0;
 	while (max11136_ctx.status != 0xFF) {
-		status = MAX11136_convert_all_channels();
+		status = _MAX11136_convert_all_channels();
 		if (status != MAX11136_SUCCESS) goto errors;
 		idx++;
 		if (idx > MAX11136_CONVERSION_LOOPS) {

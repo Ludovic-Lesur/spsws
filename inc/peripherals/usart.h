@@ -31,7 +31,7 @@ void USART1_init(void);
 #ifdef ATM
 void USARTx_enable_interrupt(void);
 void USARTx_disable_interrupt(void);
-USART_status_t USARTx_send_string(int8_t* tx_string);
+USART_status_t USARTx_send_string(char_t* tx_string);
 #endif
 
 #define USART_status_check(error_base) { if (usart_status != USART_SUCCESS) { status = error_base + usart_status; goto errors; }}

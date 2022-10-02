@@ -31,7 +31,7 @@ static uint8_t si1133_uv_index;
  * @param value_buf_length:	Number of values to write.
  * @return status:			Function execution status.
  */
-static SI1133_status_t SI1133_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value_buf, uint8_t value_buf_length) {
+static SI1133_status_t _SI1133_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value_buf, uint8_t value_buf_length) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
@@ -60,7 +60,7 @@ errors:
  * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
  * @return status:			Function execution status.
  */
-static SI1133_status_t SI1133_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
+static SI1133_status_t _SI1133_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
@@ -80,14 +80,14 @@ errors:
  * @param timeout_error:	Error to return in case of timeout.
  * @return:					Function execution status.
  */
-static SI1133_status_t SI1133_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, SI1133_status_t timeout_error) {
+static SI1133_status_t _SI1133_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, SI1133_status_t timeout_error) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	uint8_t reg_value = 0;
 	uint32_t loop_count_ms = 0;
 	// Read register.
-	status = SI1133_read_register(i2c_address, register_address, &reg_value);
+	status = _SI1133_read_register(i2c_address, register_address, &reg_value);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
@@ -101,7 +101,7 @@ static SI1133_status_t SI1133_wait_flag(uint8_t i2c_address, uint8_t register_ad
 			goto errors;
 		}
 		// Read register.
-		status = SI1133_read_register(i2c_address, register_address, &reg_value);
+		status = _SI1133_read_register(i2c_address, register_address, &reg_value);
 		if (status != SI1133_SUCCESS) goto errors;
 
 	}
@@ -115,7 +115,7 @@ errors:
  */
 
 // Function declaration for next function.
-static SI1133_status_t SI1133_send_command(uint8_t i2c_address, uint8_t command);
+static SI1133_status_t _SI1133_send_command(uint8_t i2c_address, uint8_t command);
 
 /* GET CURRENT COMMAND COUNTER.
  * @param i2c_address:		Sensor address.
@@ -123,19 +123,19 @@ static SI1133_status_t SI1133_send_command(uint8_t i2c_address, uint8_t command)
  * @param error_flag:		Pointer to 8-bits value that will contain command error flag.
  * @return status:			Function execution status.
  */
-static SI1133_status_t SI1133_get_status(uint8_t i2c_address, uint8_t* command_counter, uint8_t* error_flag) {
+static SI1133_status_t _SI1133_get_status(uint8_t i2c_address, uint8_t* command_counter, uint8_t* error_flag) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	uint8_t response0 = 0;
 	// Get counter.
-	status = SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
+	status = _SI1133_read_register(i2c_address, SI1133_REG_RESPONSE0, &response0);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Extract command counter and flag.
 	(*command_counter) = response0 & 0x0F;
 	(*error_flag) = response0 & 0x10;
 	// Reset counter when overflow.
 	if ((*command_counter) >= 0x0F) {
-		status = SI1133_send_command(i2c_address, SI1133_CMD_RESET_CMD_CTR);
+		status = _SI1133_send_command(i2c_address, SI1133_CMD_RESET_CMD_CTR);
 		if (status != SI1133_SUCCESS) goto errors;
 	}
 errors:
@@ -148,7 +148,7 @@ errors:
  * @param error_base:		Error base to use in case of error.
  * @return status:			Function execution status.
  */
-static SI1133_status_t SI1133_wait_for_command_completion(uint8_t i2c_address, uint8_t previous_counter, SI1133_status_t error_base) {
+static SI1133_status_t _SI1133_wait_for_command_completion(uint8_t i2c_address, uint8_t previous_counter, SI1133_status_t error_base) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
@@ -159,7 +159,7 @@ static SI1133_status_t SI1133_wait_for_command_completion(uint8_t i2c_address, u
 	// Wait for error or command counter change.
 	do {
 		// Read status register.
-		status = SI1133_get_status(i2c_address, &current_counter, &error_flag);
+		status = _SI1133_get_status(i2c_address, &current_counter, &error_flag);
 		if (status != SI1133_SUCCESS) goto errors;
 		// Check flag.
 		if (error_flag != 0) {
@@ -186,22 +186,22 @@ errors:
  * @param command:		Command to send.
  * @return status:		Function execution status.
  */
-static SI1133_status_t SI1133_send_command(uint8_t i2c_address, uint8_t command) {
+static SI1133_status_t _SI1133_send_command(uint8_t i2c_address, uint8_t command) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	uint8_t previous_counter = 0;
 	uint8_t error_flag = 0;
 	// Get current value of counter in RESPONSE0 register.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
-		status = SI1133_get_status(i2c_address, &previous_counter, &error_flag);
+		status = _SI1133_get_status(i2c_address, &previous_counter, &error_flag);
 		if (status != SI1133_SUCCESS) goto errors;
 	}
 	// Send command.
-	status = SI1133_write_register(i2c_address, SI1133_REG_COMMAND, &command, 1);
+	status = _SI1133_write_register(i2c_address, SI1133_REG_COMMAND, &command, 1);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Wait for completion.
 	if (command != SI1133_CMD_RESET_CMD_CTR) {
-		status = SI1133_wait_for_command_completion(i2c_address, previous_counter, SI1133_ERROR_COMMAND);
+		status = _SI1133_wait_for_command_completion(i2c_address, previous_counter, SI1133_ERROR_COMMAND);
 		if (status != SI1133_SUCCESS) goto errors;
 	}
 errors:
@@ -214,7 +214,7 @@ errors:
  * @param value:		Value to write in parameter.
  * @return status:		Function execution status.
  */
-static SI1133_status_t SI1133_set_parameter(uint8_t i2c_address, uint8_t parameter, uint8_t value) {
+static SI1133_status_t _SI1133_set_parameter(uint8_t i2c_address, uint8_t parameter, uint8_t value) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	uint8_t parameter_write_command[2];
@@ -224,13 +224,13 @@ static SI1133_status_t SI1133_set_parameter(uint8_t i2c_address, uint8_t paramet
 	parameter_write_command[0] = value;
 	parameter_write_command[1] = 0x80 + (parameter & 0x3F);
 	// Get current value of counter in RESPONSE0 register.
-	status = SI1133_get_status(i2c_address, &previous_counter, &error_flag);
+	status = _SI1133_get_status(i2c_address, &previous_counter, &error_flag);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Send command.
-	status = SI1133_write_register(i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
+	status = _SI1133_write_register(i2c_address, SI1133_REG_HOSTIN0, parameter_write_command, 2);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Wait for completion.
-	status = SI1133_wait_for_command_completion(i2c_address, previous_counter, SI1133_ERROR_PARAMETER);
+	status = _SI1133_wait_for_command_completion(i2c_address, previous_counter, SI1133_ERROR_PARAMETER);
 	if (status != SI1133_SUCCESS) goto errors;
 errors:
 	return status;
@@ -240,20 +240,20 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return status:		Function execution status.
  */
-static SI1133_status_t SI1133_configure(uint8_t si1133_i2c_address) {
+static SI1133_status_t _SI1133_configure(uint8_t si1133_i2c_address) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
 	uint8_t irq0_enable = 0x01;
 	// Configure channel 0 to compute UV index.
-	status = SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_CH_LIST, 0x01); // Enable channel 0.
+	status = _SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_CH_LIST, 0x01); // Enable channel 0.
 	if (status != SI1133_SUCCESS) goto errors;
-	status = SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCCONFIG0, 0x18); // ADCMUX='11000' (UV index).
+	status = _SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCCONFIG0, 0x18); // ADCMUX='11000' (UV index).
 	if (status != SI1133_SUCCESS) goto errors;
-	status = SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCSENS0, 0x71);
+	status = _SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCSENS0, 0x71);
 	if (status != SI1133_SUCCESS) goto errors;
-	status = SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCPOST0, 0x00); // 16-bits results.
+	status = _SI1133_set_parameter(si1133_i2c_address, SI1133_PARAM_ADCPOST0, 0x00); // 16-bits results.
 	if (status != SI1133_SUCCESS) goto errors;
-	status = SI1133_write_register(si1133_i2c_address, SI1133_REG_IRQ_ENABLE, &irq0_enable, 1);
+	status = _SI1133_write_register(si1133_i2c_address, SI1133_REG_IRQ_ENABLE, &irq0_enable, 1);
 	if (status != SI1133_SUCCESS) goto errors;
 errors:
 	return status;
@@ -271,22 +271,22 @@ SI1133_status_t SI1133_perform_measurements(uint8_t i2c_address) {
 	uint8_t response0 = 0;
 	uint16_t raw_uv = 0;
 	// Wait for sensor to be ready.
-	status = SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 5, SI1133_ERROR_READY);
+	status = _SI1133_wait_flag(i2c_address, SI1133_REG_RESPONSE0, 5, SI1133_ERROR_READY);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Configure sensor.
-	status = SI1133_configure(i2c_address);
+	status = _SI1133_configure(i2c_address);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Start conversion.
-	status = SI1133_send_command(i2c_address, SI1133_CMD_FORCE_CH);
+	status = _SI1133_send_command(i2c_address, SI1133_CMD_FORCE_CH);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Wait for conversion to complete (IRQ0='1').
-	status = SI1133_wait_flag(i2c_address, SI1133_REG_IRQ_STATUS, 0, SI1133_ERROR_TIMEOUT);
+	status = _SI1133_wait_flag(i2c_address, SI1133_REG_IRQ_STATUS, 0, SI1133_ERROR_TIMEOUT);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Get result.
-	status = SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT0, &response0);
+	status = _SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT0, &response0);
 	if (status != SI1133_SUCCESS) goto errors;
 	raw_uv |= (response0 << 8);
-	status = SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT1, &response0);
+	status = _SI1133_read_register(i2c_address, SI1133_REG_HOSTOUT1, &response0);
 	if (status != SI1133_SUCCESS) goto errors;
 	// Convert to UV index.
 	// UV index = k * ((m * raw^2) + raw) where k = 0.008284 = 1 / 121 and m = -0.000231 = -1 / 4329.

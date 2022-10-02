@@ -44,11 +44,11 @@ typedef enum {
 
 /*** STRING functions ***/
 
-STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, uint8_t print_prefix, int8_t* str);
-STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t data_length, uint8_t print_prefix, int8_t* str);
+STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, uint8_t print_prefix, char_t* str);
+STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t data_length, uint8_t print_prefix, char_t* str);
 
-STRING_status_t STRING_string_to_value(int8_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value);
-STRING_status_t STRING_hexadecimal_string_to_byte_array(int8_t* str, int8_t end_char, uint8_t* data, uint8_t* extracted_length);
+STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value);
+STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_char, uint8_t* data, uint8_t* extracted_length);
 
 #define STRING_status_check(error_base) { if (string_status != STRING_SUCCESS) { status = error_base + string_status; goto errors; }}
 #define STRING_error_check() { ERROR_status_check(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }

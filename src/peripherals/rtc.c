@@ -58,7 +58,7 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mode(void) {
+static RTC_status_t __attribute__((optimize("-O0"))) _RTC_enter_initialization_mode(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	uint32_t loop_count = 0;
@@ -82,7 +82,7 @@ static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mo
  * @param:	None.
  * @return:	None.
  */
-static void __attribute__((optimize("-O0"))) RTC_exit_initialization_mode(void) {
+static void __attribute__((optimize("-O0"))) _RTC_exit_initialization_mode(void) {
 	RTC -> ISR &= ~(0b1 << 7); // INIT='0'.
 }
 
@@ -122,13 +122,13 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uin
 	// Enable RTC and register access.
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
 	// Switch to LSI if RTC failed to enter initialization mode.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) {
 		// Try using LSI.
 		RTC_reset();
 		RCC -> CSR |= (0b10 << 16); // RTCSEL='10'.
 		RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
-		status = RTC_enter_initialization_mode();
+		status = _RTC_enter_initialization_mode();
 		if (status != RTC_SUCCESS) {
 			// Update flag.
 			(*rtc_use_lse) = 0;
@@ -160,7 +160,7 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uin
 	RTC -> CR |= (0b1 << 9); // Enable Alarm B.
 	// Configure wake-up timer.
 	RTC -> CR |= (0b100 << 0); // Wake-up timer clocked by RTC clock (1Hz).
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 	// Configure EXTI lines.
 	EXTI_configure_line(EXTI_LINE_RTC_ALARM, EXTI_TRIGGER_RISING_EDGE);
 	EXTI_configure_line(EXTI_LINE_RTC_WAKEUP_TIMER, EXTI_TRIGGER_RISING_EDGE);
@@ -211,13 +211,13 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time) {
 	units = (time -> seconds) - (tens * 10);
 	tr_value |= (tens << 4) | (units << 0);
 	// Enter initialization mode.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Perform update.
 	RTC -> TR = tr_value;
 	RTC -> DR = dr_value;
 	// Exit initialization mode and restart RTC.
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 errors:
 	return status;
 }
@@ -316,7 +316,7 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 		goto errors;
 	}
 	// Enable RTC and register access.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Configure wake-up timer.
 	RTC -> WUTR = (delay_seconds - 1);
@@ -326,7 +326,7 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	RTC -> CR |= (0b1 << 14); // WUTE='1'.
 	// Start timer.
 	RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 errors:
 	return status;
 }
@@ -339,11 +339,11 @@ RTC_status_t RTC_stop_wakeup_timer(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Enable RTC and register access.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Disable wake-up timer.
 	RTC -> CR &= ~(0b1 << 10);
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 	// Disable interrupt.
 	RTC -> CR &= ~(0b1 << 14); // WUTE='0'.
 errors:

@@ -75,7 +75,7 @@ static const uint32_t WIND_DIRECTION_ANGLE_TABLE[WIND_NUMBER_OF_DIRECTIONS] = {1
  * @param direction_mv:	Voltage divider output voltage in mV.
  * @return:				None.
  */
-static void WIND_voltage_to_angle(uint32_t ratio) {
+static void _WIND_voltage_to_angle(uint32_t ratio) {
 	// Local variables.
 	uint8_t idx = 0;
 	// Get corresponding angle.
@@ -292,7 +292,7 @@ WIND_status_t WIND_measurement_period_callback(void) {
 			max11136_status = MAX11136_get_data(MAX11136_DATA_WIND_DIRECTION_RATIO, &wind_direction_ratio);
 			MAX11136_status_check(WIND_ERROR_BASE_MAX11136)
 			// Convert voltage to direction.
-			WIND_voltage_to_angle(wind_direction_ratio);
+			_WIND_voltage_to_angle(wind_direction_ratio);
 #endif
 			// Add new vector: x=speed*cos(angle) and y=speed*sin(angle).
 			wind_ctx.direction_x += (wind_ctx.speed_mh / 1000) * (int32_t) MATH_COS_TABLE[wind_ctx.direction_degrees];

@@ -25,7 +25,7 @@
  * @param:			None.
  * @return status:	Function execution status.
  */
-static I2C_status_t I2C1_clear(void) {
+static I2C_status_t _I2C1_clear(void) {
 	// Local variables.
 	I2C_status_t status = I2C_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
@@ -105,7 +105,7 @@ I2C_status_t I2C1_write(uint8_t slave_address, uint8_t* tx_buf, uint8_t tx_buf_l
 	uint32_t loop_count = 0;
 	uint8_t idx = 0;
 	// Clear peripheral.
-	I2C1_clear();
+	_I2C1_clear();
 	// Wait for I2C bus to be ready.
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
 		// Wait for BUSY='0' or timeout.
@@ -190,7 +190,7 @@ I2C_status_t I2C1_read(uint8_t slave_address, uint8_t* rx_buf, uint8_t rx_buf_le
 	uint32_t loop_count = 0;
 	uint8_t idx = 0;
 	// Clear peripheral.
-	I2C1_clear();
+	_I2C1_clear();
 	// Wait for I2C bus to be ready.
 	while (((I2C1 -> ISR) & (0b1 << 15)) != 0) {
 		// Wait for BUSY='0' or timeout.

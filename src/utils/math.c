@@ -20,7 +20,7 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
  * @param data_length:	Length of the input buffer.
  * @return min:			Minimum value of the buffer.
  */
-#define MATH_min(data, data_length) { \
+#define _MATH_min(data, data_length) { \
 	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		if (data[idx] < min) { \
@@ -35,7 +35,7 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
  * @param data_length:	Length of the input buffer.
  * @return min:			Minimum value of the buffer.
  */
-#define MATH_max(data, data_length) { \
+#define _MATH_max(data, data_length) { \
 	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		if (data[idx] > max) { \
@@ -50,7 +50,7 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
  * @param data_length:	Length of the input buffer.
  * @return average:		Mean value of the buffer.
  */
-#define MATH_average(data, data_length) { \
+#define _MATH_average(data, data_length) { \
 	uint8_t idx = 0; \
 	for (idx=0 ; idx<data_length ; idx++) { \
 		average = ((average * idx) + data[idx]) / (idx + 1); \
@@ -64,7 +64,7 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
  * @param average_length:	Number of center elements taken for final average.
  * @return filter_out:		Output value of the median filter.
  */
-#define MATH_median_filter(data, median_length, average_length) { \
+#define _MATH_median_filter(data, median_length, average_length) { \
 	uint8_t buffer_sorted = 0; \
 	uint8_t idx1 = 0; \
 	uint8_t idx2 = 0; \
@@ -128,7 +128,7 @@ uint8_t MATH_min_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
 	uint8_t min = 0xFF;
 	// Compute minimum value.
-	MATH_min(data, data_length);
+	_MATH_min(data, data_length);
 }
 
 /* GET MINIMUM VALUE OF A 16-BITS VALUES ARRAY.
@@ -140,7 +140,7 @@ uint16_t MATH_min_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
 	uint16_t min = 0xFFFF;
 	// Compute minimum value.
-	MATH_min(data, data_length);
+	_MATH_min(data, data_length);
 }
 
 /* GET MINIMUM VALUE OF A 32-BITS VALUES ARRAY.
@@ -152,7 +152,7 @@ uint32_t MATH_min_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
 	uint32_t min = 0xFFFFFFFF;
 	// Compute minimum value.
-	MATH_min(data, data_length);
+	_MATH_min(data, data_length);
 }
 
 /* GET MAXIMUM VALUE OF A 8-BITS VALUES ARRAY.
@@ -164,7 +164,7 @@ uint8_t MATH_max_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
 	uint8_t max = 0;
 	// Compute minimum value.
-	MATH_max(data, data_length);
+	_MATH_max(data, data_length);
 }
 
 /* GET MAXIMUM VALUE OF A 16-BITS VALUES ARRAY.
@@ -176,7 +176,7 @@ uint16_t MATH_max_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
 	uint16_t max = 0;
 	// Compute minimum value.
-	MATH_max(data, data_length);
+	_MATH_max(data, data_length);
 }
 
 /* GET MAXIMUM VALUE OF A 32-BITS VALUES ARRAY.
@@ -188,7 +188,7 @@ uint32_t MATH_max_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
 	uint32_t max = 0;
 	// Compute minimum value.
-	MATH_max(data, data_length);
+	_MATH_max(data, data_length);
 }
 
 /* COMPUTE AVERAGE VALUE OF A 8-BITS VALUES ARRAY.
@@ -200,7 +200,7 @@ uint8_t MATH_average_u8(uint8_t* data, uint8_t data_length) {
 	// Local variables.
 	uint8_t average = 0;
 	// Compute average.
-	MATH_average(data, data_length);
+	_MATH_average(data, data_length);
 }
 
 /* COMPUTE AVERAGE VALUE OF A 16-BITS VALUES ARRAY.
@@ -212,7 +212,7 @@ uint16_t MATH_average_u16(uint16_t* data, uint8_t data_length) {
 	// Local variables.
 	uint16_t average = 0;
 	// Compute average.
-	MATH_average(data, data_length);
+	_MATH_average(data, data_length);
 }
 
 /* COMPUTE AVERAGE VALUE OF A 32-BITS VALUES ARRAY.
@@ -224,7 +224,7 @@ uint32_t MATH_average_u32(uint32_t* data, uint8_t data_length) {
 	// Local variables.
 	uint32_t average = 0;
 	// Compute average.
-	MATH_average(data, data_length);
+	_MATH_average(data, data_length);
 }
 
 /* COMPUTE AVERAGE MEDIAN VALUE OF A 8-BITS VALUES ARRAY.
@@ -241,7 +241,7 @@ uint8_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t aver
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
 	// Compute median filter.
-	MATH_median_filter(data, median_length, average_length);
+	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
 	filter_out = (average_length > 0)? MATH_average_u8(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
 	return filter_out;
@@ -261,7 +261,7 @@ uint16_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t a
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
 	// Compute median filter.
-	MATH_median_filter(data, median_length, average_length);
+	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
 	filter_out = (average_length > 0)? MATH_average_u16(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
 	return filter_out;
@@ -281,7 +281,7 @@ uint32_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t a
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
 	// Compute median filter.
-	MATH_median_filter(data, median_length, average_length);
+	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
 	filter_out = (average_length > 0)? MATH_average_u32(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
 	return filter_out;

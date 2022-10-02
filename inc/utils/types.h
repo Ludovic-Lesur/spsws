@@ -8,6 +8,8 @@
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
+typedef char				char_t;
+
 typedef signed char			int8_t;
 typedef unsigned char		uint8_t;
 

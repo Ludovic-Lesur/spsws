@@ -276,7 +276,7 @@ static SPSWS_context_t spsws_ctx;
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_reset_measurements(void) {
+static void _SPSWS_reset_measurements(void) {
 	// Weather data
 	spsws_ctx.measurements.tamb_degrees.count = 0;
 	spsws_ctx.measurements.tamb_degrees.full_flag = 0;
@@ -309,7 +309,7 @@ static void SPSWS_reset_measurements(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_init_context(void) {
+static void _SPSWS_init_context(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Init context.
@@ -321,7 +321,7 @@ static void SPSWS_init_context(void) {
 	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	spsws_ctx.status.station_mode = SPSWS_MODE;
 	spsws_ctx.seconds_counter = 0;
-	SPSWS_reset_measurements();
+	_SPSWS_reset_measurements();
 #ifdef FLOOD_DETECTION
 	spsws_ctx.flood_level = 0;
 	spsws_ctx.flood_level_change_count = 0;
@@ -342,7 +342,7 @@ static void SPSWS_init_context(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_mcu_clock_wake_up(void) {
+static void _SPSWS_mcu_clock_wake_up(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	// Turn HSE on.
@@ -363,7 +363,7 @@ static void SPSWS_mcu_clock_wake_up(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_rf_clock_wake_up(void) {
+static void _SPSWS_rf_clock_wake_up(void) {
 	// Local variables.
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Turn RF TCXO on.
@@ -376,7 +376,7 @@ static void SPSWS_rf_clock_wake_up(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_clock_sleep(void) {
+static void _SPSWS_clock_sleep(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
@@ -393,7 +393,7 @@ static void SPSWS_clock_sleep(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_init_hw(void) {
+static void _SPSWS_init_hw(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	NVM_status_t nvm_status = NVM_SUCCESS;
@@ -430,7 +430,7 @@ static void SPSWS_init_hw(void) {
 #endif
 	// High speed oscillator.
 	IWDG_reload();
-	SPSWS_mcu_clock_wake_up();
+	_SPSWS_mcu_clock_wake_up();
 	// Get LSI effective frequency (must be called after HSx initialization and before RTC initialization).
 	rcc_status = RCC_get_lsi_frequency(&spsws_ctx.lsi_frequency_hz);
 	RCC_error_check();
@@ -499,7 +499,7 @@ static void SPSWS_init_hw(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_update_time_flags(void) {
+static void _SPSWS_update_time_flags(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	uint8_t nvm_byte = 0;
@@ -552,7 +552,7 @@ static void SPSWS_update_time_flags(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_update_pwut(void) {
+static void _SPSWS_update_pwut(void) {
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Retrieve current time from RTC.
@@ -576,7 +576,7 @@ static void SPSWS_update_pwut(void) {
  * @param:	None.
  * @return:	None.
  */
-static void SPSWS_compute_final_measurements(void) {
+static void _SPSWS_compute_final_measurements(void) {
 	// Local variables.
 	uint8_t data_length = 0;
 	// Temperature
@@ -621,8 +621,8 @@ static void SPSWS_compute_final_measurements(void) {
  */
 int32_t main (void) {
 	// Init board.
-	SPSWS_init_context();
-	SPSWS_init_hw();
+	_SPSWS_init_context();
+	_SPSWS_init_hw();
 	// Local variables.
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
@@ -651,7 +651,7 @@ int32_t main (void) {
 		switch (spsws_ctx.state) {
 		case SPSWS_STATE_STARTUP:
 			IWDG_reload();
-			SPSWS_rf_clock_wake_up();
+			_SPSWS_rf_clock_wake_up();
 			// Fill reset reason and software version.
 			spsws_ctx.sigfox_startup_data.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
 			spsws_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
@@ -676,13 +676,13 @@ int32_t main (void) {
 		case SPSWS_STATE_WAKEUP:
 			IWDG_reload();
 			// Update flags.
-			SPSWS_update_time_flags();
+			_SPSWS_update_time_flags();
 			// Check alarm flag..
 			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
 				// Check hour change flag.
 				if (spsws_ctx.flags.hour_changed != 0) {
 					// Fixed hour wake-up.
-					SPSWS_update_pwut();
+					_SPSWS_update_pwut();
 					// Check if day changed.
 					if (spsws_ctx.flags.day_changed != 0) {
 						// Reset daily flags.
@@ -696,8 +696,8 @@ int32_t main (void) {
 					}
 					spsws_ctx.flags.hour_changed = 0; // Reset flag.
 					// Switch to external clock.
-					SPSWS_mcu_clock_wake_up();
-					SPSWS_rf_clock_wake_up();
+					_SPSWS_mcu_clock_wake_up();
+					_SPSWS_rf_clock_wake_up();
 					// Next state.
 					spsws_ctx.state = SPSWS_STATE_MEASURE;
 				}
@@ -733,7 +733,7 @@ int32_t main (void) {
 				RTC_error_check();
 				// Update PWUT when first calibration.
 				if (spsws_ctx.status.first_rtc_calibration == 0) {
-					SPSWS_update_pwut();
+					_SPSWS_update_pwut();
 				}
 				// Update calibration flags.
 				spsws_ctx.status.first_rtc_calibration = 1;
@@ -893,8 +893,8 @@ int32_t main (void) {
 			// Check alarm flag.
 			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
 				// Compute average data.
-				SPSWS_compute_final_measurements();
-				SPSWS_reset_measurements();
+				_SPSWS_compute_final_measurements();
+				_SPSWS_reset_measurements();
 				// Send data.
 				spsws_ctx.state = SPSWS_STATE_MONITORING;
 			}
@@ -1041,7 +1041,7 @@ int32_t main (void) {
 		case SPSWS_STATE_OFF:
 			IWDG_reload();
 			// Disable HSE.
-			SPSWS_clock_sleep();
+			_SPSWS_clock_sleep();
 			// Clear flags.
 			spsws_ctx.flags.por = 0;
 			spsws_ctx.flags.wake_up = 0;
@@ -1137,10 +1137,10 @@ int32_t main (void) {
  */
 int32_t main (void) {
 	// Init board.
-	SPSWS_init_context();
-	SPSWS_init_hw();
+	_SPSWS_init_context();
+	_SPSWS_init_hw();
 	// Turn RF TCXO on.
-	SPSWS_rf_clock_wake_up();
+	_SPSWS_rf_clock_wake_up();
 	// Enable alarm interrupt to wake-up every seconds to clear watchdog.
 	RTC_clear_alarm_b_flag();
 	RTC_enable_alarm_b_interrupt();

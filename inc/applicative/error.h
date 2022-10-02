@@ -96,7 +96,7 @@ uint8_t ERROR_stack_is_empty(void);
 #define ERROR_status_check_print(status, success, error_base) { \
 	if (status != success) { \
 		ERROR_stack_add(error_base + status); \
-		AT_print_status(error_base + status); \
+		_AT_print_status(error_base + status); \
 		goto errors; \
 	} \
 }

@@ -32,17 +32,17 @@ typedef enum {
 } PARSER_mode_t;
 
 typedef struct {
-    int8_t* rx_buf;
-    uint32_t rx_buf_length;
-    uint8_t start_idx;
-    uint8_t separator_idx;
+	char_t* rx_buf;
+	uint32_t rx_buf_length;
+	uint8_t start_idx;
+	uint8_t separator_idx;
 } PARSER_context_t;
 
 /*** PARSER functions ***/
 
-PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, int8_t* ref);
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, int8_t separator, int32_t* param);
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, int8_t separator, uint8_t max_length, uint8_t exact_length, uint8_t* param, uint8_t* extracted_length);
+PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char_t* ref);
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char_t separator, int32_t* param);
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separator, uint8_t max_length, uint8_t exact_length, uint8_t* param, uint8_t* extracted_length);
 
 #define PARSER_status_check(error_base) { if (parser_status != PARSER_SUCCESS) { status = error_base + parser_status; goto errors; }}
 #define PARSER_error_check() { ERROR_status_check(parser_status, PARSER_SUCCESS, ERROR_BASE_PARSER); }

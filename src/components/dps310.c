@@ -51,7 +51,7 @@ static DPS310_context_t dps310_ctx;
  * @param value:			Value to write in the selected register.
  * @return status			Function execution status.
  */
-static DPS310_status_t DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
+static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
@@ -69,7 +69,7 @@ errors:
  * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
  * @return status			Function execution status.
  */
-static DPS310_status_t DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
+static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
@@ -90,14 +90,14 @@ errors:
  * @param timeout_error:	Error to return in case of timeout.
  * @return:					Function execution status.
  */
-static DPS310_status_t DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
+static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	uint8_t reg_value = 0;
 	uint32_t loop_count_ms = 0;
 	// Read register.
-	status = DPS310_read_register(i2c_address, register_address, &reg_value);
+	status = _DPS310_read_register(i2c_address, register_address, &reg_value);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
@@ -111,7 +111,7 @@ static DPS310_status_t DPS310_wait_flag(uint8_t i2c_address, uint8_t register_ad
 			goto errors;
 		}
 		// Read register.
-		status = DPS310_read_register(i2c_address, register_address, &reg_value);
+		status = _DPS310_read_register(i2c_address, register_address, &reg_value);
 		if (status != DPS310_SUCCESS) goto errors;
 	}
 errors:
@@ -122,7 +122,7 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return status		Function execution status.
  */
-static DPS310_status_t DPS310_read_calibration_coefficients(uint8_t i2c_address) {
+static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
@@ -142,7 +142,7 @@ static DPS310_status_t DPS310_read_calibration_coefficients(uint8_t i2c_address)
 	uint32_t c21 = 0;
 	uint32_t c30 = 0;
 	// Wait for coefficients to be ready for reading.
-	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
+	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients with auto-increment method.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
@@ -189,34 +189,34 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return status		Function execution status.
  */
-static DPS310_status_t DPS310_compute_raw_temperature(uint8_t i2c_address) {
+static DPS310_status_t _DPS310_compute_raw_temperature(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t read_byte = 0;
 	uint32_t tmp_raw = 0;
 	// Wait for sensor to be ready.
-	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
+	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Trigger temperature measurement.
-	status = DPS310_write_register(i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
+	status = _DPS310_write_register(i2c_address, DPS310_REG_TMP_CFG, 0x80); // External sensor, rate=1meas/s, no oversampling.
 	if (status != DPS310_SUCCESS) goto errors;
-	status = DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x02);
+	status = _DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x02);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for temperature to be ready.
-	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 5, DPS310_ERROR_TEMPERATURE_TIMEOUT);
+	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 5, DPS310_ERROR_TEMPERATURE_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read temperature.
 	// B2.
-	status = DPS310_read_register(i2c_address, DPS310_REG_TMP_B2, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_TMP_B2, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	tmp_raw |= (read_byte << 16);
 	// B1.
-	status = DPS310_read_register(i2c_address, DPS310_REG_TMP_B1, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_TMP_B1, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	tmp_raw |= (read_byte << 8);
 	// B0.
-	status = DPS310_read_register(i2c_address, DPS310_REG_TMP_B0, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_TMP_B0, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	tmp_raw |= read_byte;
 	// Compute two complement.
@@ -230,34 +230,34 @@ errors:
  * @param i2c_address:	Sensor address.
  * @return:				Function execution status.
  */
-static DPS310_status_t DPS310_compute_raw_pressure(uint8_t i2c_address) {
+static DPS310_status_t _DPS310_compute_raw_pressure(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t read_byte = 0;
 	uint32_t prs_raw = 0;
 	// Wait for sensor to be ready.
-	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
+	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 6, DPS310_ERROR_SENSOR_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Trigger pressure measurement.
-	status = DPS310_write_register(i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
+	status = _DPS310_write_register(i2c_address, DPS310_REG_PRS_CFG, 0x01); // Rate=1meas/s, no oversampling.
 	if (status != DPS310_SUCCESS) goto errors;
-	status = DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x01);
+	status = _DPS310_write_register(i2c_address, DPS310_REG_MEAS_CFG, 0x01);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Wait for pressure to be ready.
-	status = DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 4, DPS310_ERROR_PRESSURE_TIMEOUT);
+	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 4, DPS310_ERROR_PRESSURE_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read pressure.
 	// B2.
-	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B2, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_PRS_B2, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= (read_byte << 16);
 	// B1.
-	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B1, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_PRS_B1, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= (read_byte << 8);
 	// B0.
-	status = DPS310_read_register(i2c_address, DPS310_REG_PRS_B0, &read_byte);
+	status = _DPS310_read_register(i2c_address, DPS310_REG_PRS_B0, &read_byte);
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= read_byte;
 	// Compute two complement.
@@ -289,13 +289,13 @@ DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	dps310_ctx.tmp_raw = 0;
 	dps310_ctx.prs_raw = 0;
 	// Compute raw results.
-	status = DPS310_compute_raw_temperature(i2c_address);
+	status = _DPS310_compute_raw_temperature(i2c_address);
 	if (status != DPS310_SUCCESS) goto errors;
-	status = DPS310_compute_raw_pressure(i2c_address);
+	status = _DPS310_compute_raw_pressure(i2c_address);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read calibration coefficients if needed.
 	if (dps310_ctx.coef_ready == 0) {
-		status = DPS310_read_calibration_coefficients(i2c_address);
+		status = _DPS310_read_calibration_coefficients(i2c_address);
 	}
 errors:
 	return status;

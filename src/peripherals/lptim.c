@@ -51,7 +51,7 @@ void __attribute__((optimize("-O0"))) LPTIM1_IRQHandler(void) {
  * @param arr_value:	ARR register value to write.
  * @return status:		Function execution status.
  */
-static LPTIM_status_t LPTIM1_write_arr(uint32_t arr_value) {
+static LPTIM_status_t _LPTIM1_write_arr(uint32_t arr_value) {
 	// Local variables.
 	LPTIM_status_t status = LPTIM_SUCCESS;
 	uint32_t loop_count = 0;
@@ -129,7 +129,7 @@ LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode) {
 	LPTIM1 -> ICR |= (0b1111111 << 0);
 	// Compute ARR value.
 	arr = ((delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
-	status = LPTIM1_write_arr(arr);
+	status = _LPTIM1_write_arr(arr);
 	if (status != LPTIM_SUCCESS) goto errors;
 	// Perform delay with the selected mode.
 	if (stop_mode != 0) {
@@ -170,7 +170,7 @@ LPTIM_status_t LPTIM1_start(void) {
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
 	LPTIM1 -> CNT &= 0xFFFF0000;
 	// Set ARR to maximum value (unused).
-	status = LPTIM1_write_arr(0xFFFF);
+	status = _LPTIM1_write_arr(0xFFFF);
 	if (status != LPTIM_SUCCESS) goto errors;
 	// Start timer.
 	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.

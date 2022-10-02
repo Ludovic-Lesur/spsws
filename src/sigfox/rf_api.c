@@ -125,7 +125,7 @@ static RF_api_context_t rf_api_ctx;
  * @param modulation:	Modulation type asked by Sigfox library.
  * @return status:		Function execution status.
  */
-static sfx_u8 RF_API_set_tx_modulation_parameters(sfx_modulation_type_t modulation) {
+static sfx_u8 _RF_API_set_tx_modulation_parameters(sfx_modulation_type_t modulation) {
 	// Init common parameters.
 	rf_api_ctx.phase_shift_required = 0;
 	rf_api_ctx.frequency_shift_direction = 0;
@@ -156,7 +156,7 @@ errors:
  * @param:	None.
  * @return:	None.
  */
-static void RF_API_set_rf_path(sfx_rf_mode_t rf_mode) {
+static void _RF_API_set_rf_path(sfx_rf_mode_t rf_mode) {
 	// Select TX / RX.
 	switch (rf_mode) {
 	case SFX_RF_MODE_TX:
@@ -214,7 +214,7 @@ sfx_u8 RF_API_init(sfx_rf_mode_t rf_mode) {
 	sx1232_status = SX1232_set_oscillator(SX1232_OSCILLATOR_TCXO);
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Configure switch.
-	RF_API_set_rf_path(rf_mode);
+	_RF_API_set_rf_path(rf_mode);
 	// Configure transceiver.
 	uint8_t downlink_sync_word[2] = {0xB2, 0x27};
 	switch (rf_mode) {
@@ -330,7 +330,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Disable RTC interrupt during radio processing.
 	NVIC_disable_interrupt(NVIC_IT_RTC);
 	// Set modulation parameters.
-	rf_api_status = RF_API_set_tx_modulation_parameters(type);
+	rf_api_status = _RF_API_set_tx_modulation_parameters(type);
 	if (rf_api_status != SFX_ERR_NONE) goto errors;
 	// Compute frequency shift duration required to invert signal phase.
 	// Compensate transceiver synthetizer step by programming and reading effective frequencies.

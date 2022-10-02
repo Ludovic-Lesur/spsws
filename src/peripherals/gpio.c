@@ -24,7 +24,7 @@
  * @param mode:	Mode (see enum defined in gpio.h).
  * @return:		None.
  */
-static void GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
+static void _GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
 	// Set analog mode during transition.
 	(gpio -> port_address) -> MODER |= (0b11 << (2 * (gpio -> pin_index))); // MODERy = '11'.
 	// Set required bits.
@@ -53,7 +53,7 @@ static void GPIO_set_mode(const GPIO_pin_t* gpio, GPIO_mode_t mode) {
  * @param gpio:			GPIO structure.
  * @return gpio_mode:	Current mode (see enum defined in gpio.h).
  */
-static GPIO_mode_t GPIO_get_mode(const GPIO_pin_t* gpio) {
+static GPIO_mode_t _GPIO_get_mode(const GPIO_pin_t* gpio) {
 	// Get mode.
 	GPIO_mode_t gpio_mode = (((gpio -> port_address) -> MODER) & (0b11 << (2 * (gpio -> pin_index)))) >> (2 * (gpio -> pin_index));
 	return gpio_mode;
@@ -64,7 +64,7 @@ static GPIO_mode_t GPIO_get_mode(const GPIO_pin_t* gpio) {
  * @param output_type: 	Output type (see enum defined in gpio.h).
  * @return:				None.
  */
-static void GPIO_set_output_type(const GPIO_pin_t* gpio, GPIO_output_type_t output_type) {
+static void _GPIO_set_output_type(const GPIO_pin_t* gpio, GPIO_output_type_t output_type) {
 	// Set bit.
 	switch(output_type) {
 	case GPIO_TYPE_PUSH_PULL:
@@ -85,7 +85,7 @@ static void GPIO_set_output_type(const GPIO_pin_t* gpio, GPIO_output_type_t outp
  * @param output_speed: Output speed (see enum defined in gpio.h).
  * @return:				None.
  */
-static void GPIO_set_output_speed(const GPIO_pin_t* gpio, GPIO_output_speed_t output_speed) {
+static void _GPIO_set_output_speed(const GPIO_pin_t* gpio, GPIO_output_speed_t output_speed) {
 	// Set low speed during transition.
 	(gpio -> port_address) -> OSPEEDR &= ~(0b11 << (2 * (gpio -> pin_index)));
 	// Set required bits.
@@ -115,7 +115,7 @@ static void GPIO_set_output_speed(const GPIO_pin_t* gpio, GPIO_output_speed_t ou
  * @param pull_resistor: 	Resistor configuration (see enum defined in gpio.h).
  * @return:					None.
  */
-static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t pull_resistor) {
+static void _GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t pull_resistor) {
 	// Disable resistors during transition.
 	(gpio -> port_address) -> PUPDR &= ~(0b11 << (2 * (gpio -> pin_index)));
 	// Set required bits.
@@ -141,7 +141,7 @@ static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t 
  * @param alternate_function_index:	Alternate function number (0 to 15).
  * @return:							None.
  */
-static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, uint32_t alternate_function_index) {
+static void _GPIO_set_alternate_function(const GPIO_pin_t* gpio, uint32_t alternate_function_index) {
 	// Clamp AF number.
 	alternate_function_index &= 0x0F;
 	// Select proper register to set.
@@ -169,11 +169,11 @@ static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, uint32_t alterna
  */
 void GPIO_configure(const GPIO_pin_t* gpio, GPIO_mode_t mode, GPIO_output_type_t output_type, GPIO_output_speed_t output_speed, GPIO_pull_resistor_t pull_resistor) {
 	// Configure GPIO.
-	GPIO_set_mode(gpio, mode);
-	GPIO_set_output_type(gpio, output_type);
-	GPIO_set_output_speed(gpio, output_speed);
-	GPIO_set_pull_resistor(gpio, pull_resistor);
-	GPIO_set_alternate_function(gpio, (gpio -> alternate_function_index));
+	_GPIO_set_mode(gpio, mode);
+	_GPIO_set_output_type(gpio, output_type);
+	_GPIO_set_output_speed(gpio, output_speed);
+	_GPIO_set_pull_resistor(gpio, pull_resistor);
+	_GPIO_set_alternate_function(gpio, (gpio -> alternate_function_index));
 }
 
 /* CONFIGURE MCU GPIOs.
@@ -214,7 +214,7 @@ void __attribute__((optimize("-O0"))) GPIO_write(const GPIO_pin_t* gpio, uint8_t
 uint8_t __attribute__((optimize("-O0"))) GPIO_read(const GPIO_pin_t* gpio) {
 	// Check mode.
 	uint8_t state = 0;
-	switch (GPIO_get_mode(gpio)) {
+	switch (_GPIO_get_mode(gpio)) {
 	case GPIO_MODE_INPUT:
 		// GPIO configured as input -> read IDR register.
 		if ((((gpio -> port_address) -> IDR) & (0b1 << (gpio -> pin_index))) != 0) {
