@@ -72,12 +72,17 @@ TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	uint32_t tim21_ccr1_edge1 = 0;
 	uint32_t tim21_ccr1_edge8 = 0;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if (lsi_frequency_hz == NULL) {
+		status = TIM_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Reset counter.
 	TIM21 -> CNT = 0;
 	TIM21 -> CCR1 = 0;
 	// Enable interrupt.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
-	NVIC_enable_interrupt(NVIC_IT_TIM21);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_TIM21);
 	// Enable TIM21 peripheral.
 	TIM21 -> CR1 |= (0b1 << 0); // CEN='1'.
 	TIM21 -> CCER |= (0b1 << 0); // CC1E='1'.
@@ -105,7 +110,7 @@ TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
 errors:
 	// Disable interrupt.
-	NVIC_disable_interrupt(NVIC_IT_TIM21);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_TIM21);
 	// Stop counter.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
@@ -124,9 +129,16 @@ void TIM21_disable(void) {
 
 /* CONFIGURE TIM2 FOR SIGFOX BPSK MODULATION.
  * @param timings:	Events timings given as [ARR, CCR1, CCR2, CCR3, CCR4].
- * @return:			None.
+ * @return status:	Function execution status.
  */
-void TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
+TIM_status_t TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
+	// Local variables.
+	TIM_status_t status = TIM_SUCCESS;
+	// Check parameter.
+	if (timings == NULL) {
+		status = TIM_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Configure TIM2 to overflow every timing[0] microseconds.
@@ -146,8 +158,10 @@ void TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
 	// Enable update and CCRx interrupts.
 	TIM2 -> DIER |= (0b11111 << 0);
 	// Disable interrupt by default.
-	NVIC_set_priority(NVIC_IT_TIM2, 0);
-	NVIC_disable_interrupt(NVIC_IT_TIM2);
+	NVIC_set_priority(NVIC_INTERRUPT_TIM2, 0);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_TIM2);
+errors:
+	return status;
 }
 
 /* START TIMER2.
@@ -156,7 +170,7 @@ void TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]) {
  */
 void TIM2_start(void) {
 	// Enable interrupt.
-	NVIC_enable_interrupt(NVIC_IT_TIM2);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_TIM2);
 	// Reset and start counter.
 	TIM2 -> CNT &= 0xFFFF0000;
 	TIM2 -> SR &= 0xFFFFFFE0;
@@ -171,7 +185,7 @@ void TIM2_stop(void) {
 	// Stop counter.
 	TIM2 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	// Disable interrupt.
-	NVIC_disable_interrupt(NVIC_IT_TIM2);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_TIM2);
 }
 
 /* RETURN CURRENT TIM2 COUNTER VALUE.

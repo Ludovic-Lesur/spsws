@@ -501,12 +501,14 @@ static void _SPSWS_init_hw(void) {
  */
 static void _SPSWS_update_time_flags(void) {
 	// Local variables.
+	RTC_status_t rtc_status = RTC_SUCCESS;
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	uint8_t nvm_byte = 0;
 	uint8_t local_utc_offset = 0;
 	int8_t local_hour = 0;
 	// Retrieve current time from RTC.
-	RTC_get_time(&spsws_ctx.current_time);
+	rtc_status = RTC_get_time(&spsws_ctx.current_time);
+	RTC_error_check();
 	// Retrieve previous wake-up time from NVM.
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), &nvm_byte);
 	NVM_error_check();
@@ -554,9 +556,11 @@ static void _SPSWS_update_time_flags(void) {
  */
 static void _SPSWS_update_pwut(void) {
 	// Local variables.
+	RTC_status_t rtc_status = RTC_SUCCESS;
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Retrieve current time from RTC.
-	RTC_get_time(&spsws_ctx.current_time);
+	rtc_status = RTC_get_time(&spsws_ctx.current_time);
+	RTC_error_check();
 	// Update previous wake-up time.
 	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
 	NVM_error_check();
@@ -578,37 +582,60 @@ static void _SPSWS_update_pwut(void) {
  */
 static void _SPSWS_compute_final_measurements(void) {
 	// Local variables.
+	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t data_length = 0;
+	uint8_t generic_u8 = 0;
+	uint16_t generic_u16 = 0;
 	// Temperature
 	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
-	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length);
+	math_status = MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// Humidity.
 	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
-	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0);
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
 	// Light.
 	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
-	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0);
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : generic_u8;
 	// UV index.
 	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
-	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length);
+	math_status = MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : generic_u8;
 	// Absolute pressure.
 	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
-	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0);
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0, &generic_u16);
+	MATH_error_check();
+	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : generic_u16;
 	// MCU temperature.
 	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
-	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length);
+	math_status = MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// PCB temperature.
 	data_length = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.count;
-	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length);
+	math_status = MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// PCB humidity.
 	data_length = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.count;
-	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0);
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0, &generic_u8);
+	MATH_error_check();
+	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
 	// Solar cell voltage.
 	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
-	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_16BITS : MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0);
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
+	MATH_error_check();
+	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_16BITS : generic_u16;
 	// MCU voltage.
 	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
-	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_12BITS : MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0);
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
+	MATH_error_check();
+	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_12BITS : generic_u16;
 }
 #endif
 
@@ -754,7 +781,8 @@ int32_t main (void) {
 			// Check status.
 			if (adc1_status == ADC_SUCCESS) {
 				// Read data.
-				ADC1_get_tmcu(&temperature);
+				adc1_status = ADC1_get_tmcu(&temperature);
+				ADC1_error_check();
 				math_status = MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				MATH_error_check();
 				spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_data_u32_1;
@@ -1054,7 +1082,7 @@ int32_t main (void) {
 			// Re-start continuous measurements.
 			WIND_start_continuous_measure();
 			RAIN_start_continuous_measure();
-			NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
+			NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #endif
 			// Enable RTC interrupt.
 			RTC_enable_alarm_b_interrupt();
@@ -1112,7 +1140,7 @@ int32_t main (void) {
 				// Stop continuous measurements.
 				WIND_stop_continuous_measure();
 				RAIN_stop_continuous_measure();
-				NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
+				NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #endif
 				// Wake-up.
 				spsws_ctx.state = SPSWS_STATE_WAKEUP;

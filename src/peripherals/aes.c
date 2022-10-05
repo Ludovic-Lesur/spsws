@@ -41,6 +41,11 @@ AES_status_t AES_encrypt(uint8_t* data_in, uint8_t* data_out, uint8_t* init_vect
 	uint8_t idx = 0;
 	uint32_t data_32bits = 0;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if ((data_in == NULL) || (data_out == NULL) || (init_vector == NULL) || (key == NULL)) {
+		status = AES_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Fill key.
 	AES -> KEYR3 = (key[0] << 24) | (key[1] << 16) | (key[2] << 8) | (key[3] << 0);
 	AES -> KEYR2 = (key[4] << 24) | (key[5] << 16) | (key[6] << 8) | (key[7] << 0);

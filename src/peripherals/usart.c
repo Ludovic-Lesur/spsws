@@ -126,7 +126,7 @@ void USART2_init(void) {
 	// Enable transmitter and receiver.
 	USART2 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_USART2, 3);
+	NVIC_set_priority(NVIC_INTERRUPT_USART2, 3);
 	// Enable peripheral.
 	USART2 -> CR1 |= (0b11 << 0);
 #else
@@ -158,7 +158,7 @@ void USART1_init(void) {
 	// Enable transmitter and receiver.
 	USART1 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_USART1, 3);
+	NVIC_set_priority(NVIC_INTERRUPT_USART1, 3);
 	// Enable peripheral.
 	USART1 -> CR1 |= (0b11 << 0);
 #else
@@ -176,10 +176,10 @@ void USART1_init(void) {
  */
 void USARTx_enable_interrupt(void) {
 #ifdef HW1_0
-	NVIC_enable_interrupt(NVIC_IT_USART2);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2);
 #endif
 #ifdef HW2_0
-	NVIC_enable_interrupt(NVIC_IT_USART1);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_USART1);
 #endif
 }
 #endif
@@ -191,10 +191,10 @@ void USARTx_enable_interrupt(void) {
  */
 void USARTx_disable_interrupt(void) {
 #ifdef HW1_0
-	NVIC_disable_interrupt(NVIC_IT_USART2);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_USART2);
 #endif
 #ifdef HW2_0
-	NVIC_disable_interrupt(NVIC_IT_USART1);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_USART1);
 #endif
 }
 #endif
@@ -208,6 +208,11 @@ USART_status_t USARTx_send_string(char_t* tx_string) {
 	// Local variables.
 	USART_status_t status = USART_SUCCESS;
 	uint32_t char_count = 0;
+	// Check parameter.
+	if (tx_string == NULL) {
+		status = USART_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
@@ -220,6 +225,7 @@ USART_status_t USARTx_send_string(char_t* tx_string) {
 			break;
 		}
 	}
+errors:
 	return status;
 }
 #endif

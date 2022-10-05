@@ -581,7 +581,7 @@ static NEOM8N_status_t _NEOM8N_start(uint32_t timeout_seconds) {
 	DMA1_set_channel6_dest_addr((uint32_t) &(neom8n_ctx.rx_buf1), NMEA_RX_BUFFER_SIZE); // Start with buffer 1.
 	DMA1_start_channel6();
 	// Start LPUART.
-	NVIC_enable_interrupt(NVIC_IT_LPUART1);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_LPUART1);
 errors:
 	return status;
 }
@@ -594,7 +594,7 @@ static void _NEOM8N_stop(void) {
 	// Stop DMA.
 	DMA1_stop_channel6();
 	// Stop LPUART.
-	NVIC_disable_interrupt(NVIC_IT_LPUART1);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_LPUART1);
 	// Stop wake-up timer.
 	RTC_stop_wakeup_timer();
 	RTC_clear_wakeup_timer_flag();

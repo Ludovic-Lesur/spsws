@@ -81,7 +81,7 @@ void LPUART1_init(uint8_t lpuart_use_lse) {
 	LPUART1 -> CR3 |= (0b1 << 6); // Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).
 	LPUART1 -> CR1 |= (0b1 << 14); // Enable CM interrupt (CMIE='1').
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_LPUART1, 1);
+	NVIC_set_priority(NVIC_INTERRUPT_LPUART1, 1);
 	// Enable LPUART1 transmitter and receiver.
 	LPUART1 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
 	// Enable peripheral.

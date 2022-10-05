@@ -104,6 +104,11 @@ I2C_status_t I2C1_write(uint8_t slave_address, uint8_t* tx_buf, uint8_t tx_buf_l
 	I2C_status_t status = I2C_SUCCESS;
 	uint32_t loop_count = 0;
 	uint8_t idx = 0;
+	// Check parameters.
+	if (tx_buf == NULL) {
+		status = I2C_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Clear peripheral.
 	_I2C1_clear();
 	// Wait for I2C bus to be ready.
@@ -189,6 +194,11 @@ I2C_status_t I2C1_read(uint8_t slave_address, uint8_t* rx_buf, uint8_t rx_buf_le
 	I2C_status_t status = I2C_SUCCESS;
 	uint32_t loop_count = 0;
 	uint8_t idx = 0;
+	// Check parameters.
+	if (rx_buf == NULL) {
+		status = I2C_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Clear peripheral.
 	_I2C1_clear();
 	// Wait for I2C bus to be ready.

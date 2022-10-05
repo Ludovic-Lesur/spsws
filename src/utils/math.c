@@ -99,6 +99,17 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
 	} \
 }
 
+/* GENERIC MACRO TO CHECK RESULT INPUT POINTER.
+ * @param ptr:	Pointer to check.
+ * @return:		None.
+ */
+#define _MATH_check_pointer(ptr) { \
+	if (ptr == NULL) { \
+		status = MATH_ERROR_NULL_PARAMETER; \
+		goto errors; \
+	} \
+}
+
 /*** MATH functions ***/
 
 /* COMPUTE A POWER A 10.
@@ -109,7 +120,8 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
 MATH_status_t MATH_pow_10(uint8_t power, uint32_t* result) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
-	// Check power.
+	// Check parameters.
+	_MATH_check_pointer(result);
 	if (power >= MATH_DECIMAL_MAX_LENGTH) {
 		status = MATH_ERROR_OVERFLOW;
 		goto errors;
@@ -122,182 +134,288 @@ errors:
 /* GET MINIMUM VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint8_t MATH_min_u8(uint8_t* data, uint8_t data_length) {
-	// Local variables.
-	uint8_t min = 0xFF;
+ MATH_status_t MATH_min_u8(uint8_t* data, uint8_t data_length, uint8_t* result) {
+	 // Local variables.
+	 MATH_status_t status = MATH_SUCCESS;
+	 uint8_t min = 0xFF;
+	 // Check parameters.
+	 _MATH_check_pointer(data);
+	 _MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_min(data, data_length);
+errors:
+	return status;
 }
 
 /* GET MINIMUM VALUE OF A 16-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint16_t MATH_min_u16(uint16_t* data, uint8_t data_length) {
+ MATH_status_t MATH_min_u16(uint16_t* data, uint8_t data_length, uint16_t* result) {
+	 // Local variables.
+	 MATH_status_t status = MATH_SUCCESS;
+	 uint16_t min = 0xFFFF;
+	 // Check parameters.
+	 _MATH_check_pointer(data);
+	 _MATH_check_pointer(result);
 	// Local variables.
-	uint16_t min = 0xFFFF;
 	// Compute minimum value.
 	_MATH_min(data, data_length);
+	(*result) = min;
+errors:
+	return status;
 }
 
 /* GET MINIMUM VALUE OF A 32-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint32_t MATH_min_u32(uint32_t* data, uint8_t data_length) {
-	// Local variables.
+ MATH_status_t MATH_min_u32(uint32_t* data, uint8_t data_length, uint32_t* result) {
+	 // Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint32_t min = 0xFFFFFFFF;
+	// Check parameters.
+	 _MATH_check_pointer(data);
+	 _MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_min(data, data_length);
+	(*result) = min;
+errors:
+	return status;
 }
 
 /* GET MAXIMUM VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint8_t MATH_max_u8(uint8_t* data, uint8_t data_length) {
+ MATH_status_t MATH_max_u8(uint8_t* data, uint8_t data_length, uint8_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint8_t max = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_max(data, data_length);
+	(*result) = max;
+errors:
+	return status;
 }
 
 /* GET MAXIMUM VALUE OF A 16-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint16_t MATH_max_u16(uint16_t* data, uint8_t data_length) {
+ MATH_status_t MATH_max_u16(uint16_t* data, uint8_t data_length, uint16_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint16_t max = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_max(data, data_length);
+	(*result) = max;
+errors:
+	return status;
 }
 
 /* GET MAXIMUM VALUE OF A 32-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return min: 		Minimum value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint32_t MATH_max_u32(uint32_t* data, uint8_t data_length) {
+ MATH_status_t MATH_max_u32(uint32_t* data, uint8_t data_length, uint32_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint32_t max = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_max(data, data_length);
+	(*result) = max;
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return average: 	Average value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint8_t MATH_average_u8(uint8_t* data, uint8_t data_length) {
+ MATH_status_t MATH_average_u8(uint8_t* data, uint8_t data_length, uint8_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint8_t average = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute average.
 	_MATH_average(data, data_length);
+	(*result) = average;
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE VALUE OF A 16-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return average: 	Average value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint16_t MATH_average_u16(uint16_t* data, uint8_t data_length) {
+ MATH_status_t MATH_average_u16(uint16_t* data, uint8_t data_length, uint16_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint16_t average = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute average.
 	_MATH_average(data, data_length);
+	(*result) = average;
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE VALUE OF A 32-BITS VALUES ARRAY.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
- * @return average: 	Average value of the input buffer.
+ * @param result:		Pointer that will contain the result.
+ * @return status:		Function execution status.
  */
-uint32_t MATH_average_u32(uint32_t* data, uint8_t data_length) {
+ MATH_status_t MATH_average_u32(uint32_t* data, uint8_t data_length, uint32_t* result) {
 	// Local variables.
+	MATH_status_t status = MATH_SUCCESS;
 	uint32_t average = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute average.
 	_MATH_average(data, data_length);
+	(*result) = average;
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE MEDIAN VALUE OF A 8-BITS VALUES ARRAY.
  * @param data:				Input buffer.
  * @param median_length:	Number of elements taken for median value search.
  * @param average_length:	Number of center elements taken for final average.
- * @return filter_out:		Output value of the median filter.
+ * @param result:			Pointer that will contain the result.
+ * @return status:			Function execution status.
  */
-uint8_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t average_length) {
+ MATH_status_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t average_length, uint8_t* result) {
 	// Local variables.
-	uint8_t filter_out = 0;
+	MATH_status_t status = MATH_SUCCESS;
 	uint8_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
 	uint8_t temp = 0;
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute median filter.
 	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
-	filter_out = (average_length > 0)? MATH_average_u8(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
-	return filter_out;
+	if (average_length > 0) {
+		status = MATH_average_u8(&(data[start_idx]), (end_idx - start_idx + 1), result);
+	}
+	else {
+		(*result) = local_buf[(median_length / 2)];
+	}
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE MEDIAN VALUE OF A 16-BITS VALUES ARRAY.
  * @param data:				Input buffer.
  * @param median_length:	Number of elements taken for median value search.
  * @param average_length:	Number of center elements taken for final average.
- * @return filter_out:		Output value of the median filter.
+ * @param result:			Pointer that will contain the result.
+ * @return status:			Function execution status.
  */
-uint16_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t average_length) {
+ MATH_status_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t average_length, uint16_t* result) {
 	// Local variables.
-	uint16_t filter_out = 0;
+	MATH_status_t status = MATH_SUCCESS;
 	uint16_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
 	uint16_t temp = 0;
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute median filter.
 	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
-	filter_out = (average_length > 0)? MATH_average_u16(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
-	return filter_out;
+	if (average_length > 0) {
+		status = MATH_average_u16(&(data[start_idx]), (end_idx - start_idx + 1), result);
+	}
+	else {
+		(*result) = local_buf[(median_length / 2)];
+	}
+errors:
+	return status;
 }
 
 /* COMPUTE AVERAGE MEDIAN VALUE OF A 32-BITS VALUES ARRAY.
  * @param data:				Input buffer.
  * @param median_length:	Number of elements taken for median value search.
  * @param average_length:	Number of center elements taken for final average.
- * @return filter_out:		Output value of the median filter.
+ * @param result:			Pointer that will contain the result.
+ * @return status:			Function execution status.
  */
-uint32_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t average_length) {
+ MATH_status_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t average_length, uint32_t* result) {
 	// Local variables.
-	uint32_t filter_out = 0;
+	MATH_status_t status = MATH_SUCCESS;
 	uint32_t local_buf[MATH_MEDIAN_FILTER_LENGTH_MAX];
 	uint32_t temp = 0;
 	uint8_t start_idx = 0;
 	uint8_t end_idx = 0;
+	// Check parameters.
+	_MATH_check_pointer(data);
+	_MATH_check_pointer(result);
 	// Compute median filter.
 	_MATH_median_filter(data, median_length, average_length);
 	// Compute average or median value.
-	filter_out = (average_length > 0)? MATH_average_u32(&(data[start_idx]), (end_idx - start_idx + 1)) : local_buf[(median_length / 2)];
-	return filter_out;
+	if (average_length > 0) {
+		status = MATH_average_u32(&(data[start_idx]), (end_idx - start_idx + 1), result);
+	}
+	else {
+		(*result) = local_buf[(median_length / 2)];
+	}
+errors:
+	return status;
 }
 
 /* COMPUTE ABSOLUTE VALUE.
- * @param x:	Parameter.
- * @return:		|x|.
+ * @param x:		Input value.
+ * @param result:	Pointer that will contain the result.
+ * @return status:	Function execution status.
  */
-uint32_t MATH_abs(int32_t x) {
+ MATH_status_t MATH_abs(int32_t x, uint32_t* result) {
 	// Local variables.
-	uint32_t result = 0;
+	MATH_status_t status = MATH_SUCCESS;
+	// Check parameters.
+	_MATH_check_pointer(result);
 	// Check sign.
-	if (x > 0) result = x;
-	if (x < 0) result = (-1) * x;
-	return result;
+	if (x > 0) (*result) = x;
+	if (x < 0) (*result) = (-1) * x;
+errors:
+	return status;
 }
 
 /* COMPUTE ATAN2 FUNCTION.
@@ -313,19 +431,20 @@ MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha) {
 	int32_t local_y = y;
 	uint32_t abs_x = 0;
 	uint32_t abs_y = 0;
-	// Check x and y are not null.
+	// Check parameters.
 	if ((x == 0) && (y == 0)) {
 		status = MATH_ERROR_UNDEFINED;
 		goto errors;
 	}
+	_MATH_check_pointer(alpha);
 	// Scale x and y to avoid overflow.
-	while ((MATH_abs(local_x) > 10000) || (MATH_abs(local_y) > 10000)) {
-		local_x = local_x >> 1;
-		local_y = local_y >> 1;
+	do {
+		status = MATH_abs(local_x, &abs_x);
+		if (status != MATH_SUCCESS) goto errors;
+		status = MATH_abs(local_y, &abs_y);
+		if (status != MATH_SUCCESS) goto errors;
 	}
-	// Compute atan2 function.
-	abs_x = MATH_abs(local_x);
-	abs_y = MATH_abs(local_y);
+	while ((abs_x > 10000) || (abs_y > 10000));
 	// Use the quotient within [-1,1]
 	if (abs_x >= abs_y) {
 		// Use arctan approximation: arctan(z)=(pi/4)*z.
@@ -387,6 +506,7 @@ MATH_status_t MATH_two_complement(uint32_t value, uint8_t sign_bit_position, int
 		status = MATH_ERROR_SIGN_BIT;
 		goto errors;
 	}
+	_MATH_check_pointer(result);
 	// Check sign bit.
 	if ((value & (0b1 << sign_bit_position)) == 0) {
 		// Value is positive: nothing to do.
@@ -421,6 +541,7 @@ MATH_status_t MATH_one_complement(int32_t value, uint8_t sign_bit_position, uint
 		status = MATH_ERROR_SIGN_BIT;
 		goto errors;
 	}
+	_MATH_check_pointer(result);
 	// Check value sign.
 	if (value >= 0) {
 		// Value is positive: nothing to do.

@@ -55,7 +55,7 @@ void DMA1_init_channel6(void) {
 	// Configure channel 3 for LPUART1 RX (request number 5).
 	DMA1 -> CSELR |= (0b0101 << 20); // DMA channel mapped on LPUART1_RX (C6S='0101').
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_DMA1_CH_4_7, 1);
+	NVIC_set_priority(NVIC_INTERRUPT_DMA1_CH_4_7, 1);
 }
 
 /* START DMA1 CHANNEL 6 TRANSFER.
@@ -65,7 +65,7 @@ void DMA1_init_channel6(void) {
 void DMA1_start_channel6(void) {
 	// Clear all flags.
 	DMA1 -> IFCR |= 0x00F00000;
-	NVIC_enable_interrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_DMA1_CH_4_7);
 	// Start transfer.
 	DMA1 -> CCR6 |= (0b1 << 0); // EN='1'.
 }
@@ -77,7 +77,7 @@ void DMA1_start_channel6(void) {
 void DMA1_stop_channel6(void) {
 	// Stop transfer.
 	DMA1 -> CCR6 &= ~(0b1 << 0); // EN='0'.
-	NVIC_disable_interrupt(NVIC_IT_DMA1_CH_4_7);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_DMA1_CH_4_7);
 }
 
 /* SET DMA1 CHANNEL 6 DESTINATION BUFFER ADDRESS.

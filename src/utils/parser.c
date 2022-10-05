@@ -13,6 +13,17 @@
 
 /*** PARSER local functions ***/
 
+/* GENERIC MACRO TO CHECK RESULT INPUT POINTER.
+ * @param ptr:	Pointer to check.
+ * @return:		None.
+ */
+#define _PARSER_check_pointer(ptr) { \
+	if (ptr == NULL) { \
+		status = PARSER_ERROR_NULL_PARAMETER; \
+		goto errors; \
+	} \
+}
+
 /* SEARCH SEPARATOR IN THE CURRENT AT COMMAND BUFFER.
  * @param parser_ctx:   Parser structure.
  * @param separator:    Reference separator.
@@ -22,6 +33,8 @@ static PARSER_status_t _PARSER_search_separator(PARSER_context_t* parser_ctx, ch
 	// Local variables.
 	PARSER_status_t status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
 	uint8_t idx = 0;
+	// Check parameters.
+	_PARSER_check_pointer(parser_ctx);
 	// Starting from int8_t following the current separator (which is the start of buffer in case of first call).
 	for (idx=(parser_ctx -> start_idx) ; idx<(parser_ctx -> rx_buf_length) ; idx++) {
 		if ((parser_ctx -> rx_buf)[idx] == separator) {
@@ -30,6 +43,7 @@ static PARSER_status_t _PARSER_search_separator(PARSER_context_t* parser_ctx, ch
 			break;
 		}
 	}
+errors:
 	return status;
 }
 
@@ -45,6 +59,9 @@ PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode,
 	// Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	uint32_t idx = 0;
+	// Check parameters.
+	_PARSER_check_pointer(parser_ctx);
+	_PARSER_check_pointer(ref);
 	// Compare all characters.
 	while (ref[idx] != STRING_CHAR_NULL) {
 		// Compare current character.
@@ -90,6 +107,9 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format
 	STRING_status_t string_status = STRING_SUCCESS;
 	uint8_t end_idx = 0;
 	uint8_t param_length_char = 0;
+	// Check parameters.
+	_PARSER_check_pointer(parser_ctx);
+	_PARSER_check_pointer(param);
 	// Compute end index.
 	if (separator != STRING_CHAR_NULL) {
 		// Search separator.
@@ -132,6 +152,10 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separ
 	STRING_status_t string_status = STRING_SUCCESS;
 	uint8_t param_length_char = 0;
     uint8_t end_idx = 0;
+    // Check parameters.
+    _PARSER_check_pointer(parser_ctx);
+    _PARSER_check_pointer(param);
+    _PARSER_check_pointer(extracted_length);
     // Compute end index.
 	if (separator != STRING_CHAR_NULL) {
 		// Search separator.

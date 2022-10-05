@@ -55,7 +55,7 @@ void RAIN_init(void) {
 void RAIN_start_continuous_measure(void) {
 	// Enable required interrupt.
 	EXTI_clear_all_flags();
-	NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 }
 
 /* STOP CONTINUOUS RAIN MEASUREMENTS.
@@ -64,7 +64,7 @@ void RAIN_start_continuous_measure(void) {
  */
 void RAIN_stop_continuous_measure(void) {
 	// Disable required interrupt.
-	NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 }
 
 /* GET PLUVIOMETRY SINCE LAST MEASUREMENT START.

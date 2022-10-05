@@ -104,15 +104,17 @@ void WIND_init(void) {
 #ifdef WIND_VANE_ULTIMETER
 	// Wind speed.
 	GPIO_configure(&GPIO_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_DIO0, EXTI_TRIGGER_RISING_EDGE);
+	exti_status = EXTI_configure_gpio(&GPIO_DIO0, EXTI_TRIGGER_RISING_EDGE);
+	EXTI_status_check(WIND_ERROR_BASE_EXTI);
 	// Wind direction.
 	GPIO_configure(&GPIO_DIO1, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&GPIO_DIO1, EXTI_TRIGGER_RISING_EDGE);
+	exti_status = EXTI_configure_gpio(&GPIO_DIO1, EXTI_TRIGGER_RISING_EDGE);
+	EXTI_status_check(WIND_ERROR_BASE_EXTI);
 #endif
 	// Reset data.
 	WIND_reset_data();
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_EXTI_4_15, 0);
+	NVIC_set_priority(NVIC_INTERRUPT_EXTI_4_15, 0);
 }
 
 /* START CONTINUOUS WIND MEASUREMENTS.
@@ -129,7 +131,7 @@ void WIND_start_continuous_measure(void) {
 #endif
 	// Enable required interrupts.
 	EXTI_clear_all_flags();
-	NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 }
 
 /* STOP CONTINUOUS WIND MEASUREMENTS.
@@ -138,7 +140,7 @@ void WIND_start_continuous_measure(void) {
  */
 void WIND_stop_continuous_measure(void) {
 	// Disable required interrupts.
-	NVIC_disable_interrupt(NVIC_IT_EXTI_4_15);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #ifdef WIND_VANE_ULTIMETER
 	// Stop phase shift timer.
 	LPTIM1_disable();

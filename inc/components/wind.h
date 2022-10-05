@@ -8,7 +8,6 @@
 #ifndef __WIND_H__
 #define __WIND_H__
 
-#include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"
 #include "math.h"

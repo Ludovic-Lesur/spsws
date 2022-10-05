@@ -19,6 +19,17 @@
 
 /*** STRING local functions ***/
 
+/* GENERIC MACRO TO CHECK RESULT INPUT POINTER.
+ * @param ptr:	Pointer to check.
+ * @return:		None.
+ */
+#define _STRING_check_pointer(ptr) { \
+	if (ptr == NULL) { \
+		status = STRING_ERROR_NULL_PARAMETER; \
+		goto errors; \
+	} \
+}
+
 /* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO A DECIMAL CHARACTER.
  * @param chr:		Character to analyse.
  * @return status:	Function execution status.
@@ -37,10 +48,11 @@ static STRING_status_t _STRING_is_decimal_char(char_t chr) {
 static STRING_status_t _STRING_decimal_char_to_value(char_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	// Check ranges.
+	// Check parameters.
 	status = _STRING_is_decimal_char(chr);
 	if (status != STRING_SUCCESS) goto errors;
-	// Convert to value.
+	_STRING_check_pointer(value);
+	// Perform conversion.
 	(*value) = (chr - '0') & 0x0F;
 errors:
 	return status;
@@ -53,11 +65,13 @@ errors:
 static STRING_status_t _STRING_decimal_value_to_char(uint8_t value, char_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
+	// Check parameters.
 	if (value > STRING_DIGIT_DECIMAL_MAX) {
 		status = STRING_ERROR_DECIMAL_OVERFLOW;
 		goto errors;
 	}
-	// Convert to character.
+	_STRING_check_pointer(chr);
+	// Perform conversion.
 	(*chr) = (value + '0');
 errors:
 	return status;
@@ -81,6 +95,8 @@ static STRING_status_t _STRING_is_hexadecimal_char(char_t chr) {
 static STRING_status_t _STRING_hexadecimal_char_to_value(char_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_ERROR_HEXADECIMAL_INVALID;
+	// Check parameters.
+	_STRING_check_pointer(value);
 	// Check ranges.
 	if ((chr >= 'A') && (chr <= 'F')) {
 		(*value) = (chr - 'A' + 10 ) & 0x0F;
@@ -94,6 +110,7 @@ static STRING_status_t _STRING_hexadecimal_char_to_value(char_t chr, uint8_t* va
 		(*value) = (chr - '0') & 0x0F;
 		status = STRING_SUCCESS;
 	}
+errors:
 	return status;
 }
 
@@ -104,11 +121,13 @@ static STRING_status_t _STRING_hexadecimal_char_to_value(char_t chr, uint8_t* va
 static STRING_status_t _STRING_hexadecimal_value_to_char(uint8_t value, char_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	// Check overflow.
+	// Check parameters.
 	if (value > STRING_DIGIT_HEXADECIMAL_MAX) {
 		status = STRING_ERROR_HEXADECIMAL_OVERFLOW;
 		goto errors;
 	}
+	_STRING_check_pointer(chr);
+	// Perform conversion.
 	(*chr) = (value <= 9 ? (value + '0') : (value + ('A' - 10)));
 errors:
 	return status;
@@ -133,10 +152,16 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 	uint8_t generic_byte = 0;
 	uint32_t current_power = 0;
 	uint32_t previous_decade = 0;
+	uint32_t abs_value = 0;
+	// Check parameters.
+	_STRING_check_pointer(str);
 	// Manage negative numbers.
 	if (value < 0) {
 		str[str_idx++] = STRING_CHAR_MINUS;
 	}
+	// Get absolute value.
+	math_status = MATH_abs(value, &abs_value);
+	MATH_status_check();
 	// Build string according to format.
 	switch (format) {
 	case STRING_FORMAT_BOOLEAN:
@@ -145,8 +170,9 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
             str[str_idx++] = '0';
             str[str_idx++] = 'b';
 		}
+
 		for (idx=(MATH_BINARY_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
-			if (MATH_abs(value) & (0b1 << idx)) {
+			if (abs_value & (0b1 << idx)) {
 				str[str_idx++] = '1';
 				first_non_zero_found = 1;
 			}
@@ -165,7 +191,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 			str[str_idx++] = 'x';
 		}
 		for (idx=(MATH_HEXADECIMAL_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
-			generic_byte = (MATH_abs(value) >> (8 * idx)) & 0xFF;
+			generic_byte = (abs_value >> (8 * idx)) & 0xFF;
 			if (generic_byte != 0) {
 				first_non_zero_found = 1;
 			}
@@ -188,7 +214,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 		for (idx=(MATH_DECIMAL_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
 			math_status = MATH_pow_10(idx, &current_power);
 			MATH_status_check(STRING_ERROR_BASE_MATH);
-			generic_byte = (MATH_abs(value) - previous_decade) / current_power;
+			generic_byte = (abs_value - previous_decade) / current_power;
 			previous_decade += generic_byte * current_power;
 			if (generic_byte != 0) {
 				first_non_zero_found = 1;
@@ -219,6 +245,9 @@ STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t d
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	uint8_t idx = 0;
+	// Check parameters.
+	_STRING_check_pointer(data);
+	_STRING_check_pointer(str);
 	// Build string.
 	for (idx=0 ; idx<data_length ; idx++) {
 		status = STRING_value_to_string((int32_t) data[idx], STRING_FORMAT_HEXADECIMAL, print_prefix, &(str[2 * idx]));
@@ -245,6 +274,9 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 	uint8_t negative_flag = 0;
 	uint8_t digit_value = 0;
 	uint32_t math_power10 = 0;
+	// Check parameters.
+	_STRING_check_pointer(str);
+	_STRING_check_pointer(value);
 	// Reset result.
 	(*value) = 0;
 	// Manage negative numbers.
@@ -338,6 +370,10 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_
 	STRING_status_t status = STRING_SUCCESS;
 	uint8_t char_idx = 0;
 	int32_t value = 0;
+	// Check parameters.
+	_STRING_check_pointer(str);
+	_STRING_check_pointer(data);
+	_STRING_check_pointer(extracted_length);
 	// Reset extracted length.
 	(*extracted_length) = 0;
 	// Char loop.

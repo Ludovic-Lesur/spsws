@@ -112,6 +112,11 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uin
 	RTC_status_t status = RTC_SUCCESS;
 	uint8_t tens = 0;
 	uint8_t units = 0;
+	// Check parameters.
+	if (rtc_use_lse == NULL) {
+		status = RTC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Manage RTC clock source.
 	if ((*rtc_use_lse) != 0) {
 		RCC -> CSR |= (0b01 << 16); // RTCSEL='01' (LSE).
@@ -169,8 +174,8 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uin
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
 	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_RTC, 1);
-	NVIC_enable_interrupt(NVIC_IT_RTC);
+	NVIC_set_priority(NVIC_INTERRUPT_RTC, 1);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_RTC);
 errors:
 	return status;
 }
@@ -186,6 +191,11 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time) {
 	uint32_t dr_value = 0;
 	uint8_t tens = 0;
 	uint8_t units = 0;
+	// Check parameters.
+	if (time == NULL) {
+		status = RTC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Year.
 	tens = ((time -> year) - 2000) / 10;
 	units = ((time -> year) - 2000) - (tens * 10);
@@ -224,12 +234,21 @@ errors:
 
 /* GET CURRENT RTC TIME.
  * @param rtc_time:	Pointer to time that will contain current RTC time.
- * @return:			None.
+ * @return status:	Function execution status.
  */
-void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
+	// Local variables.
+	RTC_status_t status = RTC_SUCCESS;
+	uint32_t dr_value = 0;
+	uint32_t tr_value = 0;
+	// Check parameters.
+	if (time == NULL) {
+		status = RTC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Read registers.
-	uint32_t dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
-	uint32_t tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
+	dr_value = (RTC -> DR) & 0x00FFFF3F; // Mask reserved bits.
+	tr_value = (RTC -> TR) & 0x007F7F7F; // Mask reserved bits.
 	// Parse registers into time structure.
 	time -> year = 2000 + ((dr_value & (0b1111 << 20)) >> 20) * 10 + ((dr_value & (0b1111 << 16)) >> 16);
 	time -> month = ((dr_value & (0b1 << 12)) >> 12) * 10 + ((dr_value & (0b1111 << 8)) >> 8);
@@ -237,6 +256,8 @@ void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time) {
 	time -> hours = ((tr_value & (0b11 << 20)) >> 20) * 10 + ((tr_value & (0b1111 << 16)) >> 16);
 	time -> minutes = ((tr_value & (0b111 << 12)) >> 12) * 10 + ((tr_value & (0b1111 << 8)) >> 8);
 	time -> seconds = ((tr_value & (0b111 << 4)) >> 4) * 10 + (tr_value & 0b1111);
+errors:
+	return status;
 }
 
 /* RETURN THE CURRENT ALARM INTERRUPT STATUS.

@@ -149,6 +149,11 @@ SPI_status_t SPI1_read_byte(uint8_t tx_data, uint8_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if (rx_data == NULL) {
+		status = SPI_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 #ifdef HW1_0
 	// Set data length to 8-bits.
 	SPI1 -> CR1 &= ~(0b1 << 11); // DFF='0'.
@@ -215,6 +220,11 @@ SPI_status_t SPI1_read_short(uint16_t tx_data, uint16_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if (rx_data == NULL) {
+		status = SPI_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Set data length to 16-bits.
 	SPI1 -> CR1 |= (0b1 << 11); // DFF='1'.
 	// Dummy read to DR to clear RXNE flag.
@@ -339,6 +349,11 @@ SPI_status_t SPI2_read_short(uint16_t tx_data, uint16_t* rx_data) {
 	// Local variables.
 	SPI_status_t status = SPI_SUCCESS;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if (rx_data == NULL) {
+		status = SPI_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Dummy read to DR to clear RXNE flag.
 	(*rx_data) = *((volatile uint16_t*) &(SPI2 -> DR));
 	// Wait for TXE flag.

@@ -102,6 +102,7 @@ static const int16_t MATH_SIN_TABLE[360] = {
 
 typedef enum {
 	MATH_SUCCESS = 0,
+	MATH_ERROR_NULL_PARAMETER,
 	MATH_ERROR_OVERFLOW,
 	MATH_ERROR_UNDEFINED,
 	MATH_ERROR_SIGN_BIT,
@@ -110,24 +111,24 @@ typedef enum {
 
 /*** MATH functions ***/
 
-uint8_t MATH_min_u8(uint8_t* data, uint8_t data_length);
-uint16_t MATH_min_u16(uint16_t* data, uint8_t data_length);
-uint32_t MATH_min_u32(uint32_t* data, uint8_t data_length);
+MATH_status_t MATH_min_u8(uint8_t* data, uint8_t data_length, uint8_t* result);
+MATH_status_t MATH_min_u16(uint16_t* data, uint8_t data_length, uint16_t* result);
+MATH_status_t MATH_min_u32(uint32_t* data, uint8_t data_length, uint32_t* result);
 
-uint8_t MATH_max_u8(uint8_t* data, uint8_t data_length);
-uint16_t MATH_max_u16(uint16_t* data, uint8_t data_length);
-uint32_t MATH_max_u32(uint32_t* data, uint8_t data_length);
+MATH_status_t MATH_max_u8(uint8_t* data, uint8_t data_length, uint8_t* result);
+MATH_status_t MATH_max_u16(uint16_t* data, uint8_t data_length, uint16_t* result);
+MATH_status_t MATH_max_u32(uint32_t* data, uint8_t data_length, uint32_t* result);
 
-uint8_t MATH_average_u8(uint8_t* data, uint8_t data_length);
-uint16_t MATH_average_u16(uint16_t* data, uint8_t data_length);
-uint32_t MATH_average_u32(uint32_t* data, uint8_t data_length);
+MATH_status_t MATH_average_u8(uint8_t* data, uint8_t data_length, uint8_t* result);
+MATH_status_t MATH_average_u16(uint16_t* data, uint8_t data_length, uint16_t* result);
+MATH_status_t MATH_average_u32(uint32_t* data, uint8_t data_length, uint32_t* result);
 
-uint8_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t average_length);
-uint16_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t average_length);
-uint32_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t average_length);
+MATH_status_t MATH_median_filter_u8(uint8_t* data, uint8_t median_length, uint8_t average_length, uint8_t* result);
+MATH_status_t MATH_median_filter_u16(uint16_t* data, uint8_t median_length, uint8_t average_length, uint16_t* result);
+MATH_status_t MATH_median_filter_u32(uint32_t* data, uint8_t median_length, uint8_t average_length, uint32_t* result);
 
 MATH_status_t MATH_pow_10(uint8_t power, uint32_t* result);
-uint32_t MATH_abs(int32_t x);
+MATH_status_t MATH_abs(int32_t x, uint32_t* result);
 MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha);
 
 MATH_status_t MATH_two_complement(uint32_t value, uint8_t sign_bit_position, int32_t* result);

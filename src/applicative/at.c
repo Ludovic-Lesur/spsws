@@ -350,7 +350,8 @@ static void _AT_adc_callback(void) {
 	adc1_status = ADC1_perform_measurements();
 	ADC1_error_check_print();
 	// Read data.
-	ADC1_get_tmcu(&tmcu_degrees);
+	adc1_status = ADC1_get_tmcu(&tmcu_degrees);
+	ADC1_error_check_print();
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &vmcu_mv);
 	ADC1_error_check_print();
 	// Print results.

@@ -86,7 +86,7 @@ errors:
 
 /* INIT LPTIM FOR DELAY OPERATION.
  * @param lsi_freq_hz:	Effective LSI oscillator frequency.
- * @return:				None.
+ * @return status:		Function execution status.
  */
 void LPTIM1_init(uint32_t lsi_freq_hz) {
 	// Configure clock source.
@@ -101,7 +101,7 @@ void LPTIM1_init(uint32_t lsi_freq_hz) {
 	LPTIM1 -> IER |= (0b1 << 1); // ARRMIE='1'.
 	EXTI_configure_line(EXTI_LINE_LPTIM1, EXTI_TRIGGER_RISING_EDGE);
 	// Set interrupt priority.
-	NVIC_set_priority(NVIC_IT_LPTIM1, 2);
+	NVIC_set_priority(NVIC_INTERRUPT_LPTIM1, 2);
 }
 
 /* DELAY FUNCTION.
@@ -134,7 +134,7 @@ LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode) {
 	// Perform delay with the selected mode.
 	if (stop_mode != 0) {
 		// Enable interrupt.
-		NVIC_enable_interrupt(NVIC_IT_LPTIM1);
+		NVIC_enable_interrupt(NVIC_INTERRUPT_LPTIM1);
 		lptim_wake_up = 0;
 		// Start timer.
 		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
@@ -142,7 +142,7 @@ LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode) {
 		while (lptim_wake_up == 0) {
 			PWR_enter_stop_mode();
 		}
-		NVIC_disable_interrupt(NVIC_IT_LPTIM1);
+		NVIC_disable_interrupt(NVIC_INTERRUPT_LPTIM1);
 	}
 	else {
 		// Start timer.

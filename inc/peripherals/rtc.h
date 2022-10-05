@@ -23,6 +23,7 @@
 
 typedef enum {
 	RTC_SUCCESS = 0,
+	RTC_ERROR_NULL_PARAMETER,
 	RTC_ERROR_INITIALIZATION_MODE,
 	RTC_ERROR_WAKEUP_TIMER_DELAY,
 	RTC_ERROR_WAKEUP_TIMER_RUNNING,
@@ -45,7 +46,7 @@ typedef struct {
 void RTC_reset(void);
 RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uint32_t lsi_freq_hz, uint8_t alarm_offset_seconds);
 RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time);
-void __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time);
+RTC_status_t __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time);
 
 volatile uint8_t RTC_get_alarm_a_flag(void);
 void RTC_clear_alarm_a_flag(void);

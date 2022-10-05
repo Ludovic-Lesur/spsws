@@ -315,6 +315,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	// Local variables.
 	sfx_u8 rf_api_status = SFX_ERR_NONE;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	TIM_status_t tim2_status = TIM_SUCCESS;
 	uint8_t stream_byte_idx = 0;
 	uint8_t stream_bit_idx = 0;
 	uint32_t effective_uplink_frequency_hz = 0;
@@ -328,7 +329,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	uint16_t idle_duration_us = 0;
 	uint16_t dbpsk_timings[TIM2_TIMINGS_ARRAY_LENGTH] = {0};
 	// Disable RTC interrupt during radio processing.
-	NVIC_disable_interrupt(NVIC_IT_RTC);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_RTC);
 	// Set modulation parameters.
 	rf_api_status = _RF_API_set_tx_modulation_parameters(type);
 	if (rf_api_status != SFX_ERR_NONE) goto errors;
@@ -360,7 +361,8 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR2_IDX] = dbpsk_timings[1] + rf_api_ctx.ramp_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR3_IDX] = dbpsk_timings[2] + frequency_shift_duration_us;
 	dbpsk_timings[TIM2_TIMINGS_ARRAY_CCR4_IDX] = dbpsk_timings[3] + rf_api_ctx.ramp_duration_us;
-	TIM2_init(dbpsk_timings);
+	tim2_status = TIM2_init(dbpsk_timings);
+	if (tim2_status != TIM_SUCCESS) goto errors;
 	rf_api_ctx.tim2_arr_flag = 0;
 	// Start CW.
 	sx1232_status = SX1232_set_rf_frequency(rf_api_ctx.rf_frequency_hz);
@@ -402,7 +404,7 @@ sfx_u8 RF_API_send(sfx_u8 *stream, sfx_modulation_type_t type, sfx_u8 size) {
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	TIM2_stop();
 	// Re-enable RTC interrupt.
-	NVIC_enable_interrupt(NVIC_IT_RTC);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_RTC);
 	return SFX_ERR_NONE;
 errors:
 	return RF_ERR_API_SEND;

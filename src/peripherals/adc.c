@@ -15,9 +15,6 @@
 
 /*** ADC local macros ***/
 
-#define ADC_CHANNEL_VREFINT			17
-#define ADC_CHANNEL_TMCU			18
-
 #define ADC_MEDIAN_FILTER_LENGTH	9
 #define ADC_CENTER_AVERAGE_LENGTH	3
 
@@ -29,6 +26,12 @@
 #define ADC_TIMEOUT_COUNT			1000000
 
 /*** ADC local structures ***/
+
+typedef enum {
+	ADC_CHANNEL_VREFINT = 17,
+	ADC_CHANNEL_TMCU = 18,
+	ADC_CHANNEL_LAST = 19
+} ADC_channel_t;
 
 typedef struct {
 	uint32_t vrefint_12bits;
@@ -47,10 +50,19 @@ static ADC_context_t adc_ctx;
  * @param adc_result_12bits:	Pointer to 32-bits value that will contain ADC raw result on 12 bits.
  * @return status:				Function execution status.
  */
-static ADC_status_t _ADC1_single_conversion(uint8_t adc_channel, uint32_t* adc_result_12bits) {
+static ADC_status_t _ADC1_single_conversion(ADC_channel_t adc_channel, uint32_t* adc_result_12bits) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	uint32_t loop_count = 0;
+	// Check parameters.
+	if (adc_channel >= ADC_CHANNEL_LAST) {
+		status = ADC_ERROR_CHANNEL;
+		goto errors;
+	}
+	if (adc_result_12bits == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Select input channel.
 	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
 	ADC1 -> CHSELR |= (0b1 << adc_channel);
@@ -76,18 +88,29 @@ errors:
  * @param adc_result_12bits:	Pointer to 32-bits value that will contain ADC filtered result on 12 bits.
  * @return status:				Function execution status.
  */
-static ADC_status_t _ADC1_filtered_conversion(uint8_t adc_channel, uint32_t* adc_result_12bits) {
+static ADC_status_t _ADC1_filtered_conversion(ADC_channel_t adc_channel, uint32_t* adc_result_12bits) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	uint32_t adc_sample_buf[ADC_MEDIAN_FILTER_LENGTH] = {0x00};
 	uint8_t idx = 0;
+	// Check parameters.
+	if (adc_channel >= ADC_CHANNEL_LAST) {
+		status = ADC_ERROR_CHANNEL;
+		goto errors;
+	}
+	if (adc_result_12bits == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Perform all conversions.
 	for (idx=0 ; idx<ADC_MEDIAN_FILTER_LENGTH ; idx++) {
 		status = _ADC1_single_conversion(adc_channel, &(adc_sample_buf[idx]));
 		if (status != ADC_SUCCESS) goto errors;
 	}
 	// Apply median filter.
-	(*adc_result_12bits) = MATH_median_filter_u32(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
+	math_status = MATH_median_filter_u32(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH, adc_result_12bits);
+	MATH_status_check(ADC_ERROR_BASE_MATH);
 errors:
 	return status;
 }
@@ -224,9 +247,13 @@ errors:
 ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, uint32_t* data) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	// Check index.
+	// Check parameters.
 	if (data_idx >= ADC_DATA_INDEX_LAST) {
 		status = ADC_ERROR_DATA_INDEX;
+		goto errors;
+	}
+	if (data == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
 		goto errors;
 	}
 	(*data) = adc_ctx.data[data_idx];
@@ -236,8 +263,17 @@ errors:
 
 /* GET MCU TEMPERATURE.
  * @param tmcu_degrees:	Pointer to 8-bits value that will contain MCU temperature in degrees (2-complement).
- * @return:				None.
+ * @return status:		Function execution status.
  */
-void ADC1_get_tmcu(int8_t* tmcu_degrees) {
+ADC_status_t ADC1_get_tmcu(int8_t* tmcu_degrees) {
+	// Local variables.
+	ADC_status_t status = ADC_SUCCESS;
+	// Check parameter.
+	if (tmcu_degrees == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	(*tmcu_degrees) = adc_ctx.tmcu_degrees;
+errors:
+	return status;
 }
