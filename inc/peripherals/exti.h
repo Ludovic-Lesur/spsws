@@ -42,8 +42,4 @@ void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger);
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger);
 void EXTI_clear_all_flags(void);
 
-#define EXTI_status_check(error_base) { if (exti_status != EXTI_SUCCESS) { status = error_base + exti_status; goto errors; }}
-#define EXTI_error_check() { ERROR_status_check(exti_status, EXTI_SUCCESS, ERROR_BASE_EXTI); }
-#define EXTI_error_check_print() { ERROR_status_check(exti_status, EXTI_SUCCESS, ERROR_BASE_EXTI); }
-
 #endif /* __EXTI_H__ */
