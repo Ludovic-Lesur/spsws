@@ -27,7 +27,6 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
 			min = data[idx]; \
 		} \
 	} \
-	return min; \
 }
 
 /* GENERIC FUNCTION TO GET MINIMUM VALUE OF AN ARRAY.
@@ -42,7 +41,6 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
 			max = data[idx]; \
 		} \
 	} \
-	return max; \
 }
 
 /* GENERIC FUNCTION TO COMPUTE AVERAGE VALUE OF AN ARRAY.
@@ -55,7 +53,6 @@ static const uint32_t MATH_POW10[MATH_DECIMAL_MAX_LENGTH] = {1, 10, 100, 1000, 1
 	for (idx=0 ; idx<data_length ; idx++) { \
 		average = ((average * idx) + data[idx]) / (idx + 1); \
 	} \
-	return average; \
 }
 
 /* GENERIC FUNCTION TO COMPUTE AVERAGE MEDIAN VALUE OF AN ARRAY.
@@ -146,6 +143,7 @@ errors:
 	 _MATH_check_pointer(result);
 	// Compute minimum value.
 	_MATH_min(data, data_length);
+	(*result) = min;
 errors:
 	return status;
 }
