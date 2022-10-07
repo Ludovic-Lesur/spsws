@@ -149,12 +149,21 @@ void WIND_stop_continuous_measure(void) {
 
 /* GET AVERAGE AND PEAK WIND SPEED VALUES SINCE LAST MEASUREMENT START.
  * @param average_speed_mh:	Pointer to 32-bits value that will contain average wind speed value in m/h.
- * @param peak_speed_mh:		Pointer to 32-bits value that will contain peak wind speed value in m/h.
- * @return:							None.
+ * @param peak_speed_mh:	Pointer to 32-bits value that will contain peak wind speed value in m/h.
+ * @return status:			Function execution status.
  */
-void WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh) {
+WIND_status_t WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh) {
+	// Local variables.
+	WIND_status_t status = WIND_SUCCESS;
+	// Check parameters.
+	if ((average_speed_mh == NULL) || (peak_speed_mh == NULL)) {
+		status = WIND_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	(*average_speed_mh) = wind_ctx.speed_mh_average;
 	(*peak_speed_mh) = wind_ctx.speed_mh_peak;
+errors:
+	return status;
 }
 
 /* GET AVERAGE AVERAGE WIND DIRECTION VALUE SINCE LAST MEASUREMENT START.
@@ -165,6 +174,11 @@ WIND_status_t WIND_get_direction(uint32_t* average_direction_degrees) {
 	// Local variables.
 	WIND_status_t status = WIND_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
+	// Check parameters.
+	if (average_direction_degrees == NULL) {
+		status = WIND_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Compute trend point angle (considered as average wind direction).
 	math_status = MATH_atan2(wind_ctx.direction_x, wind_ctx.direction_y, average_direction_degrees);
 	MATH_status_check(WIND_ERROR_BASE_MATH);

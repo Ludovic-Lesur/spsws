@@ -64,18 +64,36 @@ errors:
 
 /* READ TEMPERATURE FROM SHT3X SENSOR.
  * @param temperature_degrees:	Pointer to signed byte that will contain temperature result (2-complement).
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void SHT3X_get_temperature(int8_t* temperature_degrees) {
+SHT3X_status_t SHT3X_get_temperature(int8_t* temperature_degrees) {
+	// Local variables.
+	SHT3X_status_t status = SHT3X_SUCCESS;
+	// Check parameter.
+	if (temperature_degrees == NULL) {
+		status = SHT3X_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Get result.
 	(*temperature_degrees) = sht3x_ctx.temperature_degrees;
+errors:
+	return status;
 }
 
 /* READ HUMIDTY FROM SHT3X SENSOR.
  * @param humidity_percent:		Pointer to 8-bits value that will contain humidity result (%).
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void SHT3X_get_humidity(uint8_t* humidity_percent) {
+SHT3X_status_t SHT3X_get_humidity(uint8_t* humidity_percent) {
+	// Local variables.
+	SHT3X_status_t status = SHT3X_SUCCESS;
+	// Check parameter.
+	if (humidity_percent == NULL) {
+		status = SHT3X_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Get result.
 	(*humidity_percent) = sht3x_ctx.humidity_percent;
+errors:
+	return status;
 }

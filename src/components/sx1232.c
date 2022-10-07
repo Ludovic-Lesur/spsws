@@ -24,8 +24,6 @@
 #define SX1232_FXOSC_HZ							32000000
 #define SX1232_CLKOUT_PRESCALER					2
 #define SX1232_CLKOUT_FREQUENCY_KHZ				((SX1232_FXOSC_HZ) / (SX1232_CLKOUT_PRESCALER * 1000))
-// Last register address
-#define SX1232_REGISTER_ADRESS_LAST				0x7F
 // FSK deviation range.
 #define SX1232_FSK_DEVIATION_MAX				16383 // 2^(14) - 1.
 // Output power ranges.
@@ -64,9 +62,9 @@ static SX1232_status_t _SX1232_write_register(uint8_t addr, uint8_t value) {
 	SX1232_status_t status = SX1232_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
 	uint8_t sx1232_spi_command = 0;
-	// Check addr is a 7-bits value.
-	if (addr > SX1232_REGISTER_ADRESS_LAST) {
-		status = SX1232_ERROR_ADDRESS;
+	// Check parameters.
+	if (addr > SX1232_REG_LAST) {
+		status = SX1232_ERROR_REGISTER_ADDRESS;
 		goto errors;
 	}
 	// Build SPI frame.
@@ -95,9 +93,13 @@ static SX1232_status_t _SX1232_read_register(uint8_t addr, uint8_t* value) {
 	SX1232_status_t status = SX1232_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
 	uint8_t sx1232_spi_command = 0;
-	// Check addr is a 7-bits value.
-	if (addr > SX1232_REGISTER_ADRESS_LAST) {
-		status = SX1232_ERROR_ADDRESS;
+	// Check parameters.
+	if (addr > SX1232_REG_LAST) {
+		status = SX1232_ERROR_REGISTER_ADDRESS;
+		goto errors;
+	}
+	if (value == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
 		goto errors;
 	}
 	// Build SPI frame.
@@ -335,6 +337,11 @@ SX1232_status_t SX1232_get_rf_frequency(uint32_t* rf_frequency_hz) {
 	uint8_t byte_value = 0;
 	uint32_t frf_reg_value = 0;
 	uint64_t local_rf_frequency_hz = 0;
+	// Check parameter.
+	if (rf_frequency_hz == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Read registers.
 	status = _SX1232_read_register(SX1232_REG_FRFMSB, &byte_value);
 	if (status != SX1232_SUCCESS) goto errors;
@@ -498,6 +505,11 @@ SX1232_status_t SX1232_get_irq_flags(uint32_t* irq_flags) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
 	uint8_t reg_value = 0;
+	// Check parameter.
+	if (irq_flags == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Reset result.
 	(*irq_flags) = 0;
 	// Read registers.
@@ -764,7 +776,11 @@ SX1232_status_t SX1232_set_sync_word(uint8_t* sync_word, uint8_t sync_word_lengt
 	SX1232_status_t status = SX1232_SUCCESS;
 	uint8_t reg_value = 0;
 	uint8_t idx = 0;
-	// Check parameter.
+	// Check parameters.
+	if (sync_word == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	if (sync_word_length_bytes > SX1232_SYNC_WORD_MAXIMUM_LENGTH_BYTES) {
 		status = SX1232_ERROR_SYNC_WORD_LENGTH;
 		goto errors;
@@ -832,6 +848,11 @@ SX1232_status_t SX1232_get_rssi(int16_t* rssi_dbm) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
 	uint8_t rssi_reg_value = 0;
+	// Check parameter.
+	if (rssi_dbm == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Read RSSI register.
 	status = _SX1232_read_register(SX1232_REG_RSSIVALUE, &rssi_reg_value);
 	if (status != SX1232_SUCCESS) goto errors;
@@ -851,7 +872,11 @@ SX1232_status_t SX1232_read_fifo(uint8_t* fifo_data, uint8_t fifo_data_length) {
 	SX1232_status_t status = SX1232_SUCCESS;
 	uint8_t idx = 0;
 	uint8_t fifo_data_byte = 0;
-	// Check parameter.
+	// Check parameters.
+	if (fifo_data == NULL) {
+		status = SX1232_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	if (fifo_data_length > SX1232_FIFO_LENGTH) {
 		status = SX1232_ERROR_FIFO_LENGTH;
 		goto errors;

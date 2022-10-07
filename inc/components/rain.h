@@ -11,6 +11,14 @@
 #include "mode.h"
 #include "types.h"
 
+/*** RAIN structures ***/
+
+typedef enum {
+	RAIN_SUCCESS = 0,
+	RAIN_ERROR_NULL_PARAMETER,
+	RAIN_ERROR_BASE_LAST = 0x0100
+} RAIN_status_t;
+
 #if (defined CM || defined ATM)
 
 /*** RAIN functions ***/
@@ -18,9 +26,9 @@
 void RAIN_init(void);
 void RAIN_start_continuous_measure(void);
 void RAIN_stop_continuous_measure(void);
-void RAIN_get_pluviometry(uint8_t* rain_pluviometry_mm);
+RAIN_status_t RAIN_get_pluviometry(uint8_t* pluviometry_mm);
 #ifdef FLOOD_DETECTION
-void RAIN_get_flood_level(uint8_t* flood_level);
+RAIN_status_t RAIN_get_flood_level(uint8_t* flood_level);
 #endif
 void RAIN_reset_data(void);
 void RAIN_edge_callback(void);

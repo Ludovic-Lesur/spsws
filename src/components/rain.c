@@ -22,10 +22,12 @@
 // Pluviometry conversion ratio.
 #define RAIN_EDGE_TO_UM				279
 #define RAIN_MAX_VALUE_MM			0xFF
+#ifdef FLOOD_DETECTION
 // Flood alarm levels mapping.
 #define RAIN_GPIO_FLOOD_LEVEL_1		GPIO_DIO1
 #define RAIN_GPIO_FLOOD_LEVEL_2		GPIO_DIO3
 #define RAIN_GPIO_FLOOD_LEVEL_3		GPIO_DIO4
+#endif
 
 /*** RAIN local global variables ***/
 
@@ -68,33 +70,52 @@ void RAIN_stop_continuous_measure(void) {
 }
 
 /* GET PLUVIOMETRY SINCE LAST MEASUREMENT START.
- * @param rain_pluviometry_mm:	Pointer to 8-bits value that will contain pluviometry in mm.
- * @return:						None.
+ * @param pluviometry_mm:	Pointer to 8-bits value that will contain pluviometry in mm.
+ * @return status:			Function execution status.
  */
-void RAIN_get_pluviometry(uint8_t* rain_pluviometry_mm) {
+RAIN_status_t RAIN_get_pluviometry(uint8_t* pluviometry_mm) {
+	// Local variables.
+	RAIN_status_t status = RAIN_SUCCESS;
+	uint32_t rain_um = 0;
+	uint32_t rain_mm = 0;
+	uint32_t remainder = 0;
+	// Check parameter.
+	if (pluviometry_mm == NULL) {
+		status = RAIN_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Convert edge count to mm of rain.
-	uint32_t rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
-	uint32_t rain_mm = (rain_um / 1000);
+	rain_um = (rain_edge_count * RAIN_EDGE_TO_UM);
+	rain_mm = (rain_um / 1000);
 	// Rounding operation.
-	uint32_t remainder = rain_um - (rain_mm * 1000);
+	remainder = rain_um - (rain_mm * 1000);
 	if (remainder >= 500) {
 		rain_mm++;
 	}
 	// Clip value.
 	if (rain_mm > RAIN_MAX_VALUE_MM) {
-		(*rain_pluviometry_mm) = RAIN_MAX_VALUE_MM;
+		(*pluviometry_mm) = RAIN_MAX_VALUE_MM;
 	}
 	else {
-		(*rain_pluviometry_mm) = (uint8_t) rain_mm;
+		(*pluviometry_mm) = (uint8_t) rain_mm;
 	}
+errors:
+	return status;
 }
 
 #ifdef FLOOD_DETECTION
 /* GET CURRENT FLOOD LEVEL.
  * @param flood_level:	Pointer to 8-bits value that will current flood level.
- * @return:				None.
+ * @return status:		Function execution status.
  */
-void RAIN_get_flood_level(uint8_t* flood_level) {
+RAIN_status_t RAIN_get_flood_level(uint8_t* flood_level) {
+	// Local variables.
+	RAIN_status_t status = RAIN_SUCCESS;
+	// Check parameter.
+	if (flood_level == NULL) {
+		status = RAIN_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Read inputs.
 	if (GPIO_read(&RAIN_GPIO_FLOOD_LEVEL_3) == 0) {
 		(*flood_level) = 3;
@@ -108,6 +129,8 @@ void RAIN_get_flood_level(uint8_t* flood_level) {
 	else {
 		(*flood_level) = 0;
 	}
+errors:
+	return status;
 }
 #endif
 

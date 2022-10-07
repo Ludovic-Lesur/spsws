@@ -11,8 +11,8 @@
 /*** Wheather station mode ***/
 
 //#define ATM 		// AT command mode.
-//#define IM 			// Intermittent mode.
-#define CM 		// Continuous mode.
+#define IM 			// Intermittent mode.
+//#define CM 		// Continuous mode.
 
 #ifdef IM
 #define SPSWS_MODE	0

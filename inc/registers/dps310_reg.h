@@ -43,5 +43,6 @@
 #define DPS310_REG_COEF_C30B		0x20
 #define DPS310_REG_COEF_C30A		0x21
 #define DPS310_REG_COEF_COEF_SRCE	0x28
+#define DPS310_REG_LAST				0x29
 
 #endif /* __DPS310_REG_H__ */

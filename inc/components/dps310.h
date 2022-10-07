@@ -21,6 +21,9 @@
 
 typedef enum {
 	DPS310_SUCCESS = 0,
+	DPS310_ERROR_NULL_PARAMETER,
+	DPS310_ERROR_REGISTER_ADDRESS,
+	DPS310_ERROR_REGISTER_BIT_INDEX,
 	DPS310_ERROR_COEFFICIENTS_TIMEOUT,
 	DPS310_ERROR_SENSOR_TIMEOUT,
 	DPS310_ERROR_TEMPERATURE_TIMEOUT,
@@ -35,8 +38,8 @@ typedef enum {
 
 void DPS310_init(void);
 DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address);
-void DPS310_get_pressure(uint32_t* pressure_pa);
-void DPS310_get_temperature(int8_t* temperature_degrees);
+DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa);
+DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees);
 
 #define DPS310_status_check(error_base) { if (dps310_status != DPS310_SUCCESS) { status = error_base + dps310_status; goto errors; }}
 #define DPS310_error_check() { ERROR_status_check(dps310_status, DPS310_SUCCESS, ERROR_BASE_DPS310); }

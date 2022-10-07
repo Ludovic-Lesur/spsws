@@ -448,8 +448,10 @@ static void _AT_iths_callback(void) {
 	sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
 	SHT3X_INT_error_check_print();
 	// Read data.
-	SHT3X_get_temperature(&tamb_degrees);
-	SHT3X_get_humidity(&hamb_percent);
+	sht3x_status = SHT3X_get_temperature(&tamb_degrees);
+	SHT3X_INT_error_check_print();
+	sht3x_status = SHT3X_get_humidity(&hamb_percent);
+	SHT3X_INT_error_check_print();
 	// Print results.
 	_AT_response_add_string("T=");
 	_AT_response_add_value((int32_t) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
@@ -487,8 +489,10 @@ static void _AT_eths_callback(void) {
 	sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
 	SHT3X_EXT_error_check_print();
 	// Read data.
-	SHT3X_get_temperature(&tamb_degrees);
-	SHT3X_get_humidity(&hamb_percent);
+	sht3x_status = SHT3X_get_temperature(&tamb_degrees);
+	SHT3X_EXT_error_check_print();
+	sht3x_status = SHT3X_get_humidity(&hamb_percent);
+	SHT3X_EXT_error_check_print();
 	// Print results.
 	_AT_response_add_string("T=");
 	_AT_response_add_value((int32_t) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
@@ -526,8 +530,10 @@ static void _AT_epts_callback(void) {
 	dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
 	DPS310_error_check_print();
 	// Read data.
-	DPS310_get_pressure(&pressure_pa);
-	DPS310_get_temperature(&tamb_degrees);
+	dps310_status = DPS310_get_pressure(&pressure_pa);
+	DPS310_error_check_print();
+	dps310_status = DPS310_get_temperature(&tamb_degrees);
+	DPS310_error_check_print();
 	// Print results.
 	_AT_response_add_string("P=");
 	_AT_response_add_value((int32_t) pressure_pa, STRING_FORMAT_DECIMAL, 0);
@@ -564,7 +570,8 @@ static void _AT_euvs_callback(void) {
 	si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
 	SI1133_error_check_print();
 	// Read data.
-	SI1133_get_uv_index(&uv_index);
+	si1133_status = SI1133_get_uv_index(&uv_index);
+	SI1133_error_check_print();
 	// Print result.
 	_AT_response_add_string("UVI=");
 	_AT_response_add_value(uv_index, STRING_FORMAT_DECIMAL, 0);
@@ -596,7 +603,8 @@ static void _AT_wind_callback(void) {
 		// Update flag.
 		at_ctx.wind_measurement_flag = 0;
 		// Get speeds.
-		WIND_get_speed(&wind_speed_average, &wind_speed_peak);
+		wind_status = WIND_get_speed(&wind_speed_average, &wind_speed_peak);
+		WIND_error_check_print();
 		_AT_response_add_string("AverageSpeed=");
 		_AT_response_add_value((int32_t) wind_speed_average, STRING_FORMAT_DECIMAL, 0);
 		_AT_response_add_string("m/h PeakSpeed=");
@@ -604,7 +612,6 @@ static void _AT_wind_callback(void) {
 		// Get direction.
 		_AT_response_add_string("m/h AverageDirection=");
 		wind_status = WIND_get_direction(&wind_direction);
-
 		if (wind_status == (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED)) {
 			_AT_response_add_string("N/A");
 		}
@@ -635,6 +642,7 @@ errors:
 static void _AT_rain_callback(void) {
 	// Local variables.
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
+	RAIN_status_t rain_status = RAIN_SUCCESS;
 	int32_t enable = 0;
 	uint8_t rain_mm = 0;
 	// Read enable parameter.
@@ -644,7 +652,8 @@ static void _AT_rain_callback(void) {
 	if (enable == 0) {
 		RAIN_stop_continuous_measure();
 		// Get result.
-		RAIN_get_pluviometry(&rain_mm);
+		rain_status = RAIN_get_pluviometry(&rain_mm);
+		RAIN_error_check_print();
 		// Print data.
 		_AT_response_add_string("Rain=");
 		_AT_response_add_value((int32_t) rain_mm, STRING_FORMAT_DECIMAL,0);

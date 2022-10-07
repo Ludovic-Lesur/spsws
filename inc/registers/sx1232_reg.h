@@ -93,5 +93,7 @@
 #define SX1232_REG_FORMERTEMP		0x6C
 // 0x6D-0x6F = reserved.
 #define SX1232_REG_BITRATEFRAC		0x70
+// Last register address
+#define SX1232_REG_LAST				0x7F
 
 #endif /* __SX1232_REG_H__ */

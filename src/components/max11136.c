@@ -64,23 +64,28 @@ static MAX11136_context_t max11136_ctx;
 /*** MAX11136 local functions ***/
 
 /* MAX11136 REGISTER WRITE FUNCTION.
- * @param addr:		Register address (5 bits).
- * @param valie:	Value to write in register.
- * @return status:	Function execution status.
+ * @param register_address:	Register address (5 bits).
+ * @param value:			Value to write in register.
+ * @return status:			Function execution status.
  */
-static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_register(uint8_t addr, uint16_t value) {
+static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_register(uint8_t register_address, uint16_t value) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
 	SPI_status_t spi_status = SPI_SUCCESS;
 	uint16_t spi_command = 0;
+	// Check parameters.
+	if (register_address >= MAX11136_REG_LAST) {
+		status = MAX11136_ERROR_REGISTER_ADDRESS;
+		goto errors;
+	}
 	// Build SPI command.
-	if (addr == MAX11136_REG_ADC_MODE_CONTROL) {
+	if (register_address == MAX11136_REG_ADC_MODE_CONTROL) {
 		// Data is 15-bits length.
 		spi_command |= value & 0x00007FFF;
 	}
 	else {
 		// Data is 11-bits length.
-		spi_command |= (addr & 0x0000001F) << 11;
+		spi_command |= (register_address & 0x0000001F) << 11;
 		spi_command |= (value & 0x000007FF);
 	}
 	// Send command.
@@ -246,12 +251,16 @@ errors:
 MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, uint32_t* data) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
-	// Check index.
+	// Check parameters.
+	if (data == NULL) {
+		status = MAX11136_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	if (data_idx >= MAX11136_DATA_INDEX_LAST) {
 		status = MAX11136_ERROR_DATA_INDEX;
+		goto errors;
 	}
-	else {
-		(*data) = max11136_ctx.data[data_idx];
-	}
+	(*data) = max11136_ctx.data[data_idx];
+errors:
 	return status;
 }

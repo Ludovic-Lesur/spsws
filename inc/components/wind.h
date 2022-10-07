@@ -27,6 +27,7 @@
 
 typedef enum {
 	WIND_SUCCESS = 0,
+	WIND_ERROR_NULL_PARAMETER,
 	WIND_ERROR_MATH,
 	WIND_ERROR_BASE_LPTIM = 0x0100,
 	WIND_ERROR_BASE_SPI = (WIND_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
@@ -41,7 +42,7 @@ typedef enum {
 void WIND_init(void);
 void WIND_start_continuous_measure(void);
 void WIND_stop_continuous_measure(void);
-void WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh);
+WIND_status_t WIND_get_speed(uint32_t* average_speed_mh, uint32_t* peak_speed_mh);
 WIND_status_t WIND_get_direction(uint32_t* average_direction_degrees);
 void WIND_reset_data(void);
 WIND_status_t WIND_speed_edge_callback(void);

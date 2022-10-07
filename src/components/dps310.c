@@ -49,13 +49,18 @@ static DPS310_context_t dps310_ctx;
  * @param i2c_address:		Sensor address
  * @param register_address:	Address of the register to set.
  * @param value:			Value to write in the selected register.
- * @return status			Function execution status.
+ * @return status:			Function execution status.
  */
 static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	uint8_t register_write_command[2] = {register_address, value};
+	// Check parameters.
+	if (register_address >= DPS310_REG_LAST) {
+		status = DPS310_ERROR_REGISTER_ADDRESS;
+		goto errors;
+	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
@@ -67,13 +72,22 @@ errors:
  * @param i2c_address:		Sensor address
  * @param register_address:	Address of the register to read.
  * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
- * @return status			Function execution status.
+ * @return status:			Function execution status.
  */
 static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	I2C_status_t i2c1_status = I2C_SUCCESS;
 	uint8_t local_addr = register_address;
+	// Check parameters.
+	if (register_address >= DPS310_REG_LAST) {
+		status = DPS310_ERROR_REGISTER_ADDRESS;
+		goto errors;
+	}
+	if (value == NULL) {
+		status = DPS310_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
 	I2C1_status_check(DPS310_ERROR_BASE_I2C);
@@ -88,7 +102,7 @@ errors:
  * @param register_address: Address of the register to read.
  * @param bit_index:		Bit index of the flag to wait for.
  * @param timeout_error:	Error to return in case of timeout.
- * @return:					Function execution status.
+ * @return status:			Function execution status.
  */
 static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
@@ -96,6 +110,15 @@ static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_a
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	uint8_t reg_value = 0;
 	uint32_t loop_count_ms = 0;
+	// Check parameters.
+	if (register_address >= DPS310_REG_LAST) {
+		status = DPS310_ERROR_REGISTER_ADDRESS;
+		goto errors;
+	}
+	if (bit_index > 7) {
+		status = DPS310_ERROR_REGISTER_BIT_INDEX;
+		goto errors;
+	}
 	// Read register.
 	status = _DPS310_read_register(i2c_address, register_address, &reg_value);
 	if (status != DPS310_SUCCESS) goto errors;
@@ -120,7 +143,7 @@ errors:
 
 /* READ ALL SENSOR CALIBRATION COEFFICIENTS.
  * @param i2c_address:	Sensor address.
- * @return status		Function execution status.
+ * @return status:		Function execution status.
  */
 static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address) {
 	// Local variables.
@@ -187,7 +210,7 @@ errors:
 
 /* PERFORM TEMPERATURE MEASUREMENT.
  * @param i2c_address:	Sensor address.
- * @return status		Function execution status.
+ * @return status:		Function execution status.
  */
 static DPS310_status_t _DPS310_compute_raw_temperature(uint8_t i2c_address) {
 	// Local variables.
@@ -228,7 +251,7 @@ errors:
 
 /* PERFORM PRESSURE MEASUREMENT.
  * @param i2c_address:	Sensor address.
- * @return:				Function execution status.
+ * @return status:		Function execution status.
  */
 static DPS310_status_t _DPS310_compute_raw_pressure(uint8_t i2c_address) {
 	// Local variables.
@@ -280,7 +303,7 @@ void DPS310_init(void) {
 
 /* PERFORM PRESSURE AND TEMPERATURE MEASUREMENT.
  * @param i2c_address:	Sensor address.
- * @return status :		Function execution status.
+ * @return status:		Function execution status.
  */
 DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
@@ -303,12 +326,18 @@ errors:
 
 /* READ PRESSURE FROM DPS310 SENSOR.
  * @param pressure_pa:	Pointer to 32-bits value that will contain pressure result (Pa).
- * @return:				None.
+ * @return status:		Function execution status.
  */
-void DPS310_get_pressure(uint32_t* pressure_pa) {
+DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa) {
 	// Local variables.
+	DPS310_status_t status = DPS310_SUCCESS;
 	int64_t psr_temp = 0;
 	int64_t last_term = 0;
+	// Check parameter.
+	if (pressure_pa == NULL) {
+		status = DPS310_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Compute pressure in Pa.
 	psr_temp = dps310_ctx.coef_c20 + (dps310_ctx.prs_raw * dps310_ctx.coef_c30) / DPS310_SAMPLING_FACTOR_KP;
 	psr_temp = dps310_ctx.coef_c10 + (dps310_ctx.prs_raw * psr_temp) / DPS310_SAMPLING_FACTOR_KP;
@@ -319,16 +348,26 @@ void DPS310_get_pressure(uint32_t* pressure_pa) {
 	last_term = (dps310_ctx.tmp_raw * last_term) / DPS310_SAMPLING_FACTOR_KT;
 	psr_temp += last_term;
 	(*pressure_pa) = (uint32_t) psr_temp;
+errors:
+	return status;
 }
 
 /* READ TEMPERATURE FROM DPS310 SENSOR.
  * @param temperature_degrees:	Pointer to 8-bits value that will contain temperature result (degrees).
- * @return:						None.
+ * @return status:				Function execution status.
  */
-void DPS310_get_temperature(int8_t* temperature_degrees) {
+DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees) {
 	// Local variables.
+	DPS310_status_t status = DPS310_SUCCESS;
 	int64_t tmp_temp = 0;
+	// Check parameter.
+	if (temperature_degrees == NULL) {
+		status = DPS310_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Compute temperature in degrees.
 	tmp_temp = (dps310_ctx.coef_c0 / 2) + (dps310_ctx.coef_c1 * dps310_ctx.tmp_raw) / DPS310_SAMPLING_FACTOR_KT;
 	(*temperature_degrees) = (uint8_t) tmp_temp;
+errors:
+	return status;
 }

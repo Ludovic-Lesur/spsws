@@ -153,36 +153,46 @@ errors:
 }
 
 /* SELECT RF PATH ACCORDING TO RF MODE AND SIGFOX RADIO CONFIGURAION.
- * @param:	None.
- * @return:	None.
+ * @param rf_mode:	RF direction.
+ * @return status:	Function execution status.
  */
-static void _RF_API_set_rf_path(sfx_rf_mode_t rf_mode) {
+static sfx_u8 _RF_API_set_rf_path(sfx_rf_mode_t rf_mode) {
+	// Local variables.
+	SX1232_status_t sx1232_success = SX1232_SUCCESS;
+	SKY13317_status_t sky13317_status = SKY13317_SUCCESS;
 	// Select TX / RX.
 	switch (rf_mode) {
 	case SFX_RF_MODE_TX:
 		// Select TX path.
-		SX1232_set_rf_output_pin(SX1232_RF_OUTPUT_PIN_PABOOST);
+		sx1232_success = SX1232_set_rf_output_pin(SX1232_RF_OUTPUT_PIN_PABOOST);
+		if (sx1232_success != SX1232_SUCCESS) goto errors;
 #ifdef HW1_0
-		SKY13317_set_channel(SKY13317_CHANNEL_RF1);
+		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF1);
+		if (sky13317_status != SKY13317_SUCCESS) goto errors;
 #endif
 #ifdef HW2_0
-		SKY13317_set_channel(SKY13317_CHANNEL_RF2);
+		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF2);
+		if (sky13317_status != SKY13317_SUCCESS) goto errors;
 #endif
 		break;
 	case SFX_RF_MODE_RX:
 		// Activate LNA path.
 #ifdef HW1_0
-		SKY13317_set_channel(SKY13317_CHANNEL_RF2);
+		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF2);
+		if (sky13317_status != SKY13317_SUCCESS) goto errors;
 #endif
 #ifdef HW2_0
-		SKY13317_set_channel(SKY13317_CHANNEL_RF3);
+		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF3);
+		if (sky13317_status != SKY13317_SUCCESS) goto errors;
 #endif
 		break;
 	default:
-		// Disable every channel.
-		SKY13317_set_channel(SKY13317_CHANNEL_NONE);
+		goto errors;
 		break;
 	}
+	return SFX_ERR_NONE;
+errors:
+	return RF_ERR_API_INIT;
 }
 
 /*** RF API functions ***/
@@ -282,8 +292,10 @@ errors:
 sfx_u8 RF_API_stop(void) {
 	// Local variables.
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	SKY13317_status_t sky13317_status = SKY13317_SUCCESS;
 	// Disable all switch channels.
-	SKY13317_set_channel(SKY13317_CHANNEL_NONE);
+	sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_NONE);
+	if (sky13317_status != SKY13317_SUCCESS) goto errors;
 	// Power transceiver down.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
 	if (sx1232_status != SX1232_SUCCESS) goto errors;

@@ -53,9 +53,11 @@ void SKY13317_disable(void) {
 
 /* SELECT RF SWITCH CHANNEL.
  * @param channel:	Channel to select (see SKY13317_channel_t enumeration in sky13317.h).
- * ]return:			None.
+ * @return status:	Function execution status.
  */
-void SKY13317_set_channel(SKY13317_channel_t channel) {
+SKY13317_status_t SKY13317_set_channel(SKY13317_channel_t channel) {
+	// Local variables.
+	SKY13317_status_t status = SKY13317_SUCCESS;
 	// Reset channels.
 #ifdef HW1_0
 	GPIO_write(&GPIO_RF_CHANNEL_A, 0);
@@ -67,7 +69,6 @@ void SKY13317_set_channel(SKY13317_channel_t channel) {
 #endif
 	// Select channel.
 	switch (channel) {
-
 	case SKY13317_CHANNEL_NONE:
 		// Allready done by previous reset.
 		break;
@@ -97,7 +98,9 @@ void SKY13317_set_channel(SKY13317_channel_t channel) {
 #endif
 		break;
 	default:
+		status = SKY13317_ERROR_CHANNEL;
 		break;
 	}
+	return status;
 }
 

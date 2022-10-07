@@ -671,6 +671,7 @@ int32_t main (void) {
 #ifdef CM
 	uint32_t generic_data_u32_2 = 0;
 	WIND_status_t wind_status = WIND_SUCCESS;
+	RAIN_status_t rain_status = RAIN_SUCCESS;
 #endif
 	// Main loop.
 	while (1) {
@@ -739,8 +740,8 @@ int32_t main (void) {
 #ifdef FLOOD_DETECTION
 				// Turn clocks on if alarm has to be sent.
 				if (spsws_ctx.flags.flood_alarm != 0) {
-					SPSWS_mcu_clock_wake_up();
-					SPSWS_rf_clock_wake_up();
+					_SPSWS_mcu_clock_wake_up();
+					_SPSWS_rf_clock_wake_up();
 				}
 #endif
 			}
@@ -843,12 +844,14 @@ int32_t main (void) {
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
 				// Read data.
-				SHT3X_get_temperature(&temperature);
+				sht3x_status = SHT3X_get_temperature(&temperature);
+				SHT3X_INT_error_check();
 				math_status = MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				MATH_error_check();
 				spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
-				SHT3X_get_humidity(&generic_data_u8);
+				sht3x_status = SHT3X_get_humidity(&generic_data_u8);
+				SHT3X_INT_error_check();
 				spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = generic_data_u8;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.hpcb_percent);
 			}
@@ -867,11 +870,13 @@ int32_t main (void) {
 			SHT3X_EXT_error_check();
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				SHT3X_get_temperature(&temperature);
+				sht3x_status = SHT3X_get_temperature(&temperature);
+				SHT3X_EXT_error_check();
 				MATH_one_complement(temperature, 7, &generic_data_u32_1);
 				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_data_u32_1;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-				SHT3X_get_humidity(&generic_data_u8);
+				sht3x_status = SHT3X_get_humidity(&generic_data_u8);
+				SHT3X_EXT_error_check();
 				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_data_u8;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 			}
@@ -883,7 +888,8 @@ int32_t main (void) {
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
 				// Read data.
-				DPS310_get_pressure(&generic_data_u32_1);
+				dps310_status = DPS310_get_pressure(&generic_data_u32_1);
+				DPS310_error_check();
 				spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (generic_data_u32_1 / 10);
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 			}
@@ -896,14 +902,16 @@ int32_t main (void) {
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
-				SI1133_get_uv_index(&generic_data_u8);
+				si1133_status = SI1133_get_uv_index(&generic_data_u8);
+				SI1133_error_check();
 				spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = generic_data_u8;
 				SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
 			}
 #ifdef CM
 			IWDG_reload();
 			// Retrieve wind measurements.
-			WIND_get_speed(&generic_data_u32_1, &generic_data_u32_2);
+			wind_status = WIND_get_speed(&generic_data_u32_1, &generic_data_u32_2);
+			WIND_error_check();
 			spsws_ctx.sigfox_weather_data.average_wind_speed_kmh = (generic_data_u32_1 / 1000);
 			spsws_ctx.sigfox_weather_data.peak_wind_speed_kmh = (generic_data_u32_2 / 1000);
 			wind_status = WIND_get_direction(&generic_data_u32_1);
@@ -913,7 +921,8 @@ int32_t main (void) {
 			}
 			spsws_ctx.sigfox_weather_data.average_wind_direction_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
 			// Retrieve rain measurements.
-			RAIN_get_pluviometry(&generic_data_u8);
+			rain_status = RAIN_get_pluviometry(&generic_data_u8);
+			RAIN_error_check();
 			spsws_ctx.sigfox_weather_data.rain_mm = generic_data_u8;
 #endif
 			// Read status byte.
@@ -979,7 +988,8 @@ int32_t main (void) {
 #ifdef FLOOD_DETECTION
 		case SPSWS_STATE_FLOOD_ALARM:
 			// Read level and pluviometry.
-			RAIN_get_pluviometry(&generic_data_u8);
+			rain_status = RAIN_get_pluviometry(&generic_data_u8);
+			RAIN_error_check();
 			spsws_ctx.sigfox_flood_data.rain_mm = generic_data_u8;
 			spsws_ctx.sigfox_flood_data.level = spsws_ctx.flood_level;
 			// Send uplink flood alarm frame.
@@ -1103,7 +1113,8 @@ int32_t main (void) {
 #ifdef FLOOD_DETECTION
 				// Check flood level if there is no pending alarm.
 				if (spsws_ctx.flags.flood_alarm == 0) {
-					RAIN_get_flood_level(&generic_data_u8);
+					rain_status = RAIN_get_flood_level(&generic_data_u8);
+					RAIN_error_check();
 					if (spsws_ctx.flood_level != generic_data_u8) {
 						spsws_ctx.flood_level_change_count++;
 					}
