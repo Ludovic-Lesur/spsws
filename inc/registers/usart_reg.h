@@ -28,9 +28,13 @@ typedef struct {
 
 /*** USART base address ***/
 
-#ifdef HW2_0
+#define USART2	((USART_base_address_t*) ((uint32_t) 0x40004400))
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define USART1	((USART_base_address_t*) ((uint32_t) 0x40013800))
 #endif
-#define USART2	((USART_base_address_t*) ((uint32_t) 0x40004400))
+#ifdef MCU_CATEGORY_5
+#define USART4	((USART_base_address_t*) ((uint32_t) 0x40004C00))
+#define USART5	((USART_base_address_t*) ((uint32_t) 0x40005000))
+#endif
 
 #endif /* __USART_REG_H__ */

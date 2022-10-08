@@ -31,8 +31,14 @@ typedef struct {
 #define GPIOA	((GPIO_base_address_t*) ((uint32_t) 0x50000000))
 #define GPIOB	((GPIO_base_address_t*) ((uint32_t) 0x50000400))
 #define GPIOC	((GPIO_base_address_t*) ((uint32_t) 0x50000800))
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define GPIOD	((GPIO_base_address_t*) ((uint32_t) 0x50000C00))
+#endif
+#ifdef MCU_CATEGORY_5
 #define GPIOE	((GPIO_base_address_t*) ((uint32_t) 0x50001000))
+#endif
+#if (defined MCU_CATEGORY_2) || (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define GPIOH	((GPIO_base_address_t*) ((uint32_t) 0x50001C00))
+#endif
 
 #endif /* __GPIO_REG_H__ */

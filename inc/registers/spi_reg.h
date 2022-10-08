@@ -27,6 +27,8 @@ typedef struct {
 /*** SPI base addresses ***/
 
 #define SPI1	((SPI_base_address_t*) ((uint32_t) 0x40013000))
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define SPI2	((SPI_base_address_t*) ((uint32_t) 0x40003800))
+#endif
 
 #endif /* __SPI_REG_H__ */

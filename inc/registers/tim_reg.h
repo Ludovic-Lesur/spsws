@@ -39,14 +39,16 @@ typedef struct {
 /*** TIMx base addresses ***/
 
 #define TIM2	((TIM_base_address_t*) ((uint32_t) 0x40000000))
-#ifdef HW2_0
-#define TIM3	((TIM_base_address_t*) ((uint32_t) 0x40000400)) // Not present on STM32L041K6xx.
-#endif
 #define TIM21	((TIM_base_address_t*) ((uint32_t) 0x40010800))
+#if (defined MCU_CATEGORY_2) || (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define TIM22	((TIM_base_address_t*) ((uint32_t) 0x40011400))
-#ifdef HW2_0
-#define TIM6	((TIM_base_address_t*) ((uint32_t) 0x40001000)) // Not present on STM32L041K6xx.
-#define TIM7	((TIM_base_address_t*) ((uint32_t) 0x40001400)) // Not present on STM32L041K6xx.
+#endif
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
+#define TIM6	((TIM_base_address_t*) ((uint32_t) 0x40001000))
+#endif
+#ifdef MCU_CATEOGORY_5
+#define TIM3	((TIM_base_address_t*) ((uint32_t) 0x40000400))
+#define TIM7	((TIM_base_address_t*) ((uint32_t) 0x40001400))
 #endif
 
 #endif /* __TIM_REG_H__ */

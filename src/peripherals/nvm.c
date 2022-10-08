@@ -87,7 +87,7 @@ NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data) {
 	// Local variables.
 	NVM_status_t status = NVM_SUCCESS;
 	// Check parameters.
-	if (address_offset >= EEPROM_SIZE) {
+	if (address_offset >= EEPROM_SIZE_BYTES) {
 		status = NVM_ERROR_ADDRESS;
 		goto errors;
 	}
@@ -116,7 +116,7 @@ NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data) {
 	NVM_status_t status = NVM_SUCCESS;
 	uint32_t loop_count = 0;
 	// Check parameters.
-	if (address_offset >= EEPROM_SIZE) {
+	if (address_offset >= EEPROM_SIZE_BYTES) {
 		status = NVM_ERROR_ADDRESS;
 		goto errors;
 	}

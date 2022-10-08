@@ -29,7 +29,11 @@ typedef struct {
 /*** I2C base addresses ***/
 
 #define I2C1	((I2C_base_address_t*) ((uint32_t) 0x40005400))
-//#define I2C2	((I2C_base_address_t*) ((uint32_t) 0x40005800))
-//#define I2C3	((I2C_base_address_t*) ((uint32_t) 0x40007800))
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
+#define I2C2	((I2C_base_address_t*) ((uint32_t) 0x40005800))
+#endif
+#ifdef MCU_CATEGORY_5
+#define I2C3	((I2C_base_address_t*) ((uint32_t) 0x40007800))
+#endif
 
 #endif /* __I2C_REG_H__ */

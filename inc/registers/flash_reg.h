@@ -33,13 +33,17 @@ typedef struct {
 /*** EEPROM address range ***/
 
 #define EEPROM_START_ADDRESS	(uint32_t) 0x08080000
-#ifdef HW1_0
-// EEPROM size is 1kB for STM32L041xxxx (category 2 device).
-#define EEPROM_SIZE				1024 // In bytes.
+#ifdef MCU_CATEGORY_1
+#define EEPROM_SIZE_BYTES		512
 #endif
-#ifdef HW2_0
-// EEPROM size is 6kB for STM32L081xxxx (category 5 device).
-#define EEPROM_SIZE				6144 // In bytes.
+#ifdef MCU_CATEGORY_2
+#define EEPROM_SIZE_BYTES		1024
+#endif
+#ifdef MCU_CATEGORY_3
+#define EEPROM_SIZE_BYTES		2048
+#endif
+#ifdef MCU_CATEGORY_5
+#define EEPROM_SIZE_BYTES		6144
 #endif
 
 #endif /* __FLASH_REG_H__ */
