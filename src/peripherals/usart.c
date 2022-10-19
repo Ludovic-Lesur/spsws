@@ -217,7 +217,7 @@ USART_status_t USARTx_send_string(char_t* tx_string) {
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
 		status = _USARTx_fill_tx_buffer((uint8_t) *(tx_string++));
-		if (status != USART_SUCCESS) break;
+		if (status != USART_SUCCESS) goto errors;
 		// Check character count.
 		char_count++;
 		if (char_count > USART_STRING_LENGTH_MAX) {

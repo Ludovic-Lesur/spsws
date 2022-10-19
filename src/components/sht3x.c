@@ -63,7 +63,7 @@ errors:
 }
 
 /* READ TEMPERATURE FROM SHT3X SENSOR.
- * @param temperature_degrees:	Pointer to signed byte that will contain temperature result (2-complement).
+ * @param temperature_degrees:	Pointer to 8-bits value that will contain temperature result (2-complement).
  * @return status:				Function execution status.
  */
 SHT3X_status_t SHT3X_get_temperature(int8_t* temperature_degrees) {

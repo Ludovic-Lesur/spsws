@@ -7,7 +7,6 @@
 
 #include "rtc.h"
 
-#include "at.h"
 #include "exti.h"
 #include "exti_reg.h"
 #include "nvic.h"

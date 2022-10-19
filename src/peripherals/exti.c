@@ -16,6 +16,7 @@
 #include "rain.h"
 #include "syscfg_reg.h"
 #include "wind.h"
+#include "types.h"
 
 /*** EXTI local macros ***/
 
@@ -129,7 +130,7 @@ void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 /* CONFIGURE A LINE AS INTERNAL INTERRUPT SOURCE.
  * @param line:		Line to configure (see EXTI_line_t enum).
  * @param trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
- * @return status:	Function execution status.
+ * @return:			None.
  */
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger) {
 	// Set mask.

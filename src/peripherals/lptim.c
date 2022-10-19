@@ -86,7 +86,7 @@ errors:
 
 /* INIT LPTIM FOR DELAY OPERATION.
  * @param lsi_freq_hz:	Effective LSI oscillator frequency.
- * @return status:		Function execution status.
+ * @return:				None.
  */
 void LPTIM1_init(uint32_t lsi_freq_hz) {
 	// Configure clock source.

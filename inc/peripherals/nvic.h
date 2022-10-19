@@ -55,8 +55,8 @@ typedef enum {
 /*** NVIC functions ***/
 
 void NVIC_init(void);
-void NVIC_enable_interrupt(NVIC_interrupt_t irq_idx);
-void NVIC_disable_interrupt(NVIC_interrupt_t irq_idx);
-void NVIC_set_priority(NVIC_interrupt_t irq_idx, uint8_t priority);
+void NVIC_enable_interrupt(NVIC_interrupt_t irq_index);
+void NVIC_disable_interrupt(NVIC_interrupt_t irq_index);
+void NVIC_set_priority(NVIC_interrupt_t irq_index, uint8_t priority);
 
 #endif /* __NVIC_H__ */
