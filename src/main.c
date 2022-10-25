@@ -70,8 +70,8 @@
 #define SPSWS_FLOOD_LEVEL_CHANGE_THRESHOLD			10 // Number of consecutive reading to validate a new flood level.
 #endif
 // Error values.
-#define SPSWS_ERROR_VALUE_VOLTAGE_12BITS			0xFFF
-#define SPSWS_ERROR_VALUE_VOLTAGE_16BITS			0xFFFF
+#define SPSWS_ERROR_VALUE_ANALOG_12BITS				0xFFF
+#define SPSWS_ERROR_VALUE_ANALOG_16BITS				0xFFFF
 #define SPSWS_ERROR_VALUE_LIGHT						0xFF
 #define SPSWS_ERROR_VALUE_TEMPERATURE				0x7F
 #define SPSWS_ERROR_VALUE_HUMIDITY					0xFF
@@ -181,9 +181,9 @@ typedef union {
 		unsigned uv_index : 8;
 		unsigned patm_abs_tenth_hpa : 16;
 #ifdef CM
-		unsigned average_wind_speed_kmh : 8;
-		unsigned peak_wind_speed_kmh : 8;
-		unsigned average_wind_direction_two_degrees : 8;
+		unsigned wind_speed_average_kmh : 8;
+		unsigned wind_speed_peak_kmh : 8;
+		unsigned wind_direction_average_two_degrees : 8;
 		unsigned rain_mm : 8;
 #endif
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
@@ -631,12 +631,12 @@ static void _SPSWS_compute_final_measurements(void) {
 	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
 	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
 	MATH_error_check();
-	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_16BITS : generic_u16;
+	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_16BITS : generic_u16;
 	// MCU voltage.
 	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
 	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
 	MATH_error_check();
-	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_VOLTAGE_12BITS : generic_u16;
+	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_12BITS : generic_u16;
 }
 #endif
 
@@ -832,7 +832,7 @@ int32_t main (void) {
 				}
 				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &generic_data_u32_1);
 				MAX11136_error_check();
-				spsws_ctx.sigfox_monitoring_data.vcap_mv = (max11136_status == MAX11136_SUCCESS) ? (uint16_t) generic_data_u32_1 : SPSWS_ERROR_VALUE_VOLTAGE_12BITS;
+				spsws_ctx.sigfox_monitoring_data.vcap_mv = (max11136_status == MAX11136_SUCCESS) ? (uint16_t) generic_data_u32_1 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
 				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &generic_data_u32_1);
 				MAX11136_error_check();
 				if (max11136_status == MAX11136_SUCCESS) {
@@ -842,7 +842,7 @@ int32_t main (void) {
 			}
 			else {
 				// Set error value for Vcap.
-				spsws_ctx.sigfox_monitoring_data.vcap_mv = SPSWS_ERROR_VALUE_VOLTAGE_12BITS;
+				spsws_ctx.sigfox_monitoring_data.vcap_mv = SPSWS_ERROR_VALUE_ANALOG_12BITS;
 			}
 			// Internal temperature/humidity sensor.
 #ifdef HW1_0
@@ -941,14 +941,14 @@ int32_t main (void) {
 			// Retrieve wind measurements.
 			wind_status = WIND_get_speed(&generic_data_u32_1, &generic_data_u32_2);
 			WIND_error_check();
-			spsws_ctx.sigfox_weather_data.average_wind_speed_kmh = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 1000) : SPSWS_ERROR_VALUE_WIND;
-			spsws_ctx.sigfox_weather_data.peak_wind_speed_kmh = (wind_status == WIND_SUCCESS) ? (generic_data_u32_2 / 1000) : SPSWS_ERROR_VALUE_WIND;
+			spsws_ctx.sigfox_weather_data.wind_speed_average_kmh = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 1000) : SPSWS_ERROR_VALUE_WIND;
+			spsws_ctx.sigfox_weather_data.wind_speed_peak_kmh = (wind_status == WIND_SUCCESS) ? (generic_data_u32_2 / 1000) : SPSWS_ERROR_VALUE_WIND;
 			wind_status = WIND_get_direction(&generic_data_u32_1);
 			// Do not store undefined error (meaning that no wind has been detected so no direction can be computed).
 			if ((wind_status != WIND_SUCCESS) && (wind_status != (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED))) {
 				WIND_error_check();
 			}
-			spsws_ctx.sigfox_weather_data.average_wind_direction_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
+			spsws_ctx.sigfox_weather_data.wind_direction_average_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_data_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
 			// Retrieve rain measurements.
 			rain_status = RAIN_get_pluviometry(&generic_data_u8);
 			RAIN_error_check();
