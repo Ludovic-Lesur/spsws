@@ -802,12 +802,12 @@ int32_t main (void) {
 				}
 			}
 			// Retrieve external ADC data.
-			i2c1_status = I2C1_power_on(); // Must be called before ADC since LDR is on the sensors module (powered by I2C supply).
-			I2C1_error_check();
 #ifdef HW1_0
 			spi_status = SPI1_power_on();
 			SPI1_error_check();
 #endif
+			i2c1_status = I2C1_power_on(); // Must be called before ADC since LDR is on the sensors module (powered by I2C supply).
+			I2C1_error_check();
 #ifdef HW2_0
 			spi_status = SPI2_power_on();
 			SPI2_error_check();
@@ -815,9 +815,6 @@ int32_t main (void) {
 			IWDG_reload();
 			max11136_status = MAX11136_perform_measurements();
 			MAX11136_error_check();
-#ifdef HW1_0
-			SPI1_power_off();
-#endif
 #ifdef HW2_0
 			SPI2_power_off();
 #endif
@@ -845,11 +842,6 @@ int32_t main (void) {
 				spsws_ctx.sigfox_monitoring_data.vcap_mv = SPSWS_ERROR_VALUE_ANALOG_12BITS;
 			}
 			// Internal temperature/humidity sensor.
-#ifdef HW1_0
-			// Must be called again because SPI1 power function turned off the sensors.
-			i2c1_status = I2C1_power_on();
-			I2C1_error_check();
-#endif
 			IWDG_reload();
 			sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
 			SHT3X_INT_error_check();
@@ -926,6 +918,9 @@ int32_t main (void) {
 			SI1133_error_check();
 			// Turn sensors off.
 			I2C1_power_off();
+#ifdef HW1_0
+			SPI1_power_off();
+#endif
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
