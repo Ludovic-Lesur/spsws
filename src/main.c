@@ -64,7 +64,7 @@
 #define SPSWS_SIGFOX_MONITORING_DATA_LENGTH			9
 #define SPSWS_SIGFOX_GEOLOC_DATA_LENGTH				11
 #define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_LENGTH		1
-#define SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH		(ERROR_STACK_DEPTH * 2)
+#define SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH		12
 #ifdef FLOOD_DETECTION
 #define SPSWS_SIGFOX_FLOOD_DATA_LENGTH				2
 #define SPSWS_FLOOD_LEVEL_CHANGE_THRESHOLD			10 // Number of consecutive reading to validate a new flood level.
@@ -260,7 +260,6 @@ typedef struct {
 	uint32_t geoloc_fix_duration_seconds;
 	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
 	// Error stack.
-	ERROR_t error_stack[ERROR_STACK_DEPTH];
 	uint8_t sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH];
 	// Sigfox.
 	sfx_rc_t sigfox_rc;
@@ -666,6 +665,7 @@ int32_t main (void) {
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	sfx_error_t sigfox_api_status = SFX_ERR_NONE;
 	uint8_t idx = 0;
+	ERROR_t error_code = 0;
 	int8_t temperature = 0;
 	uint8_t generic_data_u8 = 0;
 	uint32_t generic_data_u32_1 = 0;
@@ -1080,10 +1080,10 @@ int32_t main (void) {
 			// Check stack.
 			if (ERROR_stack_is_empty() == 0) {
 				// Read error stack.
-				ERROR_stack_read(spsws_ctx.error_stack);
-				// Convert to 8-bits little-endian array.
-				for (idx=0 ; idx<SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
-					spsws_ctx.sigfox_error_stack_data[idx] = spsws_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
+				for (idx=0 ; idx<(SPSWS_SIGFOX_ERROR_STACK_DATA_LENGTH / 2) ; idx++) {
+					error_code = ERROR_stack_read();
+					spsws_ctx.sigfox_error_stack_data[(2 * idx) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
+					spsws_ctx.sigfox_error_stack_data[(2 * idx) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
 				}
 				// Send frame.
 				sigfox_api_status = SIGFOX_API_open(&spsws_ctx.sigfox_rc);

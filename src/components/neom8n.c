@@ -105,8 +105,8 @@ typedef enum {
 
 typedef struct {
 	// Buffers.
-	uint8_t rx_buf1[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 1.
-	uint8_t rx_buf2[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 2.
+	char_t rx_buf1[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 1.
+	char_t rx_buf2[NMEA_RX_BUFFER_SIZE]; // NMEA input messages buffer 2.
 	volatile uint8_t fill_buf1; // 0/1 = buffer 2/1 is currently filled by DMA, buffer 1/2 is ready to be parsed.
 	volatile uint8_t line_end_flag; // Set to '1' as soon as a complete NMEA message is received.
 #ifdef NMEA_GGA_ALTITUDE_STABILITY_FILTER
@@ -161,7 +161,7 @@ errors:
  * @param ck:			Pointer to the read checksum.
  * @return status:		Function executions status.
  */
-static NEOM8N_status_t _NEOM8N_get_nmea_checksum(uint8_t* nmea_rx_buf, uint8_t* ck) {
+static NEOM8N_status_t _NEOM8N_get_nmea_checksum(char_t* nmea_rx_buf, uint8_t* ck) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -194,7 +194,7 @@ errors:
  * @param ck:			Pointer to the computed checksum.
  * @return status:		Function executions status.
  */
-static NEOM8N_status_t _NEOM8N_compute_nmea_checksum(uint8_t* nmea_rx_buf, uint8_t* ck) {
+static NEOM8N_status_t _NEOM8N_compute_nmea_checksum(char_t* nmea_rx_buf, uint8_t* ck) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	uint8_t message_start_char_idx = 0;
@@ -258,7 +258,7 @@ errors:
  * @param gps_time:		Pointer to time structure.
  * @return status:		Function execution status.
  */
-static NEOM8N_status_t _NEOM8N_parse_nmea_zda(uint8_t* nmea_rx_buf, RTC_time_t* gps_time) {
+static NEOM8N_status_t _NEOM8N_parse_nmea_zda(char_t* nmea_rx_buf, RTC_time_t* gps_time) {
 	// Local variables.
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -395,7 +395,7 @@ errors:
  * @param gps_position:	Pointer to position structure.
  * @return status:		Function execution status.
  */
-static NEOM8N_status_t _NEOM8N_parse_nmea_gga(uint8_t* nmea_rx_buf, NEOM8N_position_t* gps_position) {
+static NEOM8N_status_t _NEOM8N_parse_nmea_gga(char_t* nmea_rx_buf, NEOM8N_position_t* gps_position) {
 	// Local variables
 	NEOM8N_status_t status = NEOM8N_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
