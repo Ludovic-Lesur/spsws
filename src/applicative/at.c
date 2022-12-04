@@ -172,9 +172,19 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$RSSI=", "frequency[hz],duration[s]", "Start or stop continuous RSSI measurement", _AT_rssi_callback},
 #endif
 };
+
 static AT_context_t at_ctx;
 
 /*** AT local functions ***/
+
+/* GENERIC MACRO TO ADD A CHARACTER TO THE REPLY BUFFER.
+ * @param character:	Character to add.
+ * @return:				None.
+ */
+#define _AT_reply_add_char(character) { \
+	at_ctx.reply[at_ctx.reply_size] = character; \
+	at_ctx.reply_size = (at_ctx.reply_size + 1) % AT_REPLY_BUFFER_SIZE; \
+}
 
 /* APPEND A STRING TO THE REPONSE BUFFER.
  * @param tx_string:	String to add.
@@ -183,11 +193,7 @@ static AT_context_t at_ctx;
 static void _AT_reply_add_string(char_t* tx_string) {
 	// Fill TX buffer with new bytes.
 	while (*tx_string) {
-		at_ctx.reply[at_ctx.reply_size++] = *(tx_string++);
-		// Manage rollover.
-		if (at_ctx.reply_size >= AT_REPLY_BUFFER_SIZE) {
-			at_ctx.reply_size = 0;
-		}
+		_AT_reply_add_char(*(tx_string++));
 	}
 }
 
@@ -218,14 +224,13 @@ static void _AT_reply_add_value(int32_t tx_value, STRING_format_t format, uint8_
 static void _AT_reply_send(void) {
 	// Local variables.
 	USART_status_t usart_status = USART_SUCCESS;
-	uint32_t idx = 0;
 	// Add ending string.
 	_AT_reply_add_string(AT_REPLY_END);
+	_AT_reply_add_char(STRING_CHAR_NULL);
 	// Send response over UART.
 	usart_status = USARTx_send_string(at_ctx.reply);
 	USART_error_check();
-	// Flush response buffer.
-	for (idx=0 ; idx<AT_REPLY_BUFFER_SIZE ; idx++) at_ctx.reply[idx] = STRING_CHAR_NULL;
+	// Flush reply buffer.
 	at_ctx.reply_size = 0;
 }
 
@@ -1309,15 +1314,12 @@ errors:
  * @return:	None.
  */
 static void _AT_reset_parser(void) {
-	// Local variables.
-	uint8_t idx = 0;
-	// Reset buffers.
-	for (idx=0 ; idx<AT_COMMAND_BUFFER_SIZE ; idx++) at_ctx.command[idx] = STRING_CHAR_NULL;
-	for (idx=0 ; idx<AT_REPLY_BUFFER_SIZE ; idx++) at_ctx.reply[idx] = STRING_CHAR_NULL;
-	// Reset parsing variables.
+	// Flush buffers.
 	at_ctx.command_size = 0;
 	at_ctx.reply_size = 0;
+	// Reset flag.
 	at_ctx.line_end_flag = 0;
+	// Reset parser.
 	at_ctx.parser.buffer = (char_t*) at_ctx.command;
 	at_ctx.parser.buffer_size = 0;
 	at_ctx.parser.separator_idx = 0;
@@ -1403,10 +1405,7 @@ void AT_fill_rx_buffer(uint8_t rx_byte) {
 			// Store new byte.
 			at_ctx.command[at_ctx.command_size] = rx_byte;
 			// Manage index.
-			at_ctx.command_size++;
-			if (at_ctx.command_size >= AT_COMMAND_BUFFER_SIZE) {
-				at_ctx.command_size = 0;
-			}
+			at_ctx.command_size = (at_ctx.command_size + 1) % AT_COMMAND_BUFFER_SIZE;
 		}
 	}
 }
