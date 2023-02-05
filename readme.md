@@ -18,9 +18,10 @@ Each hardware revision has a corresponding **build configuration** in the Eclips
 
 ## Structure
 The project is organized as follow:
-* `inc` and `src`: **source code** split in 5 layers:
+* `inc` and `src`: **source code** split in 6 layers:
     * `registers`: MCU **registers** adress definition.
     * `peripherals`: internal MCU **peripherals** drivers.
+    * `utils`: **utility** functions.
     * `components`: external **components** drivers.
     * `sigfox`: **Sigfox library** API and low level implementation.
     * `applicative`: high-level **application** layers.

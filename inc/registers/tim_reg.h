@@ -46,7 +46,7 @@ typedef struct {
 #if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define TIM6	((TIM_base_address_t*) ((uint32_t) 0x40001000))
 #endif
-#ifdef MCU_CATEOGORY_5
+#ifdef MCU_CATEGORY_5
 #define TIM3	((TIM_base_address_t*) ((uint32_t) 0x40000400))
 #define TIM7	((TIM_base_address_t*) ((uint32_t) 0x40001400))
 #endif

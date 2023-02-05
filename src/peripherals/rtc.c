@@ -325,12 +325,13 @@ void RTC_clear_alarm_b_flag(void) {
 RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
+	uint32_t loop_count = 0;
 	// Check parameter.
 	if (delay_seconds > RTC_WAKEUP_TIMER_DELAY_MAX) {
 		status = RTC_ERROR_WAKEUP_TIMER_DELAY;
 		goto errors;
 	}
-	// Check if timer si not allready running.
+	// Check if timer is not already running.
 	if (((RTC -> CR) & (0b1 << 10)) != 0) {
 		status = RTC_ERROR_WAKEUP_TIMER_RUNNING;
 		goto errors;
@@ -338,6 +339,17 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	// Enable RTC and register access.
 	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
+	// Disable interrupt.
+	RTC -> CR &= ~(0b1 << 14); // WUTE='0'.
+	// Poll WUTWF flag before accessing reload register.
+	while (((RTC -> ISR) & (0b1 << 2)) == 0) {
+		// Wait for WUTWF='1' or timeout.
+		loop_count++;
+		if (loop_count > RTC_INIT_TIMEOUT_COUNT) {
+			status = RTC_ERROR_WAKEUP_TIMER_REGISTER_ACCESS;
+			goto errors;
+		}
+	}
 	// Configure wake-up timer.
 	RTC -> WUTR = (delay_seconds - 1);
 	// Clear flags.
@@ -346,8 +358,8 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	RTC -> CR |= (0b1 << 14); // WUTE='1'.
 	// Start timer.
 	RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
-	_RTC_exit_initialization_mode();
 errors:
+	_RTC_exit_initialization_mode();
 	return status;
 }
 

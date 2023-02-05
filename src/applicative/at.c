@@ -51,7 +51,7 @@
 #define AT_COMMANDS_SIGFOX
 #define AT_COMMANDS_RC
 #define AT_COMMANDS_TEST_MODES
-// Commands
+// Commands.
 #define AT_COMMAND_BUFFER_SIZE			128
 // Parameters separator.
 #define AT_CHAR_SEPARATOR				','
@@ -119,7 +119,7 @@ typedef struct {
 	volatile uint32_t command_size;
 	volatile uint8_t line_end_flag;
 	PARSER_context_t parser;
-	// Replies.
+	// Reply.
 	char_t reply[AT_REPLY_BUFFER_SIZE];
 	uint32_t reply_size;
 	// Wind measurement flag.
