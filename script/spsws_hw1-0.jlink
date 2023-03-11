@@ -1,0 +1,6 @@
+r
+loadfile hw1-0/spsws.hex
+verifyfile hw1-0/spsws.hex
+r
+g
+qc

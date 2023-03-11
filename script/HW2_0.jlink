@@ -1,6 +1,0 @@
-r
-loadfile HW2_0/SPSWS.hex
-verifyfile HW2_0/SPSWS.hex
-r
-g
-qc

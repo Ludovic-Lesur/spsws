@@ -1,12 +1,16 @@
+/*
+ * spsws_hw2-0.ld
+ *
+ *  Created on: 3 mar. 2019
+ *      Author: ARM
+ */
+
 /* Linker script to configure memory regions. */
 MEMORY
 {
-  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
-  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 8K
+  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 128K
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 20K
 }
-
-/* Library configurations */
-/*GROUP(libgcc.a libc.a libm.a libnosys.a)*/
 
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.

@@ -1,30 +1,11 @@
-/**************************************************************************//**
- * @file     startup_ARMCM0plus.s
- * @brief    CMSIS Core Device Startup File for
- *           ARMCM0plus Device Series
- * @version  V5.00
- * @date     10. January 2018
- ******************************************************************************/
 /*
- * Copyright (c) 2009-2018 Arm Limited. All rights reserved.
+ * spsws_startup.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the License); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an AS IS BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Created on: 26 apr. 2018
+ *      Author: ARM
  */
 
-#include <stdint.h>
-
+#include "types.h"
 
 /*----------------------------------------------------------------------------
   Linker generated Symbols
@@ -33,10 +14,10 @@ extern uint32_t __etext;
 extern uint32_t __data_start__;
 extern uint32_t __data_end__;
 #ifdef __STARTUP_COPY_MULTIPLE
- extern uint32_t __copy_table_start__;
- extern uint32_t __copy_table_end__;
- extern uint32_t __zero_table_start__;
- extern uint32_t __zero_table_end__;
+extern uint32_t __copy_table_start__;
+extern uint32_t __copy_table_end__;
+extern uint32_t __zero_table_start__;
+extern uint32_t __zero_table_end__;
 #endif
 extern uint32_t __bss_start__;
 extern uint32_t __bss_end__;
@@ -46,7 +27,6 @@ extern uint32_t __StackTop;
   Exception / Interrupt Handler Function Prototype
  *----------------------------------------------------------------------------*/
 typedef void( *pFunc )( void );
-
 
 /*----------------------------------------------------------------------------
   External References
@@ -58,32 +38,29 @@ extern int  __START(void) __attribute__((noreturn));    /* main entry point */
 #endif
 
 #ifndef __NO_SYSTEM_INIT
-extern void SystemInit (void);            /* CMSIS System Initialization      */
+extern void SystemInit (void);            				/* CMSIS System Initialization      */
 #endif
-
 
 /*----------------------------------------------------------------------------
   Internal References
  *----------------------------------------------------------------------------*/
-void Default_Handler(void);                          /* Default empty handler */
-void Reset_Handler(void);                            /* Reset Handler */
-
+void Default_Handler(void);                          	/* Default empty handler */
+void Reset_Handler(void);                            	/* Reset Handler */
 
 /*----------------------------------------------------------------------------
   User Initial Stack & Heap
  *----------------------------------------------------------------------------*/
 #ifndef __STACK_SIZE
-  #define	__STACK_SIZE  0x00000400
+#define	__STACK_SIZE	0x00000400
 #endif
 static uint8_t stack[__STACK_SIZE] __attribute__ ((aligned(8), used, section(".stack")));
 
 #ifndef __HEAP_SIZE
-  #define	__HEAP_SIZE   0x00000C00
+#define	__HEAP_SIZE		0x00000C00
 #endif
 #if __HEAP_SIZE > 0
 static uint8_t heap[__HEAP_SIZE]   __attribute__ ((aligned(8), used, section(".heap")));
 #endif
-
 
 /*----------------------------------------------------------------------------
   Exception / Interrupt Handler
@@ -284,16 +261,14 @@ void Reset_Handler(void) {
 #define __START _start
 #endif
 	__START();
-
 }
-
 
 /*----------------------------------------------------------------------------
   Default Handler for Exceptions / Interrupts
  *----------------------------------------------------------------------------*/
 void Default_Handler(void) {
-
-	while(1);
+	// Enter sleep mode.
+	while(1) {
+		__asm volatile ("wfi");
+	}
 }
-
-
