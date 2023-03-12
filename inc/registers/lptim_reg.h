@@ -21,10 +21,10 @@ typedef struct {
 	volatile uint32_t CMP;      // LPTIM compare register.
 	volatile uint32_t ARR;    	// LPTIM autoreload register.
 	volatile uint32_t CNT;     	// LPTIM counter register.
-} LPTIM_base_address_t;
+} LPTIM_registers_t;
 
 /*** LPTIM base address ***/
 
-#define LPTIM1	((LPTIM_base_address_t*) ((uint32_t) 0x40007C00))
+#define LPTIM1	((LPTIM_registers_t*) ((uint32_t) 0x40007C00))
 
 #endif /* __LPTIM_REG_H__ */

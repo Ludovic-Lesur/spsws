@@ -1,7 +1,7 @@
 /*
  * spsws_startup.c
  *
- *  Created on: 26 apr. 2018
+ *  Created on: 6 mar. 2023
  *      Author: ARM
  */
 
@@ -38,14 +38,14 @@ extern int  __START(void) __attribute__((noreturn));    /* main entry point */
 #endif
 
 #ifndef __NO_SYSTEM_INIT
-extern void SystemInit (void);            				/* CMSIS System Initialization      */
+extern void SystemInit (void);							/* CMSIS System Initialization */
 #endif
 
 /*----------------------------------------------------------------------------
   Internal References
  *----------------------------------------------------------------------------*/
-void Default_Handler(void);                          	/* Default empty handler */
-void Reset_Handler(void);                            	/* Reset Handler */
+void Default_Handler(void);								/* Default empty handler */
+void Reset_Handler(void);								/* Reset Handler */
 
 /*----------------------------------------------------------------------------
   User Initial Stack & Heap
@@ -159,7 +159,6 @@ const pFunc __Vectors[] __attribute__ ((section(".vectors"))) = {
   0                                  /* Reserved                     */
 };
 
-
 /*----------------------------------------------------------------------------
   Reset Handler called on controller reset
  *----------------------------------------------------------------------------*/
@@ -268,7 +267,7 @@ void Reset_Handler(void) {
  *----------------------------------------------------------------------------*/
 void Default_Handler(void) {
 	// Enter sleep mode.
-	while(1) {
+	while (1) {
 		__asm volatile ("wfi");
 	}
 }

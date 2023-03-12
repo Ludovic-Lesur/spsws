@@ -14,14 +14,14 @@
 /*** GPIO structures ***/
 
 typedef struct {
-	GPIO_base_address_t* port_address; // GPIOA to GPIOC.
+	GPIO_registers_t* port; // GPIOA to GPIOC.
 	uint8_t port_index; // 0 for GPIOA, 1 for GPIOB, etc.
-	uint8_t pin_index; // 0 to 15.
-	uint8_t alternate_function_index; // Alternate function number if used.
+	uint8_t pin; // 0 to 15.
+	uint8_t alternate_function; // Alternate function number if used.
 } GPIO_pin_t;
 
 typedef enum {
-	GPIO_MODE_INPUT,
+	GPIO_MODE_INPUT = 0,
 	GPIO_MODE_OUTPUT,
 	GPIO_MODE_ALTERNATE_FUNCTION,
 	GPIO_MODE_ANALOG,
@@ -29,13 +29,13 @@ typedef enum {
 } GPIO_mode_t;
 
 typedef enum {
-	GPIO_TYPE_PUSH_PULL,
+	GPIO_TYPE_PUSH_PULL = 0,
 	GPIO_TYPE_OPEN_DRAIN,
 	GPIO_TYPE_LAST
 } GPIO_output_type_t;
 
 typedef enum {
-	GPIO_SPEED_LOW,
+	GPIO_SPEED_LOW = 0,
 	GPIO_SPEED_MEDIUM,
 	GPIO_SPEED_HIGH,
 	GPIO_SPEED_VERY_HIGH,
@@ -43,7 +43,7 @@ typedef enum {
 } GPIO_output_speed_t;
 
 typedef enum {
-	GPIO_PULL_NONE,
+	GPIO_PULL_NONE = 0,
 	GPIO_PULL_UP,
 	GPIO_PULL_DOWN,
 	GPIO_PULL_LAST

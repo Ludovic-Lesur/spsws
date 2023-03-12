@@ -24,11 +24,11 @@ typedef struct {
 	volatile uint32_t WRPROT1;		// NVM interface write protection register 1.
 	volatile uint32_t RESERVED[23];	// Reserved 0x24.
 	volatile uint32_t WRPROT2;		// NVM interface write protection register 2.
-} FLASH_base_address_t;
+} FLASH_registers_t;
 
 /*** FLASH registers base address ***/
 
-#define FLASH	((FLASH_base_address_t*) ((uint32_t) 0x40022000))
+#define FLASH	((FLASH_registers_t*) ((uint32_t) 0x40022000))
 
 /*** EEPROM address range ***/
 

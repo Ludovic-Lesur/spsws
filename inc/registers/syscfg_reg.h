@@ -19,10 +19,10 @@ typedef struct {
 	volatile uint32_t COMP1_CSR;   	// SYSCFG comparator 1 control and status register.
 	volatile uint32_t COMP2_CSR;   	// SYSCFG comparator 2 control and status register.
 	volatile uint32_t CFGR3;   		// SYSCFG control and status register.
-} SYSCFG_base_address_t;
+} SYSCFG_registers_t;
 
 /*** SYSCFG base address ***/
 
-#define SYSCFG	((SYSCFG_base_address_t*) ((uint32_t) 0x40010000))
+#define SYSCFG	((SYSCFG_registers_t*) ((uint32_t) 0x40010000))
 
 #endif /* __SYSCFG_REG_H__ */

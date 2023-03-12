@@ -15,10 +15,10 @@
 typedef struct {
 	volatile uint32_t CR;	// Power control register.
 	volatile uint32_t CSR;	// Power control and status register.
-} PWR_base_address_t;
+} PWR_registers_t;
 
 /*** PWR base address ***/
 
-#define PWR		((PWR_base_address_t*) ((uint32_t) 0x40007000))
+#define PWR		((PWR_registers_t*) ((uint32_t) 0x40007000))
 
 #endif /* __PWR_REG_H__ */

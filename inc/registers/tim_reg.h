@@ -34,21 +34,21 @@ typedef struct {
 	volatile uint32_t DCR;    		// DMA control register (!).
 	volatile uint32_t DMAR;    		// DMA address for full transfer register (!).
 	volatile uint32_t OR;    		// Option register (!).
-} TIM_base_address_t;
+} TIM_registers_t;
 
 /*** TIMx base addresses ***/
 
-#define TIM2	((TIM_base_address_t*) ((uint32_t) 0x40000000))
-#define TIM21	((TIM_base_address_t*) ((uint32_t) 0x40010800))
+#define TIM2	((TIM_registers_t*) ((uint32_t) 0x40000000))
+#define TIM21	((TIM_registers_t*) ((uint32_t) 0x40010800))
 #if (defined MCU_CATEGORY_2) || (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define TIM22	((TIM_base_address_t*) ((uint32_t) 0x40011400))
+#define TIM22	((TIM_registers_t*) ((uint32_t) 0x40011400))
 #endif
 #if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define TIM6	((TIM_base_address_t*) ((uint32_t) 0x40001000))
+#define TIM6	((TIM_registers_t*) ((uint32_t) 0x40001000))
 #endif
 #ifdef MCU_CATEGORY_5
-#define TIM3	((TIM_base_address_t*) ((uint32_t) 0x40000400))
-#define TIM7	((TIM_base_address_t*) ((uint32_t) 0x40001400))
+#define TIM3	((TIM_registers_t*) ((uint32_t) 0x40000400))
+#define TIM7	((TIM_registers_t*) ((uint32_t) 0x40001400))
 #endif
 
 #endif /* __TIM_REG_H__ */

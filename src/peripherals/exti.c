@@ -32,33 +32,33 @@
 void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 #if (defined CM || defined ATM)
 	// Speed edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_DIO0.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO0.pin))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO0.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO0.pin))) != 0) {
 			WIND_speed_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_DIO0.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO0.pin)); // PIFx='1' (writing '1' clears the bit).
 	}
 #ifdef WIND_VANE_ULTIMETER
 	// Direction edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_DIO1.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO1.pin))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO1.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO1.pin))) != 0) {
 			WIND_direction_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_DIO1.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO1.pin)); // PIFx='1' (writing '1' clears the bit).
 	}
 #endif
 	// Rain edge interrupt.
-	if (((EXTI -> PR) & (0b1 << (GPIO_DIO2.pin_index))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_DIO2.pin))) != 0) {
 		// Manage callback.
-		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO2.pin_index))) != 0) {
+		if (((EXTI -> IMR) & (0b1 << (GPIO_DIO2.pin))) != 0) {
 			RAIN_edge_callback();
 		}
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_DIO2.pin_index)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_DIO2.pin)); // PIFx='1' (writing '1' clears the bit).
 	}
 #endif
 }
@@ -119,12 +119,12 @@ void EXTI_init(void) {
  */
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 	// Select GPIO port.
-	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] &= ~(0b1111 << (4 * ((gpio -> pin_index) % 4)));
-	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> pin_index) % 4)));
+	SYSCFG -> EXTICR[((gpio -> pin) / 4)] &= ~(0b1111 << (4 * ((gpio -> pin) % 4)));
+	SYSCFG -> EXTICR[((gpio -> pin) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> pin) % 4)));
 	// Set mask.
-	EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
+	EXTI -> IMR |= (0b1 << ((gpio -> pin))); // IMx='1'.
 	// Select triggers.
-	_EXTI_set_trigger(trigger, (gpio -> pin_index));
+	_EXTI_set_trigger(trigger, (gpio -> pin));
 }
 
 /* CONFIGURE A LINE AS INTERNAL INTERRUPT SOURCE.

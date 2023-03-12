@@ -21,10 +21,10 @@ typedef struct {
 	volatile uint32_t CCR;		// SCB configuration and control register.
 	volatile uint32_t SHPR2;	// SCB system handler priority register 2.
 	volatile uint32_t SHPR3;	// SCB system handler priority register 3.
-} SCB_base_address_t;
+} SCB_registers_t;
 
 /*** SCB base address ***/
 
-#define SCB		((SCB_base_address_t*) ((uint32_t) 0xE000ED00))
+#define SCB		((SCB_registers_t*) ((uint32_t) 0xE000ED00))
 
 #endif /* __SCB_REG_H__ */

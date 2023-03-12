@@ -22,10 +22,10 @@ typedef struct {
 	volatile uint32_t ICPR;    			// Interrupt clear-pending register.
 	volatile uint32_t RESERVED3[95];	// Reserved 0xE000E300.
 	volatile uint32_t IPR[8];			// Interrupt priority registers 0 to 7.
-} NVIC_base_address_t;
+} NVIC_registers_t;
 
 /*** NVIC base address ***/
 
-#define NVIC	((NVIC_base_address_t*) ((uint32_t) 0xE000E100))
+#define NVIC	((NVIC_registers_t*) ((uint32_t) 0xE000E100))
 
 #endif /* __NVIC_REG_H__ */

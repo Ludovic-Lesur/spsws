@@ -22,13 +22,13 @@ typedef struct {
 	volatile uint32_t TXCRCR;   // SPI TX CRC register.
 	volatile uint32_t I2SCFGR;	// SPI I2S configuration register.
 	volatile uint32_t I2SPR;    // SPI I2S prescaler register.
-} SPI_base_address_t;
+} SPI_registers_t;
 
 /*** SPI base addresses ***/
 
-#define SPI1	((SPI_base_address_t*) ((uint32_t) 0x40013000))
+#define SPI1	((SPI_registers_t*) ((uint32_t) 0x40013000))
 #if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define SPI2	((SPI_base_address_t*) ((uint32_t) 0x40003800))
+#define SPI2	((SPI_registers_t*) ((uint32_t) 0x40003800))
 #endif
 
 #endif /* __SPI_REG_H__ */

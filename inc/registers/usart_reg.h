@@ -24,17 +24,17 @@ typedef struct {
 	volatile uint32_t ICR;    	// USART interrupt flag clear register.
 	volatile uint32_t RDR;     	// USART receive data register.
 	volatile uint32_t TDR;   	// USART transmit data register.
-} USART_base_address_t;
+} USART_registers_t;
 
 /*** USART base address ***/
 
-#define USART2	((USART_base_address_t*) ((uint32_t) 0x40004400))
+#define USART2	((USART_registers_t*) ((uint32_t) 0x40004400))
 #if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define USART1	((USART_base_address_t*) ((uint32_t) 0x40013800))
+#define USART1	((USART_registers_t*) ((uint32_t) 0x40013800))
 #endif
 #ifdef MCU_CATEGORY_5
-#define USART4	((USART_base_address_t*) ((uint32_t) 0x40004C00))
-#define USART5	((USART_base_address_t*) ((uint32_t) 0x40005000))
+#define USART4	((USART_registers_t*) ((uint32_t) 0x40004C00))
+#define USART5	((USART_registers_t*) ((uint32_t) 0x40005000))
 #endif
 
 #endif /* __USART_REG_H__ */

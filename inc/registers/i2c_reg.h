@@ -24,16 +24,16 @@ typedef struct {
 	volatile uint32_t PECR;    		// I2C PEC register.
 	volatile uint32_t RXDR;    		// I2C receive data register.
 	volatile uint32_t TXDR;    		// I2C transmit data register.
-} I2C_base_address_t;
+} I2C_registers_t;
 
 /*** I2C base addresses ***/
 
-#define I2C1	((I2C_base_address_t*) ((uint32_t) 0x40005400))
+#define I2C1	((I2C_registers_t*) ((uint32_t) 0x40005400))
 #if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define I2C2	((I2C_base_address_t*) ((uint32_t) 0x40005800))
+#define I2C2	((I2C_registers_t*) ((uint32_t) 0x40005800))
 #endif
 #ifdef MCU_CATEGORY_5
-#define I2C3	((I2C_base_address_t*) ((uint32_t) 0x40007800))
+#define I2C3	((I2C_registers_t*) ((uint32_t) 0x40007800))
 #endif
 
 #endif /* __I2C_REG_H__ */
