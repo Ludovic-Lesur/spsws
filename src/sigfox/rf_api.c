@@ -526,13 +526,13 @@ sfx_u8 RF_API_wait_frame(sfx_u8 *frame, sfx_s16 *rssi, sfx_rx_state_enum_t *stat
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_STOP);
 	if (lptim1_status != LPTIM_SUCCESS) goto errors;
 	// Go to RX state.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
 	if (sx1232_status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_STOP);
 	if (lptim1_status != LPTIM_SUCCESS) goto errors;
 	// Wait for external interrupt (payload ready on DIO0).
 	while ((remaining_delay > 0) && (GPIO_read(&GPIO_SX1232_DIO0) == 0)) {

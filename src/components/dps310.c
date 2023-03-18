@@ -125,7 +125,7 @@ static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_a
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
-		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
 		LPTIM1_status_check(DPS310_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += DPS310_SUB_DELAY_MS;

@@ -76,11 +76,11 @@ SPI_status_t SPI1_power_on(void) {
 	// Turn SPI1 slaves on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
 	// Wait for power-on.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_STOP);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #ifdef HW1_0
 	GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_STOP);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 #endif
 	// Chip select high by default.
@@ -295,7 +295,7 @@ SPI_status_t SPI2_power_on(void) {
 	// Turn MAX11136 on.
 	GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 	// Warm-up delay.
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_STOP);
 	LPTIM1_status_check(SPI_ERROR_BASE_LPTIM);
 	// Chip select high by default.
 	GPIO_write(&GPIO_MAX11136_CS, 1);

@@ -7,6 +7,7 @@
 
 #include "lpuart.h"
 
+#include "exti.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "lpuart_reg.h"
@@ -44,6 +45,7 @@ void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 		// Clear ORE flag.
 		LPUART1 -> ICR |= (0b1 << 3);
 	}
+	EXTI_clear_flag(EXTI_LINE_LPUART1);
 }
 
 /*** LPUART functions ***/
@@ -103,7 +105,7 @@ LPUART_status_t LPUART1_power_on(void) {
 #endif
 	// Turn NEOM8N on.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
-	lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_STOP);
 	LPTIM1_status_check(LPUART_ERROR_BASE_LPTIM);
 errors:
 	return status;

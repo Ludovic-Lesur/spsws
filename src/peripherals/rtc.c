@@ -8,7 +8,6 @@
 #include "rtc.h"
 
 #include "exti.h"
-#include "exti_reg.h"
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
@@ -39,7 +38,7 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 		}
 		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
-		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
+		EXTI_clear_flag(EXTI_LINE_RTC_ALARM);
 	}
 	// Wake-up timer interrupt.
 	if (((RTC -> ISR) & (0b1 << 10)) != 0) {
@@ -49,7 +48,7 @@ void __attribute__((optimize("-O0"))) RTC_IRQHandler(void) {
 		}
 		// Clear flags.
 		RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
-		EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+		EXTI_clear_flag(EXTI_LINE_RTC_WAKEUP_TIMER);
 	}
 }
 
@@ -170,8 +169,8 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uin
 	EXTI_configure_line(EXTI_LINE_RTC_WAKEUP_TIMER, EXTI_TRIGGER_RISING_EDGE);
 	// Disable interrupts and clear all flags.
 	RTC -> ISR &= 0xFFFE0000;
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+	EXTI_clear_flag(EXTI_LINE_RTC_ALARM);
+	EXTI_clear_flag(EXTI_LINE_RTC_WAKEUP_TIMER);
 	// Set interrupt priority.
 	NVIC_set_priority(NVIC_INTERRUPT_RTC, 1);
 	NVIC_enable_interrupt(NVIC_INTERRUPT_RTC);
@@ -278,7 +277,7 @@ volatile uint8_t RTC_get_alarm_a_flag(void) {
 void RTC_clear_alarm_a_flag(void) {
 	// Clear all flags.
 	RTC -> ISR &= ~(0b1 << 8); // ALRAF='0'.
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
+	EXTI_clear_flag(EXTI_LINE_RTC_ALARM);
 }
 
 /* ENABLE RTC ALARM B INTERRUPT.
@@ -314,7 +313,7 @@ volatile uint8_t RTC_get_alarm_b_flag(void) {
 void RTC_clear_alarm_b_flag(void) {
 	// Clear all flags.
 	RTC -> ISR &= ~(0b1 << 9); // ALRBF='0'.
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_ALARM);
+	EXTI_clear_flag(EXTI_LINE_RTC_ALARM);
 	rtc_alarm_b_flag = 0;
 }
 
@@ -397,6 +396,6 @@ volatile uint8_t RTC_get_wakeup_timer_flag(void) {
 void RTC_clear_wakeup_timer_flag(void) {
 	// Clear flag.
 	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
-	EXTI -> PR |= (0b1 << EXTI_LINE_RTC_WAKEUP_TIMER);
+	EXTI_clear_flag(EXTI_LINE_RTC_WAKEUP_TIMER);
 	rtc_wakeup_timer_flag = 0;
 }

@@ -141,6 +141,15 @@ void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger) {
 	}
 }
 
+/* CLEAR EXTI FLAG.
+ * @param line:	Line to clear (see EXTI_line_t enum).
+ * @return:		None.
+ */
+void EXTI_clear_flag(EXTI_line_t line) {
+	// Clear flag.
+	EXTI -> PR |= line; // PIFx='1'.
+}
+
 /* CLEAR ALL EXTI FLAGS.
  * @param:	None.
  * @return:	None.

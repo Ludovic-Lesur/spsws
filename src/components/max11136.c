@@ -138,7 +138,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	// Wait for EOC to be pulled low.
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
 		// Low power delay.
-		lptim1_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
 		LPTIM1_status_check(MAX11136_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += MAX11136_SUB_DELAY_MS;

@@ -1277,12 +1277,12 @@ static void _AT_rssi_callback(void) {
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
 	SX1232_error_check_print();
 	// Wait TS_FS=60us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_error_check_print();
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
 	SX1232_error_check_print();
 	// Wait TS_TR=120us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_error_check_print();
 	// Measurement loop.
 	_AT_reply_add_string("SX1232 running...");
@@ -1297,7 +1297,7 @@ static void _AT_rssi_callback(void) {
 		_AT_reply_add_string("dBm");
 		_AT_reply_send();
 		// Report delay.
-		lptim1_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, LPTIM_DELAY_MODE_ACTIVE);
 		LPTIM1_error_check_print();
 		report_loop++;
 	}

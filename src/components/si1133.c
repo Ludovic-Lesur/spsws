@@ -119,7 +119,7 @@ static SI1133_status_t _SI1133_wait_flag(uint8_t i2c_address, uint8_t register_a
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
-		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
 		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;
@@ -198,7 +198,7 @@ static SI1133_status_t _SI1133_wait_for_command_completion(uint8_t i2c_address, 
 			goto errors;
 		}
 		// Low power delay.
-		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
 		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;

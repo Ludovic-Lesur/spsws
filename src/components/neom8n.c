@@ -597,7 +597,7 @@ static NEOM8N_status_t _NEOM8N_select_nmea_messages(uint32_t nmea_message_id_mas
 			lpuart1_status = LPUART1_send_byte(neom8n_cfg_msg[neom8n_cfg_msg_idx]); // Send command.
 			LPUART1_status_check(NEOM8N_ERROR_BASE_LPUART);
 		}
-		lptim1_status = LPTIM1_delay_milliseconds(100, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_STOP);
 		LPTIM1_status_check(NEOM8N_ERROR_BASE_LPTIM);
 	}
 errors:

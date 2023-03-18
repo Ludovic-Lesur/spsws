@@ -137,22 +137,22 @@ sfx_u8 MCU_API_delay(sfx_delay_t delay_type) {
 	switch (delay_type) {
 	case SFX_DLY_INTER_FRAME_TX:
 		// 0 to 2s in Uplink DC.
-		lptim1_status = LPTIM1_delay_milliseconds(500, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(500, LPTIM_DELAY_MODE_STOP);
 		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		break;
 	case SFX_DLY_INTER_FRAME_TRX:
 		// 500 ms in Uplink/Downlink FH & Downlink DC.
-		lptim1_status = LPTIM1_delay_milliseconds(500, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(500, LPTIM_DELAY_MODE_STOP);
 		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		break;
 	case SFX_DLY_OOB_ACK:
 		// 1.4s to 4s for Downlink OOB.
-		lptim1_status = LPTIM1_delay_milliseconds(2000, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_STOP);
 		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		break;
 	case SFX_DLY_CS_SLEEP:
 		// Delay between several trials of Carrier Sense (for the first frame only).
-		lptim1_status = LPTIM1_delay_milliseconds(1000, 1);
+		lptim1_status = LPTIM1_delay_milliseconds(1000, LPTIM_DELAY_MODE_STOP);
 		if (lptim1_status != LPTIM_SUCCESS) goto errors;
 		break;
 	default:

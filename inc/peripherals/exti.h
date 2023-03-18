@@ -13,6 +13,22 @@
 /*** EXTI structures ***/
 
 typedef enum {
+	EXTI_LINE_GPIO_0 = 0,
+	EXTI_LINE_GPIO_1 = 1,
+	EXTI_LINE_GPIO_2 = 2,
+	EXTI_LINE_GPIO_3 = 3,
+	EXTI_LINE_GPIO_4 = 4,
+	EXTI_LINE_GPIO_5 = 5,
+	EXTI_LINE_GPIO_6 = 6,
+	EXTI_LINE_GPIO_7 = 7,
+	EXTI_LINE_GPIO_8 = 8,
+	EXTI_LINE_GPIO_9 = 9,
+	EXTI_LINE_GPIO_10 = 10,
+	EXTI_LINE_GPIO_11 = 11,
+	EXTI_LINE_GPIO_12 = 12,
+	EXTI_LINE_GPIO_13 = 13,
+	EXTI_LINE_GPIO_14 = 14,
+	EXTI_LINE_GPIO_15 = 15,
 	EXTI_LINE_PVD = 16,
 	EXTI_LINE_RTC_ALARM = 17,
 	EXTI_LINE_RTC_TAMPER_TIMESTAMP = 19,
@@ -40,6 +56,7 @@ typedef enum {
 void EXTI_init(void);
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger);
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger);
+void EXTI_clear_flag(EXTI_line_t line);
 void EXTI_clear_all_flags(void);
 
 #endif /* __EXTI_H__ */

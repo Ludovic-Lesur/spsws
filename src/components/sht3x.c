@@ -47,7 +47,7 @@ SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address) {
 	i2c1_status = I2C1_write(i2c_address, measure_command, 2, 1);
 	I2C1_status_check(SHT3X_ERROR_BASE_I2C);
 	// Wait for conversion to complete (at least 15ms).
-	lptim1_status = LPTIM1_delay_milliseconds(30, 1);
+	lptim1_status = LPTIM1_delay_milliseconds(30, LPTIM_DELAY_MODE_STOP);
 	LPTIM1_status_check(SHT3X_ERROR_BASE_LPTIM);
 	// Read data.
 	i2c1_status = I2C1_read(i2c_address, measure_buf, 6);
