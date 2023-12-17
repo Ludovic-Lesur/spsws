@@ -1,7 +1,7 @@
 /*
  * iwdg_reg.h
  *
- *  Created on: 30 march 2018
+ *  Created on: 30 mar. 2018
  *      Author: Ludo
  */
 
@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** IWDG registers ***/
+/*** IWDG REG macros ***/
 
+// Peripheral base address.
+#define IWDG	((IWDG_registers_t*) ((uint32_t) 0x40003000))
+
+/*** IWDG REG structures ***/
+
+/*!******************************************************************
+ * \enum IWDG_registers_t
+ * \brief IWDG registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t KR;    	// IWDG key register.
 	volatile uint32_t PR;   	// IWDG prescaler register.
@@ -19,9 +28,5 @@ typedef struct {
 	volatile uint32_t SR;    	// IWDG status register.
 	volatile uint32_t WINR;		// IWDG window register.
 } IWDG_registers_t;
-
-/*** IWDG base address ***/
-
-#define IWDG	((IWDG_registers_t*) ((uint32_t) 0x40003000))
 
 #endif /* __IWDG_REG_H___ */

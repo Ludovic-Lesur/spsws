@@ -13,30 +13,93 @@
 
 /*** RAIN structures ***/
 
+/*!******************************************************************
+ * \enum RAIN_status_t
+ * \brief RAIN driver error codes.
+ *******************************************************************/
 typedef enum {
+	// Driver errors.
 	RAIN_SUCCESS = 0,
 	RAIN_ERROR_NULL_PARAMETER,
+	// Last base value.
 	RAIN_ERROR_BASE_LAST = 0x0100
 } RAIN_status_t;
 
-#if (defined CM || defined ATM)
-
 /*** RAIN functions ***/
 
+#if (defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT)
+/*!******************************************************************
+ * \fn void RAIN_init_init(void)
+ * \brief Init RAIN driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void RAIN_init(void);
+#endif
+
+#if (defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT)
+/*!******************************************************************
+ * \fn void RAIN_start_continuous_measure(void)
+ * \brief Start rainfall measurement.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void RAIN_start_continuous_measure(void);
+#endif
+
+#if (defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT)
+/*!******************************************************************
+ * \fn void RAIN_stop_continuous_measure(void)
+ * \brief Stop rainfall measurement.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void RAIN_stop_continuous_measure(void);
-RAIN_status_t RAIN_get_pluviometry(uint8_t* pluviometry_mm);
-#ifdef FLOOD_DETECTION
+#endif
+
+#ifdef SPSWS_RAIN_MEASUREMENT
+/*!******************************************************************
+ * \fn void RAIN_reset_rainfall(void)
+ * \brief Reset rainfall measurement.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void RAIN_reset_rainfall(void);
+#endif
+
+#ifdef SPSWS_RAIN_MEASUREMENT
+/*!******************************************************************
+ * \fn RAIN_status_t RAIN_get_rainfall(uint8_t* rainfall_mm)
+ * \brief Read rainfall.
+ * \param[in]  	none
+ * \param[out] 	rainfall_mm: Pointer to byte that will contain the rainfall count in mm.
+ * \retval		Function execution status.
+ *******************************************************************/
+RAIN_status_t RAIN_get_rainfall(uint8_t* rainfall_mm);
+#endif
+
+#ifdef SPSWS_FLOOD_MEASUREMENT
+/*!******************************************************************
+ * \fn RAIN_status_t RAIN_get_flood_level(uint8_t* flood_level)
+ * \brief Read rainfall.
+ * \param[in]  	none
+ * \param[out] 	flood_level: Pointer to byte that will contain the flood level.
+ * \retval		Function execution status.
+ *******************************************************************/
 RAIN_status_t RAIN_get_flood_level(uint8_t* flood_level);
 #endif
-void RAIN_reset_data(void);
-void RAIN_edge_callback(void);
 
-#define RAIN_status_check(error_base) { if (rain_status != RAIN_SUCCESS) { status = error_base + rain_status; goto errors; }}
-#define RAIN_error_check() { ERROR_status_check(rain_status, RAIN_SUCCESS, ERROR_BASE_RAIN); }
-#define RAIN_error_check_print() { ERROR_status_check(rain_status, RAIN_SUCCESS, ERROR_BASE_RAIN); }
+/*******************************************************************/
+#define RAIN_exit_error(error_base) { if (rain_status != RAIN_SUCCESS) { status = (error_base + rain_status); goto errors; } }
 
-#endif
+/*******************************************************************/
+#define RAIN_stack_error(void) { if (rain_status != RAIN_SUCCESS) { ERROR_stack_add(ERROR_BASE_RAIN + rain_status); } }
+
+/*******************************************************************/
+#define RAIN_stack_exit_error(error_code) { if (rain_status != RAIN_SUCCESS) { ERROR_stack_add(ERROR_BASE_RAIN + rain_status); status = error_code; goto errors; } }
 
 #endif /* __RAIN_H__ */

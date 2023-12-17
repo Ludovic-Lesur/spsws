@@ -1,7 +1,7 @@
 /*
  * usart_reg.h
  *
- *  Created on: 11 aug 2018
+ *  Created on: 11 aug. 2018
  *      Author: Ludo
  */
 
@@ -10,8 +10,24 @@
 
 #include "types.h"
 
-/*** USART registers ***/
+/*** USART REG macros ***/
 
+// Peripherals base address.
+#define USART2	((USART_registers_t*) ((uint32_t) 0x40004400))
+#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
+#define USART1	((USART_registers_t*) ((uint32_t) 0x40013800))
+#endif
+#ifdef MCU_CATEGORY_5
+#define USART4	((USART_registers_t*) ((uint32_t) 0x40004C00))
+#define USART5	((USART_registers_t*) ((uint32_t) 0x40005000))
+#endif
+
+/*** USART REG structures ***/
+
+/*!******************************************************************
+ * \enum USART_registers_t
+ * \brief USART registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t CR1;    	// USART control register 1.
 	volatile uint32_t CR2;   	// USART control register 2.
@@ -25,16 +41,5 @@ typedef struct {
 	volatile uint32_t RDR;     	// USART receive data register.
 	volatile uint32_t TDR;   	// USART transmit data register.
 } USART_registers_t;
-
-/*** USART base address ***/
-
-#define USART2	((USART_registers_t*) ((uint32_t) 0x40004400))
-#if (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
-#define USART1	((USART_registers_t*) ((uint32_t) 0x40013800))
-#endif
-#ifdef MCU_CATEGORY_5
-#define USART4	((USART_registers_t*) ((uint32_t) 0x40004C00))
-#define USART5	((USART_registers_t*) ((uint32_t) 0x40005000))
-#endif
 
 #endif /* __USART_REG_H__ */

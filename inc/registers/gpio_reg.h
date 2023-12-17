@@ -10,24 +10,9 @@
 
 #include "types.h"
 
-/*** GPIO registers ***/
+/*** GPS REG macros ***/
 
-typedef struct {
-	volatile uint32_t MODER;    	// GPIO port mode register.
-	volatile uint32_t OTYPER;   	// GPIO port output type register.
-	volatile uint32_t OSPEEDR;  	// GPIO port output speed register.
-	volatile uint32_t PUPDR;    	// GPIO port pull-up/pull-down register.
-	volatile uint32_t IDR;      	// GPIO port input data register.
-	volatile uint32_t ODR;      	// GPIO port output data register.
-	volatile uint32_t BSRR;    		// GPIO port bit set/reset low register.
-	volatile uint32_t LCKR;     	// GPIO port configuration lock register.
-	volatile uint32_t AFRL;   		// GPIO alternate function low register.
-	volatile uint32_t AFRH;   		// GPIO alternate function high register.
-	volatile uint32_t BRR;   		// GPIO port bir reset register.
-} GPIO_registers_t;
-
-/*** GPIO base addresses ***/
-
+// Peripherals base address.
 #define GPIOA	((GPIO_registers_t*) ((uint32_t) 0x50000000))
 #define GPIOB	((GPIO_registers_t*) ((uint32_t) 0x50000400))
 #define GPIOC	((GPIO_registers_t*) ((uint32_t) 0x50000800))
@@ -40,5 +25,25 @@ typedef struct {
 #if (defined MCU_CATEGORY_2) || (defined MCU_CATEGORY_3) || (defined MCU_CATEGORY_5)
 #define GPIOH	((GPIO_registers_t*) ((uint32_t) 0x50001C00))
 #endif
+
+/*** GPIO REG structures ***/
+
+/*!******************************************************************
+ * \enum GPIO_registers_t
+ * \brief GPIO registers map.
+ *******************************************************************/
+typedef struct {
+	volatile uint32_t MODER;    	// GPIO port mode register.
+	volatile uint32_t OTYPER;   	// GPIO port output type register.
+	volatile uint32_t OSPEEDR;  	// GPIO port output speed register.
+	volatile uint32_t PUPDR;    	// GPIO port pull-up/pull-down register.
+	volatile uint32_t IDR;      	// GPIO port input data register.
+	volatile uint32_t ODR;      	// GPIO port output data register.
+	volatile uint32_t BSRR;    		// GPIO port bit set/reset low register.
+	volatile uint32_t LCKR;     	// GPIO port configuration lock register.
+	volatile uint32_t AFRL;   		// GPIO alternate function low register.
+	volatile uint32_t AFRH;   		// GPIO alternate function high register.
+	volatile uint32_t BRR;   		// GPIO port bit reset register.
+} GPIO_registers_t;
 
 #endif /* __GPIO_REG_H__ */

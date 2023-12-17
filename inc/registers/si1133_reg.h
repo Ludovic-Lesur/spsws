@@ -8,7 +8,7 @@
 #ifndef __SI1133_REG_H__
 #define __SI1133_REG_H__
 
-/*** SI1133 register map ***/
+/*** SI1133 registers map ***/
 
 #define SI1133_REG_PART_ID  	0x00
 #define SI1133_REG_HW_ID   		0x01

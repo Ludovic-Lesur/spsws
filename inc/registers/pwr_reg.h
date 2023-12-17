@@ -1,7 +1,7 @@
 /*
  * pwr_reg.h
  *
- *  Created on: 5 may 2018
+ *  Created on: 05 may 2018
  *      Author: Ludo
  */
 
@@ -10,15 +10,20 @@
 
 #include "types.h"
 
-/*** PWR registers ***/
+/*** PWR REG macros ***/
 
+// Peripheral base address.
+#define PWR		((PWR_registers_t*) ((uint32_t) 0x40007000))
+
+/*** PWR REG structures ***/
+
+/*!******************************************************************
+ * \enum PWR_registers_t
+ * \brief PWR registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t CR;	// Power control register.
 	volatile uint32_t CSR;	// Power control and status register.
 } PWR_registers_t;
-
-/*** PWR base address ***/
-
-#define PWR		((PWR_registers_t*) ((uint32_t) 0x40007000))
 
 #endif /* __PWR_REG_H__ */

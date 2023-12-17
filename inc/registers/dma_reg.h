@@ -1,7 +1,7 @@
 /*
  * dma_reg.h
  *
- *  Created on: 8 may 2018
+ *  Created on: 08 may 2018
  *      Author: Ludo
  */
 
@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** DMA registers ***/
+/*** DMA REG macros ***/
 
+// Peripheral base address.
+#define DMA1	((DMA_registers_t*) ((uint32_t) 0x40020000))
+
+/*** DMA REG structures ***/
+
+/*!******************************************************************
+ * \enum DMA_registers_t
+ * \brief DMA registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t ISR;			// DMA interrupt status register.
 	volatile uint32_t IFCR;			// DMA interrupt flag clear register.
@@ -48,13 +57,9 @@ typedef struct {
 	volatile uint32_t CCR7;			// DMA channel 7 configuration register.
 	volatile uint32_t CNDTR7;		// DMA channel 7 number of data register.
 	volatile uint32_t CPAR7;		// DMA channel 7 peripheral address register.
-	volatile uint32_t CMAR7;	// DMA channel 7 memory address register.
-	volatile uint32_t RESERVED6[6];    	// Reserved 0x90-0xA7.
-	volatile uint32_t CSELR;    // DMA channel selection register.
+	volatile uint32_t CMAR7;		// DMA channel 7 memory address register.
+	volatile uint32_t RESERVED6[6];	// Reserved 0x90-0xA7.
+	volatile uint32_t CSELR;    	// DMA channel selection register.
 } DMA_registers_t;
-
-/*** DMA base address ***/
-
-#define DMA1	((DMA_registers_t*) ((uint32_t) 0x40020000))
 
 #endif /* __DMA_REG_H__ */

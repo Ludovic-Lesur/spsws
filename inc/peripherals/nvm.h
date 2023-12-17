@@ -1,7 +1,7 @@
 /*
  * nvm.h
  *
- *  Created on: 19 june 2018
+ *  Created on: 19 jun. 2018
  *      Author: Ludo
  */
 
@@ -9,46 +9,68 @@
 #define __NVM_H__
 
 #include "types.h"
+#include "sigfox_types.h"
 
 /*** NVM macros ***/
 
+/*!******************************************************************
+ * \enum NVM_status_t
+ * \brief NVM driver error codes.
+ *******************************************************************/
 typedef enum {
+	// Driver errors.
 	NVM_SUCCESS = 0,
 	NVM_ERROR_NULL_PARAMETER,
 	NVM_ERROR_ADDRESS,
 	NVM_ERROR_UNLOCK,
 	NVM_ERROR_LOCK,
 	NVM_ERROR_WRITE,
+	// Last base value.
 	NVM_ERROR_BASE_LAST = 0x0100
 } NVM_status_t;
 
+/*!******************************************************************
+ * \enum NVM_address_t
+ * \brief NVM address mapping.
+ *******************************************************************/
 typedef enum {
-	NVM_ADDRESS_SIGFOX_DEVICE_ID = 0,
-	NVM_ADDRESS_SIGFOX_DEVICE_KEY = 4,
-	NVM_ADDRESS_SIGFOX_PN = 20,
-	NVM_ADDRESS_SIGFOX_MESSAGE_COUNTER = 22,
-	NVM_ADDRESS_SIGFOX_FH = 24,
-	NVM_ADDRESS_SIGFOX_RL = 26,
-	NVM_ADDRESS_DEVICE_CONFIGURATION = 27, // Mapped on downlink payload.
-	NVM_ADDRESS_GEOLOC_DATA_DAY_COUNT = 35,
-	NVM_ADDRESS_WEATHER_DATA_HOUR_COUNT = 36,
-	NVM_ADDRESS_STATUS = 37,
-	NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR = 38,
-	NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH = 40,
-	NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE = 41,
-	NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR = 42,
+	NVM_ADDRESS_SIGFOX_EP_ID = 0,
+	NVM_ADDRESS_SIGFOX_EP_KEY = (NVM_ADDRESS_SIGFOX_EP_ID + SIGFOX_EP_ID_SIZE_BYTES),
+	NVM_ADDRESS_SIGFOX_EP_LIB_DATA = (NVM_ADDRESS_SIGFOX_EP_KEY + SIGFOX_EP_KEY_SIZE_BYTES),
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR = (NVM_ADDRESS_SIGFOX_EP_LIB_DATA + SIGFOX_NVM_DATA_SIZE_BYTES),
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH = (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 2),
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE,
+	NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR,
 	NVM_ADDRESS_LAST
 } NVM_address_t;
 
 /*** NVM functions ***/
 
-void NVM_init(void);
-NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data);
-NVM_status_t NVM_write_byte(NVM_address_t address_offset, uint8_t data);
-NVM_status_t NVM_reset_default(void);
+/*!******************************************************************
+ * \fn NVM_status_t NVM_read_byte(NVM_address_t address_offset, uint8_t* data)
+ * \brief Read byte in NVM.
+ * \param[in]  	address: Address to read.
+ * \param[out] 	data: Pointer to byte that will contain the read value.
+ * \retval		Function execution status.
+ *******************************************************************/
+NVM_status_t NVM_read_byte(NVM_address_t address, uint8_t* data);
 
-#define NVM_status_check(error_base) { if (nvm_status != NVM_SUCCESS) { status = error_base + nvm_status; goto errors; }}
-#define NVM_error_check() { ERROR_status_check(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM); }
-#define NVM_error_check_print() { ERROR_status_check_print(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM); }
+/*!******************************************************************
+ * \fn NVM_status_t NVM_write_byte(NVM_address_t address, uint8_t data)
+ * \brief Write byte in NVM.
+ * \param[in]  	address: Address to write.
+ * \param[out] 	data: Byte to write.
+ * \retval		Function execution status.
+ *******************************************************************/
+NVM_status_t NVM_write_byte(NVM_address_t address, uint8_t data);
+
+/*******************************************************************/
+#define NVM_exit_error(error_base) { if (nvm_status != NVM_SUCCESS) { status = (error_base + nvm_status); goto errors; } }
+
+/*******************************************************************/
+#define NVM_stack_error(void) { if (nvm_status != NVM_SUCCESS) { ERROR_stack_add(ERROR_BASE_NVM + nvm_status); } }
+
+/*******************************************************************/
+#define NVM_stack_exit_error(error_code) { if (nvm_status != NVM_SUCCESS) { ERROR_stack_add(ERROR_BASE_NVM + nvm_status); status = error_code; goto errors; } }
 
 #endif /* __NVM_H__ */

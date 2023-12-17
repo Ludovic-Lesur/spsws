@@ -17,8 +17,6 @@
 
 /*** MAX11136 local macros ***/
 
-/*** MAX11136 macros ***/
-
 #define MAX11136_NUMBER_OF_CHANNELS			8
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 #define MAX11136_CHANNEL_WIND_DIRECTION		0
@@ -51,6 +49,7 @@
 
 /*** MAX11136 local structures ***/
 
+/*******************************************************************/
 typedef struct {
 	uint16_t data_12bits[MAX11136_NUMBER_OF_CHANNELS];
 	uint32_t data[MAX11136_DATA_INDEX_LAST];
@@ -63,16 +62,18 @@ static MAX11136_context_t max11136_ctx;
 
 /*** MAX11136 local functions ***/
 
-/* MAX11136 REGISTER WRITE FUNCTION.
- * @param register_address:	Register address (5 bits).
- * @param value:			Value to write in register.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_register(uint8_t register_address, uint16_t value) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
-	SPI_status_t spi_status = SPI_SUCCESS;
+#ifdef HW1_0
+	SPI_status_t spi1_status = SPI_SUCCESS;
+#endif
+#ifdef HW2_0
+	SPI_status_t spi2_status = SPI_SUCCESS;
+#endif
 	uint16_t spi_command = 0;
+	uint16_t spi_reply = 0;
 	// Check parameters.
 	if (register_address >= MAX11136_REG_LAST) {
 		status = MAX11136_ERROR_REGISTER_ADDRESS;
@@ -89,33 +90,32 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_regist
 		spi_command |= (value & 0x000007FF);
 	}
 	// Send command.
+	GPIO_write(&GPIO_MAX11136_CS, 0);
 #ifdef HW1_0
-	GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-	spi_status = SPI1_write_short(spi_command);
-	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
-	// Check status.
-	SPI1_status_check(MAX11136_ERROR_BASE_SPI);
+	spi1_status = SPI1_write_read(&spi_command, &spi_reply, 1);
+	SPI1_exit_error(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
-	GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-	spi_status = SPI2_write_short(spi_command);
-	GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
-	// Check status.
-	SPI2_status_check(MAX11136_ERROR_BASE_SPI);
+	spi2_status = SPI2_write_read(&spi_command, &spi_reply, 1);
+	SPI2_exit_error(MAX11136_ERROR_BASE_SPI);
 #endif
+	GPIO_write(&GPIO_MAX11136_CS, 1);
 errors:
 	return status;
 }
 
-/* PERFORM ADC CONVERSION ON ALL CHANNELS.
- * @param:			None.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_channels(void) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
-	SPI_status_t spi_status = SPI_SUCCESS;
+#ifdef HW1_0
+	SPI_status_t spi1_status = SPI_SUCCESS;
+#endif
+#ifdef HW2_0
+	SPI_status_t spi2_status = SPI_SUCCESS;
+#endif
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	uint16_t spi_command = 0;
 	uint16_t max11136_dout = 0;
 	uint8_t channel = 0;
 	uint8_t channel_idx = 0;
@@ -124,7 +124,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	SPI1_set_clock_polarity(1);
 #endif
 	// Configure ADC.
-	// Single-ended unipolar (allready done at POR).
+	// Single-ended unipolar (already done at POR).
 	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
 	status = _MAX11136_write_register(MAX11136_REG_ADC_CONFIG, 0x0200);
 	if (status != MAX11136_SUCCESS) goto errors;
@@ -139,7 +139,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_status_check(MAX11136_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(MAX11136_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += MAX11136_SUB_DELAY_MS;
 		if (loop_count_ms > MAX11136_TIMEOUT_MS) {
@@ -150,20 +150,16 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	// Wait for all channels to be read or timeout (TBD).
 	for (channel_idx=0 ; channel_idx<MAX11136_NUMBER_OF_CHANNELS ; channel_idx++) {
 		// Get data from SPI.
-#ifdef HW1_0
 		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-		spi_status = SPI1_read_short(0x0000, &max11136_dout);
-		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
-		// Check status.
-		SPI1_status_check(MAX11136_ERROR_BASE_SPI);
+#ifdef HW1_0
+		spi1_status = SPI1_write_read(&spi_command, &max11136_dout, 1);
+		SPI1_exit_error(MAX11136_ERROR_BASE_SPI);
 #endif
 #ifdef HW2_0
-		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
-		spi_status = SPI2_read_short(0x0000, &max11136_dout);
-		GPIO_write(&GPIO_MAX11136_CS, 1); // Set CS pin.
-		// Check status.
-		SPI2_status_check(MAX11136_ERROR_BASE_SPI);
+		spi2_status = SPI2_write_read(&spi_command, &max11136_dout, 1);
+		SPI2_exit_error(MAX11136_ERROR_BASE_SPI);
 #endif
+		GPIO_write(&GPIO_MAX11136_CS, 1);
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
 		channel = (max11136_dout & 0xF000) >> 12;
 		if (channel < MAX11136_NUMBER_OF_CHANNELS) {
@@ -179,10 +175,7 @@ errors:
 
 /*** MAX11136 functions ***/
 
-/* INIT MAX11136 ADC/
- * @param:	None.
- * @return:	None.
- */
+/*******************************************************************/
 void MAX11136_init(void) {
 	// Local variables.
 	uint8_t idx = 0;
@@ -190,23 +183,30 @@ void MAX11136_init(void) {
 	max11136_ctx.status = 0;
 	for (idx=0 ; idx<MAX11136_DATA_INDEX_LAST ; idx++) max11136_ctx.data[idx] = 0;
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.data_12bits[idx] = 0;
+#ifdef HW2_0
+	// Init SPI.
+	SPI2_init();
+#endif
+	// Configure chip select pin.
+	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_write(&GPIO_MAX11136_CS, 1);
 	// Configure EOC GPIO.
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
-/* DISABLE MAX11136 GPIO.
- * @param:	None.
- * @return:	None.
- */
-void MAX11136_disable(void) {
-	// Disable EOC GPIO.
-	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+/*******************************************************************/
+void MAX11136_de_init(void) {
+	// Release chip select pin.
+	GPIO_write(&GPIO_MAX11136_CS, 0);
+	// Release EOC GPIO.
+	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#ifdef HW2_0
+	// Release SPI.
+	SPI2_de_init();
+#endif
 }
 
-/* PERFORM ADC CONVERSION ON ALL CHANNELS.
- * @param:			None.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 MAX11136_status_t MAX11136_perform_measurements(void) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;
@@ -227,27 +227,23 @@ MAX11136_status_t MAX11136_perform_measurements(void) {
 		}
 	}
 	// Perform units conversion.
-	// Vsrc.
+	// VSRC.
 	max11136_ctx.data[MAX11136_DATA_INDEX_VSRC_MV] = (max11136_ctx.data_12bits[MAX11136_CHANNEL_VSRC] * MAX11136_REF191_VOLTAGE_MV * MAX11136_VSRC_DIVIDER_RATIO_NUM) ;
 	max11136_ctx.data[MAX11136_DATA_INDEX_VSRC_MV] /= (max11136_ctx.data_12bits[MAX11136_CHANNEL_REF191] * MAX11136_VSRC_DIVIDER_RATIO_DEN);
-	// Vcap.
+	// VCAP.
 	max11136_ctx.data[MAX11136_DATA_INDEX_VCAP_MV] = (max11136_ctx.data_12bits[MAX11136_CHANNEL_VCAP] * MAX11136_REF191_VOLTAGE_MV * MAX11136_VCAP_DIVIDER_RATIO_NUM);
 	max11136_ctx.data[MAX11136_DATA_INDEX_VCAP_MV] /= (max11136_ctx.data_12bits[MAX11136_CHANNEL_REF191] * MAX11136_VCAP_DIVIDER_RATIO_DEN);
 	// LDR.
 	max11136_ctx.data[MAX11136_DATA_INDEX_LDR_PERCENT] = (max11136_ctx.data_12bits[MAX11136_CHANNEL_LDR] * 100) / (MAX11136_FULL_SCALE);
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	// Wind direction.
-	max11136_ctx.data[MAX11136_DATA_WIND_DIRECTION_RATIO] = (max11136_ctx.data_12bits[MAX11136_CHANNEL_WIND_DIRECTION] * 1000) / (MAX11136_FULL_SCALE);
+	max11136_ctx.data[MAX11136_DATA_INDEX_WIND_DIRECTION_RATIO] = (max11136_ctx.data_12bits[MAX11136_CHANNEL_WIND_DIRECTION] * 1000) / (MAX11136_FULL_SCALE);
 #endif
 errors:
 	return status;
 }
 
-/* GET ADC DATA.
- * @param data_idx:		Index of the data to retrieve.
- * @param data:			Pointer that will contain ADC data.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, uint32_t* data) {
 	// Local variables.
 	MAX11136_status_t status = MAX11136_SUCCESS;

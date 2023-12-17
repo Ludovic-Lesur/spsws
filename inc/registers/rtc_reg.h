@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** RTC registers ***/
+/*** RTC REG macros ***/
 
+// Peripheral base address.
+#define RTC		((RTC_registers_t*) ((uint32_t) 0x40002800))
+
+/*** RTC REG structures ***/
+
+/*!******************************************************************
+ * \enum RTC_registers_t
+ * \brief RTC registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t TR;			// RTC time register.
 	volatile uint32_t DR;			// RTC date register.
@@ -39,9 +48,5 @@ typedef struct {
 	volatile uint32_t BKP3R;		// RTC back-up register 3.
 	volatile uint32_t BKP4R;		// RTC back-up register 4.
 } RTC_registers_t;
-
-/*** RTC base address ***/
-
-#define RTC		((RTC_registers_t*) ((uint32_t) 0x40002800))
 
 #endif /* __RTC_REG_H__ */

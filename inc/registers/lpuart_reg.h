@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** LPUART registers ***/
+/*** LPUART REG macros ***/
 
+// Peripheral base address.
+#define LPUART1		((LPUART_registers_t*) ((uint32_t) 0x40004800))
+
+/*** LPUART REG structures ***/
+
+/*!******************************************************************
+ * \enum LPUART_registers_t
+ * \brief LPUART registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t CR1;    		// LPUART control register 1.
 	volatile uint32_t CR2;   		// LPUART control register 2.
@@ -24,9 +33,5 @@ typedef struct {
 	volatile uint32_t RDR;     		// LPUART receive data register.
 	volatile uint32_t TDR;   		// LPUART transmit data register.
 } LPUART_registers_t;
-
-/*** LPUART base address ***/
-
-#define LPUART1	((LPUART_registers_t*) ((uint32_t) 0x40004800))
 
 #endif /* __LPUART_REG_H__ */

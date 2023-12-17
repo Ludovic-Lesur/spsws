@@ -1,7 +1,7 @@
 /*
  * exti_reg.h
  *
- *  Created on: 18 june 2018
+ *  Created on: 18 jun. 2018
  *      Author: Ludo
  */
 
@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** EXTI registers ***/
+/*** EXTI REG macros ***/
 
+// Peripheral base address.
+#define EXTI	((EXTI_registers_t*) ((uint32_t) 0x40010400))
+
+/*** EXTI REG structures ***/
+
+/*!******************************************************************
+ * \enum EXTI_registers_t
+ * \brief EXTI registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t IMR;    	// EXTI interrupt mask register.
 	volatile uint32_t EMR;    	// EXTI event mask register.
@@ -20,9 +29,5 @@ typedef struct {
 	volatile uint32_t SWIER;    // EXTI software interrupt event register.
 	volatile uint32_t PR;    	// EXTI pending register.
 } EXTI_registers_t;
-
-/*** EXTI base address ***/
-
-#define EXTI	((EXTI_registers_t*) ((uint32_t) 0x40010400))
 
 #endif /* __EXTI_REG_H__ */

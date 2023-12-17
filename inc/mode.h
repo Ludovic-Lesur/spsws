@@ -8,43 +8,27 @@
 #ifndef __MODE_H__
 #define __MODE_H__
 
-/*** Wheather station mode ***/
+/*** Board modes ***/
 
-//#define ATM 		// AT command mode.
-#define IM 			// Intermittent mode.
-//#define CM 		// Continuous mode.
+//#define ATM
+//#define DEBUG
 
-#ifdef IM
-#define SPSWS_MODE	0
-#else
-#define SPSWS_MODE	1
+/*** Board options ***/
+
+// Measurement features.
+//#define SPSWS_WIND_MEASUREMENT
+//#define SPSWS_RAIN_MEASUREMENT
+#if (defined SPSWS_RAIN_MEASUREMENT) && (defined HW2_0)
+//#define SPSWS_FLOOD_MEASUREMENT
 #endif
 
-/*** Wind vane selection ***/
-
-#if (defined CM || defined ATM)
 // Wind vane type.
-//#define WIND_VANE_ULTIMETER			// Phase shift technique.
-#define WIND_VANE_ARGENT_DATA_SYSTEMS	// Analog technique.
+#ifdef SPSWS_WIND_MEASUREMENT
+//#define WIND_VANE_ULTIMETER
+#define WIND_VANE_ARGENT_DATA_SYSTEMS
 #endif
 
-/*** Flood detection feature ***/
-
-#if (defined HW2_0) && (defined CM) && (defined WIND_VANE_ARGENT_DATA_SYSTEMS)
-//#define FLOOD_DETECTION
-#endif
-
-/*** Debug mode ***/
-
-//#define DEBUG		// Use LED and programming pins for debug purpose if defined.
-
-/*** Error management ***/
-
-#if ((defined ATM && defined IM) || \
-	 (defined ATM && defined CM) || \
-	 (defined IM && defined CM))
-#error "Only 1 weather station mode must be selected."
-#endif
+/*** Errors management ***/
 
 #if (defined WIND_VANE_ULTIMETER && defined WIND_VANE_ARGENT_DATA_SYSTEMS)
 #error "Only one wind vane type must be selected"

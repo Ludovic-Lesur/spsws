@@ -8,7 +8,7 @@
 #ifndef __DPS310_REG_H__
 #define __DPS310_REG_H__
 
-/*** DPS310 register map ***/
+/*** DPS310 registers map ***/
 
 #define DPS310_REG_PRS_B2			0x00
 #define DPS310_REG_PRS_B1			0x01

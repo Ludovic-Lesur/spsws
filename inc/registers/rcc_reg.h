@@ -10,8 +10,17 @@
 
 #include "types.h"
 
-/*** RCC registers ***/
+/*** RCC REG macros ***/
 
+// Peripheral base address.
+#define RCC		((RCC_registers_t*) ((uint32_t) 0x40021000))
+
+/*** RCC REG structures ***/
+
+/*!******************************************************************
+ * \enum RCC_registers_t
+ * \brief RCC registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t CR;			// RCC clock control register.
 	volatile uint32_t ICSCR;		// RCC internal clock sources calibration register.
@@ -35,9 +44,5 @@ typedef struct {
 	volatile uint32_t CCIPR;		// RCC clock configuration register.
 	volatile uint32_t CSR;			// RCC control and status register.
 } RCC_registers_t;
-
-/*** RCC base address ***/
-
-#define RCC		((RCC_registers_t*) ((uint32_t) 0x40021000))
 
 #endif /* __RCC_REG_H__ */

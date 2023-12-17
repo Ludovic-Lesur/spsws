@@ -24,13 +24,7 @@ static uint8_t si1133_uv_index;
 
 /*** SI1133 local functions ***/
 
-/* WRITE REGISTER(S) OF SI1133.
- * @param i2c_address:		Sensor address.
- * @param register_address:	Address of the register to set.
- * @param value_buf:		Values buffer to write in the selected register.
- * @param value_buf_length:	Number of values to write.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value_buf, uint8_t value_buf_length) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -58,17 +52,12 @@ static SI1133_status_t _SI1133_write_register(uint8_t i2c_address, uint8_t regis
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, tx_buf_length, 1);
-	I2C1_status_check(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;
 }
 
-/* READ A REGISTER OF SI1133.
- * @param i2c_address:		Sensor address.
- * @param register_address:	Address of the register to set.
- * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -84,20 +73,14 @@ static SI1133_status_t _SI1133_read_register(uint8_t i2c_address, uint8_t regist
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &register_address, 1, 1);
-	I2C1_status_check(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
 	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_status_check(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
 errors:
 	return status;
 }
 
-/* GENERIC FUNCTION TO WAIT FOR A FLAG.
- * @param i2c_address:		Sensor address
- * @param register_address: Address of the register to read.
- * @param bit_index:		Bit index of the flag to wait for.
- * @param timeout_error:	Error to return in case of timeout.
- * @return:					Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, SI1133_status_t timeout_error) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -120,7 +103,7 @@ static SI1133_status_t _SI1133_wait_flag(uint8_t i2c_address, uint8_t register_a
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;
 		if (loop_count_ms > SI1133_TIMEOUT_MS) {
@@ -136,20 +119,10 @@ errors:
 	return status;
 }
 
-/* WAIT FOR SI1133 TO BE READY.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
-
-// Function declaration for next function.
+/*******************************************************************/
 static SI1133_status_t _SI1133_send_command(uint8_t i2c_address, uint8_t command);
 
-/* GET CURRENT COMMAND COUNTER.
- * @param i2c_address:		Sensor address.
- * @param command_counter:	Pointer to 8-bits value that will contain current command counter.
- * @param error_flag:		Pointer to 8-bits value that will contain command error flag.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_get_status(uint8_t i2c_address, uint8_t* command_counter, uint8_t* error_flag) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -173,12 +146,7 @@ errors:
 	return status;
 }
 
-/* WAIT FOR COMMAND COMPLETION (COMMAND COUNTER CHANGE OR ERROR).
- * @param i2c_address:		Sensor address.
- * @param previous_counter:	Previous value of the command counter.
- * @param error_base:		Error base to use in case of error.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_wait_for_command_completion(uint8_t i2c_address, uint8_t previous_counter, SI1133_status_t error_base) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -199,7 +167,7 @@ static SI1133_status_t _SI1133_wait_for_command_completion(uint8_t i2c_address, 
 		}
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_status_check(SI1133_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;
 		if (loop_count_ms > SI1133_TIMEOUT_MS) {
@@ -212,11 +180,7 @@ errors:
 	return status;
 }
 
-/* SEND A COMMAND TO SI1133.
- * @param i2c_address:	Sensor address.
- * @param command:		Command to send.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_send_command(uint8_t i2c_address, uint8_t command) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -244,12 +208,7 @@ errors:
 	return status;
 }
 
-/* SET A SI1133 INTERNAL PARAMETER.
- * @param i2c_address:	Sensor address.
- * @param parameter:	Parameter address.
- * @param value:		Value to write in parameter.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_set_parameter(uint8_t i2c_address, uint8_t parameter, uint8_t value) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -277,10 +236,7 @@ errors:
 	return status;
 }
 
-/* CONFIGURE SI1133 SENSOR.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static SI1133_status_t _SI1133_configure(uint8_t si1133_i2c_address) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -302,10 +258,7 @@ errors:
 
 /*** SI1133 functions ***/
 
-/* PERFORM SI1133 UV INDEX MEASUREMENT.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 SI1133_status_t SI1133_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;
@@ -337,10 +290,7 @@ errors:
 	return status;
 }
 
-/* READ UV INDEX FROM SI1133 SENSOR.
- * @param uv_index:	Pointer to 8-bits value that will contain UV index (0 to 11).
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 SI1133_status_t SI1133_get_uv_index(uint8_t* uv_index) {
 	// Local variables.
 	SI1133_status_t status = SI1133_SUCCESS;

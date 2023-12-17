@@ -1,7 +1,7 @@
 /*
  * adc_reg.h
  *
- *  Created on: 5 may 2018
+ *  Created on: 05 may 2018
  *      Author: Ludo
  */
 
@@ -10,8 +10,29 @@
 
 #include "types.h"
 
-/*** ADC registers ***/
+/*** ADC REG macros ***/
 
+// Peripheral base address.
+#define ADC1					((ADC_registers_t*) ((uint32_t) 0x40012400))
+// Temperature sensor calibration values address.
+#define TS_VCC_CALIB_MV			3000
+#define TS_CAL1_ADDR			((uint16_t*) ((uint32_t) 0x1FF8007A))
+#define TS_CAL1					((int32_t) (*TS_CAL1_ADDR))
+#define TS_CAL1_TEMP			((int32_t) 30)
+#define TS_CAL2_ADDR			((uint16_t*) ((uint32_t) 0x1FF8007E))
+#define TS_CAL2					((int32_t) (*TS_CAL2_ADDR))
+#define TS_CAL2_TEMP			((int32_t) 130)
+// Internal voltage reference calibration value address.
+#define VREFINT_VCC_CALIB_MV	3000
+#define VREFINT_CAL_ADDR		((uint16_t*) ((uint32_t) 0x1FF80078))
+#define VREFINT_CAL				((uint32_t) (*VREFINT_CAL_ADDR))
+
+/*** ADC REG structures ***/
+
+/*!******************************************************************
+ * \enum ADC_registers_t
+ * \brief ADC registers map.
+ *******************************************************************/
 typedef struct {
 	volatile uint32_t ISR;    			// ADC interrupt and status register.
 	volatile uint32_t IER;    			// ADC interrupt enable register.
@@ -31,26 +52,5 @@ typedef struct {
 	volatile uint32_t RESERVED5[148];	// Reserved 0xB8.
 	volatile uint32_t CCR;				// ADC common configuration register.
 } ADC_registers_t;
-
-/*** ADC base address ***/
-
-#define ADC1	((ADC_registers_t*) ((uint32_t) 0x40012400))
-
-/*** Temperature sensor calibration values address */
-
-#define TS_VCC_CALIB_MV			3000
-#define TS_CAL1_ADDR			((uint16_t*) ((uint32_t) 0x1FF8007A))
-#define TS_CAL1					((int32_t) (*TS_CAL1_ADDR)) // Raw ADC output value on 12 bits.
-#define TS_CAL1_TEMP			((int32_t) 30)
-
-#define TS_CAL2_ADDR			((uint16_t*) ((uint32_t) 0x1FF8007E))
-#define TS_CAL2					((int32_t) (*TS_CAL2_ADDR)) // Raw ADC output value on 12 bits.
-#define TS_CAL2_TEMP			((int32_t) 130)
-
-/* Internal voltage reference calibration value address */
-
-#define VREFINT_VCC_CALIB_MV	3000
-#define VREFINT_CAL_ADDR		((uint16_t*) ((uint32_t) 0x1FF80078))
-#define VREFINT_CAL				((uint32_t) (*VREFINT_CAL_ADDR)) // Raw ADC output value on 12 bits.
 
 #endif /* __ADC_REG_H__ */

@@ -44,8 +44,12 @@ static const GPIO_pin_t GPIO_SPI1_MOSI = 			(GPIO_pin_t) {GPIOA, 0, 7, 0};
 // SX1232_DIO2.
 #ifdef HW1_0
 static const GPIO_pin_t GPIO_SX1232_DIO2 = 			(GPIO_pin_t) {GPIOA, 0, 8, 0};
+#define GPIO_SX1232_DIO2_LOW(void)					{GPIOA -> ODR &= 0xFFFFFEFF;}
+#define GPIO_SX1232_DIO2_HIGH(void)					{GPIOA -> ODR |= 0x00000100;}
 #else
 static const GPIO_pin_t GPIO_SX1232_DIO2 =			(GPIO_pin_t) {GPIOB, 1, 0, 0};
+#define GPIO_SX1232_DIO2_LOW(void)					{GPIOB -> ODR &= 0xFFFFFFFE;}
+#define GPIO_SX1232_DIO2_HIGH(void)					{GPIOB -> ODR |= 0x00000001;}
 #endif
 
 // USART1 / USART2.
@@ -92,8 +96,12 @@ static const GPIO_pin_t GPIO_DIO4 =					(GPIO_pin_t) {GPIOB, 1, 4, 0};
 // SX1232_CS.
 #ifdef HW1_0
 static const GPIO_pin_t GPIO_SX1232_CS =			(GPIO_pin_t) {GPIOB, 1, 0, 0};
+#define GPIO_SX1232_CS_LOW(void)					{GPIOB -> ODR &= 0xFFFFFFFE;}
+#define GPIO_SX1232_CS_HIGH(void)					{GPIOB -> ODR |= 0x00000001;}
 #else
 static const GPIO_pin_t GPIO_SX1232_CS =			(GPIO_pin_t) {GPIOA, 0, 4, 0};
+#define GPIO_SX1232_CS_LOW(void)					{GPIOA -> ODR &= 0xFFFFFFEF;}
+#define GPIO_SX1232_CS_HIGH(void)					{GPIOA -> ODR |= 0x00000010;}
 #endif
 
 // RF power enable.

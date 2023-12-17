@@ -1,0 +1,6 @@
+[submodule "lib/sigfox-ep-lib"]
+	path = lib/sigfox-ep-lib
+	url = https://github.com/sigfox-tech-radio/sigfox-ep-lib.git
+[submodule "lib/sigfox-ep-addon-rfp"]
+	path = lib/sigfox-ep-addon-rfp
+	url = https://github.com/sigfox-tech-radio/sigfox-ep-addon-rfp.git

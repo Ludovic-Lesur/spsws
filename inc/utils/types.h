@@ -1,12 +1,16 @@
 /*
  * types.h
  *
- *  Created on: Oct 1, 2022
+ *  Created on: 01 oct. 2022
  *      Author: Ludo
  */
 
 #ifndef __TYPES_H__
 #define __TYPES_H__
+
+/*!******************************************************************
+ * \brief Custom variables types.
+ *******************************************************************/
 
 typedef char				char_t;
 

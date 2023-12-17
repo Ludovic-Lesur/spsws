@@ -1,7 +1,7 @@
 /*
  * iwdg.c
  *
- *  Created on: 30 mars 2019
+ *  Created on: 30 mar. 2018
  *      Author: Ludo
  */
 
@@ -16,10 +16,7 @@
 
 /*** IWDG functions ***/
 
-/* INIT AND START INDEPENDENT WATCHDOG.
- * @param:			None.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 IWDG_status_t IWDG_init(void) {
 	// Local variables.
 	IWDG_status_t status = IWDG_SUCCESS;
@@ -42,10 +39,7 @@ IWDG_status_t IWDG_init(void) {
 	return status;
 }
 
-/* RELOAD WATCHDOG COUNTER.
- * @param:	None.
- * @return:	None.
- */
+/*******************************************************************/
 void IWDG_reload(void) {
 	// Reload counter.
 	IWDG -> KR = 0x0000AAAA;

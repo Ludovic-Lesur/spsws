@@ -8,7 +8,7 @@
 #ifndef __MAX11136_REG_H__
 #define __MAX11136_REG_H__
 
-/*** MAX11136 register map ***/
+/*** MAX11136 registers map ***/
 
 #define MAX11136_REG_ADC_MODE_CONTROL	0b00000
 #define MAX11136_REG_ADC_CONFIG			0b10000

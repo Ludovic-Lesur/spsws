@@ -12,17 +12,12 @@
 
 /*** STRING local macros ***/
 
-#define STRING_DIGIT_BOOLEAN_LENGTH			1
-#define STRING_DIGIT_DECIMAL_MAX			9
-#define STRING_DIGIT_HEXADECIMAL_MAX		0x0F
-#define STRING_HEXADECICMAL_DIGIT_PER_BYTE	2
+#define STRING_VALUE_BUFFER_SIZE	16
+#define STRING_SIZE_MAX				100
 
 /*** STRING local functions ***/
 
-/* GENERIC MACRO TO CHECK RESULT INPUT POINTER.
- * @param ptr:	Pointer to check.
- * @return:		None.
- */
+/*******************************************************************/
 #define _STRING_check_pointer(ptr) { \
 	if (ptr == NULL) { \
 		status = STRING_ERROR_NULL_PARAMETER; \
@@ -30,21 +25,14 @@
 	} \
 }
 
-/* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO A DECIMAL CHARACTER.
- * @param chr:		Character to analyse.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_is_decimal_char(char_t chr) {
 	// Local variables.
 	STRING_status_t status = ((chr >= '0') && (chr <= '9')) ? STRING_SUCCESS : STRING_ERROR_DECIMAL_INVALID;
 	return status;
 }
 
-/* CONVERTS THE ASCII CODE OF A DECIMAL CHARACTER TO THE CORRESPONDING 4-BIT VALUE.
- * @param chr:		Decimal ASCII character to convert.
- * @param value:	Pointer to the corresponding value.
- * @return status:	Function executions status.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_decimal_char_to_value(char_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
@@ -58,15 +46,12 @@ errors:
 	return status;
 }
 
-/* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN DECIMAL VALUE.
- * @param value:	Decimal digit.
- * @return chr:		Corresponding ASCII code.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_decimal_value_to_char(uint8_t value, char_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	// Check parameters.
-	if (value > STRING_DIGIT_DECIMAL_MAX) {
+	if (value > MATH_DECIMAL_DIGIT_MAX_VALUE) {
 		status = STRING_ERROR_DECIMAL_OVERFLOW;
 		goto errors;
 	}
@@ -77,21 +62,14 @@ errors:
 	return status;
 }
 
-/* CHECK IF A GIVEN ASCII CODE CORRESPONDS TO AN HEXADECIMAL CHARACTER.
- * @param chr:		Character to analyse.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_is_hexadecimal_char(char_t chr) {
 	// Local variables.
 	STRING_status_t status = (((chr >= '0') && (chr <= '9')) || ((chr >= 'A') && (chr <= 'F')) || ((chr >= 'a') && (chr <= 'f'))) ? STRING_SUCCESS : STRING_ERROR_HEXADECIMAL_INVALID;
 	return status;
 }
 
-/* CONVERTS THE ASCII CODE OF AN HEXADECIMAL CHARACTER TO THE CORRESPONDING 4-BIT VALUE.
- * @param chr:		Hexadecimal ASCII code to convert.
- * @param value:	Pointer to the corresponding value.
- * @return status:	Function executions status.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_hexadecimal_char_to_value(char_t chr, uint8_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_ERROR_HEXADECIMAL_INVALID;
@@ -114,15 +92,12 @@ errors:
 	return status;
 }
 
-/* CONVERTS A 4-BITS VARIABLE TO THE ASCII CODE OF THE CORRESPONDING HEXADECIMAL CHARACTER IN ASCII.
- * @param value:	Decimal digit.
- * @return chr:		Corresponding ASCII code.
- */
+/*******************************************************************/
 static STRING_status_t _STRING_hexadecimal_value_to_char(uint8_t value, char_t* chr) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	// Check parameters.
-	if (value > STRING_DIGIT_HEXADECIMAL_MAX) {
+	if (value > MATH_HEXADECIMAL_DIGIT_MAX_VALUE) {
 		status = STRING_ERROR_HEXADECIMAL_OVERFLOW;
 		goto errors;
 	}
@@ -135,13 +110,7 @@ errors:
 
 /*** STRING functions ***/
 
-/* VALUE TO STRING CONVERT FUNCTION.
- * @param value:        Value to print.
- * @param format:       Printing format.
- * @param print_prefix: Print base prefix is non zero.
- * @param str:       	Output string.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, uint8_t print_prefix, char_t* str) {
     // Local variables.
 	STRING_status_t status = STRING_SUCCESS;
@@ -150,7 +119,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 	uint32_t str_idx = 0;
 	uint32_t idx = 0;
 	uint8_t generic_byte = 0;
-	uint32_t current_power = 0;
 	uint32_t previous_decade = 0;
 	uint32_t abs_value = 0;
 	// Check parameters.
@@ -161,7 +129,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 	}
 	// Get absolute value.
 	math_status = MATH_abs(value, &abs_value);
-	MATH_status_check();
+	MATH_exit_error();
 	// Build string according to format.
 	switch (format) {
 	case STRING_FORMAT_BOOLEAN:
@@ -171,7 +139,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
             str[str_idx++] = 'b';
 		}
 
-		for (idx=(MATH_BINARY_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
+		for (idx=(MATH_BINARY_DIGIT_MAX_NUMBER - 1) ; idx>=0 ; idx--) {
 			if (abs_value & (0b1 << idx)) {
 				str[str_idx++] = '1';
 				first_non_zero_found = 1;
@@ -190,7 +158,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 			str[str_idx++] = '0';
 			str[str_idx++] = 'x';
 		}
-		for (idx=(MATH_HEXADECIMAL_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
+		for (idx=((MATH_HEXADECIMAL_DIGIT_MAX_NUMBER / 2) - 1) ; idx>=0 ; idx--) {
 			generic_byte = (abs_value >> (8 * idx)) & 0xFF;
 			if (generic_byte != 0) {
 				first_non_zero_found = 1;
@@ -211,11 +179,9 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 			str[str_idx++] = '0';
 			str[str_idx++] = 'd';
 		}
-		for (idx=(MATH_DECIMAL_MAX_LENGTH - 1) ; idx>=0 ; idx--) {
-			math_status = MATH_pow_10(idx, &current_power);
-			MATH_status_check(STRING_ERROR_BASE_MATH);
-			generic_byte = (abs_value - previous_decade) / current_power;
-			previous_decade += generic_byte * current_power;
+		for (idx=(MATH_DECIMAL_DIGIT_MAX_NUMBER - 1) ; idx>=0 ; idx--) {
+			generic_byte = (abs_value - previous_decade) / (MATH_POWER_10[idx]);
+			previous_decade += (generic_byte * MATH_POWER_10[idx]);
 			if (generic_byte != 0) {
 				first_non_zero_found = 1;
 			}
@@ -235,13 +201,8 @@ errors:
 	return status;
 }
 
-/* BYTE ARRAY TO HEXADECIMAL STRING CONVERT FUNCTION.
- * @param data:			Input buffer.
- * @param data_length:	Data length in bytes.
- * @param str:       	Output string.
- * @return status:		Function execution status.
- */
-STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t data_length, uint8_t print_prefix, char_t* str) {
+/*******************************************************************/
+STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t data_size, uint8_t print_prefix, char_t* str) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	uint8_t idx = 0;
@@ -249,7 +210,7 @@ STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t d
 	_STRING_check_pointer(data);
 	_STRING_check_pointer(str);
 	// Build string.
-	for (idx=0 ; idx<data_length ; idx++) {
+	for (idx=0 ; idx<data_size ; idx++) {
 		status = STRING_value_to_string((int32_t) data[idx], STRING_FORMAT_HEXADECIMAL, print_prefix, &(str[2 * idx]));
 		if (status != STRING_SUCCESS) goto errors;
 	}
@@ -258,22 +219,14 @@ errors:
 	return status;
 }
 
-/* STRING TO VALUE CONVERT FUNCTION.
- * @param str:				String to convert.
- * @param format:       	Input string format.
- * @param number_of_digits:	Number of digits to parse.
- * @param value:			Pointer to the result.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t char_idx = 0;
 	uint8_t start_idx = 0;
 	uint8_t negative_flag = 0;
 	uint8_t digit_value = 0;
-	uint32_t math_power10 = 0;
 	// Check parameters.
 	_STRING_check_pointer(str);
 	_STRING_check_pointer(value);
@@ -289,7 +242,7 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 	switch (format) {
 	case STRING_FORMAT_BOOLEAN:
 		// Check if there is only 1 digit (start and end index are equal).
-		if (number_of_digits != STRING_DIGIT_BOOLEAN_LENGTH) {
+		if (number_of_digits != MATH_BOOLEAN_DIGIT_MAX_NUMBER) {
 			status = STRING_ERROR_BOOLEAN_SIZE;
 			goto errors;
 		}
@@ -313,7 +266,7 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 			goto errors;
 		}
 		// Check if parameter can be binary coded on 32 bits = 4 bytes.
-		if (number_of_digits > (STRING_HEXADECICMAL_DIGIT_PER_BYTE * MATH_HEXADECIMAL_MAX_LENGTH)) {
+		if (number_of_digits > MATH_HEXADECIMAL_DIGIT_MAX_NUMBER) {
 			// Error in parameter -> value is too large.
 			status = STRING_ERROR_HEXADECIMAL_OVERFLOW;
 			goto errors;
@@ -329,7 +282,7 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 		break;
 	case STRING_FORMAT_DECIMAL:
 		// Check if parameter can be binary coded on 32 bits.
-		if (number_of_digits > MATH_DECIMAL_MAX_LENGTH) {
+		if (number_of_digits > MATH_DECIMAL_DIGIT_MAX_NUMBER) {
 			// Error in parameter -> value is too large.
 			status = STRING_ERROR_DECIMAL_OVERFLOW;
 			goto errors;
@@ -339,11 +292,8 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 			// Convert digit to value.
 			status = _STRING_decimal_char_to_value(str[start_idx + char_idx], &digit_value);
 			if (status != STRING_SUCCESS) goto errors;
-			// Compute power.
-			math_status = MATH_pow_10((number_of_digits -char_idx - 1), &math_power10);
-			MATH_status_check(STRING_ERROR_BASE_MATH);
 			// Add digit to result.
-			(*value) += (math_power10 * digit_value);
+			(*value) += (digit_value * MATH_POWER_10[number_of_digits - char_idx - 1]);
 		}
 		break;
 	default:
@@ -358,14 +308,8 @@ errors:
 	return status;
 }
 
-/* HEXADECIMAL STRING TO BYTE ARRAY CONVERT FUNCTION.
- * @param str:				Hexadecimal string to convert.
- * @param end_char:			Ending character of the string.
- * @param data:				Pointer to the output byte array.
- * @param extracted_length:	Pointer to the effective extracted length.
- * @return status:			Function execution status.
- */
-STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_char, uint8_t* data, uint8_t* extracted_length) {
+/*******************************************************************/
+STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_character, uint8_t* data, uint8_t* extracted_length) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
 	uint8_t char_idx = 0;
@@ -377,7 +321,7 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_
 	// Reset extracted length.
 	(*extracted_length) = 0;
 	// Char loop.
-	while ((str[char_idx] != end_char) && (str[char_idx] != STRING_CHAR_NULL)) {
+	while ((str[char_idx] != end_character) && (str[char_idx] != STRING_CHAR_NULL)) {
 		// Check character.
 		if ((char_idx % 2) == 0) {
 			if (_STRING_is_hexadecimal_char(str[char_idx]) != STRING_SUCCESS) {
@@ -400,6 +344,213 @@ STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_
 			(*extracted_length)++;
 		}
 		char_idx++;
+	}
+	// Check that the number of analyzed characters is even.
+	if ((char_idx % 2) != 0) {
+		status = STRING_ERROR_HEXADECIMAL_ODD_SIZE;
+		goto errors;
+	}
+errors:
+	return status;
+}
+
+/*******************************************************************/
+STRING_status_t STRING_get_size(char_t* str, uint8_t* size) {
+	// Local variables.
+	STRING_status_t status = STRING_SUCCESS;
+	// Check parameters.
+	_STRING_check_pointer(str);
+	_STRING_check_pointer(size);
+	// Reset result.
+	(*size) = 0;
+	// Compute source buffer size.
+	while (str[(*size)] != STRING_CHAR_NULL) {
+		(*size)++;
+		// Check overflow.
+		if ((*size) > STRING_SIZE_MAX) {
+			status = STRING_ERROR_SIZE_OVERFLOW;
+			goto errors;
+		}
+	}
+errors:
+	return status;
+}
+
+/*******************************************************************/
+STRING_status_t STRING_copy(STRING_copy_t* copy) {
+	// Local variables.
+	STRING_status_t status = STRING_SUCCESS;
+	uint8_t idx = 0;
+	uint8_t source_size = 0;
+	uint8_t start_idx = 0;
+	uint8_t destination_idx = 0;
+	// Reset destination buffer if required.
+	if ((copy -> flush_flag) != 0) {
+		for (idx=0 ; idx<(copy -> destination_size) ; idx++) (copy -> destination)[idx] = (copy -> flush_char);
+	}
+	// Compute source buffer size.
+	status = STRING_get_size((copy -> source), &source_size);
+	if (status != STRING_SUCCESS) goto errors;
+	// Check size.
+	if (source_size > (copy -> destination_size)) {
+		status = STRING_ERROR_COPY_OVERFLOW;
+		goto errors;
+	}
+	// Compute column according to justification.
+	switch (copy -> justification) {
+	case STRING_JUSTIFICATION_LEFT:
+		start_idx = 0;
+		break;
+	case STRING_JUSTIFICATION_CENTER:
+		start_idx = ((copy -> destination_size) - source_size) / (2);
+		break;
+	case STRING_JUSTIFICATION_RIGHT:
+		start_idx = ((copy -> destination_size) - source_size);
+		break;
+	default:
+		status = STRING_ERROR_TEXT_JUSTIFICATION;
+		goto errors;
+	}
+	// Char loop.
+	idx = 0;
+	while ((copy -> source)[idx] != STRING_CHAR_NULL) {
+		// Check index.
+		if (destination_idx >= ((copy -> destination_size) - 1)) {
+			status = STRING_ERROR_COPY_OVERFLOW;
+			goto errors;
+		}
+		(copy -> destination)[start_idx + idx] = (copy -> source)[idx];
+		idx++;
+	}
+errors:
+	return status;
+}
+
+/*******************************************************************/
+STRING_status_t STRING_append_string(char_t* str, uint8_t str_size_max, char_t* new_str, uint8_t* str_size) {
+	// Local variables.
+	STRING_status_t status = STRING_SUCCESS;
+	uint8_t idx = 0;
+	// Fill buffer.
+	while (new_str[idx] != STRING_CHAR_NULL) {
+		// Check index.
+		if ((*str_size) >= str_size_max) {
+			status = STRING_ERROR_APPEND_OVERFLOW;
+			goto errors;
+		}
+		str[(*str_size)] = new_str[idx];
+		// Increment size and index..
+		(*str_size)++;
+		idx++;
+	}
+errors:
+	return status;
+}
+
+/*******************************************************************/
+STRING_status_t STRING_append_value(char_t* str, uint8_t str_size_max, int32_t value, STRING_format_t format, uint8_t print_prefix, uint8_t* str_size) {
+	// Local variables.
+	STRING_status_t status = STRING_SUCCESS;
+	char_t str_value[STRING_VALUE_BUFFER_SIZE];
+	uint8_t idx = 0;
+	// Reset string.
+	for (idx=0 ; idx<STRING_VALUE_BUFFER_SIZE ; idx++) str_value[idx] = STRING_CHAR_NULL;
+	// Convert value to string.
+	status = STRING_value_to_string(value, format, print_prefix, str_value);
+	if (status != STRING_SUCCESS) goto errors;
+	// Add string.
+	status = STRING_append_string(str, str_size_max, str_value, str_size);
+errors:
+	return status;
+}
+
+/*******************************************************************/
+STRING_status_t STRING_value_to_5_digits_string(int32_t value, char_t* str) {
+	// Local variables.
+	STRING_status_t status = STRING_SUCCESS;
+	uint8_t u1, u2, u3, u4, u5 = 0;
+	uint8_t d1, d2, d3 = 0;
+	// Convert value to message.
+	if (value < 10000) {
+		// Format = u.ddd
+		u1 = (value) / (1000);
+		d1 = (value - (u1 * 1000)) / (100);
+		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
+		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
+		status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(str[0]));
+		if (status != STRING_SUCCESS) goto errors;
+		str[1] = STRING_CHAR_DOT;
+		status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(str[2]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(str[3]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(d3, STRING_FORMAT_DECIMAL, 0, &(str[4]));
+		if (status != STRING_SUCCESS) goto errors;
+	}
+	else if (value < 100000) {
+		// Format = uu.dd
+		u1 = (value) / (10000);
+		u2 = (value - (u1 * 10000)) / (1000);
+		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
+		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
+		status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(str[0]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(str[1]));
+		if (status != STRING_SUCCESS) goto errors;
+		str[2] = STRING_CHAR_DOT;
+		status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(str[3]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(str[4]));
+		if (status != STRING_SUCCESS) goto errors;
+	}
+	else if (value < 1000000) {
+		// Format = uuu.d
+		u1 = (value) / (100000);
+		u2 = (value - (u1 * 100000)) / (10000);
+		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
+		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
+		status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(str[0]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(str[1]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(str[2]));
+		if (status != STRING_SUCCESS) goto errors;
+		str[3] = STRING_CHAR_DOT;
+		status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(str[4]));
+		if (status != STRING_SUCCESS) goto errors;
+	}
+	else if (value < 10000000) {
+		// Format = uuuu
+		u1 = (value) / (1000000);
+		u2 = (value - (u1 * 1000000)) / (100000);
+		u3 = (value - (u1 * 1000000) - (u2 * 100000)) / (10000);
+		u4 = (value - (u1 * 1000000) - (u2 * 100000) - (u3 * 10000)) / (1000);
+		status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(str[0]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(str[1]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(str[2]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(str[3]));
+		if (status != STRING_SUCCESS) goto errors;
+	}
+	else {
+		// Format = uuuuu
+		u1 = (value) / (10000000);
+		u2 = (value - (u1 * 10000000)) / (1000000);
+		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
+		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
+		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
+		status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(str[0]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(str[1]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(str[2]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(str[3]));
+		if (status != STRING_SUCCESS) goto errors;
+		status = STRING_value_to_string(u5, STRING_FORMAT_DECIMAL, 0, &(str[4]));
+		if (status != STRING_SUCCESS) goto errors;
 	}
 errors:
 	return status;

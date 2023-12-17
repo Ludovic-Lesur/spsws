@@ -8,6 +8,7 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
+#include "rcc.h"
 #include "types.h"
 
 /*** RTC macros ***/
@@ -21,16 +22,26 @@
 
 /*** RTC structures ***/
 
+/*!******************************************************************
+ * \enum RTC_status_t
+ * \brief RTC driver error codes.
+ *******************************************************************/
 typedef enum {
+	// Driver errors.
 	RTC_SUCCESS = 0,
 	RTC_ERROR_NULL_PARAMETER,
 	RTC_ERROR_INITIALIZATION_MODE,
-	RTC_ERROR_WAKEUP_TIMER_DELAY,
-	RTC_ERROR_WAKEUP_TIMER_RUNNING,
 	RTC_ERROR_WAKEUP_TIMER_REGISTER_ACCESS,
-	RTC_ERROR_BASE_LAST = 0x0100
+	// Low level drivers errors.
+	RTC_ERROR_BASE_RCC = 0x0100,
+	// Last base value.
+	RTC_ERROR_BASE_LAST = (RTC_ERROR_BASE_RCC + RCC_ERROR_BASE_LAST)
 } RTC_status_t;
 
+/*!******************************************************************
+ * \enum RTC_time_t
+ * \brief RTC time structure.
+ *******************************************************************/
 typedef struct {
 	// Date.
 	uint16_t year;
@@ -44,26 +55,85 @@ typedef struct {
 
 /*** RTC functions ***/
 
-void RTC_reset(void);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint8_t* rtc_use_lse, uint32_t lsi_freq_hz, uint8_t alarm_offset_seconds);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_calibrate(RTC_time_t* time);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_get_time(RTC_time_t* time);
+/*!******************************************************************
+ * \fn RTC_status_t RTC_init(void)
+ * \brief Init RTC peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+RTC_status_t RTC_init(uint8_t alarm_offset_seconds);
 
+/*!******************************************************************
+ * \fn RTC_status_t RTC_calibrate(RTC_time_t* time)
+ * \brief Calibrate RTC calendar.
+ * \param[in]  	time: Pointer to the absolute time to set in calendar.
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+RTC_status_t RTC_calibrate(RTC_time_t* time);
+
+/*!******************************************************************
+ * \fn RTC_status_t RTC_get_time(RTC_time_t* time)
+ * \brief Get RTC time.
+ * \param[in]  	time: Pointer to the current absolute RTC time.
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+RTC_status_t RTC_get_time(RTC_time_t* time);
+
+/*!******************************************************************
+ * \fn volatile uint8_t RTC_get_alarm_a_flag(void)
+ * \brief Read RTC alarm A interrupt flag.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		RTC alarm A flag.
+ *******************************************************************/
 volatile uint8_t RTC_get_alarm_a_flag(void);
+
+/*!******************************************************************
+ * \fn void RTC_clear_alarm_a_flag(void)
+ * \brief Clear RTC alarm A interrupt flag.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void RTC_clear_alarm_a_flag(void);
 
-void RTC_enable_alarm_b_interrupt(void);
-void RTC_disable_alarm_b_interrupt(void);
+/*!******************************************************************
+ * \fn volatile uint8_t RTC_get_alarm_b_flag(void)
+ * \brief Read RTC alarm B interrupt flag.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		RTC alarm B flag.
+ *******************************************************************/
 volatile uint8_t RTC_get_alarm_b_flag(void);
+
+/*!******************************************************************
+ * \fn void RTC_clear_alarm_b_flag(void)
+ * \brief Clear RTC alarm B interrupt flag.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void RTC_clear_alarm_b_flag(void);
 
-RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds);
-RTC_status_t RTC_stop_wakeup_timer(void);
-volatile uint8_t RTC_get_wakeup_timer_flag(void);
-void RTC_clear_wakeup_timer_flag(void);
+/*!******************************************************************
+ * \fn uint32_t RTC_get_time_seconds(void)
+ * \brief Read MCU operating time in seconds.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Current time in seconds.
+ *******************************************************************/
+uint32_t RTC_get_time_seconds(void);
 
-#define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}
-#define RTC_error_check() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
-#define RTC_error_check_print() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
+/*******************************************************************/
+#define RTC_exit_error(error_base) { if (rtc_status != RTC_SUCCESS) { status = (error_base + rtc_status); goto errors; } }
+
+/*******************************************************************/
+#define RTC_stack_error(void) { if (rtc_status != RTC_SUCCESS) { ERROR_stack_add(ERROR_BASE_RTC + rtc_status); } }
+
+/*******************************************************************/
+#define RTC_stack_exit_error(error_code) { if (rtc_status != RTC_SUCCESS) { ERROR_stack_add(ERROR_BASE_RTC + rtc_status); status = error_code; goto errors; } }
 
 #endif /* __RTC_H__ */

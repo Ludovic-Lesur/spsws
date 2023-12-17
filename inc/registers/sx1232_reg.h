@@ -1,14 +1,14 @@
 /*
  * sx1232_reg.h
  *
- *  Created on: 20 june 2018
+ *  Created on: 20 jun. 2018
  *      Author: Ludo
  */
 
 #ifndef __SX1232_REG_H__
 #define __SX1232_REG_H__
 
-/*** SX1232 register map ***/
+/*** SX1232 registers map ***/
 
 #define SX1232_REG_FIFO				0x00
 #define SX1232_REG_OPMODE			0x01
@@ -81,6 +81,7 @@
 #define SX1232_REG_AGCTHRESH3		0x46
 // 0x47-0x4A = reserved.
 #define SX1232_REG_PLLHOP			0x4B
+#define SX1232_REG_PAVALUE			0x4C
 // 0x4C-0x57 = reserved
 #define SX1232_REG_TCXO				0x58
 // 0x59 = reserved.
@@ -90,6 +91,7 @@
 // 0x5D = reserved.
 #define SX1232_REG_PLLLOWPN			0x5E
 // 0x5F-0x6B = reserved.
+#define SX1232_REG_PAMANUAL			0x63
 #define SX1232_REG_FORMERTEMP		0x6C
 // 0x6D-0x6F = reserved.
 #define SX1232_REG_BITRATEFRAC		0x70

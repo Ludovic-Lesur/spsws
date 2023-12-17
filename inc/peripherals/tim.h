@@ -1,50 +1,180 @@
 /*
  * tim.h
  *
- *  Created on: 4 may 2018
+ *  Created on: 04 may 2018
  *      Author: Ludo
  */
 
 #ifndef __TIM_H__
 #define __TIM_H__
 
+#include "rcc.h"
 #include "types.h"
-
-/*** TIM macros ***/
-
-#define TIM2_TIMINGS_ARRAY_LENGTH		5
-#define TIM2_TIMINGS_ARRAY_ARR_IDX		0
-#define TIM2_TIMINGS_ARRAY_CCR1_IDX		1
-#define TIM2_TIMINGS_ARRAY_CCR2_IDX		2
-#define TIM2_TIMINGS_ARRAY_CCR3_IDX		3
-#define TIM2_TIMINGS_ARRAY_CCR4_IDX		4
 
 /*** TIM structures ***/
 
+/*!******************************************************************
+ * \enum TIM_status_t
+ * \brief TIM driver error codes.
+ *******************************************************************/
 typedef enum {
+	// Driver errors.
 	TIM_SUCCESS = 0,
 	TIM_ERROR_NULL_PARAMETER,
-	TIM_ERROR_INTERRUPT_TIMEOUT,
-	TIM_ERROR_BASE_LAST = 0x0100
+	TIM_ERROR_CAPTURE_TIMEOUT,
+	TIM_ERROR_CHANNEL,
+	TIM_ERROR_DURATION_UNDERFLOW,
+	TIM_ERROR_DURATION_OVERFLOW,
+	TIM_ERROR_PERIOD_UNDERFLOW,
+	TIM_ERROR_PERIOD_OVERFLOW,
+	TIM_ERROR_WAITING_MODE,
+	TIM_ERROR_COMPLETION_WATCHDOG,
+	// Low level drivers errors.
+	TIM_ERROR_BASE_RCC = 0x0100,
+	// Last base value.
+	TIM_ERROR_BASE_LAST = (TIM_ERROR_BASE_RCC + RCC_ERROR_BASE_LAST)
 } TIM_status_t;
+
+/*!******************************************************************
+ * \enum TIM2_channel_t
+ * \brief TIM channels list.
+ *******************************************************************/
+typedef enum {
+	TIM2_CHANNEL_1 = 0,
+	TIM2_CHANNEL_2,
+	TIM2_CHANNEL_3,
+	TIM2_CHANNEL_4,
+	TIM2_CHANNEL_LAST
+} TIM2_channel_t;
+
+/*!******************************************************************
+ * \enum TIM_waiting_mode_t
+ * \brief Timer completion waiting modes.
+ *******************************************************************/
+typedef enum {
+	TIM_WAITING_MODE_ACTIVE = 0,
+	TIM_WAITING_MODE_SLEEP,
+	TIM_WAITING_MODE_LOW_POWER_SLEEP,
+	TIM_WAITING_MODE_LAST
+} TIM_waiting_mode_t;
+
+/*!******************************************************************
+ * \fn TIM_completion_irq_cb_t
+ * \brief TIM completion callback.
+ *******************************************************************/
+typedef void (*TIM_completion_irq_cb_t)(void);
 
 /*** TIM functions ***/
 
+/*!******************************************************************
+ * \fn void TIM2_init(void)
+ * \brief Init TIM2 peripheral for general purpose timer operation.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM2_init(void);
+
+/*!******************************************************************
+ * \fn void TIM2_de_init(void)
+ * \brief Release TIM2 peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void TIM2_de_init(void);
+
+/*!******************************************************************
+ * \fn TIM_status_t TIM2_start(TIM2_channel_t channel, uint32_t duration_ms)
+ * \brief Start a timer channel.
+ * \param[in]  	channel: Channel to start.
+ * \param[in]	duration_ms: Timer duration in ms.
+ * \param[in]	waiting_mode: Completion waiting mode.
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM2_start(TIM2_channel_t channel, uint32_t duration_ms, TIM_waiting_mode_t waiting_mode);
+
+/*!******************************************************************
+ * \fn TIM_status_t TIM2_stop(TIM2_channel_t channel)
+ * \brief Stop a timer channel.
+ * \param[in]  	channel: Channel to stop.
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM2_stop(TIM2_channel_t channel);
+
+/*!******************************************************************
+ * \fn TIM_status_t TIM2_get_status(TIM2_channel_t channel, uint8_t* timer_has_elapsed)
+ * \brief Get the status of a timer channel.
+ * \param[in]  	channel: Channel to read.
+ * \param[out]	timer_has_elapsed: Pointer to bit that will contain the timer status (0 for running, 1 for complete).
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM2_get_status(TIM2_channel_t channel, uint8_t* timer_has_elapsed);
+
+/*!******************************************************************
+ * \fn TIM_status_t TIM2_wait_completion(TIM2_channel_t channel)
+ * \brief Blocking function waiting for a timer channel completion.
+ * \param[in]  	channel: Channel to wait for.
+ * \param[in]	waiting_mode: Completion waiting mode.
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t waiting_mode);
+
+/*!******************************************************************
+ * \fn void TIM21_init(void)
+ * \brief Init TIM21 peripheral for LSI frequency measurement.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void TIM21_init(void);
-TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz);
-void TIM21_disable(void);
 
-TIM_status_t TIM2_init(uint16_t timings[TIM2_TIMINGS_ARRAY_LENGTH]);
-void TIM2_start(void);
-void TIM2_stop(void);
-volatile uint32_t TIM2_get_counter(void);
+/*!******************************************************************
+ * \fn void TIM21_de_init(void)
+ * \brief Release TIM21 peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void TIM21_de_init(void);
 
-#define TIM21_status_check(error_base) { if (tim21_status != TIM_SUCCESS) { status = error_base + tim21_status; goto errors; }}
-#define TIM21_error_check() { ERROR_status_check(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
-#define TIM21_error_check_print() { ERROR_status_check_print(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
+/*!******************************************************************
+ * \fn TIM_status_t TIM21_mco_capture(uint16_t* ref_clock_pulse_count, uint16_t* mco_pulse_count)
+ * \brief Perform MCO clock capture.
+ * \param[in]  	none
+ * \param[out] 	ref_clock_pulse_count: Pointer to the number of pulses of the timer reference clock during the capture.
+ * \param[out]	mco_pulse_count: Pointer to the number of pulses of the MCO clock during the capture.
+ * \retval		Function execution status.
+ *******************************************************************/
+TIM_status_t TIM21_mco_capture(uint16_t* ref_clock_pulse_count, uint16_t* mco_pulse_count);
 
-#define TIM2_status_check(error_base) { if (tim2_status != TIM_SUCCESS) { status = error_base + tim2_status; goto errors; }}
-#define TIM2_error_check() { ERROR_status_check(tim2_status, TIM_SUCCESS, ERROR_BASE_TIM2); }
-#define TIM2_error_check_print() { ERROR_status_check_print(tim2_status, TIM_SUCCESS, ERROR_BASE_TIM2); }
+TIM_status_t TIM22_init(uint32_t period_ns, TIM_completion_irq_cb_t irq_callback);
+
+void TIM22_de_init(void);
+
+void TIM22_start(void);
+
+void TIM22_stop(void);
+
+/*******************************************************************/
+#define TIM2_exit_error(error_base) { if (tim2_status != TIM_SUCCESS) { status = (error_base + tim2_status); goto errors; } }
+
+/*******************************************************************/
+#define TIM2_stack_error(void) { if (tim2_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM2 + tim2_status); } }
+
+/*******************************************************************/
+#define TIM2_stack_exit_error(error_code) { if (tim2_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM2 + tim2_status); status = error_code; goto errors; } }
+
+/*******************************************************************/
+#define TIM21_exit_error(error_base) { if (tim21_status != TIM_SUCCESS) { status = (error_base + tim21_status); goto errors; } }
+
+/*******************************************************************/
+#define TIM21_stack_error(void) { if (tim21_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM21 + tim21_status); } }
+
+/*******************************************************************/
+#define TIM21_stack_exit_error(error_code) { if (tim21_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM21 + tim21_status); status = error_code; goto errors; } }
 
 #endif /* __TIM_H__ */

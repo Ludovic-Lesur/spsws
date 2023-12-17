@@ -13,10 +13,7 @@
 
 /*** PARSER local functions ***/
 
-/* GENERIC MACRO TO CHECK INPUT POINTER.
- * @param ptr:	Pointer to check.
- * @return:		None.
- */
+/*******************************************************************/
 #define _PARSER_check_pointer(ptr) { \
 	if (ptr == NULL) { \
 		status = PARSER_ERROR_NULL_PARAMETER; \
@@ -24,10 +21,7 @@
 	} \
 }
 
-/* GENERIC MACRO TO CHECK BUFFER SIZE.
- * @param:	None.
- * @return:	None.
- */
+/*******************************************************************/
 #define _PARSER_check_size(void) { \
 	if ((parser_ctx -> buffer_size) == 0) { \
 		status = PARSER_ERROR_BUFFER_SIZE; \
@@ -35,11 +29,7 @@
 	} \
 }
 
-/* SEARCH SEPARATOR IN THE CURRENT AT COMMAND BUFFER.
- * @param parser_ctx:   Parser structure.
- * @param separator:    Reference separator.
- * @return status:      Comparison result.
- */
+/*******************************************************************/
 static PARSER_status_t _PARSER_search_separator(PARSER_context_t* parser_ctx, char_t separator) {
 	// Local variables.
 	PARSER_status_t status = PARSER_ERROR_SEPARATOR_NOT_FOUND;
@@ -60,24 +50,19 @@ errors:
 
 /*** PARSER functions ***/
 
-/* CHECK EQUALITY BETWEEN A GIVEN COMMAND OR HEADER AND THE CURRENT AT COMMAND BUFFER.
- * @param parser_ctx:   Parser structure.
- * @param mode:			Comparison mode.
- * @param ref:			Reference string to compare with the buffer.
- * @return status:      Comparison result.
- */
-PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char_t* ref) {
+/*******************************************************************/
+PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char_t* reference) {
 	// Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	uint32_t idx = 0;
 	// Check parameters.
 	_PARSER_check_pointer(parser_ctx);
-	_PARSER_check_pointer(ref);
+	_PARSER_check_pointer(reference);
 	_PARSER_check_size();
 	// Compare all characters.
-	while (ref[idx] != STRING_CHAR_NULL) {
+	while (reference[idx] != STRING_CHAR_NULL) {
 		// Compare current character.
-		if ((parser_ctx -> buffer)[(parser_ctx -> start_idx) + idx] != ref[idx]) {
+		if ((parser_ctx -> buffer)[(parser_ctx -> start_idx) + idx] != reference[idx]) {
 			// Difference found or end of command, exit loop.
 			status = PARSER_ERROR_UNKNOWN_COMMAND;
 			goto errors;
@@ -106,14 +91,8 @@ errors:
 	return status;
 }
 
-/* RETRIEVE A PARAMETER IN THE CURRENT AT BUFFER.
- * @param parser_ctx:   Parser structure.
- * @param param_type:   Format of parameter to get.
- * @param separator:    Parameter separator character.
- * @param param_value:  Pointer hat will contain extracted parameter value.
- * @return status:      Searching result.
- */
-PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char_t separator, int32_t* param) {
+/*******************************************************************/
+PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t format, char_t separator, int32_t* parameter) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -121,7 +100,7 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format
 	uint8_t param_length_char = 0;
 	// Check parameters.
 	_PARSER_check_pointer(parser_ctx);
-	_PARSER_check_pointer(param);
+	_PARSER_check_pointer(parameter);
 	_PARSER_check_size();
 	// Compute end index.
 	if (separator != STRING_CHAR_NULL) {
@@ -141,8 +120,8 @@ PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format
 		goto errors;
 	}
 	// Convert string.
-	string_status = STRING_string_to_value(&((parser_ctx -> buffer)[parser_ctx -> start_idx]), param_type, param_length_char, param);
-	STRING_status_check(PARSER_ERROR_BASE_STRING);
+	string_status = STRING_string_to_value(&((parser_ctx -> buffer)[parser_ctx -> start_idx]), format, param_length_char, parameter);
+	STRING_exit_error(PARSER_ERROR_BASE_STRING);
 	// Update start index after decoding parameter.
 	if ((parser_ctx -> separator_idx) > 0) {
 		(parser_ctx -> start_idx) = (parser_ctx -> separator_idx) + 1;
@@ -151,15 +130,8 @@ errors:
 	return status;
 }
 
-/* RETRIEVE A HEXADECIMAL BYTE ARRAY IN THE CURRENT AT BUFFER.
- * @param parser_ctx:       Parser structure.
- * @param separator:        Parameter separator character.
- * @param maximum_length:	Maximum length of the byte array.
- * @param param:            Pointer to the extracted byte array.
- * @param extracted_length:	Length of the extracted buffer.
- * @return status:          Searching result.
- */
-PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separator, uint8_t maximum_length, uint8_t exact_length, uint8_t* param, uint8_t* extracted_length) {
+/*******************************************************************/
+PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separator, uint8_t maximum_length, uint8_t exact_length, uint8_t* parameter, uint8_t* extracted_length) {
     // Local variables.
 	PARSER_status_t status = PARSER_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -167,7 +139,7 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separ
     uint8_t end_idx = 0;
     // Check parameters.
     _PARSER_check_pointer(parser_ctx);
-    _PARSER_check_pointer(param);
+    _PARSER_check_pointer(parameter);
     _PARSER_check_pointer(extracted_length);
     _PARSER_check_size();
     // Compute end index.
@@ -189,8 +161,8 @@ PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separ
 		goto errors;
 	}
 	// Convert string.
-	string_status = STRING_hexadecimal_string_to_byte_array(&((parser_ctx -> buffer)[parser_ctx -> start_idx]), separator, param, extracted_length);
-	STRING_status_check(PARSER_ERROR_BASE_STRING);
+	string_status = STRING_hexadecimal_string_to_byte_array(&((parser_ctx -> buffer)[parser_ctx -> start_idx]), separator, parameter, extracted_length);
+	STRING_exit_error(PARSER_ERROR_BASE_STRING);
 	// Update start index after decoding parameter.
 	if ((parser_ctx -> separator_idx) > 0) {
 		(parser_ctx -> start_idx) = (parser_ctx -> separator_idx) + 1;

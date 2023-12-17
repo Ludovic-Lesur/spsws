@@ -22,11 +22,13 @@
 
 /*** DPS310 local structures ***/
 
+/*******************************************************************/
 typedef struct {
 	// Measurements.
 	int32_t tmp_raw;
 	int32_t prs_raw;
 	// Calibration coefficients.
+	uint8_t coef_ready_flag;
 	int32_t coef_c0;
 	int32_t coef_c1;
 	int32_t coef_c00;
@@ -36,21 +38,15 @@ typedef struct {
 	int32_t coef_c20;
 	int32_t coef_c21;
 	int32_t coef_c30;
-	uint8_t coef_ready;
 } DPS310_context_t;
 
 /*** DPS310 local global variables ***/
 
-static DPS310_context_t dps310_ctx;
+static DPS310_context_t dps310_ctx = {.coef_ready_flag = 0};
 
 /*** DPS310 local functions ***/
 
-/* WRITE A REGISTER OF DPS310.
- * @param i2c_address:		Sensor address
- * @param register_address:	Address of the register to set.
- * @param value:			Value to write in the selected register.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -63,17 +59,12 @@ static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t regis
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
-	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
 }
 
-/* READ A REGISTER OF DPS310.
- * @param i2c_address:		Sensor address
- * @param register_address:	Address of the register to read.
- * @param value:			Pointer to 8-bits value that will contain the current value of the selected register.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -90,20 +81,14 @@ static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t regist
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
 	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
 }
 
-/* GENERIC FUNCTION TO WAIT FOR A FLAG.
- * @param i2c_address:		Sensor address
- * @param register_address: Address of the register to read.
- * @param bit_index:		Bit index of the flag to wait for.
- * @param timeout_error:	Error to return in case of timeout.
- * @return status:			Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -126,7 +111,7 @@ static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_a
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_status_check(DPS310_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(DPS310_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += DPS310_SUB_DELAY_MS;
 		if (loop_count_ms > DPS310_TIMEOUT_MS) {
@@ -141,10 +126,7 @@ errors:
 	return status;
 }
 
-/* READ ALL SENSOR CALIBRATION COEFFICIENTS.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -169,9 +151,9 @@ static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients with auto-increment method.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
 	i2c1_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
-	I2C1_status_check(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Compute coefficients.
 	c0 |= (coef_registers[0] << 4) | ((coef_registers[1] & 0xF0) >> 4);
@@ -184,34 +166,31 @@ static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address
 	c21 |= (coef_registers[14] << 8) | (coef_registers[15]);
 	c30 |= (coef_registers[16] << 8) | (coef_registers[17]);
 	// Convert to sign values.
-	math_status = MATH_two_complement(c0, 11, &dps310_ctx.coef_c0);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c1, 11, &dps310_ctx.coef_c1);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c00, 19, &dps310_ctx.coef_c00);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c01, 15, &dps310_ctx.coef_c01);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c10, 19, &dps310_ctx.coef_c10);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c11, 15, &dps310_ctx.coef_c11);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c20, 15, &dps310_ctx.coef_c20);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c21, 15, &dps310_ctx.coef_c21);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
-	math_status = MATH_two_complement(c30, 15, &dps310_ctx.coef_c30);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c0, 11, &dps310_ctx.coef_c0);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c1, 11, &dps310_ctx.coef_c1);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c00, 19, &dps310_ctx.coef_c00);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c01, 15, &dps310_ctx.coef_c01);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c10, 19, &dps310_ctx.coef_c10);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c11, 15, &dps310_ctx.coef_c11);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c20, 15, &dps310_ctx.coef_c20);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c21, 15, &dps310_ctx.coef_c21);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(c30, 15, &dps310_ctx.coef_c30);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
 	// Set flag.
-	dps310_ctx.coef_ready = 1;
+	dps310_ctx.coef_ready_flag = 1;
 errors:
 	return status;
 }
 
-/* PERFORM TEMPERATURE MEASUREMENT.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_compute_raw_temperature(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -243,16 +222,13 @@ static DPS310_status_t _DPS310_compute_raw_temperature(uint8_t i2c_address) {
 	if (status != DPS310_SUCCESS) goto errors;
 	tmp_raw |= read_byte;
 	// Compute two complement.
-	math_status = MATH_two_complement(tmp_raw, 23, &dps310_ctx.tmp_raw);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(tmp_raw, 23, &dps310_ctx.tmp_raw);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
 errors:
 	return status;
 }
 
-/* PERFORM PRESSURE MEASUREMENT.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 static DPS310_status_t _DPS310_compute_raw_pressure(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -284,27 +260,15 @@ static DPS310_status_t _DPS310_compute_raw_pressure(uint8_t i2c_address) {
 	if (status != DPS310_SUCCESS) goto errors;
 	prs_raw |= read_byte;
 	// Compute two complement.
-	math_status = MATH_two_complement(prs_raw, 23, &dps310_ctx.prs_raw);
-	MATH_status_check(DPS310_ERROR_BASE_MATH);
+	math_status = MATH_two_complement_to_int32(prs_raw, 23, &dps310_ctx.prs_raw);
+	MATH_exit_error(DPS310_ERROR_BASE_MATH);
 errors:
 	return status;
 }
 
 /*** DPS310 functions ***/
 
-/* INIT DPS310 MODULE.
- * @param:	None.
- * @return:	None.
- */
-void DPS310_init(void) {
-	// Init context.
-	dps310_ctx.coef_ready = 0;
-}
-
-/* PERFORM PRESSURE AND TEMPERATURE MEASUREMENT.
- * @param i2c_address:	Sensor address.
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -317,17 +281,14 @@ DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	status = _DPS310_compute_raw_pressure(i2c_address);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read calibration coefficients if needed.
-	if (dps310_ctx.coef_ready == 0) {
+	if (dps310_ctx.coef_ready_flag == 0) {
 		status = _DPS310_read_calibration_coefficients(i2c_address);
 	}
 errors:
 	return status;
 }
 
-/* READ PRESSURE FROM DPS310 SENSOR.
- * @param pressure_pa:	Pointer to 32-bits value that will contain pressure result (Pa).
- * @return status:		Function execution status.
- */
+/*******************************************************************/
 DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -352,10 +313,7 @@ errors:
 	return status;
 }
 
-/* READ TEMPERATURE FROM DPS310 SENSOR.
- * @param temperature_degrees:	Pointer to 8-bits value that will contain temperature result (degrees).
- * @return status:				Function execution status.
- */
+/*******************************************************************/
 DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;

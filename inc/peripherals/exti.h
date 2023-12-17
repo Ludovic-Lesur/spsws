@@ -1,7 +1,7 @@
 /*
  * exti.h
  *
- *  Created on: 18 june 2018
+ *  Created on: 18 jun. 2018
  *      Author: Ludo
  */
 
@@ -12,6 +12,10 @@
 
 /*** EXTI structures ***/
 
+/*!******************************************************************
+ * \enum EXTI_line_t
+ * \brief EXTI lines list.
+ *******************************************************************/
 typedef enum {
 	EXTI_LINE_GPIO_0 = 0,
 	EXTI_LINE_GPIO_1 = 1,
@@ -44,6 +48,10 @@ typedef enum {
 	EXTI_LINE_LAST
 } EXTI_line_t;
 
+/*!******************************************************************
+ * \enum EXTI_trigger_t
+ * \brief EXTI trigger modes.
+ *******************************************************************/
 typedef enum {
 	EXTI_TRIGGER_RISING_EDGE,
 	EXTI_TRIGGER_FALLING_EDGE,
@@ -51,12 +59,60 @@ typedef enum {
 	EXTI_TRIGGER_LAST
 } EXTI_trigger_t;
 
+/*!******************************************************************
+ * \fn EXTI_gpio_irq_cb_t
+ * \brief EXTI GPIO callback.
+ *******************************************************************/
+typedef void (*EXTI_gpio_irq_cb_t)(void);
+
 /*** EXTI functions ***/
 
+/*!******************************************************************
+ * \fn void EXTI_init(void)
+ * \brief Init EXTI driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void EXTI_init(void);
-void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger);
+
+/*!******************************************************************
+ * \fn void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger, EXTI_gpio_irq_cb_t irq_callback)
+ * \brief Configure EXTI GPIO interrupt.
+ * \param[in]  	gpio: GPIO to configure as interrupt input.
+ * \param[in]	trigger: GPIO edge trigger.
+ * \param[in]	irq_callback: Function to call on interrupt.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger, EXTI_gpio_irq_cb_t irq_callback);
+
+/*!******************************************************************
+ * \fn void EXTI_release_gpio(const GPIO_pin_t* gpio)
+ * \brief Release GPIO external interrupt.
+ * \param[in]  	gpio: GPIO to release.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void EXTI_release_gpio(const GPIO_pin_t* gpio);
+
+/*!******************************************************************
+ * \fn void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger)
+ * \brief Configure EXTI line interrupt.
+ * \param[in]  	line: Line to configure as interrupt input.
+ * \param[in]	trigger: GPIO edge trigger.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger);
+
+/*!******************************************************************
+ * \fn void EXTI_clear_flag(EXTI_line_t line)
+ * \brief Clear EXTI line flag.
+ * \param[in]  	line: Line to clear.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void EXTI_clear_flag(EXTI_line_t line);
-void EXTI_clear_all_flags(void);
 
 #endif /* __EXTI_H__ */
