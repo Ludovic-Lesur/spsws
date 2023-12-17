@@ -9,7 +9,17 @@ The boards were designed on **Circuit Maker V1.3**. Below is the list of hardwar
 | Hardware revision | Description | Status |
 |:---:|:---:|:---:|
 | [SPSWS HW1.0](https://365.altium.com/files/C5470066-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version for prototyping. | :x: |
-| [SPSWS HW2.0](https://365.altium.com/files/C7B06FC0-C92D-11EB-A2F6-0A0ABF5AFC1B) | PCB fitted to outdoor casing.<br>Add connectors to external sensors and antennas.<br>Separate SPI interfaces for radio and ADC.<br>Improved power tree. | :white_check_mark: |
+| [SPSWS HW2.0](https://365.altium.com/files/C7B06FC0-C92D-11EB-A2F6-0A0ABF5AFC1B) | PCB fitted to outdoor casing.<br>Add connectors to external sensors and antennas.<br>Separate SPI interfaces for radio and ADC.<br>Improved power tree.<br>Shielding added on the radio circuitry. | :white_check_mark: |
+
+The weather station is also composed of 2 daughter boards which embed the meteorological sensors. These boards are located outdoor in a dedicated casing, out of the main enclosure.
+
+ Hardware revision | Description | Status |
+|:---:|:---:|:---:|
+| [MPMCM HW1.0](https://365.altium.com/files/CA4F6A2D-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version with all sensors. | :white_check_mark: |
+| [THPSM HW1.0](https://365.altium.com/files/C8C019CC-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
+| [THPSM HW1.1](https://365.altium.com/files/C6225D4D-C92D-11EB-A2F6-0A0ABF5AFC1B) | Change form factor. | :white_check_mark: |
+| [LUSM HW1.0](https://365.altium.com/files/C461191C-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
+| [LUSM HW1.1](https://365.altium.com/files/C5607DB6-C92D-11EB-A2F6-0A0ABF5AFC1B) | Change form factor. | :white_check_mark: |
 
 # Embedded software
 
