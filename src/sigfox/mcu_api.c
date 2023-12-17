@@ -118,8 +118,7 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t *timer) {
 	TIM_waiting_mode_t tim2_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
 	// Check parameter.
 	if (timer == SFX_NULL) {
-		status = MCU_API_ERROR_NULL_PARAMETER;
-		goto errors;
+		EXIT_ERROR(MCU_API_ERROR_NULL_PARAMETER);
 	}
 	// Update waiting mode according to timer reason.
 	if ((timer -> reason) == MCU_API_TIMER_REASON_T_RX) {
@@ -202,8 +201,8 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t *aes_data
 		}
 		break;
 	default:
-		status = MCU_API_ERROR_EP_KEY;
-		goto errors;
+		EXIT_ERROR(MCU_API_ERROR_EP_KEY);
+		break;
 	}
 #else
 	// Retrieve private key from NVM.
