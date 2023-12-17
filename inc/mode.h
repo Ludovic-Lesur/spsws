@@ -16,8 +16,8 @@
 /*** Board options ***/
 
 // Measurement features.
-//#define SPSWS_WIND_MEASUREMENT
-//#define SPSWS_RAIN_MEASUREMENT
+#define SPSWS_WIND_MEASUREMENT
+#define SPSWS_RAIN_MEASUREMENT
 #if (defined SPSWS_RAIN_MEASUREMENT) && (defined HW2_0)
 //#define SPSWS_FLOOD_MEASUREMENT
 #endif

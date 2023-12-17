@@ -15,10 +15,10 @@ The weather station is also composed of 2 daughter boards which embed the meteor
 
  Hardware revision | Description | Status |
 |:---:|:---:|:---:|
-| [MPMCM HW1.0](https://365.altium.com/files/CA4F6A2D-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version with all sensors. | :white_check_mark: |
-| [THPSM HW1.0](https://365.altium.com/files/C8C019CC-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
+| [MPMCM HW1.0](https://365.altium.com/files/CA4F6A2D-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version with all sensors. | :x: |
+| [THPSM HW1.0](https://365.altium.com/files/C8C019CC-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :x: |
 | [THPSM HW1.1](https://365.altium.com/files/C6225D4D-C92D-11EB-A2F6-0A0ABF5AFC1B) | Change form factor. | :white_check_mark: |
-| [LUSM HW1.0](https://365.altium.com/files/C461191C-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
+| [LUSM HW1.0](https://365.altium.com/files/C461191C-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :x: |
 | [LUSM HW1.1](https://365.altium.com/files/C5607DB6-C92D-11EB-A2F6-0A0ABF5AFC1B) | Change form factor. | :white_check_mark: |
 
 # Embedded software
