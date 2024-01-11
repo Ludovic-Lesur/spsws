@@ -278,15 +278,6 @@ SX1232_status_t SX1232_set_modulation(SX1232_modulation_t modulation, SX1232_mod
 SX1232_status_t SX1232_set_rf_frequency(uint32_t rf_frequency_hz);
 
 /*!******************************************************************
- * \fn SX1232_status_t SX1232_enable_fast_frequency_hopping(void)
- * \brief Enable SX1232 fast frequency hopping mode.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
- *******************************************************************/
-SX1232_status_t SX1232_enable_fast_frequency_hopping(void);
-
-/*!******************************************************************
  * \fn SX1232_status_t SX1232_enable_low_phase_noise_pll(void)
  * \brief Enable SX1232 low phase noise mode of PLL.
  * \param[in]  	none

@@ -52,14 +52,21 @@ void SPI1_de_init(void) {
 
 #ifdef HW1_0
 /*******************************************************************/
-void SPI1_set_clock_polarity(uint8_t polarity) {
-	// Check parameter.
+void SPI1_set_clock_configuration(uint8_t prescaler, uint8_t polarity) {
+	// Disable peripheral.
+	SPI1 -> CR1 &= ~(0b1 << 6); // SPE='0'.
+	// Set prescaler.
+	SPI1 -> CR1 &= ~(0b111 << 3);
+	SPI1 -> CR1 |= ((prescaler & 0x07) << 3);
+	// Set polarity.
 	if (polarity == 0) {
 		SPI1 -> CR1 &= ~(0b11 << 0); // CPOL='0' and CPHA='0'.
 	}
 	else {
 		SPI1 -> CR1 |= (0b11 << 0); // CPOL='1' and CPHA='1'.
 	}
+	// Enable peripheral.
+	SPI1 -> CR1 |= (0b1 << 6); // SPE='1'.
 }
 #endif
 
@@ -106,7 +113,7 @@ errors:
 }
 
 /*******************************************************************/
-void SPI1_write(uint16_t tx_data) {
+void __attribute__((optimize("-O0"))) SPI1_write(uint16_t tx_data) {
 	// Send TX byte.
 	*((volatile uint16_t*) &(SPI1 -> DR)) = tx_data;
 	// Wait for TXE flag.
@@ -120,11 +127,11 @@ void SPI2_init(void) {
 	RCC -> APB1ENR |= (0b1 << 14); // SPI2EN='1'.
 	// Configure peripheral.
 	// Master mode (MSTR='1').
-	// Baud rate = PCLK2/2 = SYSCLK/2 = 8MHz.
+	// Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
 	// 16-bits format (DFF='1').
 	// CPOL='1' and CPHA='1'.
 	// Enable output (SSOE='1').
-	SPI2 -> CR1 |= (0b1 << 2) | (0b1 << 11) | (0b11 << 0);
+	SPI2 -> CR1 |= (0b1 << 2) | (0b001 << 3) | (0b1 << 11) | (0b11 << 0);
 	SPI2 -> CR2 |= (0b1 << 2);
 	// Enable peripheral.
 	SPI2 -> CR1 |= (0b1 << 6); // SPE='1'.

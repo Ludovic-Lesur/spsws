@@ -62,14 +62,18 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 	case POWER_DOMAIN_ANALOG_EXTERNAL:
 		// Turn analog front-end on and init external ADC.
 #ifdef HW1_0
-		GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 		GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-		SPI1_init();
+		GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
+		SX1232_init();
+		I2C1_init();
 #endif
 #ifdef HW2_0
 		GPIO_write(&GPIO_ADC_POWER_ENABLE, 1);
 #endif
 		MAX11136_init();
+#ifdef HW1_0
+		SPI1_set_clock_configuration(1, 1);
+#endif
 		delay_ms = POWER_ON_DELAY_MS_ANALOG_EXTERNAL;
 		break;
 	case POWER_DOMAIN_SENSORS:
@@ -77,6 +81,8 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 		GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
 #ifdef HW1_0
 		GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
+		MAX11136_init();
+		SX1232_init();
 #endif
 		I2C1_init();
 		delay_ms = POWER_ON_DELAY_MS_SENSORS;
@@ -93,13 +99,17 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 		delay_ms = POWER_ON_DELAY_MS_RADIO_TCXO;
 		break;
 	case POWER_DOMAIN_RADIO:
-		// Turn radio on and init SX1232 driver.
-		GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
 #ifdef HW1_0
 		GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
-		SPI1_init();
+		MAX11136_init();
+		I2C1_init();
 #endif
+		// Turn radio on and init SX1232 driver.
+		GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
 		SX1232_init();
+#ifdef HW1_0
+		SPI1_set_clock_configuration(0, 0);
+#endif
 		SKY13317_init();
 		delay_ms = POWER_ON_DELAY_MS_RADIO;
 		break;
@@ -136,27 +146,29 @@ POWER_status_t POWER_disable(POWER_domain_t domain) {
 		if ((power_domain_state[POWER_DOMAIN_RADIO] == 0) && (power_domain_state[POWER_DOMAIN_SENSORS] == 0)) {
 			GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 			GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
-			MAX11136_de_init();
-			SPI1_de_init();
+			SX1232_de_init();
+			I2C1_de_init();
 		}
 #endif
 #ifdef HW2_0
 		GPIO_write(&GPIO_ADC_POWER_ENABLE, 0);
-		MAX11136_de_init();
 #endif
+		MAX11136_de_init();
 		break;
 	case POWER_DOMAIN_SENSORS:
-		// Turn digital sensors off and release I2C interface.
-		I2C1_de_init();
 #ifdef HW1_0
 		if ((power_domain_state[POWER_DOMAIN_RADIO] == 0) && (power_domain_state[POWER_DOMAIN_ANALOG_EXTERNAL] == 0)) {
 			GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 			GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
+			MAX11136_de_init();
+			SX1232_de_init();
 		}
 #endif
 #ifdef HW2_0
 		GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
 #endif
+		// Turn digital sensors off and release I2C interface.
+		I2C1_de_init();
 		break;
 	case POWER_DOMAIN_GPS:
 		// Turn GPS off and release NEOM8N driver.
@@ -172,7 +184,8 @@ POWER_status_t POWER_disable(POWER_domain_t domain) {
 		if ((power_domain_state[POWER_DOMAIN_SENSORS] == 0) && (power_domain_state[POWER_DOMAIN_ANALOG_EXTERNAL] == 0)) {
 			GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 			GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 0);
-			SPI1_de_init();
+			MAX11136_de_init();
+			I2C1_de_init();
 		}
 #endif
 #ifdef HW2_0

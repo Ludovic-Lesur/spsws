@@ -602,7 +602,9 @@ int main (void) {
 	application_message.common_parameters.number_of_frames = 3;
 	application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
 	application_message.type = SIGFOX_APPLICATION_MESSAGE_TYPE_BYTE_ARRAY;
+#ifdef BIDIRECTIONAL
 	application_message.bidirectional_flag = 0;
+#endif
 	application_message.ul_payload = SFX_NULL;
 	application_message.ul_payload_size_bytes = 0;
 	// Main loop.
@@ -634,7 +636,7 @@ int main (void) {
 			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
 				// Check hour change flag.
 				if (spsws_ctx.flags.hour_changed != 0) {
-					// Fixed hour wake-up.
+					// Valid fixed hour wake-up.
 					_SPSWS_update_pwut();
 					// Check if day changed.
 					if (spsws_ctx.flags.day_changed != 0) {
@@ -650,8 +652,8 @@ int main (void) {
 					spsws_ctx.flags.hour_changed = 0; // Reset flag.
 					// Calibrate and update clocks.
 					_SPSWS_update_clocks();
-					// Next state.
-					spsws_ctx.state = SPSWS_STATE_MEASURE;
+					// Next state
+					spsws_ctx.state = SPSWS_STATE_MONITORING;
 				}
 				else {
 					// False detection due to RTC calibration.
@@ -880,27 +882,20 @@ int main (void) {
 			spsws_ctx.sigfox_weather_data.rain_mm = 0;
 #endif
 #endif
-			// Read status byte.
-			spsws_ctx.sigfox_monitoring_data.status = spsws_ctx.status.all;
-			// Check alarm flag.
-			if (spsws_ctx.flags.fixed_hour_alarm != 0) {
-				// Compute average data.
-				_SPSWS_compute_final_measurements();
-				_SPSWS_reset_measurements();
-				// Send data.
-				spsws_ctx.state = SPSWS_STATE_MONITORING;
-			}
-			else {
 #ifdef SPSWS_FLOOD_MEASUREMENT
-				// Check if flood level has changed.
-				spsws_ctx.state = (spsws_ctx.flags.flood_alarm != 0) ? SPSWS_STATE_FLOOD_ALARM : SPSWS_STATE_OFF;
+			// Check if flood level has changed.
+			spsws_ctx.state = (spsws_ctx.flags.flood_alarm != 0) ? SPSWS_STATE_FLOOD_ALARM : SPSWS_STATE_OFF;
 #else
-				spsws_ctx.state = SPSWS_STATE_OFF;
+			spsws_ctx.state = SPSWS_STATE_OFF;
 #endif
-			}
 			break;
 		case SPSWS_STATE_MONITORING:
 			IWDG_reload();
+			// Compute average data.
+			_SPSWS_compute_final_measurements();
+			_SPSWS_reset_measurements();
+			// Read status byte.
+			spsws_ctx.sigfox_monitoring_data.status = spsws_ctx.status.all;
 			// Send uplink monitoring frame.
 			application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_600BPS;
 			application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_monitoring_data.frame);

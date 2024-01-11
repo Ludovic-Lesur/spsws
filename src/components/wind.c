@@ -82,14 +82,12 @@ static void _WIND_speed_edge_callback(void) {
 	wind_ctx.speed_edge_count++;
 	// Wind direction.
 #ifdef WIND_VANE_ULTIMETER
-	// Capture PWM period.
-	// TODOS
+	// TODO Capture PWM period.
 	// Compute direction
 	if ((wind_ctx.direction_pwm_period > 0) && (wind_ctx.direction_pwm_duty_cycle <= wind_ctx.direction_pwm_period)) {
 		wind_ctx.direction_degrees = (wind_ctx.direction_pwm_duty_cycle * 360) / (wind_ctx.direction_pwm_period);
 	}
-	// Start new cycle.
-	// TODO
+	// TODO Start new cycle.
 #endif
 }
 #endif
@@ -97,8 +95,7 @@ static void _WIND_speed_edge_callback(void) {
 #if (defined SPSWS_WIND_MEASUREMENT) && (defined WIND_VANE_ULTIMETER)
 /*******************************************************************/
 static void _WIND_direction_edge_callback(void) {
-	// Capture PWM duty cycle.
-	// TODO
+	// TODO Capture PWM duty cycle.
 }
 #endif
 
@@ -148,8 +145,7 @@ void WIND_start_continuous_measure(void) {
 	wind_ctx.speed_seconds_count = 0;
 	wind_ctx.direction_seconds_count = 0;
 #ifdef WIND_VANE_ULTIMETER
-	// Init phase shift timers:
-	// TODO
+	// TODO Init phase shift timers:
 #endif
 	// Enable interrupts.
 	EXTI_clear_flag((EXTI_line_t) WIND_GPIO_SPEED.pin);
@@ -166,8 +162,7 @@ void WIND_stop_continuous_measure(void) {
 	// Disable interrupts.
 	NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #ifdef WIND_VANE_ULTIMETER
-	// Release phase shift timer.
-	// TODO
+	// TODO Release phase shift timer.
 #endif
 }
 #endif

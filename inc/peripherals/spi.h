@@ -48,13 +48,14 @@ void SPI1_de_init(void);
 
 #ifdef HW1_0
 /*!******************************************************************
- * \fn void SPI1_set_clock_polarity(uint8_t polarity)
- * \brief Configure SPI1 clock polarity.
- * \param[in]  	polarity: Polarity to apply.
+ * \fn void SPI1_set_clock_configuration(uint8_t prescaler, uint8_t polarity)
+ * \brief Configure SPI1 clock.
+ * \param[in]	prescaler: SCLK prescaler.
+ * \param[in]  	polarity: SCLK polarity.
  * \param[out] 	none
  * \retval		none
  *******************************************************************/
-void SPI1_set_clock_polarity(uint8_t polarity);
+void SPI1_set_clock_configuration(uint8_t prescaler, uint8_t polarity);
 #endif
 
 /*!******************************************************************

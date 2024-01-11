@@ -388,6 +388,9 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		deviation_hz = ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES) / (4);
 		frequency_hz = (radio_parameters -> frequency_hz) + deviation_hz;
 		data_mode = SX1232_DATA_MODE_CONTINUOUS;
+		// Use manual control of the PA.
+		sx1232_status = SX1232_enable_manual_pa_control();
+		SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);
 		break;
 	case RF_API_MODULATION_GFSK:
 		modulation = SX1232_MODULATION_FSK;
@@ -430,15 +433,12 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);
 #ifdef HW1_0
 		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF1);
-		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 #endif
 #ifdef HW2_0
 		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF2);
-		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 #endif
+		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 		sx1232_status = SX1232_enable_low_phase_noise_pll();
-		SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);
-		sx1232_status = SX1232_enable_manual_pa_control();
 		SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);
 #if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION)
 		// Start latency = ramp-up.
@@ -455,12 +455,11 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		// Switch to RX.
 #ifdef HW1_0
 		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF2);
-		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 #endif
 #ifdef HW2_0
 		sky13317_status = SKY13317_set_channel(SKY13317_CHANNEL_RF3);
-		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 #endif
+		SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 		// Prepare transceiver for downlink operation.
 		sx1232_status = SX1232_set_rx_bandwidth(SX1232_RXBW_MANTISSA_24, SX1232_RXBW_EXPONENT_7);
 		SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);

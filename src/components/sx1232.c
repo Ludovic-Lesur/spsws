@@ -75,9 +75,6 @@ SX1232_status_t _SX1232_write_register(uint8_t addr, uint8_t value) {
 	// Build SPI frame.
 	sx1232_ctx.spi_tx_data = ((addr | 0x80) << 8);
 	sx1232_ctx.spi_tx_data |= (value << 0);
-#ifdef HW1_0
-	SPI1_set_clock_polarity(0);
-#endif
 	// Write access sequence.
 	GPIO_SX1232_CS_LOW();
 	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
@@ -103,9 +100,6 @@ SX1232_status_t _SX1232_read_register(uint8_t addr, uint8_t* value) {
 	}
 	// Build SPI frame.
 	sx1232_ctx.spi_tx_data = ((addr & 0x7F) << 8);
-#ifdef HW1_0
-	SPI1_set_clock_polarity(0);
-#endif
 	// Read access sequence.
 	GPIO_SX1232_CS_LOW();
 	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
@@ -124,10 +118,8 @@ void SX1232_init(void) {
 	// Init context.
 	sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
 	sx1232_ctx.spi_tx_pa_power_value = ((SX1232_REG_PAVALUE | 0x80) << 8);
-#ifdef HW2_0
 	// Init SPI.
 	SPI1_init();
-#endif
 	// Configure chip select pin.
 	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_SX1232_CS, 1);
@@ -143,10 +135,8 @@ void SX1232_de_init(void) {
 	// Release SX1232 DIOx.
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
-#ifdef HW2_0
 	// Release SPI.
 	SPI1_de_init();
-#endif
 }
 
 /*******************************************************************/
@@ -296,20 +286,6 @@ SX1232_status_t SX1232_set_rf_frequency(uint32_t rf_frequency_hz) {
 	status = _SX1232_write_register(SX1232_REG_FRFMID, (uint8_t) (frf_reg_value >> 8));
 	if (status != SX1232_SUCCESS) goto errors;
 	status = _SX1232_write_register(SX1232_REG_FRFLSB, (uint8_t) (frf_reg_value >> 0));
-errors:
-	return status;
-}
-
-/*******************************************************************/
-SX1232_status_t SX1232_enable_fast_frequency_hopping(void) {
-	// Local variables.
-	SX1232_status_t status = SX1232_SUCCESS;
-	uint8_t reg_value = 0;
-	// Read register.
-	status = _SX1232_read_register(SX1232_REG_PLLHOP, &reg_value);
-	if (status != SX1232_SUCCESS) goto errors;
-	// Program register.
-	status = _SX1232_write_register(SX1232_REG_PLLHOP, (reg_value | 0x80));
 errors:
 	return status;
 }
@@ -596,7 +572,7 @@ errors:
 }
 
 /*******************************************************************/
-void SX1232_set_pa_power_value(uint8_t pa_power_value) {
+void __attribute__((optimize("-O0"))) SX1232_set_pa_power_value(uint8_t pa_power_value) {
 	// Build SPI frame.
 	sx1232_ctx.spi_tx_pa_power_value &= 0xFF00;
 	sx1232_ctx.spi_tx_pa_power_value |= pa_power_value;

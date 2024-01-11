@@ -88,11 +88,17 @@ static void _AT_set_key_callback(void);
 static void _AT_adc_callback(void);
 static void _AT_max11136_callback(void);
 static void _AT_iths_callback(void);
+#ifdef HW2_0
 static void _AT_eths_callback(void);
+#endif
 static void _AT_epts_callback(void);
 static void _AT_euvs_callback(void);
+#ifdef SPSWS_WIND_MEASUREMENT
 static void _AT_wind_callback(void);
+#endif
+#ifdef SPSWS_RAIN_MEASUREMENT
 static void _AT_rain_callback(void);
+#endif
 #endif
 /*******************************************************************/
 #ifdef AT_COMMAND_GPS
@@ -101,7 +107,9 @@ static void _AT_gps_callback(void);
 #endif
 /*******************************************************************/
 #ifdef AT_COMMAND_SIGFOX_EP_LIB
+#ifdef CONTROL_KEEP_ALIVE_MESSAGE
 static void _AT_so_callback(void);
+#endif
 static void _AT_sb_callback(void);
 static void _AT_sf_callback(void);
 #endif
@@ -113,7 +121,7 @@ static void _AT_tm_callback(void);
 #ifdef AT_COMMAND_CW
 static void _AT_cw_callback(void);
 #endif
-#ifdef AT_COMMAND_RSSI
+#if (defined AT_COMMAND_RSSI) && (defined BIDIRECTIONAL)
 static void _AT_rssi_callback(void);
 #endif
 #endif
@@ -168,21 +176,27 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 #ifdef AT_COMMAND_SENSORS
 	{PARSER_MODE_COMMAND, "AT$ADC?", STRING_NULL, "Get internal ADC measurements", _AT_adc_callback},
 	{PARSER_MODE_COMMAND, "AT$MAX11136?", STRING_NULL, "Get external ADC measurements", _AT_max11136_callback},
-#ifdef HW2_0
 	{PARSER_MODE_COMMAND, "AT$ITHS?", STRING_NULL, "Get internal PCB temperature and humidity", _AT_iths_callback},
-#endif
+#ifdef HW2_0
 	{PARSER_MODE_COMMAND, "AT$ETHS?", STRING_NULL, "Get external temperature and humidity", _AT_eths_callback},
+#endif
 	{PARSER_MODE_COMMAND, "AT$EPTS?", STRING_NULL, "Get pressure and temperature", _AT_epts_callback},
 	{PARSER_MODE_COMMAND, "AT$EUVS?", STRING_NULL, "Get UV index", _AT_euvs_callback},
+#ifdef SPSWS_WIND_MEASUREMENT
 	{PARSER_MODE_HEADER,  "AT$WIND=", "enable[bit]", "Enable or disable wind measurements", _AT_wind_callback},
+#endif
+#ifdef SPSWS_RAIN_MEASUREMENT
 	{PARSER_MODE_HEADER,  "AT$RAIN=", "enable[bit]", "Enable or disable rain detection", _AT_rain_callback},
+#endif
 #endif
 #ifdef AT_COMMAND_GPS
 	{PARSER_MODE_HEADER,  "AT$TIME=", "timeout[s]", "Get GPS time", _AT_time_callback},
 	{PARSER_MODE_HEADER,  "AT$GPS=", "timeout[s]", "Get GPS position", _AT_gps_callback},
 #endif
 #ifdef AT_COMMAND_SIGFOX_EP_LIB
+#ifdef CONTROL_KEEP_ALIVE_MESSAGE
 	{PARSER_MODE_COMMAND, "AT$SO", STRING_NULL, "Sigfox send control message", _AT_so_callback},
+#endif
 	{PARSER_MODE_HEADER,  "AT$SB=", "data[bit],(bidir_flag[bit])", "Sigfox send bit", _AT_sb_callback},
 	{PARSER_MODE_HEADER,  "AT$SF=", "data[hex],(bidir_flag[bit])", "Sigfox send frame", _AT_sf_callback},
 #endif
@@ -192,7 +206,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 #ifdef AT_COMMAND_CW
 	{PARSER_MODE_HEADER,  "AT$CW=", "frequency[hz],enable[bit],(output_power[dbm])", "Continuous wave", _AT_cw_callback},
 #endif
-#ifdef AT_COMMAND_RSSI
+#if (defined AT_COMMAND_RSSI) && (defined BIDIRECTIONAL)
 	{PARSER_MODE_HEADER,  "AT$RSSI=", "frequency[hz],duration[s]", "Continuous RSSI measurement", _AT_rssi_callback},
 #endif
 };
@@ -671,7 +685,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_SENSORS)
+#if (defined ATM) && (defined AT_COMMAND_SENSORS) && (defined HW2_0)
 /*******************************************************************/
 static void _AT_eths_callback(void) {
 	// Local variables.
@@ -787,7 +801,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_SENSORS)
+#if (defined ATM) && (defined AT_COMMAND_SENSORS) && (defined SPSWS_WIND_MEASUREMENT)
 /*******************************************************************/
 static void _AT_wind_callback(void) {
 	// Local variables.
@@ -843,7 +857,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_SENSORS)
+#if (defined ATM) && (defined AT_COMMAND_SENSORS) && (defined SPSWS_RAIN_MEASUREMENT)
 /*******************************************************************/
 static void _AT_rain_callback(void) {
 	// Local variables.
@@ -1002,7 +1016,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_SIGFOX_EP_LIB)
+#if (defined ATM) && (defined AT_COMMAND_SIGFOX_EP_LIB) && (defined BIDIRECTIONAL)
 /*******************************************************************/
 static void _AT_print_dl_payload(void) {
 	// Local variables.
@@ -1022,7 +1036,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_SIGFOX_EP_LIB)
+#if (defined ATM) && (defined AT_COMMAND_SIGFOX_EP_LIB) && (defined CONTROL_KEEP_ALIVE_MESSAGE)
 /*******************************************************************/
 static void _AT_so_callback(void) {
 	// Local variables.
@@ -1082,7 +1096,9 @@ static void _AT_sb_callback(void) {
 		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
 		// Update parameters.
 		application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
+#ifdef BIDIRECTIONAL
 		application_message.bidirectional_flag = bidir_flag;
+#endif
 	}
 	else {
 		// Try with 1 parameter.
@@ -1090,7 +1106,9 @@ static void _AT_sb_callback(void) {
 		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
 		// Update parameters.
 		application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
+#ifdef BIDIRECTIONAL
 		application_message.bidirectional_flag = 0;
+#endif
 	}
 	// Open library.
 	sigfox_ep_api_status = SIGFOX_EP_API_open(&lib_config);
@@ -1098,10 +1116,12 @@ static void _AT_sb_callback(void) {
 	// Send application message.
 	sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(&application_message);
 	SIGFOX_EP_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * 0x0100) + sigfox_ep_api_status);
+#ifdef BIDIRECTIONAL
 	// Read and print DL payload if needed.
 	if ((application_message.bidirectional_flag) == SFX_TRUE) {
 		_AT_print_dl_payload();
 	}
+#endif
 	// Close library.
 	sigfox_ep_api_status = SIGFOX_EP_API_close();
 	SIGFOX_EP_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * 0x0100) + sigfox_ep_api_status);
@@ -1134,7 +1154,9 @@ static void _AT_sf_callback(void) {
 	application_message.common_parameters.number_of_frames = 3;
 	application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
 	application_message.type = SIGFOX_APPLICATION_MESSAGE_TYPE_BYTE_ARRAY;
+#ifdef BIDIRECTIONAL
 	application_message.bidirectional_flag = 0;
+#endif
 	application_message.ul_payload = SFX_NULL;
 	application_message.ul_payload_size_bytes = 0;
 	// First try with 2 parameters.
@@ -1146,7 +1168,9 @@ static void _AT_sf_callback(void) {
 		// Update parameters.
 		application_message.ul_payload = (sfx_u8*) data;
 		application_message.ul_payload_size_bytes = extracted_length;
+#ifdef BIDIRECTIONAL
 		application_message.bidirectional_flag = bidir_flag;
+#endif
 	}
 	else {
 		// Try with 1 parameter.
@@ -1162,10 +1186,12 @@ static void _AT_sf_callback(void) {
 	// Send application message.
 	sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(&application_message);
 	SIGFOX_EP_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * 0x0100) + sigfox_ep_api_status);
+#ifdef BIDIRECTIONAL
 	// Read and print DL payload if needed.
 	if ((application_message.bidirectional_flag) == SFX_TRUE) {
 		_AT_print_dl_payload();
 	}
+#endif
 	// Close library.
 	sigfox_ep_api_status = SIGFOX_EP_API_close();
 	SIGFOX_EP_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * 0x0100) + sigfox_ep_api_status);
@@ -1291,7 +1317,7 @@ errors:
 }
 #endif
 
-#if (defined ATM) && (defined AT_COMMAND_RSSI)
+#if (defined ATM) && (defined AT_COMMAND_RSSI) && (defined BIDIRECTIONAL)
 /*******************************************************************/
 static void _AT_rssi_callback(void) {
 	// Local variables.
@@ -1452,6 +1478,7 @@ void AT_task(void) {
 		USART1_enable_rx();
 #endif
 	}
+#ifdef SPSWS_WIND_MEASUREMENT
 	// Check RTC flag for wind measurements.
 	if ((at_ctx.wind_measurement_flag != 0) && (RTC_get_alarm_b_flag() != 0)) {
 		// Call WIND callback.
@@ -1459,6 +1486,7 @@ void AT_task(void) {
 		// Clear flag and watchdog.
 		RTC_clear_alarm_b_flag();
 	}
+#endif
 }
 #endif
 

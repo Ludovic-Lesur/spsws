@@ -120,9 +120,6 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	uint8_t channel = 0;
 	uint8_t channel_idx = 0;
 	uint32_t loop_count_ms = 0;
-#ifdef HW1_0
-	SPI1_set_clock_polarity(1);
-#endif
 	// Configure ADC.
 	// Single-ended unipolar (already done at POR).
 	// Enable averaging: AVGON='1' and NAVG='00' (4 conversions).
@@ -183,15 +180,18 @@ void MAX11136_init(void) {
 	max11136_ctx.status = 0;
 	for (idx=0 ; idx<MAX11136_DATA_INDEX_LAST ; idx++) max11136_ctx.data[idx] = 0;
 	for (idx=0 ; idx<MAX11136_NUMBER_OF_CHANNELS ; idx++) max11136_ctx.data_12bits[idx] = 0;
-#ifdef HW2_0
 	// Init SPI.
+#ifdef HW1_0
+	SPI1_init();
+#endif
+#ifdef HW2_0
 	SPI2_init();
 #endif
 	// Configure chip select pin.
 	GPIO_configure(&GPIO_MAX11136_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_MAX11136_CS, 1);
 	// Configure EOC GPIO.
-	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_UP);
 }
 
 /*******************************************************************/
@@ -200,8 +200,11 @@ void MAX11136_de_init(void) {
 	GPIO_write(&GPIO_MAX11136_CS, 0);
 	// Release EOC GPIO.
 	GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-#ifdef HW2_0
 	// Release SPI.
+#ifdef HW1_0
+	SPI1_de_init();
+#endif
+#ifdef HW2_0
 	SPI2_de_init();
 #endif
 }

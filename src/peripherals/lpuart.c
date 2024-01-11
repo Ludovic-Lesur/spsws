@@ -113,8 +113,10 @@ LPUART_status_t LPUART1_init(LPUART_character_match_irq_cb_t irq_callback) {
 	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
 	// Configure GPIOs.
+#if !(defined HW1_0) || !(defined DEBUG)
 	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 	// Register callback.
 	lpuart1_cm_irq_callback = irq_callback;
 errors:
@@ -124,8 +126,10 @@ errors:
 /*******************************************************************/
 void LPUART1_de_init(void) {
 	// Disable LPUART alternate function.
+#if !(defined HW1_0) || !(defined DEBUG)
 	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 	// Disable peripheral.
 	LPUART1 -> CR1 &= ~(0b1 << 0); // UE='0'.
 	// Disable peripheral clock.
