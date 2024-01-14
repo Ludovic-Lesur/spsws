@@ -201,7 +201,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$SF=", "data[hex],(bidir_flag[bit])", "Sigfox send frame", _AT_sf_callback},
 #endif
 #ifdef AT_COMMAND_SIGFOX_EP_ADDON_RFP
-	{PARSER_MODE_HEADER,  "AT$TM=", "rc_index[dec],bit_rate_index[dec],test_mode_reference[dec]", "Sigfox RFP test mode", _AT_tm_callback},
+	{PARSER_MODE_HEADER,  "AT$TM=", "bit_rate_index[dec],test_mode_reference[dec]", "Sigfox RFP test mode", _AT_tm_callback},
 #endif
 #ifdef AT_COMMAND_CW
 	{PARSER_MODE_HEADER,  "AT$CW=", "frequency[hz],enable[bit],(output_power[dbm])", "Continuous wave", _AT_cw_callback},
