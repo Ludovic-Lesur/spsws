@@ -172,8 +172,8 @@ POWER_status_t POWER_disable(POWER_domain_t domain) {
 		break;
 	case POWER_DOMAIN_GPS:
 		// Turn GPS off and release NEOM8N driver.
-		NEOM8N_de_init();
 		GPIO_write(&GPIO_GPS_POWER_ENABLE, 0);
+		NEOM8N_de_init();
 		break;
 	case POWER_DOMAIN_RADIO_TCXO:
 		// Turn radio TCXO off.

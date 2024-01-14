@@ -380,7 +380,7 @@ static void _SPSWS_init_hw(void) {
 	// Calibrate and update clock status.
 	_SPSWS_update_clocks();
 	// Read LS byte of the device ID to add a random delay in RTC alarm.
-	nvm_status = NVM_read_byte(NVM_ADDRESS_SIGFOX_EP_ID, &device_id_lsbyte);
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + SIGFOX_EP_ID_SIZE_BYTES - 1), &device_id_lsbyte);
 	NVM_stack_error();
 	rtc_status = RTC_init(device_id_lsbyte);
 	RTC_stack_error();
@@ -1015,11 +1015,9 @@ int main (void) {
 			spsws_ctx.seconds_counter = 0;
 #ifdef SPSWS_WIND_MEASUREMENT
 			WIND_start_continuous_measure();
-			NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15, NVIC_PRIORITY_EXTI_4_15);
 #endif
 #ifdef SPSWS_RAIN_MEASUREMENT
 			RAIN_start_continuous_measure();
-			NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15, NVIC_PRIORITY_EXTI_4_15);
 #endif
 			// Enter sleep mode.
 			spsws_ctx.state = SPSWS_STATE_SLEEP;
@@ -1072,11 +1070,9 @@ int main (void) {
 			if (spsws_ctx.flags.wake_up != 0) {
 #ifdef SPSWS_WIND_MEASUREMENT
 				WIND_stop_continuous_measure();
-				NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #endif
 #ifdef SPSWS_RAIN_MEASUREMENT
 				RAIN_stop_continuous_measure();
-				NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 #endif
 				// Wake-up.
 				spsws_ctx.state = SPSWS_STATE_WAKEUP;
