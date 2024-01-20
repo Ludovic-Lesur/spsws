@@ -23,7 +23,6 @@
 void SPI1_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 12); // SPI1EN='1'.
-	// Configure peripheral.
 	// Master mode (MSTR='1').
 	// Baud rate = PCLK2/2 = SYSCLK/2 = 8MHz.
 	// 16-bits format (DFF='1').
@@ -125,7 +124,6 @@ void __attribute__((optimize("-O0"))) SPI1_write(uint16_t tx_data) {
 void SPI2_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 14); // SPI2EN='1'.
-	// Configure peripheral.
 	// Master mode (MSTR='1').
 	// Baud rate = PCLK2/4 = SYSCLK/4 = 4MHz.
 	// 16-bits format (DFF='1').

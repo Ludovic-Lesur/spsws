@@ -75,6 +75,7 @@ typedef enum {
 	RF_API_ERROR_MODE,
 	RF_API_ERROR_LATENCY_TYPE,
 	// Low level drivers errors.
+	RF_API_ERROR_DRIVER_TIM22,
 	RF_API_ERROR_DRIVER_MCU_API,
 	RF_API_ERROR_DRIVER_POWER,
 	RF_API_ERROR_DRIVER_SX1232,
@@ -348,6 +349,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 	// Local variables.
 	RF_API_status_t status = RF_API_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
+	TIM_status_t tim22_status = TIM_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	SKY13317_status_t sky13317_status = SKY13317_SUCCESS;
 	SX1232_modulation_t modulation = SX1232_MODULATION_LAST;
@@ -448,7 +450,8 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 #endif
 		// Init symbol profile timer.
 		symbol_profile_period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
-		TIM22_init(symbol_profile_period_ns, &_RF_API_symbol_profile_timer_irq_callback);
+		tim22_status = TIM22_init(symbol_profile_period_ns, &_RF_API_symbol_profile_timer_irq_callback);
+		TIM22_stack_exit_error(RF_API_ERROR_DRIVER_TIM22);
 		break;
 #ifdef BIDIRECTIONAL
 	case RF_API_MODE_RX:

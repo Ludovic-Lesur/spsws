@@ -11,7 +11,6 @@
 #include "lpuart_reg.h"
 #include "nvic.h"
 #include "rcc_reg.h"
-#include "spi_reg.h"
 #include "types.h"
 
 /*** DMA local global variables ***/

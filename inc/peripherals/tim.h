@@ -125,7 +125,7 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 
 /*!******************************************************************
  * \fn void TIM21_init(void)
- * \brief Init TIM21 peripheral for LSI frequency measurement.
+ * \brief Init TIM21 peripheral for internal oscillators frequency measurement.
  * \param[in]  	none
  * \param[out] 	none
  * \retval		none
@@ -151,12 +151,41 @@ void TIM21_de_init(void);
  *******************************************************************/
 TIM_status_t TIM21_mco_capture(uint16_t* ref_clock_pulse_count, uint16_t* mco_pulse_count);
 
+/*!******************************************************************
+ * \fn TIM_status_t TIM22_init(uint32_t period_ns, TIM_completion_irq_cb_t irq_callback)
+ * \brief Init TIM22 peripheral for Sigfox uplink modulation.
+ * \param[in]  	period_ns: Timer period in ns.
+ * \param[in]	irq_callback: Function to call on interrupt.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 TIM_status_t TIM22_init(uint32_t period_ns, TIM_completion_irq_cb_t irq_callback);
 
+/*!******************************************************************
+ * \fn void TIM22_de_init(void)
+ * \brief Release TIM22 peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void TIM22_de_init(void);
 
+/*!******************************************************************
+ * \fn void TIM22_start(void)
+ * \brief Start TIM22 peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void TIM22_start(void);
 
+/*!******************************************************************
+ * \fn void TIM22_stop(void)
+ * \brief Stop TIM22 peripheral.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void TIM22_stop(void);
 
 /*******************************************************************/
@@ -176,5 +205,14 @@ void TIM22_stop(void);
 
 /*******************************************************************/
 #define TIM21_stack_exit_error(error_code) { if (tim21_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM21 + tim21_status); status = error_code; goto errors; } }
+
+/*******************************************************************/
+#define TIM22_exit_error(error_base) { if (tim22_status != TIM_SUCCESS) { status = (error_base + tim22_status); goto errors; } }
+
+/*******************************************************************/
+#define TIM22_stack_error(void) { if (tim22_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM22 + tim22_status); } }
+
+/*******************************************************************/
+#define TIM22_stack_exit_error(error_code) { if (tim22_status != TIM_SUCCESS) { ERROR_stack_add(ERROR_BASE_TIM22 + tim22_status); status = error_code; goto errors; } }
 
 #endif /* __TIM_H__ */
