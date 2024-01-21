@@ -81,9 +81,11 @@ static sfx_u32 MCU_API_LATENCY_MS[MCU_API_LATENCY_LAST] = {
 MCU_API_status_t MCU_API_open(MCU_API_config_t *mcu_api_config) {
 	// Local variables.
 	MCU_API_status_t status = MCU_API_SUCCESS;
+	TIM_status_t tim2_status = TIM_SUCCESS;
 	// Init timer.
-	TIM2_init();
-	// Return.
+	tim2_status = TIM2_init();
+	TIM2_stack_exit_error(MCU_API_ERROR_DRIVER_TIM2);
+errors:
 	RETURN();
 }
 #endif

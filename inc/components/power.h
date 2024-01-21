@@ -10,6 +10,7 @@
 
 #include "adc.h"
 #include "lptim.h"
+#include "neom8n.h"
 #include "types.h"
 
 /*** POWER macros ***/
@@ -35,8 +36,9 @@ typedef enum {
 	// Low level drivers errors.
 	POWER_ERROR_BASE_ADC1 = 0x0100,
 	POWER_ERROR_BASE_LPTIM = (POWER_ERROR_BASE_ADC1 + ADC_ERROR_BASE_LAST),
+	POWER_ERROR_BASE_NEOM8N = (POWER_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
 	// Last base value.
-	POWER_ERROR_BASE_LAST = (POWER_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
+	POWER_ERROR_BASE_LAST = (POWER_ERROR_BASE_NEOM8N + NEOM8N_ERROR_BASE_LAST)
 } POWER_status_t;
 
 /*!******************************************************************

@@ -355,6 +355,7 @@ static void _SPSWS_init_hw(void) {
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	RTC_status_t rtc_status = RTC_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
@@ -385,7 +386,8 @@ static void _SPSWS_init_hw(void) {
 	rtc_status = RTC_init(device_id_lsbyte);
 	RTC_stack_error();
 	// Internal.
-	LPTIM1_init();
+	lptim1_status = LPTIM1_init();
+	LPTIM1_stack_error();
 	// Init continuous measurements drivers.
 	POWER_init();
 #ifdef SPSWS_WIND_MEASUREMENT

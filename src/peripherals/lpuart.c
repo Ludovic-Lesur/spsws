@@ -77,7 +77,7 @@ LPUART_status_t LPUART1_init(LPUART_character_match_irq_cb_t irq_callback) {
 	RCC_clock_t lpuart_clock = RCC_CLOCK_LSE;
 	uint8_t lse_status = 0;
 	uint32_t lpuart_clock_hz = 0;
-	uint32_t brr = 0;
+	uint64_t brr = 0;
 	// Select peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 10); // Reset bits 10-11.
 	// Get LSE status.
@@ -101,9 +101,10 @@ LPUART_status_t LPUART1_init(LPUART_character_match_irq_cb_t irq_callback) {
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 	// Configure peripheral.
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
-	brr = (lpuart_clock_hz * 256);
-	brr /= LPUART_BAUD_RATE;
-	LPUART1 -> BRR = (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	// Baud rate.
+	brr = ((uint64_t) lpuart_clock_hz) << 8;
+	brr /= (uint64_t) LPUART_BAUD_RATE;
+	LPUART1 -> BRR = (uint32_t) (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Configure character match interrupt and DMA.
 	LPUART1 -> CR2 |= (STRING_CHAR_LF << 24); // LF character used to trigger CM interrupt.
 	LPUART1 -> CR3 |= (0b1 << 6); // Transfer is performed after each RXNE event (see p.738 of RM0377 datasheet).

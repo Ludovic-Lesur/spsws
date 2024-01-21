@@ -64,7 +64,7 @@ typedef struct {
 
 static TIM2_context_t tim2_ctx;
 static TIM21_context_t tim21_ctx;
-static TIM_completion_irq_cb_t tim22_update_irq_callback;
+static TIM_completion_irq_cb_t tim22_update_irq_callback = NULL;
 
 /*** TIM local functions ***/
 

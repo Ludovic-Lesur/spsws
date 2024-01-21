@@ -12,7 +12,6 @@
 #include "lptim.h"
 #include "lpuart.h"
 #include "math.h"
-#include "power.h"
 #include "rtc.h"
 #include "string.h"
 #include "types.h"
@@ -48,9 +47,8 @@ typedef enum {
 	NEOM8N_ERROR_BASE_LPUART = (NEOM8N_ERROR_BASE_ADC1 + ADC_ERROR_BASE_LAST),
 	NEOM8N_ERROR_BASE_LPTIM = (NEOM8N_ERROR_BASE_LPUART + LPUART_ERROR_BASE_LAST),
 	NEOM8N_ERROR_BASE_STRING = (NEOM8N_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
-	NEOM8N_ERROR_BASE_POWER = (NEOM8N_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
 	// Last base value.
-	NEOM8N_ERROR_BASE_LAST = (NEOM8N_ERROR_BASE_POWER + POWER_ERROR_BASE_LAST)
+	NEOM8N_ERROR_BASE_LAST = (NEOM8N_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST)
 } NEOM8N_status_t;
 
 /*!******************************************************************
@@ -89,9 +87,9 @@ typedef struct {
  * \brief Init NEOM8N interface.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void NEOM8N_init(void);
+NEOM8N_status_t NEOM8N_init(void);
 
 /*!******************************************************************
  * \fn void NEOM8N_de_init(void)

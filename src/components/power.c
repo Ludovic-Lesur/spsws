@@ -50,6 +50,7 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 	POWER_status_t status = POWER_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	uint32_t delay_ms = 0;
 	// Check domain.
 	switch (domain) {
@@ -90,7 +91,8 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 	case POWER_DOMAIN_GPS:
 		// Turn GPS on and init NEOM8N driver.
 		GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
-		NEOM8N_init();
+		neom8n_status = NEOM8N_init();
+		NEOM8N_exit_error(POWER_ERROR_BASE_NEOM8N);
 		delay_ms = POWER_ON_DELAY_MS_GPS;
 		break;
 	case POWER_DOMAIN_RADIO_TCXO:

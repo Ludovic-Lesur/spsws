@@ -88,7 +88,7 @@ RCC_status_t RCC_init(void);
 RCC_status_t RCC_switch_to_hsi(void);
 
 /*!******************************************************************
- * \fn RCC_status_t RCC_switch_to_msi(void)
+ * \fn RCC_status_t RCC_switch_to_msi(RCC_msi_range_t msi_range)
  * \brief Switch system clock to MSI.
  * \param[in]  	msi_range: MSI frequency to set.
  * \param[out] 	none

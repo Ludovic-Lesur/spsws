@@ -564,13 +564,13 @@ static void _AT_adc_callback(void) {
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	uint32_t voltage_mv = 0;
 	int8_t tmcu_degrees = 0;
-	// Init internal ADC.
+	// Turn analog front-end on.
 	power_status = POWER_enable(POWER_DOMAIN_ANALOG_INTERNAL, LPTIM_DELAY_MODE_ACTIVE);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
 	// Trigger internal ADC conversions.
 	adc1_status = ADC1_perform_measurements();
 	ADC1_stack_exit_error(ERROR_BASE_ADC1 + adc1_status);
-	// Release internal ADC.
+	// Turn analog front-end off.
 	power_status = POWER_disable(POWER_DOMAIN_ANALOG_INTERNAL);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
 	// Read and print data.
@@ -1441,6 +1441,13 @@ errors:
 #ifdef ATM
 /*******************************************************************/
 void AT_init(void) {
+	// Local variables.
+#ifdef HW1_0
+	USART_status_t usart2_status = USART_SUCCESS;
+#endif
+#ifdef HW2_0
+	USART_status_t usart1_status = USART_SUCCESS;
+#endif
 	// Init context.
 	_AT_reset_parser();
 #ifdef SPSWS_WIND_MEASUREMENT
@@ -1448,11 +1455,13 @@ void AT_init(void) {
 #endif
 	// Init USART.
 #ifdef HW1_0
-	USART2_init(&_AT_fill_rx_buffer);
+	usart2_status = USART2_init(&_AT_fill_rx_buffer);
+	USART2_stack_error();
 	USART2_enable_rx();
 #endif
 #ifdef HW2_0
-	USART1_init(&_AT_fill_rx_buffer);
+	usart1_status = USART1_init(&_AT_fill_rx_buffer);
+	USART1_stack_error();
 	USART1_enable_rx();
 #endif
 }
