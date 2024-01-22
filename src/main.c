@@ -66,7 +66,7 @@
 #endif
 #define SPSWS_SIGFOX_MONITORING_DATA_SIZE			9
 #define SPSWS_SIGFOX_GEOLOC_DATA_SIZE				11
-#define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE		1
+#define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE		3
 #define SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE			12
 #ifdef SPSWS_FLOOD_MEASUREMENT
 #define SPSWS_SIGFOX_FLOOD_DATA_SIZE				2
@@ -128,7 +128,6 @@ typedef union {
 		unsigned hour_changed : 1;
 		unsigned day_changed : 1;
 		unsigned is_afternoon : 1;
-		unsigned geoloc_timeout : 1;
 		unsigned wake_up : 1;
 		unsigned fixed_hour_alarm : 1;
 #ifdef SPSWS_FLOOD_MEASUREMENT
@@ -229,6 +228,15 @@ typedef union {
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SPSWS_sigfox_geoloc_data_t;
 
+/*******************************************************************/
+typedef union {
+	uint8_t frame[SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE];
+	struct {
+		unsigned error_code : 16;
+		unsigned fix_duration_seconds : 8;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
+} SPSWS_sigfox_geoloc_timeout_data_t;
+
 #ifdef SPSWS_FLOOD_MEASUREMENT
 /*******************************************************************/
 typedef union {
@@ -267,6 +275,7 @@ typedef struct {
 	NEOM8N_position_t position;
 	uint32_t geoloc_fix_duration_seconds;
 	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
+	SPSWS_sigfox_geoloc_timeout_data_t sigfox_geoloc_timeout_data;
 	// Error stack.
 	uint8_t sigfox_error_stack_data[SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE];
 } SPSWS_context_t;
@@ -954,14 +963,13 @@ int main (void) {
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
 			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &spsws_ctx.geoloc_fix_duration_seconds);
-			NEOM8N_stack_error();
+			// Note: error is never stacked since it is indicated by the dedicated timeout frame.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
 			POWER_stack_error();
 			// Update flag whatever the result.
 			spsws_ctx.status.daily_geoloc = 1;
-			// Parse result.
+			// Build Sigfox frame.
 			if (neom8n_status == NEOM8N_SUCCESS) {
-				// Build frame.
 				spsws_ctx.sigfox_geoloc_data.latitude_degrees = spsws_ctx.position.lat_degrees;
 				spsws_ctx.sigfox_geoloc_data.latitude_minutes = spsws_ctx.position.lat_minutes;
 				spsws_ctx.sigfox_geoloc_data.latitude_seconds = spsws_ctx.position.lat_seconds;
@@ -972,19 +980,24 @@ int main (void) {
 				spsws_ctx.sigfox_geoloc_data.longitude_east_flag = spsws_ctx.position.long_east_flag;
 				spsws_ctx.sigfox_geoloc_data.altitude_meters = spsws_ctx.position.altitude;
 				spsws_ctx.sigfox_geoloc_data.gps_fix_duration = spsws_ctx.geoloc_fix_duration_seconds;
+				// Update message parameters.
+				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
+				application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_data.frame);
+				application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_DATA_SIZE;
 			}
 			else {
+				spsws_ctx.sigfox_geoloc_timeout_data.error_code = (ERROR_BASE_NEOM8N + neom8n_status);
+				spsws_ctx.sigfox_geoloc_timeout_data.fix_duration_seconds = spsws_ctx.geoloc_fix_duration_seconds;
+				// Update message parameters.
+				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
+				application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_timeout_data.frame);
+				application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE;
 				spsws_ctx.sigfox_geoloc_data.frame[0] = spsws_ctx.geoloc_fix_duration_seconds;
-				spsws_ctx.flags.geoloc_timeout = 1;
 			}
 			IWDG_reload();
 			// Send uplink geolocation frame.
-			application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
-			application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_data.frame);
-			application_message.ul_payload_size_bytes = ((spsws_ctx.flags.geoloc_timeout) ? SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE : SPSWS_SIGFOX_GEOLOC_DATA_SIZE);
 			_SPSWS_send_sigfox_message(&application_message);
 			// Reset geoloc variables.
-			spsws_ctx.flags.geoloc_timeout = 0;
 			spsws_ctx.geoloc_fix_duration_seconds = 0;
 			// Send error stack frame.
 			spsws_ctx.state = SPSWS_STATE_ERROR_STACK;

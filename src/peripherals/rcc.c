@@ -97,13 +97,13 @@ RCC_status_t __attribute__((optimize("-O0"))) RCC_init(void) {
 	RCC_status_t status = RCC_SUCCESS;
 	uint8_t i = 0;
 	// Init context.
-	rcc_ctx.sysclk_source = RCC_CLOCK_MSI;
 	rcc_ctx.clock_frequency[RCC_CLOCK_LSI] = RCC_LSI_FREQUENCY_DEFAULT_HZ;
 	rcc_ctx.clock_frequency[RCC_CLOCK_LSE] = RCC_LSE_FREQUENCY_HZ;
 	rcc_ctx.clock_frequency[RCC_CLOCK_MSI] = RCC_MSI_CLOCK_FREQUENCY[RCC_MSI_RANGE_5_2MHZ];
 	rcc_ctx.clock_frequency[RCC_CLOCK_HSI] = RCC_HSI_FREQUENCY_DEFAULT_HZ;
 	rcc_ctx.clock_frequency[RCC_CLOCK_HSE] = RCC_HSE_FREQUENCY_HZ;
 	// Update system clock.
+	rcc_ctx.sysclk_source = RCC_CLOCK_MSI;
 	rcc_ctx.clock_frequency[RCC_CLOCK_SYSTEM] = rcc_ctx.clock_frequency[rcc_ctx.sysclk_source];
 	// Reset backup domain.
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
