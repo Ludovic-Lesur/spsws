@@ -59,7 +59,7 @@ static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t regis
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
 errors:
 	return status;
 }
@@ -81,9 +81,9 @@ static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t regist
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
 	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
 errors:
 	return status;
 }
@@ -111,7 +111,7 @@ static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_a
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_exit_error(DPS310_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(DPS310_ERROR_BASE_LPTIM1);
 		// Exit if timeout.
 		loop_count_ms += DPS310_SUB_DELAY_MS;
 		if (loop_count_ms > DPS310_TIMEOUT_MS) {
@@ -151,9 +151,9 @@ static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients with auto-increment method.
 	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
 	i2c1_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C);
+	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Compute coefficients.
 	c0 |= (coef_registers[0] << 4) | ((coef_registers[1] & 0xF0) >> 4);

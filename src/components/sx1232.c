@@ -78,7 +78,7 @@ SX1232_status_t _SX1232_write_register(uint8_t addr, uint8_t value) {
 	// Write access sequence.
 	GPIO_SX1232_CS_LOW();
 	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
-	SPI1_exit_error(SX1232_ERROR_BASE_SPI);
+	SPI1_exit_error(SX1232_ERROR_BASE_SPI1);
 errors:
 	GPIO_SX1232_CS_HIGH();
 	return status;
@@ -103,7 +103,7 @@ SX1232_status_t _SX1232_read_register(uint8_t addr, uint8_t* value) {
 	// Read access sequence.
 	GPIO_SX1232_CS_LOW();
 	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
-	SPI1_exit_error(SX1232_ERROR_BASE_SPI);
+	SPI1_exit_error(SX1232_ERROR_BASE_SPI1);
 	// Update value.
 	(*value) = (uint8_t) (sx1232_ctx.spi_rx_data & 0x00FF);
 errors:
@@ -160,7 +160,7 @@ SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 	}
 	// Wait TS_OSC = 250us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(SX1232_OSCILLATOR_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
 	// Trigger RC oscillator calibration.
 	status = _SX1232_write_register(SX1232_REG_OSC, 0x0F);
 errors:
@@ -467,13 +467,13 @@ SX1232_status_t SX1232_start_tx(void) {
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_TX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
 errors:
 	return status;
 }
@@ -592,13 +592,13 @@ SX1232_status_t SX1232_start_rx(void) {
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_RX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
 	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
 errors:
 	return status;
 }

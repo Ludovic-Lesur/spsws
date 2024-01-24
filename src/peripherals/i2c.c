@@ -29,7 +29,7 @@ static I2C_status_t _I2C1_clear(void) {
 	// Disable peripheral.
 	I2C1 -> CR1 &= ~(0b1 << 0); // PE='0'.
 	lptim1_status = LPTIM1_delay_milliseconds(2, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(I2C_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(I2C_ERROR_BASE_LPTIM1);
 	// Enable peripheral and clear all flags.
 	I2C1 -> CR1 |= (0b1 << 0); // PE='1'.
 	I2C1 -> ICR |= 0x00003F38;

@@ -10,8 +10,8 @@
 #include "error.h"
 #include "flash.h"
 #include "nvic.h"
-#include "rcc_reg.h"
 #include "pwr.h"
+#include "rcc_reg.h"
 #include "tim.h"
 #include "types.h"
 

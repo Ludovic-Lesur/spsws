@@ -52,7 +52,7 @@ static SI1133_status_t _SI1133_write_register(uint8_t i2c_address, uint8_t regis
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, register_write_command, tx_buf_length, 1);
-	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C1);
 errors:
 	return status;
 }
@@ -73,9 +73,9 @@ static SI1133_status_t _SI1133_read_register(uint8_t i2c_address, uint8_t regist
 	}
 	// I2C transfer.
 	i2c1_status = I2C1_write(i2c_address, &register_address, 1, 1);
-	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C1);
 	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_exit_error(SI1133_ERROR_BASE_I2C);
+	I2C1_exit_error(SI1133_ERROR_BASE_I2C1);
 errors:
 	return status;
 }
@@ -103,7 +103,7 @@ static SI1133_status_t _SI1133_wait_flag(uint8_t i2c_address, uint8_t register_a
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM1);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;
 		if (loop_count_ms > SI1133_TIMEOUT_MS) {
@@ -167,7 +167,7 @@ static SI1133_status_t _SI1133_wait_for_command_completion(uint8_t i2c_address, 
 		}
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(SI1133_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(SI1133_ERROR_BASE_LPTIM1);
 		// Exit if timeout.
 		loop_count_ms += SI1133_SUB_DELAY_MS;
 		if (loop_count_ms > SI1133_TIMEOUT_MS) {

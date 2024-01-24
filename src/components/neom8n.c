@@ -613,10 +613,10 @@ static NEOM8N_status_t _NEOM8N_select_nmea_messages(uint32_t nmea_message_id_mas
 		if (status != NEOM8N_SUCCESS) goto errors;
 		// Send message.
 		lpuart1_status = LPUART1_write(neom8n_cfg_msg, (NEOM8N_MSG_OVERHEAD_SIZE + NEOM8N_CFG_MSG_PAYLOAD_SIZE));
-		LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART);
+		LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART1);
 		// Delay between messages.
 		lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_SLEEP);
-		LPTIM1_exit_error(NEOM8N_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(NEOM8N_ERROR_BASE_LPTIM1);
 	}
 errors:
 	return status;
@@ -656,7 +656,7 @@ NEOM8N_status_t NEOM8N_init(void) {
 #endif
 	// Init LPUART and DMA.
 	lpuart1_status = LPUART1_init(&_NEOM8N_usart_cm_irq_callback);
-	LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART);
+	LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART1);
 	DMA1_CH6_init(&_NEOM8N_dma_tc_irq_callback);
 errors:
 	// Init context.
@@ -925,7 +925,7 @@ NEOM8N_status_t NEOM8N_configure_timepulse(NEOM8N_timepulse_config_t* timepulse_
 	if (status != NEOM8N_SUCCESS) goto errors;
 	// Send message.
 	lpuart1_status = LPUART1_write(neom8n_cfg_tp5, (NEOM8N_MSG_OVERHEAD_SIZE + NEOM8N_CFG_TP5_PAYLOAD_SIZE));
-	LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART);
+	LPUART1_exit_error(NEOM8N_ERROR_BASE_LPUART1);
 errors:
 	return status;
 }

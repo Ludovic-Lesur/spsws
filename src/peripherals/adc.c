@@ -225,7 +225,7 @@ ADC_status_t ADC1_init(void) {
 	// Enable ADC voltage regulator.
 	ADC1 -> CR |= (0b1 << 28);
 	lptim1_status = LPTIM1_delay_milliseconds(ADC_INIT_DELAY_MS_REGULATOR, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(ADC_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(ADC_ERROR_BASE_LPTIM1);
 	// ADC configuration.
 	ADC1 -> CFGR2 |= (0b01 << 30); // Use (PCLK2/2) as ADCCLK = SYSCLK/2.
 	ADC1 -> SMPR |= (0b111 << 0); // Maximum sampling time.
@@ -254,7 +254,7 @@ ADC_status_t ADC1_init(void) {
 	ADC1 -> CCR |= (0b11 << 22); // TSEN='1' and VREFEN='1'.
 	// Wait for startup.
 	lptim1_status = LPTIM1_delay_milliseconds(ADC_INIT_DELAY_MS_VREF_TS, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(ADC_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(ADC_ERROR_BASE_LPTIM1);
 errors:
 	return status;
 }

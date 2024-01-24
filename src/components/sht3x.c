@@ -43,13 +43,13 @@ SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address) {
 	sht3x_ctx.humidity_percent = 0;
 	// Trigger high repeatability measurement with clock stretching disabled.
 	i2c1_status = I2C1_write(i2c_address, measure_command, 2, 1);
-	I2C1_exit_error(SHT3X_ERROR_BASE_I2C);
+	I2C1_exit_error(SHT3X_ERROR_BASE_I2C1);
 	// Wait for conversion to complete (at least 15ms).
 	lptim1_status = LPTIM1_delay_milliseconds(30, LPTIM_DELAY_MODE_STOP);
-	LPTIM1_exit_error(SHT3X_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(SHT3X_ERROR_BASE_LPTIM1);
 	// Read data.
 	i2c1_status = I2C1_read(i2c_address, measure_buf, 6);
-	I2C1_exit_error(SHT3X_ERROR_BASE_I2C);
+	I2C1_exit_error(SHT3X_ERROR_BASE_I2C1);
 	// Compute temperature (TBC: verify checksum).
 	data_16bits = (measure_buf[0] << 8) + measure_buf[1];
 	sht3x_ctx.temperature_degrees = ((175 * data_16bits) / (SHT3X_FULL_SCALE)) - 45;

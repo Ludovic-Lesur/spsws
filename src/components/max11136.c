@@ -93,11 +93,11 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_write_regist
 	GPIO_write(&GPIO_MAX11136_CS, 0);
 #ifdef HW1_0
 	spi1_status = SPI1_write_read(&spi_command, &spi_reply, 1);
-	SPI1_exit_error(MAX11136_ERROR_BASE_SPI);
+	SPI1_exit_error(MAX11136_ERROR_BASE_SPI1);
 #endif
 #ifdef HW2_0
 	spi2_status = SPI2_write_read(&spi_command, &spi_reply, 1);
-	SPI2_exit_error(MAX11136_ERROR_BASE_SPI);
+	SPI2_exit_error(MAX11136_ERROR_BASE_SPI2);
 #endif
 	GPIO_write(&GPIO_MAX11136_CS, 1);
 errors:
@@ -136,7 +136,7 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 	while (GPIO_read(&GPIO_MAX11136_EOC) != 0) {
 		// Low power delay.
 		lptim1_status = LPTIM1_delay_milliseconds(MAX11136_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_exit_error(MAX11136_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(MAX11136_ERROR_BASE_LPTIM1);
 		// Exit if timeout.
 		loop_count_ms += MAX11136_SUB_DELAY_MS;
 		if (loop_count_ms > MAX11136_TIMEOUT_MS) {
@@ -150,11 +150,11 @@ static MAX11136_status_t __attribute__((optimize("-O0"))) _MAX11136_convert_all_
 		GPIO_write(&GPIO_MAX11136_CS, 0); // Falling edge on CS pin.
 #ifdef HW1_0
 		spi1_status = SPI1_write_read(&spi_command, &max11136_dout, 1);
-		SPI1_exit_error(MAX11136_ERROR_BASE_SPI);
+		SPI1_exit_error(MAX11136_ERROR_BASE_SPI1);
 #endif
 #ifdef HW2_0
 		spi2_status = SPI2_write_read(&spi_command, &max11136_dout, 1);
-		SPI2_exit_error(MAX11136_ERROR_BASE_SPI);
+		SPI2_exit_error(MAX11136_ERROR_BASE_SPI2);
 #endif
 		GPIO_write(&GPIO_MAX11136_CS, 1);
 		// Parse result = 'CH4 CH2 CH1 CH0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0'.
