@@ -64,7 +64,7 @@ typedef enum {
 ADC_status_t ADC1_init(void);
 
 /*!******************************************************************
- * \fn void ADC1_de_init(void)
+ * \fn ADC_status_t ADC1_de_init(void)
  * \brief Release ADC peripheral.
  * \param[in]  	none
  * \param[out] 	none

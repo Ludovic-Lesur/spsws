@@ -69,7 +69,7 @@ typedef struct {
 PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode, char_t* reference);
 
 /*!******************************************************************
- * \fn PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char_t separator, int32_t* param)
+ * \fn PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t format, char_t separator, int32_t* parameter
  * \brief Parse a parameter within a character buffer.
  * \param[in]  	parser_ctx: Parser context.
  * \param[in]	format: Parameter format.
@@ -80,7 +80,7 @@ PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode,
 PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t format, char_t separator, int32_t* parameter);
 
 /*!******************************************************************
- * \fn PARSER_status_t PARSER_get_parameter(PARSER_context_t* parser_ctx, STRING_format_t param_type, char_t separator, int32_t* param)
+ * \fn PARSER_status_t PARSER_get_byte_array(PARSER_context_t* parser_ctx, char_t separator, uint8_t maximum_length, uint8_t exact_length, uint8_t* parameter, uint8_t* extracted_length)
  * \brief Parse a byte array within a character buffer.
  * \param[in]  	parser_ctx: Parser context.
  * \param[in]	separator: Parameter separator.

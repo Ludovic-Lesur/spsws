@@ -69,7 +69,7 @@ void SPI1_set_clock_configuration(uint8_t prescaler, uint8_t polarity);
 SPI_status_t SPI1_write_read(uint16_t* tx_data, uint16_t* rx_data, uint8_t transfer_size);
 
 /*!******************************************************************
- * \fn void SPI1_write_16(uint16_t tx_data)
+ * \fn void SPI1_write(uint16_t tx_data)
  * \brief Optimized SPI1 single short transfer function.
  * \param[in]	tx_data: Short to send.
  * \param[out] 	none

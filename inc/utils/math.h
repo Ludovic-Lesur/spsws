@@ -139,7 +139,7 @@ MATH_status_t MATH_average_u16(uint16_t* data, uint8_t data_size, uint16_t* resu
 MATH_status_t MATH_average_u32(uint32_t* data, uint8_t data_size, uint32_t* result);
 
 /*!******************************************************************
- * \fn MATH_status_t MATH_average_u8(uint8_t* data, uint8_t data_size, uint8_t* result)
+ * \fn MATH_status_t MATH_median_filter_u8(uint8_t* data, uint8_t median_size, uint8_t average_size, uint8_t* result)
  * \brief Compute an averaged median value of a 8-bits data array.
  * \param[in]  	data: Input array.
  * \param[in]	median_size: Number of elements used to compute the median filter.

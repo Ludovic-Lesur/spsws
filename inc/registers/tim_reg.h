@@ -35,7 +35,7 @@
 typedef struct {
 	volatile uint32_t CR1;    			// Control register 1.
 	volatile uint32_t CR2;    			// Control register 2.
-	volatile uint32_t SMCR;    			// Slave mode controler register.
+	volatile uint32_t SMCR;    			// Slave mode controller register.
 	volatile uint32_t DIER;    			// DMA interrupt enable register.
 	volatile uint32_t SR;    			// Status register.
 	volatile uint32_t EGR;    			// Event generation register.

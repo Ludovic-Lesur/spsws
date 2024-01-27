@@ -70,7 +70,7 @@ typedef enum {
 /*** RCC functions ***/
 
 /*!******************************************************************
- * \fn void RCC_init(void)
+ * \fn RCC_status_t RCC_init(void)
  * \brief Init MCU default clock tree.
  * \param[in]  	none
  * \param[out] 	none
@@ -115,7 +115,7 @@ RCC_status_t RCC_calibrate(void);
 RCC_status_t RCC_get_frequency_hz(RCC_clock_t clock, uint32_t* frequency_hz);
 
 /*!******************************************************************
- * \fn RCC_status_t RCC_get_status(RCC_clock_t clock, uint32_t* clock_is_ready
+ * \fn RCC_status_t RCC_get_status(RCC_clock_t clock, uint32_t* clock_is_ready)
  * \brief Get clock status.
  * \param[in]  	clock: Clock to read.
  * \param[out] 	clock_is_ready: Pointer to the clock status (1 if the clock is running correctly, 0 otherwise).

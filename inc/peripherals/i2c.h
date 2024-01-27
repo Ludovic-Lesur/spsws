@@ -55,7 +55,7 @@ void I2C1_init(void);
 void I2C1_de_init(void);
 
 /*!******************************************************************
- * \fn I2C_status_t I2C1_write(uint8_t slave_address, uint8_t* tx_buf, uint8_t tx_buf_length, uint8_t stop_flag)
+ * \fn I2C_status_t I2C1_write(uint8_t slave_address, uint8_t* data, uint8_t data_size_bytes, uint8_t stop_flag)
  * \brief Write data on I2C1 bus.
  * \param[in]  	slave_address: 7-bits destination slave address.
  * \param[in]	data: Byte array to send.

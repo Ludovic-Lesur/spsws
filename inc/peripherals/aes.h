@@ -46,7 +46,7 @@ void AES_init(void);
 void AES_de_init(void);
 
 /*!******************************************************************
- * \fn AES_status_t AES_encrypt(uint8_t* data_in, uint8_t* data_out, uint8_t* key
+ * \fn AES_status_t AES_encrypt(uint8_t* data_in, uint8_t* data_out, uint8_t* key)
  * \brief Compute AES-128.
  * \param[in]  	data_in: Input data.
  * \param[in]	key: AES key.

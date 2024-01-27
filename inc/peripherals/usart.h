@@ -39,7 +39,7 @@ typedef void (*USART_rx_irq_cb_t)(uint8_t data);
 
 #if (defined HW1_0) && (defined ATM)
 /*!******************************************************************
- * \fn void USART2_init(USART_rx_irq_cb_t irq_callback)
+ * \fn USART_status_t USART2_init(USART_rx_irq_cb_t irq_callback)
  * \brief Init USART2 peripheral.
  * \param[in]  	irq_callback: Function to call on interrupt.
  * \param[out] 	none
@@ -95,7 +95,7 @@ USART_status_t USART2_write(uint8_t* data, uint32_t data_size_bytes);
 
 #if (defined HW2_0) && (defined ATM)
 /*!******************************************************************
- * \fn void USART1_init(USART_rx_irq_cb_t irq_callback)
+ * \fn USART_status_t USART1_init(USART_rx_irq_cb_t irq_callback)
  * \brief Init USART1 peripheral.
  * \param[in]  	irq_callback: Function to call on interrupt.
  * \param[out] 	none

@@ -45,7 +45,7 @@ typedef enum {
 /*** LPTIM functions ***/
 
 /*!******************************************************************
- * \fn void LPTIM1_init(void)
+ * \fn LPTIM_status_t LPTIM1_init(void)
  * \brief Init LPTIM1 peripheral for delay operation.
  * \param[in]  	none
  * \param[out] 	none

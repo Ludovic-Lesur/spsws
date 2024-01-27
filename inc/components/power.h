@@ -86,7 +86,7 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
 POWER_status_t POWER_disable(POWER_domain_t domain);
 
 /*!******************************************************************
- * \fn POWER_status_t POWER_get_state(POWER_domain_t domain, uint8_t* state
+ * \fn POWER_status_t POWER_get_state(POWER_domain_t domain, uint8_t* state)
  * \brief Return the current state of a power domain.
  * \param[in]  	domain: Power domain to check.
  * \param[out] 	state: Pointer to the state.

@@ -56,7 +56,7 @@ typedef struct {
 /*** RTC functions ***/
 
 /*!******************************************************************
- * \fn RTC_status_t RTC_init(void)
+ * \fn RTC_status_t RTC_init(uint8_t alarm_offset_seconds)
  * \brief Init RTC peripheral.
  * \param[in]  	alarm_offset_seconds: Random offset to add to the alarm interrupt.
  * \param[out] 	none

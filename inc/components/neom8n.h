@@ -83,7 +83,7 @@ typedef struct {
 /*** NEOM8N functions ***/
 
 /*!******************************************************************
- * \fn void NEOM8N_init(void)
+ * \fn NEOM8N_status_t NEOM8N_init(void)
  * \brief Init NEOM8N interface.
  * \param[in]  	none
  * \param[out] 	none

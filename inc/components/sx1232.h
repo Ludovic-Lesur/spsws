@@ -378,7 +378,7 @@ SX1232_status_t SX1232_set_rf_output_power(int8_t rf_output_power_dbm);
 SX1232_status_t SX1232_enable_manual_pa_control(void);
 
 /*!******************************************************************
- * \fn SX1232_status_t SX1232_set_pa_power_value(uint8_t pa_power_value)
+ * \fn void SX1232_set_pa_power_value(uint8_t pa_power_value)
  * \brief Optimized function to set SX1232 PA power value.
  * \param[in]  	pa_power_value: PA power register value.
  * \param[out] 	none

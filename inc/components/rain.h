@@ -29,7 +29,7 @@ typedef enum {
 
 #if (defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT)
 /*!******************************************************************
- * \fn void RAIN_init_init(void)
+ * \fn void RAIN_init(void)
  * \brief Init RAIN driver.
  * \param[in]  	none
  * \param[out] 	none
