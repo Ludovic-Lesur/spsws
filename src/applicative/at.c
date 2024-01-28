@@ -440,14 +440,14 @@ static void _AT_nvm_callback(void) {
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	int32_t address = 0;
 	uint8_t nvm_data = 0;
-	// Read address parameters.
+	// Read address parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &address);
 	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
 	// Read byte at requested address.
-	nvm_status = NVM_read_byte((uint16_t) address, &nvm_data);
+	nvm_status = NVM_read_byte((NVM_address_t) address, &nvm_data);
 	NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
 	// Print data.
-	_AT_reply_add_value(nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
+	_AT_reply_add_value((int32_t) nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
 	_AT_reply_send();
 	_AT_print_ok();
 	return;

@@ -38,7 +38,7 @@ typedef void (*LPUART_character_match_irq_cb_t)(void);
 /*** LPUART functions ***/
 
 /*!******************************************************************
- * \fn void LPUART_status_t LPUART1_init(LPUART_character_match_irq_cb_t irq_callback)
+ * \fn LPUART_status_t LPUART1_init(LPUART_character_match_irq_cb_t irq_callback)
  * \brief Init LPUART1 peripheral.
  * \param[in]  	irq_callback: Function to call on character match interrupt.
  * \param[out] 	none

@@ -132,16 +132,16 @@ typedef struct {
 #if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION)
 static sfx_u32 RF_API_LATENCY_MS[RF_API_LATENCY_LAST] = {
 	POWER_ON_DELAY_MS_RADIO_TCXO, // Wake-up.
-	(POWER_ON_DELAY_MS_RADIO + SX1232_OSCILLATOR_DELAY_MS + 0), // TX init (power on delay + TBD).
+	(POWER_ON_DELAY_MS_RADIO + SX1232_OSCILLATOR_DELAY_MS + 1), // TX init (power on delay + 750us).
 	0, // Send start (depends on bit rate and will be computed during init function).
 	0, // Send stop (depends on bit rate and will be computed during init function).
-	0, // TX de-init (TBD).
+	0, // TX de-init (215us).
 	0, // Sleep.
 #ifdef BIDIRECTIONAL
-	(POWER_ON_DELAY_MS_RADIO + 0), // RX init (power on delay + TBD).
-	SX1232_START_RX_DELAY_MS, // Receive start (TBD).
-	7, // Receive stop (TBD).
-	0, // RX de-init (TBD).
+	(POWER_ON_DELAY_MS_RADIO + SX1232_OSCILLATOR_DELAY_MS + 2), // RX init (power on delay + 1.06ms).
+	SX1232_START_RX_DELAY_MS, // Receive start.
+	10, // Receive stop (10ms).
+	0, // RX de-init (215us).
 #endif
 };
 #endif
@@ -337,7 +337,7 @@ RF_API_status_t RF_API_sleep(void) {
 	// Local variables.
 	RF_API_status_t status = RF_API_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
-	// Turn radio TCXO on.
+	// Turn radio TCXO off.
 	power_status = POWER_disable(POWER_DOMAIN_RADIO_TCXO);
 	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
 errors:
