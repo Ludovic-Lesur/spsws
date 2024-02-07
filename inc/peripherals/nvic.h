@@ -57,6 +57,7 @@ typedef enum {
 typedef enum {
 	// Common.
 	NVIC_PRIORITY_RCC_CRS = 0,
+	NVIC_PRIORITY_TIM21 = 1,
 	NVIC_PRIORITY_LPTIM1 = 2,
 	NVIC_PRIORITY_RTC = 3,
 	// GPS.
@@ -80,8 +81,6 @@ typedef enum {
 #ifdef HW2_0
 	NVIC_PRIORITY_USART1 = 3,
 #endif
-	// LSI measurement.
-	NVIC_PRIORITY_TIM21 = 2,
 } NVIC_priority_list_t;
 
 /*** NVIC functions ***/

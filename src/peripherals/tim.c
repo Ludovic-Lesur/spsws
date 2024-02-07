@@ -47,9 +47,17 @@
 
 /*******************************************************************/
 typedef struct {
+	uint32_t duration_ms;
+	TIM_waiting_mode_t waiting_mode;
+	volatile uint8_t running_flag;
+	volatile uint8_t irq_flag;
+} TIM_channel_context_t;
+
+/*******************************************************************/
+typedef struct {
 	RCC_clock_t trigger_source;
 	uint32_t etrf_clock_hz;
-	volatile uint8_t channel_running[TIM2_CHANNEL_LAST];
+	TIM_channel_context_t channel[TIM2_CHANNEL_LAST];
 } TIM2_context_t;
 
 /*******************************************************************/
@@ -72,14 +80,17 @@ static TIM_completion_irq_cb_t tim22_update_irq_callback = NULL;
 void __attribute__((optimize("-O0"))) TIM2_IRQHandler(void) {
 	// Local variables.
 	uint8_t channel_idx = 0;
+	uint8_t channel_mask = 0;
 	// Channels loop.
 	for (channel_idx=0 ; channel_idx<TIM2_CHANNEL_LAST ; channel_idx++) {
+		// Compute mask.
+		channel_mask = (0b1 << (channel_idx + 1));
 		// Check flag.
-		if (((TIM2 -> SR) & (0b1 << (channel_idx + 1))) != 0) {
-			// Reset flag.
-			tim2_ctx.channel_running[channel_idx] = 0;
+		if (((TIM2 -> SR) & channel_mask) != 0) {
+			// Set local flag if channel is active.
+			tim2_ctx.channel[channel_idx].irq_flag = tim2_ctx.channel[channel_idx].running_flag;
 			// Clear flag.
-			TIM2 -> SR &= ~(0b1 << (channel_idx + 1));
+			TIM2 -> SR &= ~(channel_mask);
 		}
 	}
 }
@@ -127,7 +138,13 @@ void __attribute__((optimize("-O0"))) TIM22_IRQHandler(void) {
 }
 
 /*******************************************************************/
-TIM_status_t _TIM2_internal_watchdog(uint32_t time_start, uint32_t* time_reference) {
+static void _TIM2_compute_compare_value(TIM2_channel_t channel) {
+	// Local variables.
+	TIM2 -> CCRx[channel] = ((TIM2 -> CNT) + ((tim2_ctx.channel[channel].duration_ms * tim2_ctx.etrf_clock_hz) / (1000))) % TIM2_CNT_VALUE_MAX;
+}
+
+/*******************************************************************/
+static TIM_status_t _TIM2_internal_watchdog(uint32_t time_start, uint32_t* time_reference) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
 	uint32_t time = RTC_get_time_seconds();
@@ -157,7 +174,10 @@ TIM_status_t TIM2_init(void) {
 	uint8_t channel_idx = 0;
 	// Init context.
 	for (channel_idx=0 ; channel_idx<TIM2_CHANNEL_LAST ; channel_idx++) {
-		tim2_ctx.channel_running[channel_idx] = 0;
+		tim2_ctx.channel[channel_idx].duration_ms = 0;
+		tim2_ctx.channel[channel_idx].waiting_mode = TIM_WAITING_MODE_ACTIVE;
+		tim2_ctx.channel[channel_idx].running_flag = 0;
+		tim2_ctx.channel[channel_idx].irq_flag = 0;
 	}
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
@@ -191,6 +211,8 @@ TIM_status_t TIM2_init(void) {
 		tim2_ctx.trigger_source = RCC_CLOCK_HSI;
 		tim2_ctx.etrf_clock_hz = ((trigger_clock_hz) / (TIM2_PRESCALER_ETRF_HSI * TIM2_PRESCAKER_PSC_HSI));
 	}
+	// No overflow.
+	TIM2 -> ARR |= 0x0000FFFF;
 	// Use external clock mode 2.
 	TIM2 -> SMCR |= (0b1 << 14) | (0b111 << 4);
 	// Configure channels 1-4 in output compare mode.
@@ -217,7 +239,6 @@ void TIM2_de_init(void) {
 TIM_status_t TIM2_start(TIM2_channel_t channel, uint32_t duration_ms, TIM_waiting_mode_t waiting_mode) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
-	uint32_t compare_value = 0;
 	uint32_t local_duration_ms = duration_ms;
 	uint32_t duration_min_ms = TIM2_TIMER_DURATION_MS_MIN;
 	// Check parameters.
@@ -243,19 +264,20 @@ TIM_status_t TIM2_start(TIM2_channel_t channel, uint32_t duration_ms, TIM_waitin
 		status = TIM_ERROR_DURATION_OVERFLOW;
 		goto errors;
 	}
-	// Compute compare value.
 	if (waiting_mode == TIM_WAITING_MODE_LOW_POWER_SLEEP) {
 		local_duration_ms -= TIM2_CLOCK_SWITCH_LATENCY_MS;
 	}
-	compare_value = ((TIM2 -> CNT) + ((local_duration_ms * tim2_ctx.etrf_clock_hz) / (1000))) % TIM2_CNT_VALUE_MAX;
-	TIM2 -> CCRx[channel] = compare_value;
-	// Update flag.
-	tim2_ctx.channel_running[channel] = 1;
+	// Update channel context.
+	tim2_ctx.channel[channel].duration_ms = local_duration_ms;
+	tim2_ctx.channel[channel].waiting_mode = waiting_mode;
+	tim2_ctx.channel[channel].running_flag = 1;
+	tim2_ctx.channel[channel].irq_flag = 0;
+	// Compute compare value.
+	_TIM2_compute_compare_value(channel);
 	// Clear flag.
 	TIM2 -> SR &= ~(0b1 << (channel + 1));
 	// Enable channel.
 	TIM2 -> DIER |= (0b1 << (channel + 1));
-	TIM2 -> CCER |= (0b1 << (4 * channel));
 	// Enable counter.
 	TIM2 -> CR1 |= (0b1 << 0);
 errors:
@@ -266,25 +288,20 @@ errors:
 TIM_status_t TIM2_stop(TIM2_channel_t channel) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
-	uint8_t channel_idx = 0;
-	uint8_t running_count = 0;
 	// Check parameter.
 	if (channel >= TIM2_CHANNEL_LAST) {
 		status = TIM_ERROR_CHANNEL;
 		goto errors;
 	}
-	// Disable channel.
-	TIM2 -> CCER &= ~(0b1 << (4 * channel));
+	// Disable interrupt.
 	TIM2 -> DIER &= ~(0b1 << (channel + 1));
 	// Clear flag.
 	TIM2 -> SR &= ~(0b1 << (channel + 1));
-	// Update flag.
-	tim2_ctx.channel_running[channel] = 0;
+	// Disable channel.
+	tim2_ctx.channel[channel].running_flag = 0;
+	tim2_ctx.channel[channel].irq_flag = 0;
 	// Disable counter if all channels are stopped.
-	for (channel_idx=0 ; channel_idx<TIM2_CHANNEL_LAST ; channel_idx++) {
-		running_count += tim2_ctx.channel_running[channel_idx];
-	}
-	if (running_count == 0) {
+	if (((TIM2 -> DIER) & 0x0000001E) == 0) {
 		TIM2 -> CR1 &= ~(0b1 << 0);
 	}
 errors:
@@ -305,13 +322,13 @@ TIM_status_t TIM2_get_status(TIM2_channel_t channel, uint8_t* timer_has_elapsed)
 		goto errors;
 	}
 	// Update flag.
-	(*timer_has_elapsed) = (tim2_ctx.channel_running[channel] == 0) ? 1 : 0;
+	(*timer_has_elapsed) = ((tim2_ctx.channel[channel].running_flag == 0) || (tim2_ctx.channel[channel].irq_flag != 0)) ? 1 : 0;
 errors:
 	return status;
 }
 
 /*******************************************************************/
-TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t waiting_mode) {
+TIM_status_t TIM2_wait_completion(TIM2_channel_t channel) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
 	RCC_status_t rcc_status = RCC_SUCCESS;
@@ -322,11 +339,13 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 		status = TIM_ERROR_CHANNEL;
 		goto errors;
 	}
+	// Directly exit if the IRQ already occurred.
+	if ((tim2_ctx.channel[channel].running_flag == 0) || (tim2_ctx.channel[channel].irq_flag != 0)) goto errors;
 	// Sleep until channel is not running.
-	switch (waiting_mode) {
+	switch (tim2_ctx.channel[channel].waiting_mode) {
 	case TIM_WAITING_MODE_ACTIVE:
 		// Active loop.
-		while (tim2_ctx.channel_running[channel] != 0) {
+		while (tim2_ctx.channel[channel].irq_flag == 0) {
 			// Internal watchdog.
 			status = _TIM2_internal_watchdog(time_start, &time_reference);
 			if (status != TIM_SUCCESS) goto errors;
@@ -334,7 +353,7 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 		break;
 	case TIM_WAITING_MODE_SLEEP:
 		// Enter sleep mode.
-		while (tim2_ctx.channel_running[channel] != 0) {
+		while (tim2_ctx.channel[channel].irq_flag == 0) {
 			PWR_enter_sleep_mode();
 			// Internal watchdog.
 			status = _TIM2_internal_watchdog(time_start, &time_reference);
@@ -348,7 +367,7 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 			rcc_status = RCC_switch_to_msi(RCC_MSI_RANGE_1_131KHZ);
 			RCC_exit_error(TIM_ERROR_BASE_RCC);
 			// Enter low power sleep mode.
-			while (tim2_ctx.channel_running[channel] != 0) {
+			while (tim2_ctx.channel[channel].irq_flag == 0) {
 				PWR_enter_low_power_sleep_mode();
 				// Internal watchdog.
 				status = _TIM2_internal_watchdog(time_start, &time_reference);
@@ -360,7 +379,7 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 		}
 		else {
 			// Enter sleep mode.
-			while (tim2_ctx.channel_running[channel] != 0) {
+			while (tim2_ctx.channel[channel].irq_flag == 0) {
 				PWR_enter_sleep_mode();
 				// Internal watchdog.
 				status = _TIM2_internal_watchdog(time_start, &time_reference);
@@ -373,6 +392,9 @@ TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t wai
 		goto errors;
 	}
 errors:
+	// Clear flag and update compare value for next IRQ.
+	tim2_ctx.channel[channel].irq_flag = 0;
+	_TIM2_compute_compare_value(channel);
 	return status;
 }
 
@@ -490,7 +512,7 @@ TIM_status_t TIM22_init(uint32_t period_ns, TIM_completion_irq_cb_t irq_callback
 	// Enable interrupt.
 	TIM22 -> DIER |= (0b1 << 0);
 	// Generate event to update registers.
-	TIM2 -> EGR |= (0b1 << 0); // UG='1'.
+	TIM22 -> EGR |= (0b1 << 0); // UG='1'.
 	// Register callback.
 	tim22_update_irq_callback = irq_callback;
 errors:

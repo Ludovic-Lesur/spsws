@@ -114,14 +114,13 @@ TIM_status_t TIM2_stop(TIM2_channel_t channel);
 TIM_status_t TIM2_get_status(TIM2_channel_t channel, uint8_t* timer_has_elapsed);
 
 /*!******************************************************************
- * \fn TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t waiting_mode)
+ * \fn TIM_status_t TIM2_wait_completion(TIM2_channel_t channel)
  * \brief Blocking function waiting for a timer channel completion.
  * \param[in]  	channel: Channel to wait for.
- * \param[in]	waiting_mode: Completion waiting mode.
  * \param[out] 	none
  * \retval		Function execution status.
  *******************************************************************/
-TIM_status_t TIM2_wait_completion(TIM2_channel_t channel, TIM_waiting_mode_t waiting_mode);
+TIM_status_t TIM2_wait_completion(TIM2_channel_t channel);
 
 /*!******************************************************************
  * \fn void TIM21_init(void)

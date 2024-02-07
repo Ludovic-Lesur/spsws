@@ -326,7 +326,7 @@ RF_API_status_t RF_API_wake_up(void) {
 	RF_API_status_t status = RF_API_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	// Turn radio TCXO on.
-	power_status = POWER_enable(POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_STOP);
+	power_status = POWER_enable(POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();

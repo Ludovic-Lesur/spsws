@@ -124,15 +124,18 @@ typedef union {
 /*******************************************************************/
 typedef union {
 	struct {
-		unsigned por : 1;
-		unsigned hour_changed : 1;
-		unsigned day_changed : 1;
-		unsigned is_afternoon : 1;
-		unsigned wake_up : 1;
-		unsigned fixed_hour_alarm : 1;
 #ifdef SPSWS_FLOOD_MEASUREMENT
+		unsigned unused : 1;
 		unsigned flood_alarm : 1;
+#else
+		unsigned unused : 2;
 #endif
+		unsigned fixed_hour_alarm : 1;
+		unsigned wake_up : 1;
+		unsigned is_afternoon : 1;
+		unsigned day_changed : 1;
+		unsigned hour_changed : 1;
+		unsigned por : 1;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 	uint8_t all;
 } SPSWS_flags_t;

@@ -173,7 +173,7 @@ MCU_API_status_t MCU_API_timer_wait_cplt(MCU_API_timer_instance_t timer_instance
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	TIM_status_t tim2_status = TIM_SUCCESS;
 	// Wait for timer completion.
-	tim2_status = TIM2_wait_completion(timer_instance, TIM_WAITING_MODE_LOW_POWER_SLEEP);
+	tim2_status = TIM2_wait_completion(timer_instance);
 	TIM2_stack_exit_error(MCU_API_ERROR_DRIVER_TIM2);
 errors:
 	RETURN();
