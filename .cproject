@@ -51,7 +51,6 @@
 									<listOptionValue builtIn="false" value="HW1_0"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
 									<listOptionValue builtIn="false" value="MCU_CATEGORY_2"/>
-									<listOptionValue builtIn="false" value="RC1"/>
 									<listOptionValue builtIn="false" value="APPLICATION_MESSAGES"/>
 									<listOptionValue builtIn="false" value="LOW_LEVEL_OPEN_CLOSE"/>
 									<listOptionValue builtIn="false" value="LATENCY_COMPENSATION"/>
@@ -62,6 +61,7 @@
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
+									<listOptionValue builtIn="false" value="RC1_ZONE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1917242069" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -82,7 +82,6 @@
 									<listOptionValue builtIn="false" value="HW1_0"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
 									<listOptionValue builtIn="false" value="MCU_CATEGORY_2"/>
-									<listOptionValue builtIn="false" value="RC1"/>
 									<listOptionValue builtIn="false" value="APPLICATION_MESSAGES"/>
 									<listOptionValue builtIn="false" value="LOW_LEVEL_OPEN_CLOSE"/>
 									<listOptionValue builtIn="false" value="LATENCY_COMPENSATION"/>
@@ -93,6 +92,7 @@
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
+									<listOptionValue builtIn="false" value="RC1_ZONE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.1658810338" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -159,7 +159,6 @@
 								<listOptionValue builtIn="false" value="HW1_0"/>
 								<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
 								<listOptionValue builtIn="false" value="MCU_CATEGORY_2"/>
-								<listOptionValue builtIn="false" value="RC1"/>
 								<listOptionValue builtIn="false" value="APPLICATION_MESSAGES"/>
 								<listOptionValue builtIn="false" value="LOW_LEVEL_OPEN_CLOSE"/>
 								<listOptionValue builtIn="false" value="LATENCY_COMPENSATION"/>
@@ -170,6 +169,7 @@
 								<listOptionValue builtIn="false" value="ERROR_CODES"/>
 								<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 								<listOptionValue builtIn="false" value="CERTIFICATION"/>
+								<listOptionValue builtIn="false" value="RC1_ZONE"/>
 							</option>
 							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.840201619" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 						</tool>
@@ -246,7 +246,6 @@
 									<listOptionValue builtIn="false" value="HW2_0"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
 									<listOptionValue builtIn="false" value="MCU_CATEGORY_5"/>
-									<listOptionValue builtIn="false" value="RC1"/>
 									<listOptionValue builtIn="false" value="APPLICATION_MESSAGES"/>
 									<listOptionValue builtIn="false" value="BIDIRECTIONAL"/>
 									<listOptionValue builtIn="false" value="LOW_LEVEL_OPEN_CLOSE"/>
@@ -260,6 +259,7 @@
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
+									<listOptionValue builtIn="false" value="RC1_ZONE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1537611563" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -280,7 +280,6 @@
 									<listOptionValue builtIn="false" value="HW2_0"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
 									<listOptionValue builtIn="false" value="MCU_CATEGORY_5"/>
-									<listOptionValue builtIn="false" value="RC1"/>
 									<listOptionValue builtIn="false" value="APPLICATION_MESSAGES"/>
 									<listOptionValue builtIn="false" value="BIDIRECTIONAL"/>
 									<listOptionValue builtIn="false" value="LOW_LEVEL_OPEN_CLOSE"/>
@@ -294,6 +293,7 @@
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
+									<listOptionValue builtIn="false" value="RC1_ZONE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.2131794171" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
