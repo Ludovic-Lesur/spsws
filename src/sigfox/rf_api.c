@@ -169,7 +169,9 @@ static RF_API_status_t _RF_API_internal_process(void) {
 	RF_API_status_t status = RF_API_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	sfx_u8 symbol_profile_idx = 0;
+#ifdef BIDIRECTIONAL
 	sfx_u8 sx1232_irq_flag = 0;
+#endif
 	// Perform state machine.
 	switch (rf_api_ctx.state) {
 	case RF_API_STATE_READY:

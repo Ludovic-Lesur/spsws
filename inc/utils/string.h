@@ -8,7 +8,6 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
-#include "math.h"
 #include "types.h"
 
 /*** STRING macros ***/
@@ -45,10 +44,8 @@ typedef enum {
 	STRING_ERROR_COPY_OVERFLOW,
 	STRING_ERROR_APPEND_OVERFLOW,
 	STRING_ERROR_TEXT_JUSTIFICATION,
-	// Low level drivers errors.
-	STRING_ERROR_BASE_MATH = 0x0100,
 	// Last base value.
-	STRING_ERROR_BASE_LAST = (STRING_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
+	STRING_ERROR_BASE_LAST = 0x0100
 } STRING_status_t;
 
 /*!******************************************************************

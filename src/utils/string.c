@@ -114,13 +114,12 @@ errors:
 STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, uint8_t print_prefix, char_t* str) {
     // Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t first_non_zero_found = 0;
 	uint32_t str_idx = 0;
-	uint32_t idx = 0;
 	uint8_t generic_byte = 0;
 	uint32_t previous_decade = 0;
 	uint32_t abs_value = 0;
+	int32_t idx = 0;
 	// Check parameters.
 	_STRING_check_pointer(str);
 	// Manage negative numbers.
@@ -128,8 +127,7 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 		str[str_idx++] = STRING_CHAR_MINUS;
 	}
 	// Get absolute value.
-	math_status = MATH_abs(value, &abs_value);
-	MATH_exit_error();
+	MATH_abs(value, abs_value);
 	// Build string according to format.
 	switch (format) {
 	case STRING_FORMAT_BOOLEAN:
@@ -138,7 +136,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
             str[str_idx++] = '0';
             str[str_idx++] = 'b';
 		}
-
 		for (idx=(MATH_BINARY_DIGIT_MAX_NUMBER - 1) ; idx>=0 ; idx--) {
 			if (abs_value & (0b1 << idx)) {
 				str[str_idx++] = '1';
@@ -149,7 +146,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 					str[str_idx++] = '0';
 				}
 			}
-			if (idx == 0) break;
 		}
 		break;
 	case STRING_FORMAT_HEXADECIMAL:
@@ -170,7 +166,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 				status = _STRING_hexadecimal_value_to_char(((generic_byte & 0x0F) >> 0), &(str[str_idx++]));
 				if (status != STRING_SUCCESS) goto errors;
 			}
-			if (idx == 0) break;
 		}
 		break;
 	case STRING_FORMAT_DECIMAL:
@@ -189,7 +184,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 				status = _STRING_decimal_value_to_char(generic_byte, &(str[str_idx++]));
 				if (status != STRING_SUCCESS) goto errors;
 			}
-			if (idx == 0) break;
 		}
 		break;
 	default:

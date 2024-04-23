@@ -41,6 +41,7 @@
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.command.make.306804369" name="Build command" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.command.make" useByScannerDiscovery="false" value="make" valueType="string"/>
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.command.rm.1830934290" name="Remove command" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.command.rm" useByScannerDiscovery="false" value="rm" valueType="string"/>
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.toolchain.id.1767481976" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.toolchain.id" useByScannerDiscovery="false" value="962691777" valueType="string"/>
+							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.warnings.allwarn.414360190" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.warnings.allwarn" value="true" valueType="boolean"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform.1439606546" isAbstract="false" osList="all" superClass="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform"/>
 							<builder buildPath="${workspace_loc:/SPSWS_update}/Debug" id="ilg.gnuarmeclipse.managedbuild.cross.builder.737137296" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.255100637" name="GNU ARM Cross Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
@@ -62,6 +63,7 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
+									<listOptionValue builtIn="false" value="MATH_USE_INTEGER"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1917242069" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -93,6 +95,7 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
+									<listOptionValue builtIn="false" value="MATH_USE_INTEGER"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.1658810338" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -170,6 +173,7 @@
 								<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 								<listOptionValue builtIn="false" value="CERTIFICATION"/>
 								<listOptionValue builtIn="false" value="RC1_ZONE"/>
+								<listOptionValue builtIn="false" value="MATH_USE_INTEGER"/>
 							</option>
 							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.840201619" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 						</tool>
@@ -260,6 +264,7 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
+									<listOptionValue builtIn="false" value="MATH_USE_FLOAT"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1537611563" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>
@@ -294,6 +299,7 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
+									<listOptionValue builtIn="false" value="MATH_USE_FLOAT"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.2131794171" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/inc&quot;"/>

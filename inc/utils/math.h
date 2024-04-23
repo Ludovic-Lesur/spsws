@@ -172,15 +172,6 @@ MATH_status_t MATH_median_filter_u16(uint16_t* data, uint8_t median_size, uint8_
 MATH_status_t MATH_median_filter_u32(uint32_t* data, uint8_t median_size, uint8_t average_size, uint32_t* result);
 
 /*!******************************************************************
- * \fn MATH_status_t MATH_abs(int32_t x, uint32_t* result)
- * \brief Compute the absolute value.
- * \param[in]  	x: Input argument.
- * \param[out] 	result: Pointer to the result.
- * \retval		Function execution status.
- *******************************************************************/
-MATH_status_t MATH_abs(int32_t x, uint32_t* result);
-
-/*!******************************************************************
  * \fn MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha)
  * \brief Compute the atan2 approximated value.
  * \param[in]  	x: Input argument 1.
@@ -209,6 +200,34 @@ MATH_status_t MATH_two_complement_to_int32(uint32_t value, uint8_t sign_bit_posi
  * \retval		Function execution status.
  *******************************************************************/
 MATH_status_t MATH_int32_to_signed_magnitude(int32_t value, uint8_t sign_bit_position, uint32_t* result);
+
+/*!******************************************************************
+ * \fn MATH_status_t MATH_abs(int32_t x, uint32_t* result)
+ * \brief Compute the absolute value.
+ * \param[in]  	x: Input argument.
+ * \param[out] 	result: Pointer to the result.
+ * \retval		Function execution status.
+ *******************************************************************/
+#define MATH_abs(x, y) { \
+	if (x >= 0) { y = x; } \
+	else { y = ((-1) * x); } \
+}
+
+/*!******************************************************************
+ * \fn MATH_rolling_mean(value, number_of_samples, new_sample, value_type)
+ * \brief Compute rolling mean.
+ * \param[in]  	value: Current value to update.
+ * \param[in]  	number_of_samples: Current number of samples.
+ * \param[in]	new_sample: New sample to add.
+ * \param[in]	value_type: Type of the value.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+#define MATH_rolling_mean(value, number_of_samples, new_sample, value_type) { \
+	/* Compute rolling mean */ \
+	value = (((value * ((value_type) number_of_samples)) + ((value_type) new_sample)) / ((value_type) (number_of_samples + 1))); \
+	number_of_samples++; \
+}
 
 /*******************************************************************/
 #define MATH_exit_error(error_base) { if (math_status != MATH_SUCCESS) { status = (error_base + math_status); goto errors; } }
