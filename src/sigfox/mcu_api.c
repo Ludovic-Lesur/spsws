@@ -50,6 +50,7 @@
 #include "nvm.h"
 #include "power.h"
 #include "tim.h"
+#include "types.h"
 
 /*** MCU API local structures ***/
 
@@ -82,6 +83,8 @@ MCU_API_status_t MCU_API_open(MCU_API_config_t *mcu_api_config) {
 	// Local variables.
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	TIM_status_t tim2_status = TIM_SUCCESS;
+	// Ignore unused parameters.
+	UNUSED(mcu_api_config);
 	// Init timer.
 	tim2_status = TIM2_init();
 	TIM2_stack_exit_error(MCU_API_ERROR_DRIVER_TIM2);
@@ -328,6 +331,10 @@ MCU_API_status_t MCU_API_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_
 #ifdef ATM
 	// Print data on bus.
 	AT_print_dl_payload(dl_payload, dl_payload_size, rssi_dbm);
+#else
+	UNUSED(dl_payload);
+	UNUSED(dl_payload_size);
+	UNUSED(rssi_dbm);
 #endif
 	RETURN();
 }

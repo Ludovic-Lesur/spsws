@@ -39,7 +39,7 @@ typedef enum {
 	NEOM8N_ERROR_TIME_TIMEOUT,
 	NEOM8N_ERROR_POSITION_INVALID,
 	NEOM8N_ERROR_POSITION_TIMEOUT,
-	NEOM8N_ERROR_VCAP_THRESHOLD,
+	NEOM8N_ERROR_VSTR_THRESHOLD,
 	NEOM8N_ERROR_TIMEPULSE_FREQUENCY,
 	NEOM8N_ERROR_TIMEPULSE_DUTY_CYCLE,
 	// Low level drivers errors.
@@ -101,24 +101,6 @@ NEOM8N_status_t NEOM8N_init(void);
 void NEOM8N_de_init(void);
 
 /*!******************************************************************
- * \fn void NEOM8N_set_backup(uint8_t state)
- * \brief Set NEOM8N backup voltage state.
- * \param[in]  	state: Backup voltage state.
- * \param[out] 	none
- * \retval		none
- *******************************************************************/
-void NEOM8N_set_backup(uint8_t state);
-
-/*!******************************************************************
- * \fn void uint8_t NEOM8N_get_backup(void)
- * \brief Get NEOM8N backup voltage state.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Backup voltage state.
- *******************************************************************/
-uint8_t NEOM8N_get_backup(void);
-
-/*!******************************************************************
  * \fn NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, uint32_t timeout_seconds, uint32_t* fix_duration_seconds)
  * \brief Perform GPS time acquisition.
  * \param[in]  	timeout_seconds: GPS acquisition timeout in seconds.
@@ -129,14 +111,15 @@ uint8_t NEOM8N_get_backup(void);
 NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, uint32_t timeout_seconds, uint32_t* fix_duration_seconds);
 
 /*!******************************************************************
- * \fn NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, uint32_t timeout_seconds, uint32_t* fix_duration_seconds)
+ * \fn NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, uint32_t timeout_seconds, uint8_t altitude_stability_filter_count, uint32_t* fix_duration_seconds)
  * \brief Perform GPS position acquisition.
  * \param[in]  	timeout_seconds: GPS acquisition timeout in seconds.
+ * \param[in]	altitude_stability_filter_count: Number of consecutive identical altitudes required to validate a position.
  * \param[out] 	gps_position: Pointer to the GPS position data.
  * \param[out]	fix_duration_seconds: Pointer to integer that will contain GPS fix duration in seconds.
  * \retval		Function execution status.
  *******************************************************************/
-NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, uint32_t timeout_seconds, uint32_t* fix_duration_seconds);
+NEOM8N_status_t NEOM8N_get_position(NEOM8N_position_t* gps_position, uint32_t timeout_seconds, uint8_t altitude_stability_filter_count, uint32_t* fix_duration_seconds);
 
 /*!******************************************************************
  * \fn NEOM8N_status_t NEOM8N_configure_timepulse(NEOM8N_timepulse_config_t* timepulse_config)

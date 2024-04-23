@@ -83,13 +83,13 @@ RTC_status_t RTC_calibrate(RTC_time_t* time);
 RTC_status_t RTC_get_time(RTC_time_t* time);
 
 /*!******************************************************************
- * \fn volatile uint8_t RTC_get_alarm_a_flag(void)
+ * \fn uint8_t RTC_get_alarm_a_flag(void)
  * \brief Read RTC alarm A interrupt flag.
  * \param[in]  	none
  * \param[out] 	none
  * \retval		RTC alarm A flag.
  *******************************************************************/
-volatile uint8_t RTC_get_alarm_a_flag(void);
+uint8_t RTC_get_alarm_a_flag(void);
 
 /*!******************************************************************
  * \fn void RTC_clear_alarm_a_flag(void)
@@ -101,13 +101,13 @@ volatile uint8_t RTC_get_alarm_a_flag(void);
 void RTC_clear_alarm_a_flag(void);
 
 /*!******************************************************************
- * \fn volatile uint8_t RTC_get_alarm_b_flag(void)
+ * \fn uint8_t RTC_get_alarm_b_flag(void)
  * \brief Read RTC alarm B interrupt flag.
  * \param[in]  	none
  * \param[out] 	none
  * \retval		RTC alarm B flag.
  *******************************************************************/
-volatile uint8_t RTC_get_alarm_b_flag(void);
+uint8_t RTC_get_alarm_b_flag(void);
 
 /*!******************************************************************
  * \fn void RTC_clear_alarm_b_flag(void)

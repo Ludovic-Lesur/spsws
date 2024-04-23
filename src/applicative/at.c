@@ -976,7 +976,7 @@ static void _AT_gps_callback(void) {
 	power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
 	// Start GPS fix.
-	neom8n_status = NEOM8N_get_position(&gps_position, (uint32_t) timeout_seconds, &fix_duration_seconds);
+	neom8n_status = NEOM8N_get_position(&gps_position, (uint32_t) timeout_seconds, 5, &fix_duration_seconds);
 	NEOM8N_stack_exit_error(ERROR_BASE_NEOM8N + neom8n_status);
 	// Turn GPS off.
 	power_status = POWER_disable(POWER_DOMAIN_GPS);
@@ -1361,7 +1361,7 @@ static void _AT_rssi_callback(void) {
 	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_stack_exit_error(ERROR_BASE_LPTIM1 + lptim1_status);
 	// Measurement loop.
-	while (report_loop < ((duration_seconds * 1000) / AT_RSSI_REPORT_PERIOD_MS)) {
+	while (report_loop < ((uint32_t) ((duration_seconds * 1000) / AT_RSSI_REPORT_PERIOD_MS))) {
 		// Read RSSI.
 		sx1232_status = SX1232_get_rssi(&rssi_dbm);
 		SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);

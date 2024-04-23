@@ -56,6 +56,8 @@
 // Timeouts.
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS		180
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
+// GPS altitude stability filter
+#define SPSWS_GPS_ALTITUDE_STABILITY_FILTER			5
 // Sigfox UL payloads size.
 #define SPSWS_SIGFOX_STARTUP_DATA_SIZE				8
 #define SPSWS_SIGFOX_ERROR_DATA_SIZE				12
@@ -965,7 +967,7 @@ int main (void) {
 			// Get position from GPS.
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
-			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &spsws_ctx.geoloc_fix_duration_seconds);
+			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, SPSWS_GPS_ALTITUDE_STABILITY_FILTER, &spsws_ctx.geoloc_fix_duration_seconds);
 			// Note: error is never stacked since it is indicated by the dedicated timeout frame.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
 			POWER_stack_error();

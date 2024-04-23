@@ -207,7 +207,7 @@ errors:
 }
 
 /*******************************************************************/
-volatile uint8_t RTC_get_alarm_a_flag(void) {
+uint8_t RTC_get_alarm_a_flag(void) {
 	return rtc_alarm_a_flag;
 }
 
@@ -217,7 +217,7 @@ void RTC_clear_alarm_a_flag(void) {
 }
 
 /*******************************************************************/
-volatile uint8_t RTC_get_alarm_b_flag(void) {
+uint8_t RTC_get_alarm_b_flag(void) {
 	return rtc_alarm_b_flag;
 }
 

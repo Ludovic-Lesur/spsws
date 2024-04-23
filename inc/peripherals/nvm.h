@@ -8,6 +8,7 @@
 #ifndef __NVM_H__
 #define __NVM_H__
 
+#include "flash_reg.h"
 #include "types.h"
 #include "sigfox_types.h"
 
@@ -42,7 +43,7 @@ typedef enum {
 	NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH = (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 2),
 	NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE,
 	NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR,
-	NVM_ADDRESS_LAST
+	NVM_ADDRESS_LAST = (EEPROM_SIZE_BYTES - 1)
 } NVM_address_t;
 
 /*** NVM functions ***/
