@@ -43,8 +43,6 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 		if ((((USART2 -> CR1) & (0b1 << 5)) != 0) && (usart_rx_irq_callback != NULL)) {
 			usart_rx_irq_callback(rx_byte);
 		}
-		// Clear RXNE flag.
-		USART2 -> RQR |= (0b1 << 3);
 	}
 	// Overrun error interrupt.
 	if (((USART2 -> ISR) & (0b1 << 3)) != 0) {
@@ -68,8 +66,6 @@ void __attribute__((optimize("-O0"))) USART1_IRQHandler(void) {
 		if ((((USART1 -> CR1) & (0b1 << 5)) != 0) && (usart_rx_irq_callback != NULL)) {
 			usart_rx_irq_callback(rx_byte);
 		}
-		// Clear RXNE flag.
-		USART1 -> RQR |= (0b1 << 3);
 	}
 	// Overrun error interrupt.
 	if (((USART1 -> ISR) & (0b1 << 3)) != 0) {
@@ -137,8 +133,11 @@ void USART2_de_init(void) {
 #if (defined HW1_0) && (defined ATM)
 /*******************************************************************/
 void USART2_enable_rx(void) {
-	// Clear flag and enable interrupt.
-	USART2 -> RQR |= (0b1 << 3);
+	// Clear RXNE flag if needed.
+	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
+		USART2 -> RQR |= (0b1 << 3);
+	}
+	// Enable interrupt.
 	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2, NVIC_PRIORITY_USART2);
 }
 #endif
@@ -237,8 +236,11 @@ void USART1_de_init(void) {
 #if (defined HW2_0) && (defined ATM)
 /*******************************************************************/
 void USART1_enable_rx(void) {
-	// Clear flag and enable interrupt.
-	USART1 -> RQR |= (0b1 << 3);
+	// Clear RXNE flag if needed.
+	if (((USART1 -> ISR) & (0b1 << 5)) != 0) {
+		USART1 -> RQR |= (0b1 << 3);
+	}
+	// Enable interrupt.
 	NVIC_enable_interrupt(NVIC_INTERRUPT_USART1, NVIC_PRIORITY_USART1);
 }
 #endif
