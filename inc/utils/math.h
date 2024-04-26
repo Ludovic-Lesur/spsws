@@ -202,11 +202,12 @@ MATH_status_t MATH_two_complement_to_int32(uint32_t value, uint8_t sign_bit_posi
 MATH_status_t MATH_int32_to_signed_magnitude(int32_t value, uint8_t sign_bit_position, uint32_t* result);
 
 /*!******************************************************************
- * \fn MATH_status_t MATH_abs(int32_t x, uint32_t* result)
+ * \fn MATH_abs(x, y)
  * \brief Compute the absolute value.
  * \param[in]  	x: Input argument.
- * \param[out] 	result: Pointer to the result.
- * \retval		Function execution status.
+ * \param[in]	y: Output result.
+ * \param[out] 	none
+ * \retval		none
  *******************************************************************/
 #define MATH_abs(x, y) { \
 	if (x >= 0) { y = x; } \
