@@ -25,7 +25,10 @@ The weather station is also composed of 2 daughter boards which embed the meteor
 
 ## Environment
 
-The embedded software is developed under **Eclipse IDE** version 2023-09 (4.29.0) and **GNU MCU** plugin. The `script` folder contains Eclipse run/debug configuration files and **JLink** scripts to flash the MCU.
+As of version `sw1.2.3` the embedded software is developed under **Eclipse IDE** version 2023-09 (4.29.0) and **GNU MCU** plugin. The `script` folder contains Eclipse run/debug configuration files and **JLink** scripts to flash the MCU.
+
+> [!WARNING]
+> To compile any version under `sw3.0`, the `git_version.sh` script must be patched when `sscanf` function is called: the `SW` prefix must be replaced by `sw` since Git tags have been renamed in this way.
 
 ## Target
 
@@ -35,16 +38,17 @@ The SPSWS boards are based on the **STM32L041K6U6** (HW1.0) and the **STM32L081C
 
 The project is organized as follow:
 
-* `inc` and `src`: **source code** split in 6 layers:
-    * `registers`: MCU **registers** adress definition.
-    * `peripherals`: internal MCU **peripherals** drivers.
-    * `utils`: **utility** functions.
-    * `components`: external **components** drivers.
-    * `sigfox`: **Sigfox EP library** low level implementation.
-    * `applicative`: high-level **application** layers.
-* `lib`: **Sigfox EP_LIB and ADDON_RFP** submodules.
-* `startup`: MCU **startup** code (from ARM).
-* `linker`: MCU **linker** script (from ARM).
+* `startup` : MCU **startup** code (from ARM).
+* `linker` : MCU **linker** script (from ARM).
+* `drivers` :
+    * `registers` : MCU **registers** address definition.
+    * `peripherals` : internal MCU **peripherals** drivers.
+    * `components` : external **components** drivers.
+* `middleware` :
+    * `utils` : **utility** functions.
+    * `at` : **AT commands** parser.
+    * `sigfox` : **Sigfox EP_LIB** and **ADDON_RFP** submodules and low level implementation.
+* `application` : high-level **application** layers.
 
 ## Sigfox library
 
