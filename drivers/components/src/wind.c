@@ -8,6 +8,8 @@
 #include "wind.h"
 
 #include "at.h"
+#include "error.h"
+#include "error_base.h"
 #include "exti.h"
 #include "lptim.h"
 #include "mapping.h"

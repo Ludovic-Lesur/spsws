@@ -17,6 +17,7 @@
 #include "rtc.h"
 #include "usart.h"
 // Utils.
+#include "error.h"
 #include "math.h"
 #include "parser.h"
 #include "string.h"
@@ -40,7 +41,7 @@
 #include "sigfox_rc.h"
 #include "sigfox_types.h"
 // Applicative.
-#include "error.h"
+#include "error_base.h"
 #include "mode.h"
 #include "version.h"
 

@@ -46,6 +46,7 @@
 #include "aes.h"
 #include "at.h"
 #include "error.h"
+#include "error_base.h"
 #include "mode.h"
 #include "nvm.h"
 #include "power.h"

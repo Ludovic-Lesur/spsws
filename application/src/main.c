@@ -28,6 +28,7 @@
 #include "tim.h"
 #include "usart.h"
 // Utils.
+#include "error.h"
 #include "math.h"
 #include "types.h"
 // Components.
@@ -47,7 +48,7 @@
 #include "sigfox_types.h"
 // Applicative.
 #include "at.h"
-#include "error.h"
+#include "error_base.h"
 #include "mode.h"
 #include "version.h"
 

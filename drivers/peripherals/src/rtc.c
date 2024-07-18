@@ -8,6 +8,7 @@
 #include "rtc.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "exti.h"
 #include "nvic.h"
 #include "rcc_reg.h"

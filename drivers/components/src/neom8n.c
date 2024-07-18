@@ -8,6 +8,8 @@
 #include "neom8n.h"
 
 #include "dma.h"
+#include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "iwdg.h"
 #include "lptim.h"

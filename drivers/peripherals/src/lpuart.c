@@ -7,6 +7,8 @@
 
 #include "lpuart.h"
 
+#include "error.h"
+#include "error_base.h"
 #include "exti.h"
 #include "gpio.h"
 #include "lpuart_reg.h"

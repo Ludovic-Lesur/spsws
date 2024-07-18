@@ -7,6 +7,8 @@
 
 #include "si1133.h"
 
+#include "error.h"
+#include "error_base.h"
 #include "i2c.h"
 #include "lptim.h"
 #include "si1133_reg.h"

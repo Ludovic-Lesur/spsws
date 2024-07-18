@@ -7,6 +7,8 @@
 
 #include "sht3x.h"
 
+#include "error.h"
+#include "error_base.h"
 #include "i2c.h"
 #include "lptim.h"
 #include "types.h"

@@ -7,6 +7,8 @@
 
 #include "i2c.h"
 
+#include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"

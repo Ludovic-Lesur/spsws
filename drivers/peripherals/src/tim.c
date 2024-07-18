@@ -7,6 +7,8 @@
 
 #include "tim.h"
 
+#include "error.h"
+#include "error_base.h"
 #include "iwdg.h"
 #include "math.h"
 #include "nvic.h"

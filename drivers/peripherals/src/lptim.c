@@ -8,6 +8,7 @@
 #include "lptim.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "exti.h"
 #include "iwdg.h"
 #include "lptim_reg.h"

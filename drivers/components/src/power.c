@@ -8,6 +8,8 @@
 #include "power.h"
 
 #include "adc.h"
+#include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "i2c.h"
 #include "lptim.h"

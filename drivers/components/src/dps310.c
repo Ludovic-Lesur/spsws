@@ -8,6 +8,8 @@
 #include "dps310.h"
 
 #include "dps310_reg.h"
+#include "error.h"
+#include "error_base.h"
 #include "i2c.h"
 #include "math.h"
 #include "types.h"

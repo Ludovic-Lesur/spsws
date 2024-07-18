@@ -8,6 +8,7 @@
 #include "rcc.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "flash.h"
 #include "nvic.h"
 #include "pwr.h"
