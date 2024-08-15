@@ -28,13 +28,31 @@ typedef enum {
 	SHT3X_SUCCESS = 0,
 	SHT3X_ERROR_NULL_PARAMETER,
 	// Low level drivers errors.
-	SHT3X_ERROR_BASE_I2C1 = 0x0100,
-	SHT3X_ERROR_BASE_LPTIM1 = (SHT3X_ERROR_BASE_I2C1 + I2C_ERROR_BASE_LAST),
+	SHT3X_ERROR_BASE_I2C = 0x0100,
+	SHT3X_ERROR_BASE_LPTIM = (SHT3X_ERROR_BASE_I2C + I2C_ERROR_BASE_LAST),
 	// Last base value.
-	SHT3X_ERROR_BASE_LAST = (SHT3X_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST)
+	SHT3X_ERROR_BASE_LAST = (SHT3X_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
 } SHT3X_status_t;
 
 /*** SHT3x functions ***/
+
+/*!******************************************************************
+ * \fn SHT3X_status_t SHT3X_init(void)
+ * \brief Init SHT3X driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+SHT3X_status_t SHT3X_init(void);
+
+/*!******************************************************************
+ * \fn SHT3X_status_t SHT3X_de_init(void)
+ * \brief Release SHT3X driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+SHT3X_status_t SHT3X_de_init(void);
 
 /*!******************************************************************
  * \fn SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address)
@@ -46,22 +64,22 @@ typedef enum {
 SHT3X_status_t SHT3X_perform_measurements(uint8_t i2c_address);
 
 /*!******************************************************************
- * \fn SHT3X_status_t SHT3X_get_temperature(int8_t* temperature_degrees)
+ * \fn SHT3X_status_t SHT3X_get_temperature(int32_t* temperature_degrees)
  * \brief Read temperature.
  * \param[in]  	none
- * \param[out] 	temperature_degrees: Pointer to signed byte that will contain the temperature in degrees.
+ * \param[out] 	temperature_degrees: Pointer to integer that will contain the temperature in degrees.
  * \retval		Function execution status.
  *******************************************************************/
-SHT3X_status_t SHT3X_get_temperature(int8_t* temperature_degrees);
+SHT3X_status_t SHT3X_get_temperature(int32_t* temperature_degrees);
 
 /*!******************************************************************
- * \fn SHT3X_status_t SHT3X_get_humidity(uint8_t* humidity_percent)
+ * \fn SHT3X_status_t SHT3X_get_humidity(int32_t* humidity_percent)
  * \brief Read humidity.
  * \param[in]  	none
- * \param[out] 	humidity_percent: Pointer to byte that will contain the humidity in percent.
+ * \param[out] 	humidity_percent: Pointer to integer that will contain the humidity in percent.
  * \retval		Function execution status.
  *******************************************************************/
-SHT3X_status_t SHT3X_get_humidity(uint8_t* humidity_percent);
+SHT3X_status_t SHT3X_get_humidity(int32_t* humidity_percent);
 
 /*******************************************************************/
 #define SHT3X_exit_error(error_base) { if (sht3x_status != SHT3X_SUCCESS) { status = (error_base + sht3x_status); goto errors; } }

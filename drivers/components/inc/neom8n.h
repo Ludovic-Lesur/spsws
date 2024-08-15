@@ -9,6 +9,7 @@
 #define __NEOM8N_H__
 
 #include "adc.h"
+#include "dma.h"
 #include "lptim.h"
 #include "lpuart.h"
 #include "math.h"
@@ -26,7 +27,6 @@ typedef enum {
 	// Driver errors.
 	NEOM8N_SUCCESS = 0,
 	NEOM8N_ERROR_NULL_PARAMETER,
-	NEOM8N_ERROR_NMEA_FRAME_RECEPTION,
 	NEOM8N_ERROR_TIMEOUT,
 	NEOM8N_ERROR_CHECKSUM_INDEX,
 	NEOM8N_ERROR_CHECKSUM,
@@ -44,9 +44,10 @@ typedef enum {
 	NEOM8N_ERROR_TIMEPULSE_DUTY_CYCLE,
 	// Low level drivers errors.
 	NEOM8N_ERROR_BASE_ADC1 = 0x0100,
-	NEOM8N_ERROR_BASE_LPUART1 = (NEOM8N_ERROR_BASE_ADC1 + ADC_ERROR_BASE_LAST),
-	NEOM8N_ERROR_BASE_LPTIM1 = (NEOM8N_ERROR_BASE_LPUART1 + LPUART_ERROR_BASE_LAST),
-	NEOM8N_ERROR_BASE_STRING = (NEOM8N_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST),
+	NEOM8N_ERROR_BASE_LPUART = (NEOM8N_ERROR_BASE_ADC1 + ADC_ERROR_BASE_LAST),
+	NEOM8N_ERROR_BASE_DMA = (NEOM8N_ERROR_BASE_LPUART + LPUART_ERROR_BASE_LAST),
+	NEOM8N_ERROR_BASE_LPTIM = (NEOM8N_ERROR_BASE_DMA + DMA_ERROR_BASE_LAST),
+	NEOM8N_ERROR_BASE_STRING = (NEOM8N_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
 	// Last base value.
 	NEOM8N_ERROR_BASE_LAST = (NEOM8N_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST)
 } NEOM8N_status_t;
@@ -96,9 +97,9 @@ NEOM8N_status_t NEOM8N_init(void);
  * \brief Release NEOM8N interface.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void NEOM8N_de_init(void);
+NEOM8N_status_t NEOM8N_de_init(void);
 
 /*!******************************************************************
  * \fn NEOM8N_status_t NEOM8N_get_time(RTC_time_t* gps_time, uint32_t timeout_seconds, uint32_t* fix_duration_seconds)

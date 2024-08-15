@@ -7,18 +7,15 @@
 
 #include "wind.h"
 
+#include "analog.h"
 #include "at.h"
-#include "error.h"
-#include "error_base.h"
 #include "exti.h"
+#include "gpio_mapping.h"
 #include "lptim.h"
-#include "mapping.h"
 #include "math.h"
-#include "max11136.h"
 #include "mode.h"
-#include "nvic.h"
+#include "nvic_priority.h"
 #include "power.h"
-#include "rcc.h"
 #include "types.h"
 
 /*** WIND local macros ***/
@@ -125,15 +122,15 @@ void WIND_init(void) {
 	// Init GPIOs and EXTI.
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	GPIO_configure(&WIND_GPIO_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&WIND_GPIO_SPEED, EXTI_TRIGGER_FALLING_EDGE, &_WIND_speed_edge_callback);
+	EXTI_configure_gpio(&WIND_GPIO_SPEED, EXTI_TRIGGER_FALLING_EDGE, &_WIND_speed_edge_callback, NVIC_PRIORITY_WIND);
 #endif
 #ifdef WIND_VANE_ULTIMETER
 	// Wind speed.
 	GPIO_configure(&WIND_GPIO_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&WIND_GPIO_SPEED, EXTI_TRIGGER_RISING_EDGE, &_WIND_speed_edge_callback);
+	EXTI_configure_gpio(&WIND_GPIO_SPEED, EXTI_TRIGGER_RISING_EDGE, &_WIND_speed_edge_callback, NVIC_PRIORITY_WIND);
 	// Wind direction.
 	GPIO_configure(&WIND_GPIO_DIRECTION, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&WIND_GPIO_DIRECTION, EXTI_TRIGGER_RISING_EDGE, &_WIND_direction_edge_callback);
+	EXTI_configure_gpio(&WIND_GPIO_DIRECTION, EXTI_TRIGGER_RISING_EDGE, &_WIND_direction_edge_callback, NVIC_PRIORITY_WIND);
 #endif
 	// Reset data.
 	WIND_reset_data();
@@ -150,11 +147,12 @@ void WIND_start_continuous_measure(void) {
 	// TODO Init phase shift timers:
 #endif
 	// Enable interrupts.
-	EXTI_clear_flag((EXTI_line_t) WIND_GPIO_SPEED.pin);
+	EXTI_clear_gpio_flag(&WIND_GPIO_SPEED);
+	EXTI_enable_gpio_interrupt(&WIND_GPIO_SPEED);
 #ifdef WIND_VANE_ULTIMETER
-	EXTI_clear_flag((EXTI_line_t) WIND_GPIO_DIRECTION.pin);
+	EXTI_clear_gpio_flag(&WIND_GPIO_DIRECTION);
+	EXTI_enable_gpio_interrupt(&WIND_GPIO_DIRECTION);
 #endif
-	NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15, NVIC_PRIORITY_EXTI_4_15);
 }
 #endif
 
@@ -162,8 +160,9 @@ void WIND_start_continuous_measure(void) {
 /*******************************************************************/
 void WIND_stop_continuous_measure(void) {
 	// Disable interrupts.
-	NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
+	EXTI_disable_gpio_interrupt(&WIND_GPIO_SPEED);
 #ifdef WIND_VANE_ULTIMETER
+	EXTI_disable_gpio_interrupt(&WIND_GPIO_DIRECTION);
 	// TODO Release phase shift timer.
 #endif
 }
@@ -199,8 +198,8 @@ WIND_status_t WIND_tick_second(void) {
 	WIND_status_t status = WIND_SUCCESS;
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	POWER_status_t power_status = POWER_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
-	uint32_t wind_direction_ratio = 0;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
+	int32_t wind_direction_ratio = 0;
 #endif
 	// Update counters.
 	wind_ctx.speed_seconds_count++;
@@ -229,17 +228,14 @@ WIND_status_t WIND_tick_second(void) {
 		if ((wind_ctx.speed_mh / 1000) > 0) {
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 			// Turn external ADC on.
-			power_status = POWER_enable(POWER_DOMAIN_ANALOG_EXTERNAL, LPTIM_DELAY_MODE_STOP);
+			power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_STOP);
 			POWER_exit_error(WIND_ERROR_BASE_POWER);
 			// Get direction from ADC.
-			max11136_status = MAX11136_perform_measurements();
-			MAX11136_exit_error(WIND_ERROR_BASE_MAX11136);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_WIND_DIRECTION_RATIO, &wind_direction_ratio);
+			ANALOG_exit_error(WIND_ERROR_BASE_ANALOG);
 			// Turn external ADC off.
-			power_status = POWER_disable(POWER_DOMAIN_ANALOG_EXTERNAL);
+			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
 			POWER_exit_error(WIND_ERROR_BASE_POWER);
-			// Get 12-bits result.
-			max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_WIND_DIRECTION_RATIO, &wind_direction_ratio);
-			MAX11136_exit_error(WIND_ERROR_BASE_MAX11136);
 			// Convert voltage to direction.
 			_WIND_voltage_to_angle(wind_direction_ratio);
 #endif
@@ -256,7 +252,7 @@ WIND_status_t WIND_tick_second(void) {
 	return status;
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 errors:
-	POWER_disable(POWER_DOMAIN_ANALOG_EXTERNAL);
+	POWER_disable(POWER_DOMAIN_ANALOG);
 #endif
 	return status;
 }

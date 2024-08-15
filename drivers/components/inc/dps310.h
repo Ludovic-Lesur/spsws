@@ -34,14 +34,32 @@ typedef enum {
 	DPS310_ERROR_TEMPERATURE_TIMEOUT,
 	DPS310_ERROR_PRESSURE_TIMEOUT,
 	// Low level drivers errors.
-	DPS310_ERROR_BASE_I2C1 = 0x0100,
-	DPS310_ERROR_BASE_LPTIM1 = (DPS310_ERROR_BASE_I2C1 + I2C_ERROR_BASE_LAST),
-	DPS310_ERROR_BASE_MATH = (DPS310_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST),
+	DPS310_ERROR_BASE_I2C = 0x0100,
+	DPS310_ERROR_BASE_LPTIM = (DPS310_ERROR_BASE_I2C + I2C_ERROR_BASE_LAST),
+	DPS310_ERROR_BASE_MATH = (DPS310_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
 	// Last base value.
 	DPS310_ERROR_BASE_LAST = (DPS310_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
 } DPS310_status_t;
 
 /*** DPS310 functions ***/
+
+/*!******************************************************************
+ * \fn DPS310_status_t DPS310_init(void)
+ * \brief Init DPS310 driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+DPS310_status_t DPS310_init(void);
+
+/*!******************************************************************
+ * \fn DPS310_status_t DPS310_de_init(void)
+ * \brief Release DPS310 driver.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Function execution status.
+ *******************************************************************/
+DPS310_status_t DPS310_de_init(void);
 
 /*!******************************************************************
  * \fn DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address)
@@ -53,22 +71,22 @@ typedef enum {
 DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address);
 
 /*!******************************************************************
- * \fn DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa)
+ * \fn DPS310_status_t DPS310_get_pressure(int32_t* pressure_pa)
  * \brief Read pressure.
  * \param[in]  	none
  * \param[out] 	pressure_pa: Pointer to integer that will contain the pressure in Pa.
  * \retval		Function execution status.
  *******************************************************************/
-DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa);
+DPS310_status_t DPS310_get_pressure(int32_t* pressure_pa);
 
 /*!******************************************************************
- * \fn DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees)
+ * \fn DPS310_status_t DPS310_get_temperature(int32_t* temperature_degrees)
  * \brief Read temperature.
  * \param[in]  	none
- * \param[out] 	temperature_degrees: Pointer to signed byte that will contain the temperature in degrees.
+ * \param[out] 	temperature_degrees: Pointer to integer that will contain the temperature in degrees.
  * \retval		Function execution status.
  *******************************************************************/
-DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees);
+DPS310_status_t DPS310_get_temperature(int32_t* temperature_degrees);
 
 /*******************************************************************/
 #define DPS310_exit_error(error_base) { if (dps310_status != DPS310_SUCCESS) { status = (error_base + dps310_status); goto errors; } }

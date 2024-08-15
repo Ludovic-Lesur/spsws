@@ -8,13 +8,13 @@
 #include "at.h"
 
 // Peripherals.
-#include "adc.h"
 #include "lptim.h"
-#include "nvic.h"
+#include "gpio_mapping.h"
+#include "nvic_priority.h"
 #include "nvm.h"
+#include "nvm_address.h"
 #include "pwr.h"
 #include "rcc.h"
-#include "rtc.h"
 #include "usart.h"
 // Utils.
 #include "error.h"
@@ -24,15 +24,16 @@
 #include "types.h"
 // Components.
 #include "dps310.h"
-#include "max11136.h"
 #include "neom8n.h"
-#include "power.h"
 #include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sky13317.h"
 #include "sx1232.h"
 #include "wind.h"
+// Middleware.
+#include "analog.h"
+#include "power.h"
 // Sigfox.
 #include "manuf/rf_api.h"
 #include "sigfox_ep_addon_rfp_api.h"
@@ -47,6 +48,14 @@
 
 /*** AT local macros ***/
 
+// USART.
+#ifdef HW1_0
+#define AT_USART_INSTANCE				USART_INSTANCE_USART2
+#endif
+#ifdef HW2_0
+#define AT_USART_INSTANCE				USART_INSTANCE_USART1
+#endif
+#define AT_USART_BAUD_RATE				9600
 // Commands.
 #define AT_COMMAND_BUFFER_SIZE			128
 // Parameters separator.
@@ -87,7 +96,6 @@ static void _AT_set_key_callback(void);
 /*******************************************************************/
 #ifdef AT_COMMAND_SENSORS
 static void _AT_adc_callback(void);
-static void _AT_max11136_callback(void);
 static void _AT_iths_callback(void);
 #ifdef HW2_0
 static void _AT_eths_callback(void);
@@ -175,8 +183,7 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 	{PARSER_MODE_HEADER,  "AT$KEY=", "key[hex]", "Set Sigfox EP key", _AT_set_key_callback},
 #endif
 #ifdef AT_COMMAND_SENSORS
-	{PARSER_MODE_COMMAND, "AT$ADC?", STRING_NULL, "Get internal ADC measurements", _AT_adc_callback},
-	{PARSER_MODE_COMMAND, "AT$MAX11136?", STRING_NULL, "Get external ADC measurements", _AT_max11136_callback},
+	{PARSER_MODE_COMMAND, "AT$ADC?", STRING_NULL, "Get analog measurements", _AT_adc_callback},
 	{PARSER_MODE_COMMAND, "AT$ITHS?", STRING_NULL, "Get internal PCB temperature and humidity", _AT_iths_callback},
 #ifdef HW2_0
 	{PARSER_MODE_COMMAND, "AT$ETHS?", STRING_NULL, "Get external temperature and humidity", _AT_eths_callback},
@@ -286,23 +293,12 @@ static void _AT_reply_add_value(int32_t tx_value, STRING_format_t format, uint8_
 /*******************************************************************/
 static void _AT_reply_send(void) {
 	// Local variables.
-#ifdef HW1_0
-	USART_status_t usart2_status = USART_SUCCESS;
-#endif
-#ifdef HW2_0
-	USART_status_t usart1_status = USART_SUCCESS;
-#endif
+	USART_status_t usart_status = USART_SUCCESS;
 	// Add ending string.
 	_AT_reply_add_string(AT_REPLY_END);
 	// Send response over UART.
-#ifdef HW1_0
-	usart2_status = USART2_write((uint8_t*) at_ctx.reply, at_ctx.reply_size);
-	USART2_stack_error();
-#endif
-#ifdef HW2_0
-	usart1_status = USART1_write((uint8_t*) at_ctx.reply, at_ctx.reply_size);
-	USART1_stack_error();
-#endif
+	usart_status = USART_write(AT_USART_INSTANCE, (uint8_t*) at_ctx.reply, at_ctx.reply_size);
+	USART_stack_error(ERROR_BASE_USART_AT);
 	// Flush reply buffer.
 	at_ctx.reply_size = 0;
 }
@@ -356,7 +352,7 @@ static void _AT_print_command_list(void) {
 #ifdef ATM
 /*******************************************************************/
 static void _AT_print_sw_version(void) {
-	_AT_reply_add_string("SW");
+	_AT_reply_add_string("sw");
 	_AT_reply_add_value((int32_t) GIT_MAJOR_VERSION, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string(".");
 	_AT_reply_add_value((int32_t) GIT_MINOR_VERSION, STRING_FORMAT_DECIMAL, 0);
@@ -402,21 +398,21 @@ static void _AT_rcc_callback(void) {
 	// Local variables.
 	ERROR_code_t status = SUCCESS;
 	RCC_status_t rcc_status = RCC_SUCCESS;
-	char_t* rcc_clock_name[RCC_CLOCK_LAST] =  {"LSI", "LSE", "MSI", "HSI", "HSE", "SYS"};
+	char_t* rcc_clock_name[RCC_CLOCK_LAST] =  {"LSI", "LSE", "MSI", "HSI", "SYS"};
 	uint8_t clock_status = 0;
 	uint32_t clock_frequency = 0;
 	uint8_t idx = 0;
 	// Calibrate clocks.
-	rcc_status = RCC_calibrate();
-	RCC_stack_exit_error(ERROR_BASE_RCC + rcc_status);
+	rcc_status = RCC_calibrate(NVIC_PRIORITY_CLOCK_CALIBRATION);
+	RCC_stack_exit_error(ERROR_BASE_RCC, (ERROR_BASE_RCC + rcc_status));
 	// Clocks loop.
 	for (idx=0 ; idx<RCC_CLOCK_LAST ; idx++) {
 		// Read status.
 		rcc_status = RCC_get_status(idx, &clock_status);
-		RCC_stack_exit_error(ERROR_BASE_RCC + rcc_status);
+		RCC_stack_exit_error(ERROR_BASE_RCC, (ERROR_BASE_RCC + rcc_status));
 		// Read frequency.
 		rcc_status = RCC_get_frequency_hz(idx, &clock_frequency);
-		RCC_stack_exit_error(ERROR_BASE_RCC + rcc_status);
+		RCC_stack_exit_error(ERROR_BASE_RCC, (ERROR_BASE_RCC + rcc_status));
 		// Print data.
 		_AT_reply_add_string(rcc_clock_name[idx]);
 		_AT_reply_add_string((clock_status == 0) ? ": OFF " : ": ON  ");
@@ -443,10 +439,10 @@ static void _AT_nvm_callback(void) {
 	uint8_t nvm_data = 0;
 	// Read address parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &address);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Read byte at requested address.
 	nvm_status = NVM_read_byte((NVM_address_t) address, &nvm_data);
-	NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
+	NVM_stack_exit_error(ERROR_BASE_NVM, (ERROR_BASE_NVM + nvm_status));
 	// Print data.
 	_AT_reply_add_value((int32_t) nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
 	_AT_reply_send();
@@ -469,7 +465,7 @@ static void _AT_get_id_callback(void) {
 	// Retrieve device ID in NVM.
 	for (idx=0 ; idx<SIGFOX_EP_ID_SIZE_BYTES ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + idx), &id_byte);
-		NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (ERROR_BASE_NVM + nvm_status));
 		_AT_reply_add_value(id_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
 	}
 	_AT_reply_send();
@@ -493,11 +489,11 @@ static void _AT_set_id_callback(void) {
 	uint8_t idx = 0;
 	// Read ID parameter.
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, STRING_CHAR_NULL, SIGFOX_EP_ID_SIZE_BYTES, 1, sigfox_ep_id, &extracted_length);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Write device ID in NVM.
 	for (idx=0 ; idx<SIGFOX_EP_ID_SIZE_BYTES ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_EP_ID + idx), sigfox_ep_id[idx]);
-		NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (ERROR_BASE_NVM + nvm_status));
 	}
 	_AT_print_ok();
 	return;
@@ -518,7 +514,7 @@ static void _AT_get_key_callback(void) {
 	// Retrieve device key in NVM.
 	for (idx=0 ; idx<SIGFOX_EP_KEY_SIZE_BYTES ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), &key_byte);
-		NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (ERROR_BASE_NVM + nvm_status));
 		_AT_reply_add_value(key_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
 	}
 	_AT_reply_send();
@@ -542,11 +538,11 @@ static void _AT_set_key_callback(void) {
 	uint8_t idx = 0;
 	// Read key parameter.
 	parser_status = PARSER_get_byte_array(&at_ctx.parser, STRING_CHAR_NULL, SIGFOX_EP_KEY_SIZE_BYTES, 1, sigfox_ep_key, &extracted_length);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Write device ID in NVM.
 	for (idx=0 ; idx<SIGFOX_EP_KEY_SIZE_BYTES ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), sigfox_ep_key[idx]);
-		NVM_stack_exit_error(ERROR_BASE_NVM + nvm_status);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (ERROR_BASE_NVM + nvm_status));
 	}
 	_AT_print_ok();
 	return;
@@ -562,83 +558,53 @@ static void _AT_adc_callback(void) {
 	// Local variables.
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
-	ADC_status_t adc1_status = ADC_SUCCESS;
-	uint32_t voltage_mv = 0;
-	int8_t tmcu_degrees = 0;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
+	int32_t generic_s32 = 0;
 	// Turn analog front-end on.
-	power_status = POWER_enable(POWER_DOMAIN_ANALOG_INTERNAL, LPTIM_DELAY_MODE_ACTIVE);
+	power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_ACTIVE);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Trigger internal ADC conversions.
-	adc1_status = ADC1_perform_measurements();
-	ADC1_stack_exit_error(ERROR_BASE_ADC1 + adc1_status);
-	// Turn analog front-end off.
-	power_status = POWER_disable(POWER_DOMAIN_ANALOG_INTERNAL);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Read and print data.
 	// MCU voltage.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &voltage_mv);
-	ADC1_stack_exit_error(ERROR_BASE_ADC1 + adc1_status);
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
 	_AT_reply_add_string("Vmcu=");
-	_AT_reply_add_value((int32_t) voltage_mv, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("mV ");
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_string("mV");
+	_AT_reply_send();
 	// MCU temperature.
-	adc1_status = ADC1_get_tmcu(&tmcu_degrees);
-	ADC1_stack_exit_error(ERROR_BASE_ADC1 + adc1_status);
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
 	_AT_reply_add_string("Tmcu=");
-	_AT_reply_add_value((int32_t) tmcu_degrees, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
-	_AT_print_ok();
-	return;
-errors:
-	POWER_disable(POWER_DOMAIN_ANALOG_INTERNAL);
-	_AT_print_error(status);
-	return;
-}
-#endif
-
-#if (defined ATM) && (defined AT_COMMAND_SENSORS)
-/*******************************************************************/
-static void _AT_max11136_callback(void) {
-	// Local variables.
-	ERROR_code_t status = SUCCESS;
-	POWER_status_t power_status = POWER_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
-	uint32_t data = 0;
-	// Power on ADC.
-	power_status = POWER_enable(POWER_DOMAIN_ANALOG_EXTERNAL, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Run external ADC conversions.
-	max11136_status = MAX11136_perform_measurements();
-	MAX11136_stack_exit_error(ERROR_BASE_MAX11136 + max11136_status);
-	// Power off ADC.
-	power_status = POWER_disable(POWER_DOMAIN_ANALOG_EXTERNAL);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
 	// Source voltage.
-	_AT_reply_add_string("Vsrc=");
-	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &data);
-	MAX11136_stack_exit_error(ERROR_BASE_MAX11136 + max11136_status);
-	_AT_reply_add_value((int32_t) data, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_string("Vpv=");
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("mV");
 	_AT_reply_send();
 	// Supercap voltage.
 	_AT_reply_add_string("Vcap=");
-	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &data);
-	MAX11136_stack_exit_error(ERROR_BASE_MAX11136 + max11136_status);
-	_AT_reply_add_value((int32_t) data, STRING_FORMAT_DECIMAL, 0);
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("mV");
 	_AT_reply_send();
 	// Light.
 	_AT_reply_add_string("Light=");
-	max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &data);
-	MAX11136_stack_exit_error(ERROR_BASE_MAX11136 + max11136_status);
-	_AT_reply_add_value((int32_t) data, STRING_FORMAT_DECIMAL, 0);
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("%");
 	_AT_reply_send();
+	// Turn analog front-end off.
+	power_status = POWER_disable(POWER_DOMAIN_ANALOG);
+	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
 	_AT_print_ok();
 	return;
 errors:
-	POWER_disable(POWER_DOMAIN_ANALOG_EXTERNAL);
+	POWER_disable(POWER_DOMAIN_ANALOG);
 	_AT_print_error(status);
 	return;
 }
@@ -651,8 +617,7 @@ static void _AT_iths_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
-	int8_t tpcb_degrees = 0;
-	uint8_t hpcb_percent = 0;
+	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -665,16 +630,16 @@ static void _AT_iths_callback(void) {
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tpcb=");
-	sht3x_status = SHT3X_get_temperature(&tpcb_degrees);
+	sht3x_status = SHT3X_get_temperature(&generic_s32);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value((int32_t) tpcb_degrees, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	// Humidity.
 	_AT_reply_add_string("Hpcb=");
-	sht3x_status = SHT3X_get_humidity(&hpcb_percent);
+	sht3x_status = SHT3X_get_humidity(&generic_s32);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value((int32_t) hpcb_percent, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("%");
 	_AT_reply_send();
 	_AT_print_ok();
@@ -693,8 +658,7 @@ static void _AT_eths_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
-	int8_t tamb_degrees = 0;
-	uint8_t hamb_percent = 0;
+	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -707,16 +671,16 @@ static void _AT_eths_callback(void) {
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
-	sht3x_status = SHT3X_get_temperature(&tamb_degrees);
+	sht3x_status = SHT3X_get_temperature(&generic_s32);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value((int32_t) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	// Humidity.
 	_AT_reply_add_string("Hamb=");
-	sht3x_status = SHT3X_get_humidity(&hamb_percent);
+	sht3x_status = SHT3X_get_humidity(&generic_s32);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value((int32_t) hamb_percent, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("%");
 	_AT_reply_send();
 	_AT_print_ok();
@@ -735,8 +699,7 @@ static void _AT_epts_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
-	uint32_t pressure_pa = 0;
-	int8_t tamb_degrees = 0;
+	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -749,16 +712,16 @@ static void _AT_epts_callback(void) {
 	// Read and print data.
 	// Pressure.
 	_AT_reply_add_string("Pabs=");
-	dps310_status = DPS310_get_pressure(&pressure_pa);
+	dps310_status = DPS310_get_pressure(&generic_s32);
 	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
-	_AT_reply_add_value((int32_t) pressure_pa, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("Pa");
 	_AT_reply_send();
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
-	dps310_status = DPS310_get_temperature(&tamb_degrees);
+	dps310_status = DPS310_get_temperature(&generic_s32);
 	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
-	_AT_reply_add_value((int32_t) tamb_degrees, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	_AT_print_ok();
@@ -777,7 +740,7 @@ static void _AT_euvs_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
-	uint8_t uv_index = 0;
+	int32_t uv_index = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -815,7 +778,7 @@ static void _AT_wind_callback(void) {
 	uint32_t wind_direction = 0;
 	// Read enable parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Start or stop wind continuous measurements.
 	if (enable == 0) {
 		WIND_stop_continuous_measure();
@@ -869,7 +832,7 @@ static void _AT_rain_callback(void) {
 	uint8_t rain_mm = 0;
 	// Read enable parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Start or stop rain continuous measurements.
 	if (enable == 0) {
 		RAIN_stop_continuous_measure();
@@ -907,7 +870,7 @@ static void _AT_time_callback(void) {
 	RTC_time_t gps_time;
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Turn GPS on.
 	power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -972,7 +935,7 @@ static void _AT_gps_callback(void) {
 	NEOM8N_position_t gps_position;
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Turn GPS on.
 	power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
@@ -1094,7 +1057,7 @@ static void _AT_sb_callback(void) {
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
 		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &bidir_flag);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update parameters.
 		application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
 #ifdef BIDIRECTIONAL
@@ -1104,7 +1067,7 @@ static void _AT_sb_callback(void) {
 	else {
 		// Try with 1 parameter.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &ul_bit);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update parameters.
 		application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
 #ifdef BIDIRECTIONAL
@@ -1165,7 +1128,7 @@ static void _AT_sf_callback(void) {
 	if (parser_status == PARSER_SUCCESS) {
 		// Try parsing downlink request parameter.
 		parser_status =  PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &bidir_flag);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update parameters.
 		application_message.ul_payload = (sfx_u8*) data;
 		application_message.ul_payload_size_bytes = extracted_length;
@@ -1176,7 +1139,7 @@ static void _AT_sf_callback(void) {
 	else {
 		// Try with 1 parameter.
 		parser_status = PARSER_get_byte_array(&at_ctx.parser, STRING_CHAR_NULL, SIGFOX_UL_PAYLOAD_MAX_SIZE_BYTES, 0, data, &extracted_length);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update parameters.
 		application_message.ul_payload = (sfx_u8*) data;
 		application_message.ul_payload_size_bytes = extracted_length;
@@ -1220,10 +1183,10 @@ static void _AT_tm_callback(void) {
 	int32_t test_mode_reference = 0;
 	// Read bit rate.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, &bit_rate_index);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Read test mode parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &test_mode_reference);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Addon configuration.
 	addon_config.rc = &SIGFOX_RC1;
 	// Test mode parameters.
@@ -1269,7 +1232,7 @@ static void _AT_cw_callback(void) {
 #endif
 	// Read frequency parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, &frequency_hz);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Update radio configuration.
 	radio_params.frequency_hz = (sfx_u32) frequency_hz;
 	// First try with 3 parameters.
@@ -1277,14 +1240,14 @@ static void _AT_cw_callback(void) {
 	if (parser_status == PARSER_SUCCESS) {
 		// There is a third parameter, try to parse power.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &power_dbm);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update radio configuration.
 		radio_params.tx_power_dbm_eirp = (sfx_s8) power_dbm;
 	}
 	else {
 		// Power is not given, try to parse enable as last parameter.
 		parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
-		PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+		PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 		// Update radio configuration.
 		radio_params.tx_power_dbm_eirp = TX_POWER_DBM_EIRP;
 	}
@@ -1327,17 +1290,17 @@ static void _AT_rssi_callback(void) {
 	RF_API_status_t rf_api_status = RF_API_SUCCESS;
 	RF_API_radio_parameters_t radio_params;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	int32_t frequency_hz = 0;
 	int32_t duration_seconds = 0;
 	int16_t rssi_dbm = 0;
 	uint32_t report_loop = 0;
 	// Read frequency parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, AT_CHAR_SEPARATOR, &frequency_hz);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Read duration parameters.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &duration_seconds);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER + parser_status);
+	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Radio configuration.
 	radio_params.rf_mode = RF_API_MODE_RX;
 	radio_params.frequency_hz = (sfx_u32) frequency_hz;
@@ -1354,13 +1317,13 @@ static void _AT_rssi_callback(void) {
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
 	SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);
 	// Wait TS_FS=60us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_stack_exit_error(ERROR_BASE_LPTIM1 + lptim1_status);
+	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
+	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
 	SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);
 	// Wait TS_TR=120us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_stack_exit_error(ERROR_BASE_LPTIM1 + lptim1_status);
+	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
+	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 	// Measurement loop.
 	while (report_loop < ((uint32_t) ((duration_seconds * 1000) / AT_RSSI_REPORT_PERIOD_MS))) {
 		// Read RSSI.
@@ -1372,8 +1335,8 @@ static void _AT_rssi_callback(void) {
 		_AT_reply_add_string("dBm");
 		_AT_reply_send();
 		// Report delay.
-		lptim1_status = LPTIM1_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, LPTIM_DELAY_MODE_ACTIVE);
-		LPTIM1_stack_exit_error(ERROR_BASE_LPTIM1 + lptim1_status);
+		lptim_status = LPTIM_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, LPTIM_DELAY_MODE_ACTIVE);
+		LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 		report_loop++;
 	}
 	// Turn radio off.
@@ -1443,60 +1406,48 @@ errors:
 /*******************************************************************/
 void AT_init(void) {
 	// Local variables.
-#ifdef HW1_0
-	USART_status_t usart2_status = USART_SUCCESS;
-#endif
-#ifdef HW2_0
-	USART_status_t usart1_status = USART_SUCCESS;
-#endif
+	USART_status_t usart_status = USART_SUCCESS;
+	USART_configuration_t usart_config;
 	// Init context.
 	_AT_reset_parser();
 #ifdef SPSWS_WIND_MEASUREMENT
 	at_ctx.wind_measurement_flag = 0;
 #endif
 	// Init USART.
-#ifdef HW1_0
-	usart2_status = USART2_init(&_AT_fill_rx_buffer);
-	USART2_stack_error();
-	USART2_enable_rx();
-#endif
-#ifdef HW2_0
-	usart1_status = USART1_init(&_AT_fill_rx_buffer);
-	USART1_stack_error();
-	USART1_enable_rx();
-#endif
+	usart_config.baud_rate = AT_USART_BAUD_RATE;
+	usart_config.nvic_priority = NVIC_PRIORITY_AT;
+	usart_config.rxne_callback = &_AT_fill_rx_buffer;
+	usart_status = USART_init(AT_USART_INSTANCE, &GPIO_AT_USART, &usart_config);
+	USART_stack_error();
+	// Start reception.
+	usart_status = USART_enable_rx(AT_USART_INSTANCE);
+	USART_stack_error();
 }
 #endif
 
 #ifdef ATM
 /*******************************************************************/
 void AT_task(void) {
+	// Local variables.
+	USART_status_t usart_status = USART_SUCCESS;
 	// Trigger decoding function if line end found.
 	if (at_ctx.line_end_flag != 0) {
+		// Stop reception.
+		usart_status = USART_disable_rx(AT_USART_INSTANCE);
+		USART_stack_error();
 		// Decode and execute command.
-#ifdef HW1_0
-		USART2_disable_rx();
-#endif
-#ifdef HW2_0
-		USART1_disable_rx();
-#endif
 		_AT_decode();
-#ifdef HW1_0
-		USART2_enable_rx();
-#endif
-#ifdef HW2_0
-		USART1_enable_rx();
-#endif
+		// Start reception.
+		usart_status = USART_enable_rx(AT_USART_INSTANCE);
+		USART_stack_error();
 	}
-#ifdef SPSWS_WIND_MEASUREMENT
-	// Check RTC flag for wind measurements.
-	if ((at_ctx.wind_measurement_flag != 0) && (RTC_get_alarm_b_flag() != 0)) {
-		// Call WIND callback.
-		WIND_tick_second();
-		// Clear flag and watchdog.
-		RTC_clear_alarm_b_flag();
-	}
+}
 #endif
+
+#if (defined ATM) && (defined SPSWS_WIND_MEASUREMENT)
+/*******************************************************************/
+uint8_t AT_get_wind_measurement_flag(void) {
+	return (at_ctx.wind_measurement_flag);
 }
 #endif
 

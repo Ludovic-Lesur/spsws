@@ -8,13 +8,11 @@
 #include "rain.h"
 
 #include "at.h"
-#include "error.h"
-#include "error_base.h"
 #include "exti.h"
 #include "gpio.h"
-#include "mapping.h"
+#include "gpio_mapping.h"
 #include "mode.h"
-#include "nvic.h"
+#include "nvic_priority.h"
 #include "types.h"
 
 /*** RAIN local macros ***/
@@ -60,7 +58,7 @@ void RAIN_init(void) {
 	// Init GPIOs and EXTI.
 #ifdef SPSWS_RAIN_MEASUREMENT
 	GPIO_configure(&RAIN_GPIO_DETECT, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&RAIN_GPIO_DETECT, EXTI_TRIGGER_FALLING_EDGE, &_RAIN_edge_callback);
+	EXTI_configure_gpio(&RAIN_GPIO_DETECT, EXTI_TRIGGER_FALLING_EDGE, &_RAIN_edge_callback, NVIC_PRIORITY_RAIN);
 #endif
 #ifdef SPSWS_FLOOD_MEASUREMENT
 	GPIO_configure(&RAIN_GPIO_FLOOD_LEVEL_1, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -74,8 +72,8 @@ void RAIN_init(void) {
 /*******************************************************************/
 void RAIN_start_continuous_measure(void) {
 	// Enable interrupt.
-	EXTI_clear_flag((EXTI_line_t) RAIN_GPIO_DETECT.pin);
-	NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15, NVIC_INTERRUPT_EXTI_4_15);
+	EXTI_clear_gpio_flag(&RAIN_GPIO_DETECT);
+	EXTI_enable_gpio_interrupt(&RAIN_GPIO_DETECT);
 }
 #endif
 
@@ -83,7 +81,7 @@ void RAIN_start_continuous_measure(void) {
 /*******************************************************************/
 void RAIN_stop_continuous_measure(void) {
 	// Disable interrupt.
-	NVIC_disable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
+	EXTI_disable_gpio_interrupt(&RAIN_GPIO_DETECT);
 }
 #endif
 

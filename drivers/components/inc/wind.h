@@ -8,10 +8,9 @@
 #ifndef __WIND_H__
 #define __WIND_H__
 
+#include "analog.h"
 #include "lptim.h"
-#include "mapping.h"
 #include "math.h"
-#include "max11136.h"
 #include "mode.h"
 #include "power.h"
 #include "types.h"
@@ -36,8 +35,8 @@ typedef enum {
 	// Low level drivers errors.
 	WIND_ERROR_BASE_LPTIM1 = 0x0100,
 	WIND_ERROR_BASE_POWER = (WIND_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST),
-	WIND_ERROR_BASE_MAX11136 = (WIND_ERROR_BASE_POWER + POWER_ERROR_BASE_LAST),
-	WIND_ERROR_BASE_MATH = (WIND_ERROR_BASE_MAX11136 + MAX11136_ERROR_BASE_LAST),
+	WIND_ERROR_BASE_ANALOG = (WIND_ERROR_BASE_POWER + POWER_ERROR_BASE_LAST),
+	WIND_ERROR_BASE_MATH = (WIND_ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST),
 	// Last base value.
 	WIND_ERROR_BASE_LAST = (WIND_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
 } WIND_status_t;

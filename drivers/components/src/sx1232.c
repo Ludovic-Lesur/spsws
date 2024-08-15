@@ -7,19 +7,17 @@
 
 #include "sx1232.h"
 
-#include "error.h"
-#include "error_base.h"
 #include "gpio.h"
 #include "lptim.h"
-#include "mapping.h"
+#include "gpio_mapping.h"
 #include "spi.h"
-#include "sx1232_reg.h"
 #include "tim.h"
 #include "types.h"
 
 /*** SX1232 local macros ***/
 
-// SPI transfer.
+// SPI.
+#define SX1232_SPI_INSTANCE						SPI_INSTANCE_SPI1
 #define SX1232_REGISTER_SPI_TRANSFER_SIZE		2
 // RF frequency range.
 #define SX1232_RF_FREQUENCY_HZ_MIN				862000000
@@ -48,6 +46,85 @@
 // SX1232 FIFO.
 #define SX1232_FIFO_SIZE_BYTES					64
 
+#define SX1232_REG_FIFO							0x00
+#define SX1232_REG_OPMODE						0x01
+#define SX1232_REG_BITRATEMSB					0x02
+#define SX1232_REG_BITRATELSB					0x03
+#define SX1232_REG_FDEVMSB						0x04
+#define SX1232_REG_FDEVLSB						0x05
+#define SX1232_REG_FRFMSB						0x06
+#define SX1232_REG_FRFMID						0x07
+#define SX1232_REG_FRFLSB						0x08
+#define SX1232_REG_PACONFIG						0x09
+#define SX1232_REG_PARAMP						0x0A
+#define SX1232_REG_OCP							0x0B
+#define SX1232_REG_LNA							0x0C
+#define SX1232_REG_RXCONFIG						0x0D
+#define SX1232_REG_RSSICONFIG					0x0E
+#define SX1232_REG_RSSICOLLISION				0x0F
+#define SX1232_REG_RSSITHRESH					0x10
+#define SX1232_REG_RSSIVALUE					0x11
+#define SX1232_REG_RXBW							0x12
+#define SX1232_REG_AFCBW						0x13
+#define SX1232_REG_OOKPEAK						0x14
+#define SX1232_REG_OOKFIX						0x15
+#define SX1232_REG_OOKAVG						0x16
+#define SX1232_REG_AFCFEI						0x1A
+#define SX1232_REG_AFCMSB						0x1B
+#define SX1232_REG_AFCLSB						0x1C
+#define SX1232_REG_FEIMSB						0x1D
+#define SX1232_REG_FEILSB						0x1E
+#define SX1232_REG_PREAMBLEDETECT				0x1F
+#define SX1232_REG_RXTIMEOUT1					0x20
+#define SX1232_REG_RXTIMEOUT2					0x21
+#define SX1232_REG_RXTIMEOUT3					0x22
+#define SX1232_REG_RXDELAY						0x23
+#define SX1232_REG_OSC							0x24
+#define SX1232_REG_PREAMBLEMSB					0x25
+#define SX1232_REG_PREAMBLELSB					0x26
+#define SX1232_REG_SYNCCONFIG					0x27
+#define SX1232_REG_SYNCVALUE1					0x28
+#define SX1232_REG_SYNCVALUE2					0x29
+#define SX1232_REG_SYNCVALUE3					0x2A
+#define SX1232_REG_SYNCVALUE4					0x2B
+#define SX1232_REG_SYNCVALUE5					0x2C
+#define SX1232_REG_SYNCVALUE6					0x2D
+#define SX1232_REG_SYNCVALUE7					0x2E
+#define SX1232_REG_SYNCVALUE8					0x2F
+#define SX1232_REG_PACKETCONFIG1				0x30
+#define SX1232_REG_PACKETCONFIG2				0x31
+#define SX1232_REG_PAYLOADLENGTH				0x32
+#define SX1232_REG_NODEADRS						0x33
+#define SX1232_REG_BROADCASTADRS				0x34
+#define SX1232_REG_FIFOTHRESH					0x35
+#define SX1232_REG_SEQCONFIG1					0x36
+#define SX1232_REG_SEQCONFIG2					0x37
+#define SX1232_REG_TIMERRESOL					0x38
+#define SX1232_REG_TIMER1COEF					0x39
+#define SX1232_REG_TIMER2COEF					0x3A
+#define SX1232_REG_IMAGECAL						0x3B
+#define SX1232_REG_TEMP							0x3C
+#define SX1232_REG_LOWBAT						0x3D
+#define SX1232_REG_IRQFLAGS1					0x3E
+#define SX1232_REG_IRQFLAGS2					0x3F
+#define SX1232_REG_DIOMAPPING1					0x40
+#define SX1232_REG_DIOMAPPING2					0x41
+#define SX1232_REG_VERSION						0x42
+#define SX1232_REG_AGCREF						0x43
+#define SX1232_REG_AGCTHRESH1					0x44
+#define SX1232_REG_AGCTHRESH2					0x45
+#define SX1232_REG_AGCTHRESH3					0x46
+#define SX1232_REG_PLLHOP						0x4B
+#define SX1232_REG_PAVALUE						0x4C
+#define SX1232_REG_TCXO							0x58
+#define SX1232_REG_PADAC						0x5A
+#define SX1232_REG_PLL							0x5C
+#define SX1232_REG_PLLLOWPN						0x5E
+#define SX1232_REG_PAMANUAL						0x63
+#define SX1232_REG_FORMERTEMP					0x6C
+#define SX1232_REG_BITRATEFRAC					0x70
+#define SX1232_REG_LAST							0x7F
+
 /*** SX1232 local structures ***/
 
 /*******************************************************************/
@@ -68,7 +145,7 @@ static SX1232_context_t sx1232_ctx;
 SX1232_status_t _SX1232_write_register(uint8_t addr, uint8_t value) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	SPI_status_t spi1_status = SPI_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
 	// Check parameters.
 	if (addr > SX1232_REG_LAST) {
 		status = SX1232_ERROR_REGISTER_ADDRESS;
@@ -79,8 +156,8 @@ SX1232_status_t _SX1232_write_register(uint8_t addr, uint8_t value) {
 	sx1232_ctx.spi_tx_data |= (value << 0);
 	// Write access sequence.
 	GPIO_SX1232_CS_LOW();
-	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
-	SPI1_exit_error(SX1232_ERROR_BASE_SPI1);
+	spi_status = SPI_write_read_16(SX1232_SPI_INSTANCE, &sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
+	SPI_exit_error(SX1232_ERROR_BASE_SPI);
 errors:
 	GPIO_SX1232_CS_HIGH();
 	return status;
@@ -90,7 +167,7 @@ errors:
 SX1232_status_t _SX1232_read_register(uint8_t addr, uint8_t* value) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	SPI_status_t spi1_status = SPI_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
 	// Check parameters.
 	if (addr > SX1232_REG_LAST) {
 		status = SX1232_ERROR_REGISTER_ADDRESS;
@@ -104,8 +181,8 @@ SX1232_status_t _SX1232_read_register(uint8_t addr, uint8_t* value) {
 	sx1232_ctx.spi_tx_data = ((addr & 0x7F) << 8);
 	// Read access sequence.
 	GPIO_SX1232_CS_LOW();
-	spi1_status = SPI1_write_read(&sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
-	SPI1_exit_error(SX1232_ERROR_BASE_SPI1);
+	spi_status = SPI_write_read_16(SX1232_SPI_INSTANCE, &sx1232_ctx.spi_tx_data, &sx1232_ctx.spi_rx_data, 1);
+	SPI_exit_error(SX1232_ERROR_BASE_SPI);
 	// Update value.
 	(*value) = (uint8_t) (sx1232_ctx.spi_rx_data & 0x00FF);
 errors:
@@ -116,36 +193,52 @@ errors:
 /*** SX1232 functions ***/
 
 /*******************************************************************/
-void SX1232_init(void) {
+SX1232_status_t SX1232_init(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
+	SPI_configuration_t spi_config;
 	// Init context.
 	sx1232_ctx.rf_output_pin = SX1232_RF_OUTPUT_PIN_RFO;
 	sx1232_ctx.spi_tx_pa_power_value = ((SX1232_REG_PAVALUE | 0x80) << 8);
 	// Init SPI.
-	SPI1_init();
+	spi_config.baud_rate_prescaler = SPI_BAUD_RATE_PRESCALER_2;
+	spi_config.data_format = SPI_DATA_FORMAT_16_BITS;
+	spi_config.clock_polarity = SPI_CLOCK_POLARITY_LOW;
+	spi_status = SPI_init(SX1232_SPI_INSTANCE, &GPIO_SX1232_SPI, &spi_config);
+	SPI_exit_error(SX1232_ERROR_BASE_SPI);
 	// Configure chip select pin.
 	GPIO_configure(&GPIO_SX1232_CS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_SX1232_CS, 1);
 	// Init SX1232 DIOx.
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_SX1232_DIO2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+errors:
+	return status;
 }
 
 /*******************************************************************/
-void SX1232_de_init(void) {
+SX1232_status_t SX1232_de_init(void) {
+	// Local variables.
+	SX1232_status_t status = SX1232_SUCCESS;
+	SPI_status_t spi_status = SPI_SUCCESS;
 	// Release chip select pin.
 	GPIO_write(&GPIO_SX1232_CS, 0);
 	// Release SX1232 DIOx.
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
 	// Release SPI.
-	SPI1_de_init();
+	spi_status = SPI_de_init(SX1232_SPI_INSTANCE, &GPIO_SX1232_SPI);
+	SPI_exit_error(SX1232_ERROR_BASE_SPI);
+errors:
+	return status;
 }
 
 /*******************************************************************/
 SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Select oscillator.
 	switch (oscillator) {
 	case SX1232_OSCILLATOR_QUARTZ:
@@ -161,8 +254,8 @@ SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator) {
 		goto errors;
 	}
 	// Wait TS_OSC = 250us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(SX1232_OSCILLATOR_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
+	lptim_status = LPTIM_delay_milliseconds(SX1232_OSCILLATOR_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
+	LPTIM_exit_error(SX1232_ERROR_BASE_LPTIM);
 	// Trigger RC oscillator calibration.
 	status = _SX1232_write_register(SX1232_REG_OSC, 0x0F);
 errors:
@@ -463,19 +556,19 @@ errors:
 SX1232_status_t SX1232_start_tx(void) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Start radio.
 	status = SX1232_set_mode(SX1232_MODE_FSTX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
+	lptim_status = LPTIM_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
+	LPTIM_exit_error(SX1232_ERROR_BASE_LPTIM);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_TX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
+	lptim_status = LPTIM_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
+	LPTIM_exit_error(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }
@@ -580,7 +673,7 @@ void __attribute__((optimize("-O0"))) SX1232_set_pa_power_value(uint8_t pa_power
 	sx1232_ctx.spi_tx_pa_power_value |= pa_power_value;
 	// Write access sequence.
 	GPIO_SX1232_CS_LOW();
-	SPI1_write(sx1232_ctx.spi_tx_pa_power_value);
+	SPI_write_16(SX1232_SPI_INSTANCE, sx1232_ctx.spi_tx_pa_power_value);
 	GPIO_SX1232_CS_HIGH();
 }
 
@@ -588,19 +681,19 @@ void __attribute__((optimize("-O0"))) SX1232_set_pa_power_value(uint8_t pa_power
 SX1232_status_t SX1232_start_rx(void) {
 	// Local variables.
 	SX1232_status_t status = SX1232_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Start radio.
 	status = SX1232_set_mode(SX1232_MODE_FSRX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_FS=60us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
+	lptim_status = LPTIM_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
+	LPTIM_exit_error(SX1232_ERROR_BASE_LPTIM);
 	// TX mode.
 	status = SX1232_set_mode(SX1232_MODE_RX);
 	if (status != SX1232_SUCCESS) goto errors;
 	// Wait TS_TR=120us typical.
-	lptim1_status = LPTIM1_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
-	LPTIM1_exit_error(SX1232_ERROR_BASE_LPTIM1);
+	lptim_status = LPTIM_delay_milliseconds(SX1232_STATE_SWITCH_DELAY_MS, LPTIM_DELAY_MODE_SLEEP);
+	LPTIM_exit_error(SX1232_ERROR_BASE_LPTIM);
 errors:
 	return status;
 }

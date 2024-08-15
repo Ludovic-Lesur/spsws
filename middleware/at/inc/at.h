@@ -36,6 +36,17 @@ void AT_init(void);
 void AT_task(void);
 #endif
 
+#if (defined ATM) && (defined SPSWS_WIND_MEASUREMENT)
+/*!******************************************************************
+ * \fn uint8_t AT_get_wind_measurement_flag(void);
+ * \brief Read the wind measurement enable flag.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Wind measurement flag from commands.
+ *******************************************************************/
+uint8_t AT_get_wind_measurement_flag(void);
+#endif
+
 #ifdef ATM
 /*!******************************************************************
  * \fn void AT_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm)

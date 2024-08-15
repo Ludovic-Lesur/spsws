@@ -8,40 +8,33 @@
 // Registers
 #include "rcc_reg.h"
 // Peripherals.
-#include "adc.h"
-#include "aes.h"
-#include "dma.h"
 #include "exti.h"
-#include "flash.h"
 #include "gpio.h"
-#include "i2c.h"
+#include "gpio_mapping.h"
 #include "iwdg.h"
 #include "lptim.h"
-#include "lpuart.h"
-#include "mapping.h"
 #include "nvic.h"
+#include "nvic_priority.h"
 #include "nvm.h"
+#include "nvm_address.h"
 #include "pwr.h"
 #include "rcc.h"
-#include "spi.h"
 #include "rtc.h"
-#include "tim.h"
-#include "usart.h"
 // Utils.
 #include "error.h"
 #include "math.h"
 #include "types.h"
 // Components.
 #include "dps310.h"
-#include "max11136.h"
 #include "neom8n.h"
 #include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
-#include "sky13317.h"
-#include "sx1232.h"
 #include "sigfox_types.h"
 #include "wind.h"
+// Middleware.
+#include "power.h"
+#include "analog.h"
 // Sigfox.
 #include "sigfox_ep_api.h"
 #include "sigfox_rc.h"
@@ -128,11 +121,11 @@ typedef union {
 typedef union {
 	struct {
 #ifdef SPSWS_FLOOD_MEASUREMENT
-		unsigned unused : 1;
 		unsigned flood_alarm : 1;
 #else
-		unsigned unused : 2;
+		unsigned unused : 1;
 #endif
+		unsigned tick_second : 1;
 		unsigned fixed_hour_alarm : 1;
 		unsigned wake_up : 1;
 		unsigned is_afternoon : 1;
@@ -258,7 +251,7 @@ typedef union {
 typedef struct {
 	// Global.
 	SPSWS_state_t state;
-	SPSWS_flags_t flags;
+	volatile SPSWS_flags_t flags;
 	// Wake-up management.
 	RTC_time_t current_time;
 	RTC_time_t previous_wake_up_time;
@@ -325,35 +318,12 @@ static void _SPSWS_reset_measurements(void) {
 }
 
 /*******************************************************************/
-static void _SPSWS_init_context(void) {
-	// Init context.
-	spsws_ctx.state = SPSWS_STATE_STARTUP;
-	spsws_ctx.flags.all = 0;
-	spsws_ctx.flags.por = 1;
-	spsws_ctx.geoloc_fix_duration_seconds = 0;
-	spsws_ctx.seconds_counter = 0;
-	spsws_ctx.status.all = 0;
-#ifdef SPSWS_FLOOD_MEASUREMENT
-	spsws_ctx.flood_level = 0;
-	spsws_ctx.flood_level_change_count = 0;
-#endif
-	// Init station mode.
-#if (defined SPSWS_WIND_MEASUREMENT) || (defined SPSWS_RAIN_MEASUREMENT)
-	spsws_ctx.status.station_mode = 0b1;
-#else
-	spsws_ctx.status.station_mode = 0b0;
-#endif
-	// Reset measurements.
-	_SPSWS_reset_measurements();
-}
-
-/*******************************************************************/
 static void _SPSWS_update_clocks(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	uint8_t clock_status = 0;
 	// Calibrate clocks.
-	rcc_status = RCC_calibrate();
+	rcc_status = RCC_calibrate(NVIC_PRIORITY_CLOCK_CALIBRATION);
 	RCC_stack_error();
 	// Update clock status.
 	rcc_status = RCC_get_status(RCC_CLOCK_LSI, &clock_status);
@@ -362,57 +332,6 @@ static void _SPSWS_update_clocks(void) {
 	rcc_status = RCC_get_status(RCC_CLOCK_LSE, &clock_status);
 	RCC_stack_error();
 	spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
-}
-
-/*******************************************************************/
-static void _SPSWS_init_hw(void) {
-	// Local variables.
-	RCC_status_t rcc_status = RCC_SUCCESS;
-	NVM_status_t nvm_status = NVM_SUCCESS;
-	RTC_status_t rtc_status = RTC_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-#ifndef DEBUG
-	IWDG_status_t iwdg_status = IWDG_SUCCESS;
-#endif
-	uint8_t device_id_lsbyte = 0;
-	// Init error stack
-	ERROR_stack_init();
-	// Init memory.
-	NVIC_init();
-	// Init power module and clock tree.
-	PWR_init();
-	RCC_init();
-	// Init GPIOs.
-	GPIO_init();
-	EXTI_init();
-#ifndef DEBUG
-	// Start independent watchdog.
-	iwdg_status = IWDG_init();
-	IWDG_stack_error();
-#endif
-	// High speed oscillator.
-	rcc_status = RCC_switch_to_hsi();
-	RCC_stack_error();
-	// Calibrate and update clock status.
-	_SPSWS_update_clocks();
-	// Read LS byte of the device ID to add a random delay in RTC alarm.
-	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + SIGFOX_EP_ID_SIZE_BYTES - 1), &device_id_lsbyte);
-	NVM_stack_error();
-	rtc_status = RTC_init(device_id_lsbyte);
-	RTC_stack_error();
-	// Internal.
-	lptim1_status = LPTIM1_init();
-	LPTIM1_stack_error();
-	// Init continuous measurements drivers.
-	POWER_init();
-#ifdef SPSWS_WIND_MEASUREMENT
-	WIND_init();
-#endif
-#ifdef SPSWS_RAIN_MEASUREMENT
-	RAIN_init();
-#endif
-	// Init LED pin.
-	GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 }
 
 /*******************************************************************/
@@ -584,6 +503,106 @@ static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* appl
 }
 #endif
 
+/*******************************************************************/
+static void _SPSWS_tick_second_callback(void) {
+	// Update context.
+	spsws_ctx.flags.tick_second = 1;
+}
+
+/*******************************************************************/
+static void _SPSWS_fixed_hour_alarm_callback(void) {
+	// Update context.
+	spsws_ctx.flags.fixed_hour_alarm = 1;
+	spsws_ctx.flags.wake_up = 1;
+}
+
+/*******************************************************************/
+static void _SPSWS_init_context(void) {
+	// Init context.
+	spsws_ctx.state = SPSWS_STATE_STARTUP;
+	spsws_ctx.flags.all = 0;
+	spsws_ctx.flags.por = 1;
+	spsws_ctx.geoloc_fix_duration_seconds = 0;
+	spsws_ctx.seconds_counter = 0;
+	spsws_ctx.status.all = 0;
+#ifdef SPSWS_FLOOD_MEASUREMENT
+	spsws_ctx.flood_level = 0;
+	spsws_ctx.flood_level_change_count = 0;
+#endif
+	// Init station mode.
+#if (defined SPSWS_WIND_MEASUREMENT) || (defined SPSWS_RAIN_MEASUREMENT)
+	spsws_ctx.status.station_mode = 0b1;
+#else
+	spsws_ctx.status.station_mode = 0b0;
+#endif
+	// Reset measurements.
+	_SPSWS_reset_measurements();
+}
+
+/*******************************************************************/
+static void _SPSWS_init_hw(void) {
+	// Local variables.
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	NVM_status_t nvm_status = NVM_SUCCESS;
+	RTC_status_t rtc_status = RTC_SUCCESS;
+#ifndef DEBUG
+	IWDG_status_t iwdg_status = IWDG_SUCCESS;
+#endif
+	RTC_alarm_configuration_t rtc_alarm_config;
+	uint8_t device_id_lsbyte = 0;
+	// Init error stack
+	ERROR_stack_init();
+	// Init memory.
+	NVIC_init();
+	// Init power module and clock tree.
+	PWR_init();
+	rcc_status = RCC_init(NVIC_PRIORITY_CLOCK);
+	RCC_stack_error();
+	// Init GPIOs.
+	GPIO_init();
+	EXTI_init();
+#ifndef DEBUG
+	// Start independent watchdog.
+	iwdg_status = IWDG_init();
+	IWDG_stack_error();
+#endif
+	// High speed oscillator.
+	rcc_status = RCC_switch_to_hsi();
+	RCC_stack_error();
+	// Calibrate and update clock status.
+	_SPSWS_update_clocks();
+	// Init RTC.
+	rtc_status = RTC_init(&_SPSWS_tick_second_callback, NVIC_PRIORITY_RTC);
+	RTC_stack_error();
+	// Read LS byte of the device ID to add a random delay in RTC alarm.
+	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + SIGFOX_EP_ID_SIZE_BYTES - 1), &device_id_lsbyte);
+	NVM_stack_error();
+	// Init RTC alarm.
+	rtc_alarm_config.mode = RTC_ALARM_MODE_DATE;
+	rtc_alarm_config.date.mask = 1;
+	rtc_alarm_config.date.value = 0;
+	rtc_alarm_config.hours.mask = 1;
+	rtc_alarm_config.hours.value = 0;
+	rtc_alarm_config.minutes.mask = 0;
+	rtc_alarm_config.minutes.value = 0;
+	rtc_alarm_config.seconds.mask = 0;
+	rtc_alarm_config.seconds.value = (device_id_lsbyte % 60) & 0x7F;
+	rtc_status = RTC_start_alarm(RTC_ALARM_A, &rtc_alarm_config, &_SPSWS_fixed_hour_alarm_callback);
+	RTC_stack_error();
+	// Internal.
+	LPTIM_init(NVIC_PRIORITY_DELAY);
+	// Init continuous measurements drivers.
+	POWER_init();
+#ifdef SPSWS_WIND_MEASUREMENT
+	WIND_init();
+#endif
+#ifdef SPSWS_RAIN_MEASUREMENT
+	RAIN_init();
+#endif
+	// Init LED pin.
+	GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+}
+
 /*** SPSWS main function ***/
 
 #ifndef ATM
@@ -594,18 +613,17 @@ int main (void) {
 	_SPSWS_init_hw();
 	// Local variables.
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	ADC_status_t adc1_status = ADC_SUCCESS;
+	ANALOG_status_t analog_status = ADC_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
 	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
 	SIGFOX_EP_API_application_message_t application_message;
 	ERROR_code_t error_code = 0;
-	int8_t temperature = 0;
 	uint8_t generic_u8 = 0;
+	int32_t generic_s32 = 0;
 	uint32_t generic_u32_1 = 0;
 	uint8_t idx = 0;
 #ifdef SPSWS_WIND_MEASUREMENT
@@ -678,7 +696,7 @@ int main (void) {
 				}
 			}
 			else {
-				// Intermediate measure wake-up.
+				// Intermediate analog wake-up.
 				spsws_ctx.state = SPSWS_STATE_MEASURE;
 #ifdef SPSWS_FLOOD_MEASUREMENT
 				// Calibrate clocks if alarm has to be sent.
@@ -701,7 +719,7 @@ int main (void) {
 			// Calibrate RTC if time is available.
 			if (neom8n_status == NEOM8N_SUCCESS) {
 				// Update RTC registers.
-				rtc_status = RTC_calibrate(&spsws_ctx.current_time);
+				rtc_status = RTC_set_time(&spsws_ctx.current_time);
 				RTC_stack_error();
 				// Update PWUT when first calibration.
 				if (spsws_ctx.status.first_rtc_calibration == 0) {
@@ -713,7 +731,8 @@ int main (void) {
 			}
 			else {
 				// In POR case, to avoid wake-up directly after RTC calibration (alarm A will occur during the first GPS time acquisition because of the RTC reset and the random delay).
-				RTC_clear_alarm_a_flag();
+				spsws_ctx.flags.fixed_hour_alarm = 0;
+				spsws_ctx.flags.wake_up = 0;
 			}
 			// Send error stack at start
 			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;
@@ -721,31 +740,25 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			IWDG_reload();
 			// Retrieve internal ADC data.
-			power_status = POWER_enable(POWER_DOMAIN_ANALOG_INTERNAL, LPTIM_DELAY_MODE_SLEEP);
+			power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
 			POWER_stack_error();
-			adc1_status = ADC1_perform_measurements();
-			ADC1_stack_error();
-			power_status = POWER_disable(POWER_DOMAIN_ANALOG_INTERNAL);
-			POWER_stack_error();
-			// Check status.
-			if (adc1_status == ADC_SUCCESS) {
-				// Read data.
-				adc1_status = ADC1_get_tmcu(&temperature);
-				ADC1_stack_error();
-				if (adc1_status == ADC_SUCCESS) {
-					// Convert to 1-complement.
-					math_status = MATH_int32_to_signed_magnitude(temperature, 7, &generic_u32_1);
-					MATH_stack_error();
-					if (math_status == MATH_SUCCESS) {
-						spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_u32_1;
-						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
-					}
-				}
-				adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_u32_1);
-				ADC1_stack_error();
-				if (adc1_status == ADC_SUCCESS) {
-					spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
+			// MCU voltage.
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
+			ANALOG_stack_error();
+			if (analog_status == ANALOG_SUCCESS) {
+				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = (uint16_t) generic_s32;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
+			}
+			// MCU temperature.
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32);
+			ANALOG_stack_error();
+			if (analog_status == ANALOG_SUCCESS) {
+				// Convert to 1-complement.
+				math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
+				MATH_stack_error();
+				if (math_status == MATH_SUCCESS) {
+					spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_u32_1;
+					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
 				}
 			}
 			IWDG_reload();
@@ -753,35 +766,26 @@ int main (void) {
 			// Note: digital sensors power supply must also be enabled at this step to power the LDR.
 			power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
-			power_status = POWER_enable(POWER_DOMAIN_ANALOG_EXTERNAL, LPTIM_DELAY_MODE_STOP);
-			POWER_stack_error();
-			max11136_status = MAX11136_perform_measurements();
-			MAX11136_stack_error();
-			power_status = POWER_disable(POWER_DOMAIN_ANALOG_EXTERNAL);
-			POWER_stack_error();
-			// Check status.
-			if (max11136_status == MAX11136_SUCCESS) {
-				// Read data.
-				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VSRC_MV, &generic_u32_1);
-				MAX11136_stack_error();
-				if (max11136_status == MAX11136_SUCCESS) {
-					spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
-				}
-				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_VCAP_MV, &generic_u32_1);
-				MAX11136_stack_error();
-				spsws_ctx.sigfox_monitoring_data.vcap_mv = (max11136_status == MAX11136_SUCCESS) ? (uint16_t) generic_u32_1 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
-				max11136_status = MAX11136_get_data(MAX11136_DATA_INDEX_LDR_PERCENT, &generic_u32_1);
-				MAX11136_stack_error();
-				if (max11136_status == MAX11136_SUCCESS) {
-					spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
-				}
+			// Solar cell voltage.
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32);
+			ANALOG_stack_error();
+			if (analog_status == ANALOG_SUCCESS) {
+				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_s32;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
 			}
-			else {
-				// Set error value for VCAP.
-				spsws_ctx.sigfox_monitoring_data.vcap_mv = SPSWS_ERROR_VALUE_ANALOG_12BITS;
+			// Supercap voltage.
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32);
+			ANALOG_stack_error();
+			spsws_ctx.sigfox_monitoring_data.vcap_mv = (analog_status == ANALOG_SUCCESS) ? (uint16_t) generic_s32 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
+			// Light sensor.
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32);
+			ANALOG_stack_error();
+			if (analog_status == ANALOG_SUCCESS) {
+				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_s32;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
 			}
+			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
+			POWER_stack_error();
 			IWDG_reload();
 			// Internal temperature/humidity sensor.
 			sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
@@ -789,52 +793,52 @@ int main (void) {
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
 				// Read data.
-				sht3x_status = SHT3X_get_temperature(&temperature);
+				sht3x_status = SHT3X_get_temperature(&generic_s32);
 				SHT3X_stack_error();
 				if (sht3x_status == SHT3X_SUCCESS) {
-					math_status = MATH_int32_to_signed_magnitude(temperature, 7, &generic_u32_1);
+					math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
 					MATH_stack_error();
 					if (math_status == MATH_SUCCESS) {
 						spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_u32_1;
 						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
+#ifdef HW1_0
+						spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
+						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
+#endif
 					}
 				}
-				sht3x_status = SHT3X_get_humidity(&generic_u8);
+				sht3x_status = SHT3X_get_humidity(&generic_s32);
 				SHT3X_stack_error();
 				if (sht3x_status == SHT3X_SUCCESS) {
-					spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = generic_u8;
+					spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = (uint8_t) generic_s32;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hpcb_percent);
+#ifdef HW1_0
+					spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = (uint8_t) generic_s32;
+					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
+#endif
 				}
 			}
 			IWDG_reload();
-			// External temperature/humidity sensor.
-#ifdef HW1_0
-			if (sht3x_status == SHT3X_SUCCESS) {
-				spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_u8;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
-			}
-#endif
 #ifdef HW2_0
+			// External temperature/humidity sensor.
 			sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
 			SHT3X_stack_error();
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				sht3x_status = SHT3X_get_temperature(&temperature);
+				sht3x_status = SHT3X_get_temperature(&generic_s32);
 				SHT3X_stack_error();
 				if (sht3x_status == SHT3X_SUCCESS) {
-					math_status = MATH_int32_to_signed_magnitude(temperature, 7, &generic_u32_1);
+					math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
 					MATH_stack_error();
 					if (math_status == MATH_SUCCESS) {
 						spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
 						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 					}
 				}
-				sht3x_status = SHT3X_get_humidity(&generic_u8);
+				sht3x_status = SHT3X_get_humidity(&generic_s32);
 				SHT3X_stack_error();
 				if (sht3x_status == SHT3X_SUCCESS) {
-					spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_u8;
+					spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_s32;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 				}
 			}
@@ -846,10 +850,10 @@ int main (void) {
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
 				// Read data.
-				dps310_status = DPS310_get_pressure(&generic_u32_1);
+				dps310_status = DPS310_get_pressure(&generic_s32);
 				DPS310_stack_error();
 				if (dps310_status == DPS310_SUCCESS) {
-					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (generic_u32_1 / 10);
+					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32 / 10);
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 				}
 			}
@@ -862,10 +866,10 @@ int main (void) {
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
-				si1133_status = SI1133_get_uv_index(&generic_u8);
+				si1133_status = SI1133_get_uv_index(&generic_s32);
 				SI1133_stack_error();
 				if (si1133_status == SI1133_SUCCESS) {
-					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = generic_u8;
+					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
 				}
 			}
@@ -1014,8 +1018,8 @@ int main (void) {
 				// Read error stack.
 				for (idx=0 ; idx<(SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE / 2) ; idx++) {
 					error_code = ERROR_stack_read();
-					spsws_ctx.sigfox_error_stack_data[(2 * idx) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
-					spsws_ctx.sigfox_error_stack_data[(2 * idx) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
+					spsws_ctx.sigfox_error_stack_data[(idx << 1) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
+					spsws_ctx.sigfox_error_stack_data[(idx << 1) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
 				}
 				// Send frame.
 				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_600BPS;
@@ -1048,8 +1052,8 @@ int main (void) {
 			IWDG_reload();
 			PWR_enter_stop_mode();
 			IWDG_reload();
-			// Check RTC alarm B flag (set every second).
-			if (RTC_get_alarm_b_flag() != 0) {
+			// Check RTC wake-up flag.
+			if (spsws_ctx.flags.tick_second != 0) {
 #ifdef SPSWS_WIND_MEASUREMENT
 				wind_status = WIND_tick_second();
 				WIND_stack_error();
@@ -1078,14 +1082,7 @@ int main (void) {
 					// Wake-up for single measurement.
 					spsws_ctx.flags.wake_up = 1;
 				}
-				RTC_clear_alarm_b_flag();
-			}
-			// Check RTC alarm A flag (set every fixed hour).
-			if (RTC_get_alarm_a_flag() != 0) {
-				// Clear RTC flags and set local flag.
-				spsws_ctx.flags.fixed_hour_alarm = 1;
-				spsws_ctx.flags.wake_up = 1;
-				RTC_clear_alarm_a_flag();
+				spsws_ctx.flags.tick_second = 0;
 			}
 			// Wake-up if required.
 			if (spsws_ctx.flags.wake_up != 0) {
@@ -1126,6 +1123,18 @@ int main (void) {
 		// Perform AT command parsing.
 		AT_task();
 		IWDG_reload();
+#ifdef SPSWS_WIND_MEASUREMENT
+		// Check RTC flag for wind measurements.
+		if (spsws_ctx.flags.tick_second != 0) {
+			// Clear flag.
+			spsws_ctx.flags.tick_second = 0;
+			// Process wind driver if needed.
+			if (AT_get_wind_measurement_flag() != 0) {
+				// Call WIND callback.
+				WIND_tick_second();
+			}
+		}
+#endif
 	}
 	return 0;
 }

@@ -7,20 +7,55 @@
 
 #include "dps310.h"
 
-#include "dps310_reg.h"
-#include "error.h"
-#include "error_base.h"
+#include "gpio_mapping.h"
 #include "i2c.h"
 #include "math.h"
 #include "types.h"
 
 /*** DPS310 local macros ***/
 
+#define DPS310_I2C_INSTANCE					I2C_INSTANCE_I2C1
+
 #define DPS310_SUB_DELAY_MS					10
 #define DPS310_TIMEOUT_MS					2000
 #define DPS310_SAMPLING_FACTOR_KT			524288
 #define DPS310_SAMPLING_FACTOR_KP			1572864
 #define DPS310_NUMBER_OF_COEF_REGISTERS		18
+
+#define DPS310_REG_PRS_B2					0x00
+#define DPS310_REG_PRS_B1					0x01
+#define DPS310_REG_PRS_B0					0x02
+#define DPS310_REG_TMP_B2					0x03
+#define DPS310_REG_TMP_B1					0x04
+#define DPS310_REG_TMP_B0					0x05
+#define DPS310_REG_PRS_CFG					0x06
+#define DPS310_REG_TMP_CFG					0x07
+#define DPS310_REG_MEAS_CFG					0x08
+#define DPS310_REG_CFG_REG					0x09
+#define DPS310_REG_INT_STS					0x0A
+#define DPS310_REG_FIFO_STS					0x0B
+#define DPS310_REG_RESET					0x0C
+#define DPS310_REG_PRODUCT_ID				0x0D
+#define DPS310_REG_COEF_C0B					0x10
+#define DPS310_REG_COEF_C0A_C1B				0x11
+#define DPS310_REG_COEF_C1A					0x12
+#define DPS310_REG_COEF_C00C				0x13
+#define DPS310_REG_COEF_C00B				0x14
+#define DPS310_REG_COEF_C00A_C10C			0x15
+#define DPS310_REG_COEF_C10B				0x16
+#define DPS310_REG_COEF_C10A				0x17
+#define DPS310_REG_COEF_C01B				0x18
+#define DPS310_REG_COEF_C01A				0x19
+#define DPS310_REG_COEF_C11B				0x1A
+#define DPS310_REG_COEF_C11A				0x1B
+#define DPS310_REG_COEF_C20B				0x1C
+#define DPS310_REG_COEF_C20A				0x1D
+#define DPS310_REG_COEF_C21B				0x1E
+#define DPS310_REG_COEF_C21A				0x1F
+#define DPS310_REG_COEF_C30B				0x20
+#define DPS310_REG_COEF_C30A				0x21
+#define DPS310_REG_COEF_COEF_SRCE			0x28
+#define DPS310_REG_LAST						0x29
 
 /*** DPS310 local structures ***/
 
@@ -52,7 +87,7 @@ static DPS310_context_t dps310_ctx = {.coef_ready_flag = 0};
 static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t register_address, uint8_t value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c1_status = I2C_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	uint8_t register_write_command[2] = {register_address, value};
 	// Check parameters.
 	if (register_address >= DPS310_REG_LAST) {
@@ -60,8 +95,8 @@ static DPS310_status_t _DPS310_write_register(uint8_t i2c_address, uint8_t regis
 		goto errors;
 	}
 	// I2C transfer.
-	i2c1_status = I2C1_write(i2c_address, register_write_command, 2, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
+	i2c_status = I2C_write(DPS310_I2C_INSTANCE, i2c_address, register_write_command, 2, 1);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
 }
@@ -70,7 +105,7 @@ errors:
 static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t register_address, uint8_t* value) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c1_status = I2C_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	uint8_t local_addr = register_address;
 	// Check parameters.
 	if (register_address >= DPS310_REG_LAST) {
@@ -82,10 +117,10 @@ static DPS310_status_t _DPS310_read_register(uint8_t i2c_address, uint8_t regist
 		goto errors;
 	}
 	// I2C transfer.
-	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
-	i2c1_status = I2C1_read(i2c_address, value, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
+	i2c_status = I2C_write(DPS310_I2C_INSTANCE, i2c_address, &local_addr, 1, 1);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
+	i2c_status = I2C_read(DPS310_I2C_INSTANCE, i2c_address, value, 1);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
 errors:
 	return status;
 }
@@ -94,7 +129,7 @@ errors:
 static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_address, uint8_t bit_index, DPS310_status_t timeout_error) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	uint8_t reg_value = 0;
 	uint32_t loop_count_ms = 0;
 	// Check parameters.
@@ -112,8 +147,8 @@ static DPS310_status_t _DPS310_wait_flag(uint8_t i2c_address, uint8_t register_a
 	// Wait for flag to be set.
 	while ((reg_value & (0b1 << bit_index)) == 0) {
 		// Low power delay.
-		lptim1_status = LPTIM1_delay_milliseconds(DPS310_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
-		LPTIM1_exit_error(DPS310_ERROR_BASE_LPTIM1);
+		lptim_status = LPTIM_delay_milliseconds(DPS310_SUB_DELAY_MS, LPTIM_DELAY_MODE_STOP);
+		LPTIM_exit_error(DPS310_ERROR_BASE_LPTIM);
 		// Exit if timeout.
 		loop_count_ms += DPS310_SUB_DELAY_MS;
 		if (loop_count_ms > DPS310_TIMEOUT_MS) {
@@ -132,7 +167,7 @@ errors:
 static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
-	I2C_status_t i2c1_status = I2C_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t local_addr = DPS310_REG_COEF_C0B;
 	uint8_t idx = 0;
@@ -152,10 +187,10 @@ static DPS310_status_t _DPS310_read_calibration_coefficients(uint8_t i2c_address
 	status = _DPS310_wait_flag(i2c_address, DPS310_REG_MEAS_CFG, 7, DPS310_ERROR_COEFFICIENTS_TIMEOUT);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Read all coefficients with auto-increment method.
-	i2c1_status = I2C1_write(i2c_address, &local_addr, 1, 1);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
-	i2c1_status = I2C1_read(i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
-	I2C1_exit_error(DPS310_ERROR_BASE_I2C1);
+	i2c_status = I2C_write(DPS310_I2C_INSTANCE, i2c_address, &local_addr, 1, 1);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
+	i2c_status = I2C_read(DPS310_I2C_INSTANCE, i2c_address, coef_registers, DPS310_NUMBER_OF_COEF_REGISTERS);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
 	if (status != DPS310_SUCCESS) goto errors;
 	// Compute coefficients.
 	c0 |= (coef_registers[0] << 4) | ((coef_registers[1] & 0xF0) >> 4);
@@ -271,6 +306,30 @@ errors:
 /*** DPS310 functions ***/
 
 /*******************************************************************/
+DPS310_status_t DPS310_init(void) {
+	// Local variables.
+	DPS310_status_t status = DPS310_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
+	// Init I2C.
+	i2c_status = I2C_init(DPS310_I2C_INSTANCE, &GPIO_SENSORS_I2C);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
+errors:
+	return status;
+}
+
+/*******************************************************************/
+DPS310_status_t DPS310_de_init(void) {
+	// Local variables.
+	DPS310_status_t status = DPS310_SUCCESS;
+	I2C_status_t i2c_status = I2C_SUCCESS;
+	// Init I2C.
+	i2c_status = I2C_de_init(DPS310_I2C_INSTANCE, &GPIO_SENSORS_I2C);
+	I2C_exit_error(DPS310_ERROR_BASE_I2C);
+errors:
+	return status;
+}
+
+/*******************************************************************/
 DPS310_status_t DPS310_perform_measurements(uint8_t i2c_address) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
@@ -291,7 +350,7 @@ errors:
 }
 
 /*******************************************************************/
-DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa) {
+DPS310_status_t DPS310_get_pressure(int32_t* pressure_pa) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	int64_t psr_temp = 0;
@@ -310,13 +369,13 @@ DPS310_status_t DPS310_get_pressure(uint32_t* pressure_pa) {
 	last_term = (dps310_ctx.prs_raw * last_term) / DPS310_SAMPLING_FACTOR_KP;
 	last_term = (dps310_ctx.tmp_raw * last_term) / DPS310_SAMPLING_FACTOR_KT;
 	psr_temp += last_term;
-	(*pressure_pa) = (uint32_t) psr_temp;
+	(*pressure_pa) = (int32_t) psr_temp;
 errors:
 	return status;
 }
 
 /*******************************************************************/
-DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees) {
+DPS310_status_t DPS310_get_temperature(int32_t* temperature_degrees) {
 	// Local variables.
 	DPS310_status_t status = DPS310_SUCCESS;
 	int64_t tmp_temp = 0;
@@ -327,7 +386,7 @@ DPS310_status_t DPS310_get_temperature(int8_t* temperature_degrees) {
 	}
 	// Compute temperature in degrees.
 	tmp_temp = (dps310_ctx.coef_c0 / 2) + (dps310_ctx.coef_c1 * dps310_ctx.tmp_raw) / DPS310_SAMPLING_FACTOR_KT;
-	(*temperature_degrees) = (uint8_t) tmp_temp;
+	(*temperature_degrees) = (int32_t) tmp_temp;
 errors:
 	return status;
 }

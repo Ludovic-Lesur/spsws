@@ -13,6 +13,10 @@
 #include "spi.h"
 #include "types.h"
 
+/*** MAX11136 macros ***/
+
+#define MAX11136_FULL_SCALE		4095
+
 /*** MAX11136 structures ***/
 
 /*!******************************************************************
@@ -23,56 +27,53 @@ typedef enum {
 	// Driver errors.
 	MAX11136_SUCCESS = 0,
 	MAX11136_ERROR_NULL_PARAMETER,
+	MAX11136_ERROR_CHANNEL,
 	MAX11136_ERROR_REGISTER_ADDRESS,
 	MAX11136_ERROR_TIMEOUT,
 	MAX11136_ERROR_CONVERSION,
-	MAX11136_ERROR_DATA_INDEX,
+	MAX11136_ERROR_OUTPUT_CHANNEL,
 	// Low level drivers errors.
-#ifdef HW1_0
-	MAX11136_ERROR_BASE_SPI1 = 0x0100,
-	MAX11136_ERROR_BASE_LPTIM1 = (MAX11136_ERROR_BASE_SPI1 + SPI_ERROR_BASE_LAST),
-#endif
-#ifdef HW2_0
-	MAX11136_ERROR_BASE_SPI2 = 0x0100,
-	MAX11136_ERROR_BASE_LPTIM1 = (MAX11136_ERROR_BASE_SPI2 + SPI_ERROR_BASE_LAST),
-#endif
+	MAX11136_ERROR_BASE_SPI = 0x0100,
+	MAX11136_ERROR_BASE_LPTIM = (MAX11136_ERROR_BASE_SPI + SPI_ERROR_BASE_LAST),
 	// Last base value.
-	MAX11136_ERROR_BASE_LAST = (MAX11136_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST)
+	MAX11136_ERROR_BASE_LAST = (MAX11136_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
 } MAX11136_status_t;
 
 /*!******************************************************************
- * \enum MAX11136_data_index_t
- * \brief MAX11136 data indexes.
+ * \enum MAX11136_channel_t
+ * \brief MAX11136 channels list.
  *******************************************************************/
 typedef enum {
-	MAX11136_DATA_INDEX_VSRC_MV,
-	MAX11136_DATA_INDEX_VCAP_MV,
-	MAX11136_DATA_INDEX_LDR_PERCENT,
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-	MAX11136_DATA_INDEX_WIND_DIRECTION_RATIO,
-#endif
-	MAX11136_DATA_INDEX_LAST
-} MAX11136_data_index_t;
+	MAX11136_CHANNEL_AIN0 = 0,
+	MAX11136_CHANNEL_AIN1,
+	MAX11136_CHANNEL_AIN2,
+	MAX11136_CHANNEL_AIN3,
+	MAX11136_CHANNEL_AIN4,
+	MAX11136_CHANNEL_AIN5,
+	MAX11136_CHANNEL_AIN6,
+	MAX11136_CHANNEL_AIN7,
+	MAX11136_CHANNEL_LAST
+} MAX11136_channel_t;
 
 /*** MAX11136 functions ***/
 
 /*!******************************************************************
- * \fn void MAX11136_init(void)
+ * \fn MAX11136_status_t MAX11136_init(void)
  * \brief Init MAX11136 driver.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void MAX11136_init(void);
+MAX11136_status_t MAX11136_init(void);
 
 /*!******************************************************************
- * \fn void MAX11136_de_init_init(void)
+ * \fn MAX11136_status_t MAX11136_de_init_init(void)
  * \brief Release MAX11136 driver.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void MAX11136_de_init(void);
+MAX11136_status_t MAX11136_de_init(void);
 
 /*!******************************************************************
  * \fn MAX11136_status_t MAX11136_perform_measurements(void)
@@ -81,16 +82,7 @@ void MAX11136_de_init(void);
  * \param[out] 	none
  * \retval		Function execution status.
  *******************************************************************/
-MAX11136_status_t MAX11136_perform_measurements(void);
-
-/*!******************************************************************
- * \fn MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, uint32_t* data)
- * \brief Read MAX11136 conversion data.
- * \param[in]  	data_idx: Data to read.
- * \param[out] 	data: Pointer to integer that will contain the result.
- * \retval		Function execution status.
- *******************************************************************/
-MAX11136_status_t MAX11136_get_data(MAX11136_data_index_t data_idx, uint32_t* data);
+MAX11136_status_t MAX11136_convert_channel(MAX11136_channel_t channel, uint16_t* adc_data_12bits);
 
 /*******************************************************************/
 #define MAX11136_exit_error(error_base) { if (max11136_status != MAX11136_SUCCESS) { status = (error_base + max11136_status); goto errors; } }

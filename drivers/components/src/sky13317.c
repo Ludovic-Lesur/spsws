@@ -8,7 +8,7 @@
 #include "sky13317.h"
 
 #include "gpio.h"
-#include "mapping.h"
+#include "gpio_mapping.h"
 
 /*** SKY13317 functions ***/
 

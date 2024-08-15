@@ -58,23 +58,20 @@
 									<listOptionValue builtIn="false" value="TX_POWER_DBM_EIRP=14"/>
 									<listOptionValue builtIn="false" value="T_IFU_MS=1000"/>
 									<listOptionValue builtIn="false" value="MESSAGE_COUNTER_ROLLOVER=4096"/>
-									<listOptionValue builtIn="false" value="PARAMETERS_CHECK"/>
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
-									<listOptionValue builtIn="false" value="STM32L0XX_REGISTERS_MCU_CATEGORY=2"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_DEPTH=32"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SUCCESS_VALUE=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_PRECISION=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SIGFOX"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_COS_TABLE"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_SIN_TABLE"/>
+									<listOptionValue builtIn="false" value="PARAMETERS_CHECK"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1917242069" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/stm32l0xx-registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/stm32l0xx-drivers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/sigfox/sigfox-ep-lib/inc&quot;"/>
@@ -96,23 +93,20 @@
 									<listOptionValue builtIn="false" value="TX_POWER_DBM_EIRP=14"/>
 									<listOptionValue builtIn="false" value="T_IFU_MS=1000"/>
 									<listOptionValue builtIn="false" value="MESSAGE_COUNTER_ROLLOVER=4096"/>
-									<listOptionValue builtIn="false" value="PARAMETERS_CHECK"/>
 									<listOptionValue builtIn="false" value="ERROR_CODES"/>
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CERTIFICATION"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
-									<listOptionValue builtIn="false" value="STM32L0XX_REGISTERS_MCU_CATEGORY=2"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_DEPTH=32"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SUCCESS_VALUE=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SIGFOX"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_PRECISION=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_COS_TABLE"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_SIN_TABLE"/>
+									<listOptionValue builtIn="false" value="PARAMETERS_CHECK"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.1658810338" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/stm32l0xx-registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/stm32l0xx-drivers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/sigfox/sigfox-ep-lib/inc&quot;"/>
@@ -243,18 +237,15 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
-									<listOptionValue builtIn="false" value="STM32L0XX_REGISTERS_MCU_CATEGORY=5"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_DEPTH=32"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SUCCESS_VALUE=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_PRECISION=1"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SIGFOX"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_COS_TABLE"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_SIN_TABLE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths.1537611563" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.include.paths" useByScannerDiscovery="true" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/stm32l0xx-registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/stm32l0xx-drivers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/sigfox/sigfox-ep-lib/inc&quot;"/>
@@ -284,18 +275,15 @@
 									<listOptionValue builtIn="false" value="ERROR_STACK=32"/>
 									<listOptionValue builtIn="false" value="CONTROL_KEEP_ALIVE_MESSAGE"/>
 									<listOptionValue builtIn="false" value="RC1_ZONE"/>
-									<listOptionValue builtIn="false" value="STM32L0XX_REGISTERS_MCU_CATEGORY=5"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_DEPTH=32"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SUCCESS_VALUE=0"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_PRECISION=1"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_ERROR_STACK_SIGFOX"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_COS_TABLE"/>
-									<listOptionValue builtIn="false" value="EMBEDDED_UTILS_MATH_SIN_TABLE"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.2131794171" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="true" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/registers/stm32l0xx-registers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/peripherals/stm32l0xx-drivers/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/sigfox/sigfox-ep-lib/inc&quot;"/>

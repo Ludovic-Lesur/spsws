@@ -53,10 +53,10 @@ typedef enum {
 	SX1232_ERROR_RSSI_SAMPLING,
 	SX1232_ERROR_FIFO_LENGTH,
 	// Low level drivers errors.
-	SX1232_ERROR_BASE_SPI1 = 0x0100,
-	SX1232_ERROR_BASE_LPTIM1 = (SX1232_ERROR_BASE_SPI1 + SPI_ERROR_BASE_LAST),
+	SX1232_ERROR_BASE_SPI = 0x0100,
+	SX1232_ERROR_BASE_LPTIM = (SX1232_ERROR_BASE_SPI + SPI_ERROR_BASE_LAST),
 	// Last base value.
-	SX1232_ERROR_BASE_LAST = (SX1232_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST)
+	SX1232_ERROR_BASE_LAST = (SX1232_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
 } SX1232_status_t;
 
 /*!******************************************************************
@@ -223,22 +223,22 @@ typedef enum {
 /*** SX1232 functions ***/
 
 /*!******************************************************************
- * \fn void SX1232_init(void)
+ * \fn SX1232_status_t SX1232_init(void)
  * \brief Init SX1232 driver.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void SX1232_init(void);
+SX1232_status_t SX1232_init(void);
 
 /*!******************************************************************
- * \fn void SX1232_de_init_init(void)
+ * \fn SX1232_status_t SX1232_de_init(void)
  * \brief Release SX1232 driver.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void SX1232_de_init(void);
+SX1232_status_t SX1232_de_init(void);
 
 /*!******************************************************************
  * \fn SX1232_status_t SX1232_set_oscillator(SX1232_oscillator_t oscillator)
