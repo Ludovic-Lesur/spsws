@@ -8,8 +8,9 @@
 #include "at.h"
 
 // Peripherals.
-#include "lptim.h"
 #include "gpio_mapping.h"
+#include "i2c_address.h"
+#include "lptim.h"
 #include "nvic_priority.h"
 #include "nvm.h"
 #include "nvm_address.h"
@@ -617,29 +618,26 @@ static void _AT_iths_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
-	int32_t generic_s32 = 0;
+	int32_t temperature_degrees = 0;
+	int32_t humidity_percent = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
+	sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &temperature_degrees, &humidity_percent);
+	SHT3X_stack_exit_error(ERROR_BASE_SHT30_INTERNAL, (ERROR_BASE_SHT30_INTERNAL + sht3x_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tpcb=");
-	sht3x_status = SHT3X_get_temperature(&generic_s32);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	// Humidity.
 	_AT_reply_add_string("Hpcb=");
-	sht3x_status = SHT3X_get_humidity(&generic_s32);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(humidity_percent, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("%");
 	_AT_reply_send();
 	_AT_print_ok();
@@ -658,29 +656,26 @@ static void _AT_eths_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
-	int32_t generic_s32 = 0;
+	int32_t temperature_degrees = 0;
+	int32_t humidity_percent = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
+	sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_EXTERNAL, &temperature_degrees, &humidity_percent);
+	SHT3X_stack_exit_error(ERROR_BASE_SHT30_EXTERNAL, (ERROR_BASE_SHT30_EXTERNAL + sht3x_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
-	sht3x_status = SHT3X_get_temperature(&generic_s32);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	// Humidity.
 	_AT_reply_add_string("Hamb=");
-	sht3x_status = SHT3X_get_humidity(&generic_s32);
-	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(humidity_percent, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("%");
 	_AT_reply_send();
 	_AT_print_ok();
@@ -704,7 +699,7 @@ static void _AT_epts_callback(void) {
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
+	dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
 	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
@@ -745,7 +740,7 @@ static void _AT_euvs_callback(void) {
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
+	si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
 	SI1133_stack_exit_error(ERROR_BASE_SI1133 + si1133_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);

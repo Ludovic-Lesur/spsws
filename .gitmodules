@@ -10,6 +10,9 @@
 [submodule "neom8x-driver"]
 	path = drivers/components/neom8x-driver
 	url = https://github.com/Ludovic-Lesur/neom8x-driver.git
+[submodule "sht3x-driver"]
+	path = drivers/components/sht3x-driver
+	url = https://github.com/Ludovic-Lesur/sht3x-driver.git
 [submodule "sigfox-ep-lib"]
 	path = middleware/sigfox/sigfox-ep-lib
 	url = https://github.com/sigfox-tech-radio/sigfox-ep-lib.git

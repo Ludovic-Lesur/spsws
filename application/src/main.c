@@ -11,6 +11,7 @@
 #include "exti.h"
 #include "gpio.h"
 #include "gpio_mapping.h"
+#include "i2c_address.h"
 #include "iwdg.h"
 #include "lptim.h"
 #include "nvic.h"
@@ -625,7 +626,8 @@ int main (void) {
 #endif
 	SIGFOX_EP_API_application_message_t application_message;
 	ERROR_code_t error_code = 0;
-	int32_t generic_s32 = 0;
+	int32_t generic_s32_1 = 0;
+	int32_t generic_s32_2 = 0;
 	uint32_t generic_u32_1 = 0;
 #ifdef SPSWS_WIND_MEASUREMENT
 	uint32_t generic_u32_2 = 0;
@@ -751,18 +753,18 @@ int main (void) {
 			power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
 			POWER_stack_error();
 			// MCU voltage.
-			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32_1);
 			ANALOG_stack_error();
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = (uint16_t) generic_s32;
+				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = (uint16_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
 			}
 			// MCU temperature.
-			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32_1);
 			ANALOG_stack_error();
 			if (analog_status == ANALOG_SUCCESS) {
 				// Convert to 1-complement.
-				math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
+				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
 				MATH_stack_error();
 				if (math_status == MATH_SUCCESS) {
 					spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_u32_1;
@@ -774,105 +776,94 @@ int main (void) {
 			power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
 			// Solar cell voltage.
-			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
 			ANALOG_stack_error();
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_s32;
+				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
 			}
 			// Supercap voltage.
-			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32_1);
 			ANALOG_stack_error();
-			spsws_ctx.sigfox_monitoring_data.vcap_mv = (analog_status == ANALOG_SUCCESS) ? (uint16_t) generic_s32 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
+			spsws_ctx.sigfox_monitoring_data.vcap_mv = (analog_status == ANALOG_SUCCESS) ? (uint16_t) generic_s32_1 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
 			// Light sensor.
-			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32);
+			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32_1);
 			ANALOG_stack_error();
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_s32;
+				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
 			}
 			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
 			POWER_stack_error();
 			// Internal temperature/humidity sensor.
-			sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
+			sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &generic_s32_1, &generic_s32_2);
 			SHT3X_stack_error();
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				// Read data.
-				sht3x_status = SHT3X_get_temperature(&generic_s32);
-				SHT3X_stack_error();
-				if (sht3x_status == SHT3X_SUCCESS) {
-					math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
-					MATH_stack_error();
-					if (math_status == MATH_SUCCESS) {
-						spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_u32_1;
-						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
+				// Convert temperature.
+				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
+				MATH_stack_error();
+				if (math_status == MATH_SUCCESS) {
+					// Store temperature.
+					spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_u32_1;
+					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
 #ifdef HW1_0
-						spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
-						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-#endif
-					}
-				}
-				sht3x_status = SHT3X_get_humidity(&generic_s32);
-				SHT3X_stack_error();
-				if (sht3x_status == SHT3X_SUCCESS) {
-					spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = (uint8_t) generic_s32;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hpcb_percent);
-#ifdef HW1_0
-					spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = (uint8_t) generic_s32;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
+					spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
+					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 #endif
 				}
+				// Store humidity.
+				spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = (uint8_t) generic_s32_2;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hpcb_percent);
+#ifdef HW1_0
+				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = (uint8_t) generic_s32_2;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
+#endif
 			}
 #ifdef HW2_0
 			// External temperature/humidity sensor.
-			sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
+			sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_EXTERNAL, &generic_s32_1, &generic_s32_2);
 			SHT3X_stack_error();
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				sht3x_status = SHT3X_get_temperature(&generic_s32);
-				SHT3X_stack_error();
-				if (sht3x_status == SHT3X_SUCCESS) {
-					math_status = MATH_int32_to_signed_magnitude(generic_s32, 7, &generic_u32_1);
-					MATH_stack_error();
-					if (math_status == MATH_SUCCESS) {
-						spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
-						_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-					}
+				// Convert temperature.
+				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
+				MATH_stack_error();
+				if (math_status == MATH_SUCCESS) {
+					// Store temperature.
+					spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
+					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
 				}
-				sht3x_status = SHT3X_get_humidity(&generic_s32);
-				SHT3X_stack_error();
-				if (sht3x_status == SHT3X_SUCCESS) {
-					spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_s32;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
-				}
+				// Store humidity.
+				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_s32_2;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 			}
 #endif
 			// External pressure/temperature sensor.
-			dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
+			dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
 			DPS310_stack_error();
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
 				// Read data.
-				dps310_status = DPS310_get_pressure(&generic_s32);
+				dps310_status = DPS310_get_pressure(&generic_s32_1);
 				DPS310_stack_error();
 				if (dps310_status == DPS310_SUCCESS) {
-					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32 / 10);
+					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32_1 / 10);
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 				}
 			}
 			// External UV index sensor.
-			si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
+			si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
 			SI1133_stack_error();
 			power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 			POWER_stack_error();
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
-				si1133_status = SI1133_get_uv_index(&generic_s32);
+				si1133_status = SI1133_get_uv_index(&generic_s32_1);
 				SI1133_stack_error();
 				if (si1133_status == SI1133_SUCCESS) {
-					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32;
+					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32_1;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
 				}
 			}

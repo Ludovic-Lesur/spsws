@@ -13,8 +13,7 @@
 
 /*** SI1133 macros ***/
 
-#define SI1133_EXTERNAL_I2C_ADDRESS		0x52
-#define SI1133_ERROR_CODE_LAST			0x0F
+#define SI1133_ERROR_CODE_LAST	0x0F
 
 /*** SI1133 structures ***/
 

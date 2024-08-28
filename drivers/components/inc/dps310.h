@@ -13,10 +13,6 @@
 #include "math.h"
 #include "types.h"
 
-/*** DPS310 macros ***/
-
-#define DPS310_EXTERNAL_I2C_ADDRESS		0x77
-
 /*** DPS310 structures ***/
 
 /*!******************************************************************
