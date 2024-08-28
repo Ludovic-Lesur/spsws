@@ -24,7 +24,6 @@
 #include "types.h"
 // Components.
 #include "dps310.h"
-#include "neom8n.h"
 #include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
@@ -33,6 +32,7 @@
 #include "wind.h"
 // Middleware.
 #include "analog.h"
+#include "gps.h"
 #include "power.h"
 // Sigfox.
 #include "manuf/rf_api.h"
@@ -562,7 +562,7 @@ static void _AT_adc_callback(void) {
 	int32_t generic_s32 = 0;
 	// Turn analog front-end on.
 	power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_ACTIVE);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// MCU voltage.
 	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
 	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (ERROR_BASE_ANALOG + analog_status));
@@ -600,7 +600,7 @@ static void _AT_adc_callback(void) {
 	_AT_reply_send();
 	// Turn analog front-end off.
 	power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	_AT_print_ok();
 	return;
 errors:
@@ -620,13 +620,13 @@ static void _AT_iths_callback(void) {
 	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tpcb=");
@@ -661,13 +661,13 @@ static void _AT_eths_callback(void) {
 	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
 	SHT3X_stack_exit_error(ERROR_BASE_SHT3X + sht3x_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
@@ -702,13 +702,13 @@ static void _AT_epts_callback(void) {
 	int32_t generic_s32 = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
 	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	// Pressure.
 	_AT_reply_add_string("Pabs=");
@@ -743,13 +743,13 @@ static void _AT_euvs_callback(void) {
 	int32_t uv_index = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
 	SI1133_stack_exit_error(ERROR_BASE_SI1133 + si1133_status);
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	_AT_reply_add_string("UVI=");
 	si1133_status = SI1133_get_uv_index(&uv_index);
@@ -864,54 +864,61 @@ static void _AT_time_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	GPS_status_t gps_status = GPS_SUCCESS;
+	GPS_acquisition_status_t acquisition_status = GPS_ACQUISITION_ERROR_LAST;
+	GPS_time_t gps_time;
 	int32_t timeout_seconds = 0;
 	uint32_t fix_duration_seconds = 0;
-	RTC_time_t gps_time;
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
 	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Turn GPS on.
 	power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Start GPS fix.
-	neom8n_status = NEOM8N_get_time(&gps_time, (uint32_t) timeout_seconds, &fix_duration_seconds);
-	NEOM8N_stack_exit_error(ERROR_BASE_NEOM8N + neom8n_status);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
+	// Perform time acquisition.
+	gps_status = GPS_get_time(&gps_time, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);
+	GPS_stack_exit_error(ERROR_BASE_GPS, ERROR_BASE_GPS + gps_status);
 	// Turn GPS off.
 	power_status = POWER_disable(POWER_DOMAIN_GPS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Year.
-	_AT_reply_add_value((gps_time.year), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("-");
-	// Month.
-	if ((gps_time.month) < 10) {
-		_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
+	// Check status.
+	if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
+		// Year.
+		_AT_reply_add_value((int32_t) (gps_time.year), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("-");
+		// Month.
+		if ((gps_time.month) < 10) {
+			_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+		}
+		_AT_reply_add_value((int32_t) (gps_time.month), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("-");
+		// Day.
+		if ((gps_time.date) < 10) {
+			_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+		}
+		_AT_reply_add_value((int32_t) (gps_time.date), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string(" ");
+		// Hours.
+		if ((gps_time.hours) < 10) {
+			_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+		}
+		_AT_reply_add_value((int32_t) (gps_time.hours), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string(":");
+		// Minutes.
+		if ((gps_time.minutes) < 10) {
+			_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+		}
+		_AT_reply_add_value((int32_t) (gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string(":");
+		// Seconds.
+		if ((gps_time.seconds) < 10) {
+			_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+		}
+		_AT_reply_add_value((int32_t) (gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
 	}
-	_AT_reply_add_value((gps_time.month), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("-");
-	// Day.
-	if ((gps_time.date) < 10) {
-		_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
+	else {
+		_AT_reply_add_string("GPS timeout");
 	}
-	_AT_reply_add_value((gps_time.date), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string(" ");
-	// Hours.
-	if ((gps_time.hours) < 10) {
-		_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
-	}
-	_AT_reply_add_value((gps_time.hours), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string(":");
-	// Minutes.
-	if ((gps_time.minutes) < 10) {
-		_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
-	}
-	_AT_reply_add_value((gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string(":");
-	// Seconds.
-	if ((gps_time.seconds) < 10) {
-		_AT_reply_add_value(0, STRING_FORMAT_DECIMAL, 0);
-	}
-	_AT_reply_add_value((gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_send();
 	_AT_print_ok();
 	return;
@@ -929,49 +936,56 @@ static void _AT_gps_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	GPS_status_t gps_status = GPS_SUCCESS;
+	GPS_position_t gps_position;
+	GPS_acquisition_status_t acquisition_status = GPS_ACQUISITION_ERROR_LAST;
 	int32_t timeout_seconds = 0;
 	uint32_t fix_duration_seconds = 0;
-	NEOM8N_position_t gps_position;
 	// Read timeout parameter.
 	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
 	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
 	// Turn GPS on.
 	power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Start GPS fix.
-	neom8n_status = NEOM8N_get_position(&gps_position, (uint32_t) timeout_seconds, 5, &fix_duration_seconds);
-	NEOM8N_stack_exit_error(ERROR_BASE_NEOM8N + neom8n_status);
-	// Turn GPS off.
-	power_status = POWER_disable(POWER_DOMAIN_GPS);
-	POWER_stack_exit_error(ERROR_BASE_POWER + power_status);
-	// Latitude.
-	_AT_reply_add_string("Lat=");
-	_AT_reply_add_value((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("d");
-	_AT_reply_add_value((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("'");
-	_AT_reply_add_value((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("''");
-	_AT_reply_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
-	// Longitude.
-	_AT_reply_add_string(" Long=");
-	_AT_reply_add_value((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("d");
-	_AT_reply_add_value((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("'");
-	_AT_reply_add_value((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("''");
-	_AT_reply_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
-	// Altitude.
-	_AT_reply_add_string(" Alt=");
-	_AT_reply_add_value((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
-	// Fix duration.
-	_AT_reply_add_string("m Fix=");
-	_AT_reply_add_value(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("s");
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
+	// Perform time acquisition.
+	gps_status = GPS_get_position(&gps_position, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);
+	GPS_stack_exit_error(ERROR_BASE_GPS, ERROR_BASE_GPS + gps_status);
+	// Check status.
+	if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
+		// Latitude.
+		_AT_reply_add_string("Lat=");
+		_AT_reply_add_value((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("d");
+		_AT_reply_add_value((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("'");
+		_AT_reply_add_value((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("''");
+		_AT_reply_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
+		// Longitude.
+		_AT_reply_add_string(" Long=");
+		_AT_reply_add_value((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("d");
+		_AT_reply_add_value((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("'");
+		_AT_reply_add_value((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("''");
+		_AT_reply_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
+		// Altitude.
+		_AT_reply_add_string(" Alt=");
+		_AT_reply_add_value((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
+		// Fix duration.
+		_AT_reply_add_string("m Fix=");
+		_AT_reply_add_value(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
+		_AT_reply_add_string("s");
+	}
+	else {
+		_AT_reply_add_string("GPS timeout");
+	}
 	_AT_reply_send();
 	_AT_print_ok();
+	// Turn GPS off.
+	power_status = POWER_disable(POWER_DOMAIN_GPS);
+	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	return;
 errors:
 	POWER_disable(POWER_DOMAIN_GPS);

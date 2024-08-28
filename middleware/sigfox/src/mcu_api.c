@@ -316,7 +316,7 @@ MCU_API_status_t MCU_API_get_voltage_temperature(sfx_u16 *voltage_idle_mv, sfx_u
 	int32_t data = 0;
 	// Perform analog measurements.
 	power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(MCU_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, MCU_API_ERROR_DRIVER_POWER);
 	// Get MCU supply voltage.
 	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &data);
 	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, MCU_API_ERROR_DRIVER_ANALOG);
@@ -327,7 +327,7 @@ MCU_API_status_t MCU_API_get_voltage_temperature(sfx_u16 *voltage_idle_mv, sfx_u
 	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, MCU_API_ERROR_DRIVER_ANALOG);
 	(*temperature_tenth_degrees) = ((sfx_s16) data) * 10;
 	power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-	POWER_stack_exit_error(MCU_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, MCU_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }

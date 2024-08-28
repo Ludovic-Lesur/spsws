@@ -26,15 +26,15 @@
 #include "types.h"
 // Components.
 #include "dps310.h"
-#include "neom8n.h"
 #include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_types.h"
 #include "wind.h"
 // Middleware.
-#include "power.h"
 #include "analog.h"
+#include "gps.h"
+#include "power.h"
 // Sigfox.
 #include "sigfox_ep_api.h"
 #include "sigfox_rc.h"
@@ -50,8 +50,6 @@
 // Timeouts.
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS		180
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS				120
-// GPS altitude stability filter
-#define SPSWS_GPS_ALTITUDE_STABILITY_FILTER			5
 // Sigfox UL payloads size.
 #define SPSWS_SIGFOX_STARTUP_DATA_SIZE				8
 #define SPSWS_SIGFOX_ERROR_DATA_SIZE				12
@@ -223,7 +221,7 @@ typedef union {
 		unsigned longitude_seconds : 17;
 		unsigned longitude_east_flag : 1;
 		unsigned altitude_meters : 16;
-		unsigned gps_fix_duration : 8;
+		unsigned gps_acquisition_duration_seconds : 8;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SPSWS_sigfox_geoloc_data_t;
 
@@ -232,7 +230,7 @@ typedef union {
 	uint8_t frame[SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE];
 	struct {
 		unsigned error_code : 16;
-		unsigned fix_duration_seconds : 8;
+		unsigned gps_acquisition_duration_seconds : 8;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SPSWS_sigfox_geoloc_timeout_data_t;
 
@@ -243,7 +241,7 @@ typedef union {
 	struct {
 		unsigned level : 8;
 		unsigned rain_mm : 8;
-	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SPSWS_sigfox_flood_data_t;
 #endif
 
@@ -270,9 +268,7 @@ typedef struct {
 	uint8_t flood_level_change_count;
 	SPSWS_sigfox_flood_data_t sigfox_flood_data;
 #endif
-	// Geoloc.
-	NEOM8N_position_t position;
-	uint32_t geoloc_fix_duration_seconds;
+	// GPS.
 	SPSWS_sigfox_geoloc_data_t sigfox_geoloc_data;
 	SPSWS_sigfox_geoloc_timeout_data_t sigfox_geoloc_timeout_data;
 	// Error stack.
@@ -284,6 +280,30 @@ typedef struct {
 static SPSWS_context_t spsws_ctx;
 
 /*** SPSWS local functions ***/
+
+/*******************************************************************/
+#define _SPSWS_increment_measurement_count(measurement_struct) { \
+	/* Increment index */ \
+	measurement_struct.count++; \
+	/* Manage rollover and flag */ \
+	if (measurement_struct.count >= MEASUREMENT_BUFFER_LENGTH) { \
+		measurement_struct.count = 0; \
+		measurement_struct.full_flag = 1; \
+	} \
+}
+
+/*******************************************************************/
+static void _SPSWS_tick_second_callback(void) {
+	// Update context.
+	spsws_ctx.flags.tick_second = 1;
+}
+
+/*******************************************************************/
+static void _SPSWS_fixed_hour_alarm_callback(void) {
+	// Update context.
+	spsws_ctx.flags.fixed_hour_alarm = 1;
+	spsws_ctx.flags.wake_up = 1;
+}
 
 /*******************************************************************/
 static void _SPSWS_reset_measurements(void) {
@@ -317,6 +337,67 @@ static void _SPSWS_reset_measurements(void) {
 	spsws_ctx.measurements.vmcu_mv.full_flag = 0;
 }
 
+#ifndef ATM
+/*******************************************************************/
+static void _SPSWS_compute_final_measurements(void) {
+	// Local variables.
+	MATH_status_t math_status = MATH_SUCCESS;
+	uint8_t data_length = 0;
+	uint8_t generic_u8 = 0;
+	uint16_t generic_u16 = 0;
+	// Temperature
+	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
+	math_status = MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	// Humidity.
+	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
+	// Light.
+	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : generic_u8;
+	// UV index.
+	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
+	math_status = MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : generic_u8;
+	// Absolute pressure.
+	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0, &generic_u16);
+	MATH_stack_error();
+	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : generic_u16;
+	// MCU temperature.
+	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
+	math_status = MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	// PCB temperature.
+	data_length = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.count;
+	math_status = MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	// PCB humidity.
+	data_length = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.count;
+	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0, &generic_u8);
+	MATH_stack_error();
+	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
+	// Solar cell voltage.
+	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
+	MATH_stack_error();
+	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_16BITS : generic_u16;
+	// MCU voltage.
+	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
+	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
+	MATH_stack_error();
+	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_12BITS : generic_u16;
+}
+#endif
+
 /*******************************************************************/
 static void _SPSWS_update_clocks(void) {
 	// Local variables.
@@ -332,17 +413,6 @@ static void _SPSWS_update_clocks(void) {
 	rcc_status = RCC_get_status(RCC_CLOCK_LSE, &clock_status);
 	RCC_stack_error();
 	spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
-}
-
-/*******************************************************************/
-#define _SPSWS_increment_measurement_count(measurement_struct) { \
-	/* Increment index */ \
-	measurement_struct.count++; \
-	/* Manage rollover and flag */ \
-	if (measurement_struct.count >= MEASUREMENT_BUFFER_LENGTH) { \
-		measurement_struct.count = 0; \
-		measurement_struct.full_flag = 1; \
-	} \
 }
 
 #ifndef ATM
@@ -422,67 +492,6 @@ static void _SPSWS_update_pwut(void) {
 
 #ifndef ATM
 /*******************************************************************/
-static void _SPSWS_compute_final_measurements(void) {
-	// Local variables.
-	MATH_status_t math_status = MATH_SUCCESS;
-	uint8_t data_length = 0;
-	uint8_t generic_u8 = 0;
-	uint16_t generic_u16 = 0;
-	// Temperature
-	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
-	// Humidity.
-	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
-	// Light.
-	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : generic_u8;
-	// UV index.
-	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
-	math_status = MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : generic_u8;
-	// Absolute pressure.
-	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
-	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : generic_u16;
-	// MCU temperature.
-	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
-	// PCB temperature.
-	data_length = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
-	// PCB humidity.
-	data_length = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
-	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
-	// Solar cell voltage.
-	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
-	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_16BITS : generic_u16;
-	// MCU voltage.
-	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
-	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_12BITS : generic_u16;
-}
-#endif
-
-#ifndef ATM
-/*******************************************************************/
 static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* application_message) {
 	// Local variables.
 	SIGFOX_EP_API_status_t sigfox_ep_api_status = SIGFOX_EP_API_SUCCESS;
@@ -492,11 +501,9 @@ static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* appl
 	// Open library.
 	sigfox_ep_api_status = SIGFOX_EP_API_open(&lib_config);
 	SIGFOX_EP_API_stack_error();
-	if (sigfox_ep_api_status == SIGFOX_EP_API_SUCCESS) {
-		// Send message.
-		sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(application_message);
-		SIGFOX_EP_API_stack_error();
-	}
+	// Send message.
+	sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(application_message);
+	SIGFOX_EP_API_stack_error();
 	// Close library.
 	sigfox_ep_api_status = SIGFOX_EP_API_close();
 	SIGFOX_EP_API_stack_error();
@@ -504,25 +511,11 @@ static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* appl
 #endif
 
 /*******************************************************************/
-static void _SPSWS_tick_second_callback(void) {
-	// Update context.
-	spsws_ctx.flags.tick_second = 1;
-}
-
-/*******************************************************************/
-static void _SPSWS_fixed_hour_alarm_callback(void) {
-	// Update context.
-	spsws_ctx.flags.fixed_hour_alarm = 1;
-	spsws_ctx.flags.wake_up = 1;
-}
-
-/*******************************************************************/
 static void _SPSWS_init_context(void) {
 	// Init context.
 	spsws_ctx.state = SPSWS_STATE_STARTUP;
 	spsws_ctx.flags.all = 0;
 	spsws_ctx.flags.por = 1;
-	spsws_ctx.geoloc_fix_duration_seconds = 0;
 	spsws_ctx.seconds_counter = 0;
 	spsws_ctx.status.all = 0;
 #ifdef SPSWS_FLOOD_MEASUREMENT
@@ -614,25 +607,33 @@ int main (void) {
 	// Local variables.
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	ANALOG_status_t analog_status = ADC_SUCCESS;
+	GPS_status_t gps_status = GPS_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
 	SI1133_status_t si1133_status = SI1133_SUCCESS;
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
-	SIGFOX_EP_API_application_message_t application_message;
-	ERROR_code_t error_code = 0;
-	uint8_t generic_u8 = 0;
-	int32_t generic_s32 = 0;
-	uint32_t generic_u32_1 = 0;
-	uint8_t idx = 0;
+	GPS_time_t gps_time;
+	GPS_position_t gps_position;
+	GPS_acquisition_status_t gps_acquisition_status;
+	uint32_t gps_acquisition_duration_seconds;
 #ifdef SPSWS_WIND_MEASUREMENT
-	uint32_t generic_u32_2 = 0;
 	WIND_status_t wind_status = WIND_SUCCESS;
 #endif
 #ifdef SPSWS_RAIN_MEASUREMENT
 	RAIN_status_t rain_status = RAIN_SUCCESS;
 #endif
+	SIGFOX_EP_API_application_message_t application_message;
+	ERROR_code_t error_code = 0;
+	int32_t generic_s32 = 0;
+	uint32_t generic_u32_1 = 0;
+#ifdef SPSWS_WIND_MEASUREMENT
+	uint32_t generic_u32_2 = 0;
+#endif
+#if ((defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT))
+	uint8_t generic_u8 = 0;
+#endif
+	uint8_t idx = 0;
 	// Application message default parameters.
 	application_message.common_parameters.number_of_frames = 3;
 	application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
@@ -644,10 +645,11 @@ int main (void) {
 	application_message.ul_payload_size_bytes = 0;
 	// Main loop.
 	while (1) {
+		// Reload watchdog.
+		IWDG_reload();
 		// Perform state machine.
 		switch (spsws_ctx.state) {
 		case SPSWS_STATE_STARTUP:
-			IWDG_reload();
 			// Fill reset reason and software version.
 			spsws_ctx.sigfox_startup_data.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
 			spsws_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
@@ -664,7 +666,6 @@ int main (void) {
 			spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
 			break;
 		case SPSWS_STATE_WAKEUP:
-			IWDG_reload();
 			// Update flags.
 			_SPSWS_update_time_flags();
 			// Check alarm flag..
@@ -708,16 +709,24 @@ int main (void) {
 			}
 			break;
 		case SPSWS_STATE_RTC_CALIBRATION:
-			IWDG_reload();
-			// Get current time from GPS.
+			// Turn GPS on.
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
-			neom8n_status = NEOM8N_get_time(&spsws_ctx.current_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &generic_u32_1);
-			NEOM8N_stack_error();
+			// Get current time from GPS.
+			gps_status = GPS_get_time(&gps_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
+			GPS_stack_error();
+			// Turn GPS off.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
 			POWER_stack_error();
 			// Calibrate RTC if time is available.
-			if (neom8n_status == NEOM8N_SUCCESS) {
+			if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
+				// Copy structure.
+				spsws_ctx.current_time.year = gps_time.year;
+				spsws_ctx.current_time.month = gps_time.month;
+				spsws_ctx.current_time.date = gps_time.date;
+				spsws_ctx.current_time.hours = gps_time.hours;
+				spsws_ctx.current_time.minutes = gps_time.minutes;
+				spsws_ctx.current_time.seconds = gps_time.seconds;
 				// Update RTC registers.
 				rtc_status = RTC_set_time(&spsws_ctx.current_time);
 				RTC_stack_error();
@@ -738,7 +747,6 @@ int main (void) {
 			spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;
 			break;
 		case SPSWS_STATE_MEASURE:
-			IWDG_reload();
 			// Retrieve internal ADC data.
 			power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
 			POWER_stack_error();
@@ -761,7 +769,6 @@ int main (void) {
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
 				}
 			}
-			IWDG_reload();
 			// Retrieve external ADC data.
 			// Note: digital sensors power supply must also be enabled at this step to power the LDR.
 			power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
@@ -786,7 +793,6 @@ int main (void) {
 			}
 			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
 			POWER_stack_error();
-			IWDG_reload();
 			// Internal temperature/humidity sensor.
 			sht3x_status = SHT3X_perform_measurements(SHT3X_INT_I2C_ADDRESS);
 			SHT3X_stack_error();
@@ -818,7 +824,6 @@ int main (void) {
 #endif
 				}
 			}
-			IWDG_reload();
 #ifdef HW2_0
 			// External temperature/humidity sensor.
 			sht3x_status = SHT3X_perform_measurements(SHT3X_EXT_I2C_ADDRESS);
@@ -843,7 +848,6 @@ int main (void) {
 				}
 			}
 #endif
-			IWDG_reload();
 			// External pressure/temperature sensor.
 			dps310_status = DPS310_perform_measurements(DPS310_EXTERNAL_I2C_ADDRESS);
 			DPS310_stack_error();
@@ -857,7 +861,6 @@ int main (void) {
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 				}
 			}
-			IWDG_reload();
 			// External UV index sensor.
 			si1133_status = SI1133_perform_measurements(SI1133_EXTERNAL_I2C_ADDRESS);
 			SI1133_stack_error();
@@ -874,7 +877,6 @@ int main (void) {
 				}
 			}
 #ifdef SPSWS_WIND_MEASUREMENT
-			IWDG_reload();
 			// Retrieve wind measurements.
 			wind_status = WIND_get_speed(&generic_u32_1, &generic_u32_2);
 			WIND_stack_error();
@@ -911,7 +913,6 @@ int main (void) {
 #endif
 			break;
 		case SPSWS_STATE_MONITORING:
-			IWDG_reload();
 			// Compute average data.
 			_SPSWS_compute_final_measurements();
 			_SPSWS_reset_measurements();
@@ -926,7 +927,6 @@ int main (void) {
 			spsws_ctx.state = SPSWS_STATE_WEATHER_DATA;
 			break;
 		case SPSWS_STATE_WEATHER_DATA:
-			IWDG_reload();
 			// Send uplink weather frame.
 			application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
 			application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_weather_data.frame);
@@ -968,47 +968,44 @@ int main (void) {
 			break;
 #endif
 		case SPSWS_STATE_GEOLOC:
-			IWDG_reload();
-			// Get position from GPS.
+			// Turn GPS on.
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
 			POWER_stack_error();
-			neom8n_status = NEOM8N_get_position(&spsws_ctx.position, SPSWS_GEOLOC_TIMEOUT_SECONDS, SPSWS_GPS_ALTITUDE_STABILITY_FILTER, &spsws_ctx.geoloc_fix_duration_seconds);
-			// Note: error is never stacked since it is indicated by the dedicated timeout frame.
+			// Get geolocation from GPS.
+			gps_status = GPS_get_position(&gps_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
+			GPS_stack_error();
+			// Turn GPS off.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
 			POWER_stack_error();
 			// Update flag whatever the result.
 			spsws_ctx.status.daily_geoloc = 1;
 			// Build Sigfox frame.
-			if (neom8n_status == NEOM8N_SUCCESS) {
-				spsws_ctx.sigfox_geoloc_data.latitude_degrees = spsws_ctx.position.lat_degrees;
-				spsws_ctx.sigfox_geoloc_data.latitude_minutes = spsws_ctx.position.lat_minutes;
-				spsws_ctx.sigfox_geoloc_data.latitude_seconds = spsws_ctx.position.lat_seconds;
-				spsws_ctx.sigfox_geoloc_data.latitude_north_flag = spsws_ctx.position.lat_north_flag;
-				spsws_ctx.sigfox_geoloc_data.longitude_degrees = spsws_ctx.position.long_degrees;
-				spsws_ctx.sigfox_geoloc_data.longitude_minutes = spsws_ctx.position.long_minutes;
-				spsws_ctx.sigfox_geoloc_data.longitude_seconds = spsws_ctx.position.long_seconds;
-				spsws_ctx.sigfox_geoloc_data.longitude_east_flag = spsws_ctx.position.long_east_flag;
-				spsws_ctx.sigfox_geoloc_data.altitude_meters = spsws_ctx.position.altitude;
-				spsws_ctx.sigfox_geoloc_data.gps_fix_duration = spsws_ctx.geoloc_fix_duration_seconds;
+			if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
+				spsws_ctx.sigfox_geoloc_data.latitude_degrees = gps_position.lat_degrees;
+				spsws_ctx.sigfox_geoloc_data.latitude_minutes = gps_position.lat_minutes;
+				spsws_ctx.sigfox_geoloc_data.latitude_seconds = gps_position.lat_seconds;
+				spsws_ctx.sigfox_geoloc_data.latitude_north_flag = gps_position.lat_north_flag;
+				spsws_ctx.sigfox_geoloc_data.longitude_degrees = gps_position.long_degrees;
+				spsws_ctx.sigfox_geoloc_data.longitude_minutes = gps_position.long_minutes;
+				spsws_ctx.sigfox_geoloc_data.longitude_seconds = gps_position.long_seconds;
+				spsws_ctx.sigfox_geoloc_data.longitude_east_flag = gps_position.long_east_flag;
+				spsws_ctx.sigfox_geoloc_data.altitude_meters = gps_position.altitude;
+				spsws_ctx.sigfox_geoloc_data.gps_acquisition_duration_seconds = gps_acquisition_duration_seconds;
 				// Update message parameters.
 				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
 				application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_data.frame);
 				application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_DATA_SIZE;
 			}
 			else {
-				spsws_ctx.sigfox_geoloc_timeout_data.error_code = (ERROR_BASE_NEOM8N + neom8n_status);
-				spsws_ctx.sigfox_geoloc_timeout_data.fix_duration_seconds = spsws_ctx.geoloc_fix_duration_seconds;
+				spsws_ctx.sigfox_geoloc_timeout_data.error_code = gps_acquisition_status;
+				spsws_ctx.sigfox_geoloc_timeout_data.gps_acquisition_duration_seconds = gps_acquisition_duration_seconds;
 				// Update message parameters.
 				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
 				application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_timeout_data.frame);
 				application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE;
-				spsws_ctx.sigfox_geoloc_data.frame[0] = spsws_ctx.geoloc_fix_duration_seconds;
 			}
-			IWDG_reload();
 			// Send uplink geolocation frame.
 			_SPSWS_send_sigfox_message(&application_message);
-			// Reset geoloc variables.
-			spsws_ctx.geoloc_fix_duration_seconds = 0;
 			// Send error stack frame.
 			spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
 			break;
@@ -1016,7 +1013,7 @@ int main (void) {
 			// Check stack.
 			if (ERROR_stack_is_empty() == 0) {
 				// Read error stack.
-				for (idx=0 ; idx<(SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE / 2) ; idx++) {
+				for (idx=0 ; idx<(SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE >> 1) ; idx++) {
 					error_code = ERROR_stack_read();
 					spsws_ctx.sigfox_error_stack_data[(idx << 1) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
 					spsws_ctx.sigfox_error_stack_data[(idx << 1) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
@@ -1033,7 +1030,7 @@ int main (void) {
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
 		case SPSWS_STATE_OFF:
-			IWDG_reload();
+			// Clear flags.
 			spsws_ctx.flags.por = 0;
 			spsws_ctx.flags.wake_up = 0;
 			spsws_ctx.flags.fixed_hour_alarm = 0;
@@ -1098,7 +1095,6 @@ int main (void) {
 			break;
 		// UNKNOWN STATE.
 		default:
-			IWDG_reload();
 			// Enter standby mode.
 			spsws_ctx.state = SPSWS_STATE_OFF;
 			break;
@@ -1118,11 +1114,12 @@ int main (void) {
 	AT_init();
 	// Main loop.
 	while (1) {
+		// Reload watchdog.
+		IWDG_reload();
 		// Enter sleep mode.
 		PWR_enter_sleep_mode();
 		// Perform AT command parsing.
 		AT_task();
-		IWDG_reload();
 #ifdef SPSWS_WIND_MEASUREMENT
 		// Check RTC flag for wind measurements.
 		if (spsws_ctx.flags.tick_second != 0) {

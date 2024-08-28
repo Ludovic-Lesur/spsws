@@ -337,7 +337,7 @@ RF_API_status_t RF_API_wake_up(void) {
 	POWER_status_t power_status = POWER_SUCCESS;
 	// Turn radio TCXO on.
 	power_status = POWER_enable(POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }
@@ -349,7 +349,7 @@ RF_API_status_t RF_API_sleep(void) {
 	POWER_status_t power_status = POWER_SUCCESS;
 	// Turn radio TCXO off.
 	power_status = POWER_disable(POWER_DOMAIN_RADIO_TCXO);
-	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }
@@ -377,7 +377,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 #endif
 	// Turn radio on.
 	power_status = POWER_enable(POWER_DOMAIN_RADIO, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
 	// Init transceiver.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_SLEEP);
 	SX1232_stack_exit_error(RF_API_ERROR_DRIVER_SX1232);
@@ -526,7 +526,7 @@ RF_API_status_t RF_API_de_init(void) {
 	SKY13317_stack_exit_error(RF_API_ERROR_DRIVER_SKY13317);
 	// Turn radio off.
 	power_status = POWER_disable(POWER_DOMAIN_RADIO);
-	POWER_stack_exit_error(RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
 	RETURN();
 errors:
 	POWER_disable(POWER_DOMAIN_RADIO);

@@ -12,8 +12,8 @@
 #include "error.h"
 #include "gpio.h"
 #include "gpio_mapping.h"
+#include "gps.h"
 #include "lptim.h"
-#include "neom8n.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sky13317.h"
@@ -130,12 +130,12 @@ errors:
 static POWER_status_t _POWER_gps_init(void) {
 	// Local variables.
 	POWER_status_t status = POWER_SUCCESS;
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
+	GPS_status_t gps_status = GPS_SUCCESS;
 	// Turn GPS on.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 1);
-	// Init NEOM8N driver.
-	neom8n_status = NEOM8N_init();
-	NEOM8N_exit_error(POWER_ERROR_BASE_NEOM8N);
+	// Init GPS driver.
+	gps_status = GPS_init();
+	GPS_exit_error(POWER_ERROR_BASE_GPS);
 #ifdef HW1_0
 	power_ctx.effective_state[POWER_DOMAIN_GPS] = 1;
 #endif
@@ -147,10 +147,10 @@ errors:
 static POWER_status_t _POWER_gps_de_init(void) {
 	// Local variables.
 	POWER_status_t status = POWER_SUCCESS;
-	NEOM8N_status_t neom8n_status = NEOM8N_SUCCESS;
-	// Release NEOM8N driver.
-	neom8n_status = NEOM8N_init();
-	NEOM8N_exit_error(POWER_ERROR_BASE_NEOM8N);
+	GPS_status_t gps_status = GPS_SUCCESS;
+	// Release GPS driver.
+	gps_status = GPS_de_init();
+	GPS_exit_error(POWER_ERROR_BASE_GPS);
 	// Turn GPS off.
 	GPIO_write(&GPIO_GPS_POWER_ENABLE, 0);
 #ifdef HW1_0
