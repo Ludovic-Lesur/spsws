@@ -5,7 +5,7 @@
 	path = drivers/peripherals/stm32l0xx-drivers
 	url = https://github.com/Ludovic-Lesur/stm32l0xx-drivers.git
 [submodule "embedded-utils"]
-	path = middleware/utils/embedded-utils
+	path = drivers/utils/embedded-utils
 	url = https://github.com/Ludovic-Lesur/embedded-utils.git
 [submodule "neom8x-driver"]
 	path = drivers/components/neom8x-driver
