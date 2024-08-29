@@ -122,12 +122,12 @@ WIND_status_t WIND_get_direction(uint32_t* average_direction_degrees);
 #endif
 
 /*******************************************************************/
-#define WIND_exit_error(error_base) { if (wind_status != WIND_SUCCESS) { status = (error_base + wind_status); goto errors; } }
+#define WIND_exit_error(base) { ERROR_check_exit(wind_status, WIND_SUCCESS, base) }
 
 /*******************************************************************/
-#define WIND_stack_error(void) { if (wind_status != WIND_SUCCESS) { ERROR_stack_add(ERROR_BASE_WIND + wind_status); } }
+#define WIND_stack_error(base) { ERROR_check_stack(wind_status, WIND_SUCCESS, base) }
 
 /*******************************************************************/
-#define WIND_stack_exit_error(error_code) { if (wind_status != WIND_SUCCESS) { ERROR_stack_add(ERROR_BASE_WIND + wind_status); status = error_code; goto errors; } }
+#define WIND_stack_exit_error(base, code) { ERROR_check_stack_exit(wind_status, WIND_SUCCESS, base, code) }
 
 #endif  /* __WIND_H__ */

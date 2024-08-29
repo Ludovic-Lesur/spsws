@@ -7,6 +7,7 @@
 
 #include "gps.h"
 
+#include "error.h"
 #include "iwdg.h"
 #include "neom8x.h"
 #include "pwr.h"

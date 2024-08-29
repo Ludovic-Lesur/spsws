@@ -92,12 +92,12 @@ GPS_status_t GPS_get_time(GPS_time_t* gps_time, uint32_t timeout_seconds, uint32
 GPS_status_t GPS_get_position(GPS_position_t* gps_position, uint32_t timeout_seconds, uint32_t* acquisition_duration_seconds, GPS_acquisition_status_t* acquisition_status);
 
 /*******************************************************************/
-#define GPS_exit_error(base) { if (gps_status != GPS_SUCCESS) { status = (base + gps_status); goto errors; } }
+#define GPS_exit_error(base) { ERROR_check_exit(gps_status, GPS_SUCCESS, base) }
 
 /*******************************************************************/
-#define GPS_stack_error(base) { if (gps_status != GPS_SUCCESS) { ERROR_stack_add(base + gps_status); } }
+#define GPS_stack_error(base) { ERROR_check_stack(gps_status, GPS_SUCCESS, base) }
 
 /*******************************************************************/
-#define GPS_stack_exit_error(base, code) { if (gps_status != GPS_SUCCESS) { ERROR_stack_add(base + gps_status); status = code; goto errors; } }
+#define GPS_stack_exit_error(base, code) { ERROR_check_stack_exit(gps_status, GPS_SUCCESS, base, code) }
 
 #endif /* __GPS_H__ */

@@ -85,12 +85,12 @@ MAX11136_status_t MAX11136_de_init(void);
 MAX11136_status_t MAX11136_convert_channel(MAX11136_channel_t channel, uint16_t* adc_data_12bits);
 
 /*******************************************************************/
-#define MAX11136_exit_error(error_base) { if (max11136_status != MAX11136_SUCCESS) { status = (error_base + max11136_status); goto errors; } }
+#define MAX11136_exit_error(base) { ERROR_check_exit(max11136_status, MAX11136_SUCCESS, base) }
 
 /*******************************************************************/
-#define MAX11136_stack_error(void) { if (max11136_status != MAX11136_SUCCESS) { ERROR_stack_add(ERROR_BASE_MAX11136 + max11136_status); } }
+#define MAX11136_stack_error(base) { ERROR_check_stack(max11136_status, MAX11136_SUCCESS, base) }
 
 /*******************************************************************/
-#define MAX11136_stack_exit_error(error_code) { if (max11136_status != MAX11136_SUCCESS) { ERROR_stack_add(ERROR_BASE_MAX11136 + max11136_status); status = error_code; goto errors; } }
+#define MAX11136_stack_exit_error(base, code) { ERROR_check_stack_exit(max11136_status, MAX11136_SUCCESS, base, code) }
 
 #endif /* __MAX11136_H__ */

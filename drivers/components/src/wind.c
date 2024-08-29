@@ -10,6 +10,7 @@
 #include "analog.h"
 #include "at.h"
 #include "exti.h"
+#include "error.h"
 #include "gpio_mapping.h"
 #include "lptim.h"
 #include "math.h"

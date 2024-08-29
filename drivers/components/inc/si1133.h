@@ -81,12 +81,12 @@ SI1133_status_t SI1133_perform_measurements(uint8_t i2c_address);
 SI1133_status_t SI1133_get_uv_index(int32_t* uv_index);
 
 /*******************************************************************/
-#define SI1133_exit_error(error_base) { if (si1133_status != SI1133_SUCCESS) { status = (error_base + si1133_status); goto errors; } }
+#define SI1133_exit_error(base) { ERROR_check_exit(si1133_status, SI1133_SUCCESS, base) }
 
 /*******************************************************************/
-#define SI1133_stack_error(void) { if (si1133_status != SI1133_SUCCESS) { ERROR_stack_add(ERROR_BASE_SI1133 + si1133_status); } }
+#define SI1133_stack_error(base) { ERROR_check_stack(si1133_status, SI1133_SUCCESS, base) }
 
 /*******************************************************************/
-#define SI1133_stack_exit_error(error_code) { if (si1133_status != SI1133_SUCCESS) { ERROR_stack_add(ERROR_BASE_SI1133 + si1133_status); status = error_code; goto errors; } }
+#define SI1133_stack_exit_error(base, code) { ERROR_check_stack_exit(si1133_status, SI1133_SUCCESS, base, code) }
 
 #endif /* __SI1133_H__ */

@@ -66,12 +66,12 @@ void SKY13317_de_init(void);
 SKY13317_status_t SKY13317_set_channel(SKY13317_channel_t channel);
 
 /*******************************************************************/
-#define SKY13317_exit_error(error_base) { if (sky13317_status != SKY13317_SUCCESS) { status = (error_base + sky13317_status); goto errors; } }
+#define SKY13317_exit_error(base) { ERROR_check_exit(sky13317_status, SKY13317_SUCCESS, base) }
 
 /*******************************************************************/
-#define SKY13317_stack_error(void) { if (sky13317_status != SKY13317_SUCCESS) { ERROR_stack_add(ERROR_BASE_SKY13317 + sky13317_status); } }
+#define SKY13317_stack_error(base) { ERROR_check_stack(sky13317_status, SKY13317_SUCCESS, base) }
 
 /*******************************************************************/
-#define SKY13317_stack_exit_error(error_code) { if (sky13317_status != SKY13317_SUCCESS) { ERROR_stack_add(ERROR_BASE_SKY13317 + sky13317_status); status = error_code; goto errors; } }
+#define SKY13317_stack_exit_error(base, code) { ERROR_check_stack_exit(sky13317_status, SKY13317_SUCCESS, base, code) }
 
 #endif /* __SKY13317_H__ */

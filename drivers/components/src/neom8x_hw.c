@@ -7,6 +7,7 @@
 
 #include "neom8x_hw.h"
 
+#include "error.h"
 #include "gpio_mapping.h"
 #include "lptim.h"
 #include "lpuart.h"

@@ -8,6 +8,7 @@
 #include "analog.h"
 
 #include "adc.h"
+#include "error.h"
 #include "max11136.h"
 #include "mode.h"
 #include "types.h"

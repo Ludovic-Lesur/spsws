@@ -7,6 +7,7 @@
 
 #include "sx1232.h"
 
+#include "error.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "gpio_mapping.h"

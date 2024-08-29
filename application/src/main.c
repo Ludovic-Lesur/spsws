@@ -349,52 +349,52 @@ static void _SPSWS_compute_final_measurements(void) {
 	// Temperature
 	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
 	math_status = MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// Humidity.
 	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
 	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
 	// Light.
 	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
 	math_status = MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : generic_u8;
 	// UV index.
 	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
 	math_status = MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : generic_u8;
 	// Absolute pressure.
 	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
 	math_status = MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : generic_u16;
 	// MCU temperature.
 	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
 	math_status = MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// PCB temperature.
 	data_length = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.count;
 	math_status = MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
 	// PCB humidity.
 	data_length = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.count;
 	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
 	// Solar cell voltage.
 	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
 	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_16BITS : generic_u16;
 	// MCU voltage.
 	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
 	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error();
+	MATH_stack_error(ERROR_BASE_MATH);
 	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_12BITS : generic_u16;
 }
 #endif
@@ -406,13 +406,13 @@ static void _SPSWS_update_clocks(void) {
 	uint8_t clock_status = 0;
 	// Calibrate clocks.
 	rcc_status = RCC_calibrate(NVIC_PRIORITY_CLOCK_CALIBRATION);
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	// Update clock status.
 	rcc_status = RCC_get_status(RCC_CLOCK_LSI, &clock_status);
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	spsws_ctx.status.lsi_status = (clock_status == 0) ? 0b0 : 0b1;
 	rcc_status = RCC_get_status(RCC_CLOCK_LSE, &clock_status);
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
 }
 
@@ -427,20 +427,20 @@ static void _SPSWS_update_time_flags(void) {
 	int8_t local_hour = 0;
 	// Retrieve current time from RTC.
 	rtc_status = RTC_get_time(&spsws_ctx.current_time);
-	RTC_stack_error();
+	RTC_stack_error(ERROR_BASE_RTC);
 	// Retrieve previous wake-up time from NVM.
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), &nvm_byte);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	spsws_ctx.previous_wake_up_time.year = (nvm_byte << 8);
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), &nvm_byte);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	spsws_ctx.previous_wake_up_time.year |= nvm_byte;
 	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	// Check time are different (avoiding false wake-up due to RTC calibration).
 	if ((spsws_ctx.current_time.year != spsws_ctx.previous_wake_up_time.year) ||
 		(spsws_ctx.current_time.month != spsws_ctx.previous_wake_up_time.month) ||
@@ -476,18 +476,18 @@ static void _SPSWS_update_pwut(void) {
 	NVM_status_t nvm_status = NVM_SUCCESS;
 	// Retrieve current time from RTC.
 	rtc_status = RTC_get_time(&spsws_ctx.current_time);
-	RTC_stack_error();
+	RTC_stack_error(ERROR_BASE_RTC);
 	// Update previous wake-up time.
 	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 }
 #endif
 
@@ -551,26 +551,26 @@ static void _SPSWS_init_hw(void) {
 	// Init power module and clock tree.
 	PWR_init();
 	rcc_status = RCC_init(NVIC_PRIORITY_CLOCK);
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	// Init GPIOs.
 	GPIO_init();
 	EXTI_init();
 #ifndef DEBUG
 	// Start independent watchdog.
 	iwdg_status = IWDG_init();
-	IWDG_stack_error();
+	IWDG_stack_error(ERROR_BASE_IWDG);
 #endif
 	// High speed oscillator.
 	rcc_status = RCC_switch_to_hsi();
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	// Calibrate and update clock status.
 	_SPSWS_update_clocks();
 	// Init RTC.
 	rtc_status = RTC_init(&_SPSWS_tick_second_callback, NVIC_PRIORITY_RTC);
-	RTC_stack_error();
+	RTC_stack_error(ERROR_BASE_RTC);
 	// Read LS byte of the device ID to add a random delay in RTC alarm.
 	nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + SIGFOX_EP_ID_SIZE_BYTES - 1), &device_id_lsbyte);
-	NVM_stack_error();
+	NVM_stack_error(ERROR_BASE_NVM);
 	// Init RTC alarm.
 	rtc_alarm_config.mode = RTC_ALARM_MODE_DATE;
 	rtc_alarm_config.date.mask = 1;
@@ -582,7 +582,7 @@ static void _SPSWS_init_hw(void) {
 	rtc_alarm_config.seconds.mask = 0;
 	rtc_alarm_config.seconds.value = (device_id_lsbyte % 60) & 0x7F;
 	rtc_status = RTC_start_alarm(RTC_ALARM_A, &rtc_alarm_config, &_SPSWS_fixed_hour_alarm_callback);
-	RTC_stack_error();
+	RTC_stack_error(ERROR_BASE_RTC);
 	// Internal.
 	LPTIM_init(NVIC_PRIORITY_DELAY);
 	// Init continuous measurements drivers.
@@ -713,13 +713,13 @@ int main (void) {
 		case SPSWS_STATE_RTC_CALIBRATION:
 			// Turn GPS on.
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Get current time from GPS.
 			gps_status = GPS_get_time(&gps_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
-			GPS_stack_error();
+			GPS_stack_error(ERROR_BASE_GPS);
 			// Turn GPS off.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Calibrate RTC if time is available.
 			if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
 				// Copy structure.
@@ -731,7 +731,7 @@ int main (void) {
 				spsws_ctx.current_time.seconds = gps_time.seconds;
 				// Update RTC registers.
 				rtc_status = RTC_set_time(&spsws_ctx.current_time);
-				RTC_stack_error();
+				RTC_stack_error(ERROR_BASE_RTC);
 				// Update PWUT when first calibration.
 				if (spsws_ctx.status.first_rtc_calibration == 0) {
 					_SPSWS_update_pwut();
@@ -751,21 +751,21 @@ int main (void) {
 		case SPSWS_STATE_MEASURE:
 			// Retrieve internal ADC data.
 			power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// MCU voltage.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32_1);
-			ANALOG_stack_error();
+			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
 				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = (uint16_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
 			}
 			// MCU temperature.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32_1);
-			ANALOG_stack_error();
+			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
 				// Convert to 1-complement.
 				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error();
+				MATH_stack_error(ERROR_BASE_MATH);
 				if (math_status == MATH_SUCCESS) {
 					spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_u32_1;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
@@ -774,35 +774,35 @@ int main (void) {
 			// Retrieve external ADC data.
 			// Note: digital sensors power supply must also be enabled at this step to power the LDR.
 			power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Solar cell voltage.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
-			ANALOG_stack_error();
+			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
 				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
 			}
 			// Supercap voltage.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32_1);
-			ANALOG_stack_error();
+			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			spsws_ctx.sigfox_monitoring_data.vcap_mv = (analog_status == ANALOG_SUCCESS) ? (uint16_t) generic_s32_1 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
 			// Light sensor.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32_1);
-			ANALOG_stack_error();
+			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
 				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_s32_1;
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
 			}
 			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Internal temperature/humidity sensor.
 			sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &generic_s32_1, &generic_s32_2);
-			SHT3X_stack_error();
+			SHT3X_stack_error(ERROR_BASE_SHT30_INTERNAL);
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
 				// Convert temperature.
 				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error();
+				MATH_stack_error(ERROR_BASE_MATH);
 				if (math_status == MATH_SUCCESS) {
 					// Store temperature.
 					spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_u32_1;
@@ -823,12 +823,12 @@ int main (void) {
 #ifdef HW2_0
 			// External temperature/humidity sensor.
 			sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_EXTERNAL, &generic_s32_1, &generic_s32_2);
-			SHT3X_stack_error();
+			SHT3X_stack_error(ERROR_BASE_SHT30_EXTERNAL);
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
 				// Convert temperature.
 				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error();
+				MATH_stack_error(ERROR_BASE_MATH);
 				if (math_status == MATH_SUCCESS) {
 					// Store temperature.
 					spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
@@ -841,12 +841,12 @@ int main (void) {
 #endif
 			// External pressure/temperature sensor.
 			dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
-			DPS310_stack_error();
+			DPS310_stack_error(ERROR_BASE_WIND);
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
 				// Read data.
 				dps310_status = DPS310_get_pressure(&generic_s32_1);
-				DPS310_stack_error();
+				DPS310_stack_error(ERROR_BASE_DPS310);
 				if (dps310_status == DPS310_SUCCESS) {
 					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32_1 / 10);
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
@@ -854,14 +854,14 @@ int main (void) {
 			}
 			// External UV index sensor.
 			si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
-			SI1133_stack_error();
+			SI1133_stack_error(ERROR_BASE_SI1133);
 			power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Read data.
 				si1133_status = SI1133_get_uv_index(&generic_s32_1);
-				SI1133_stack_error();
+				SI1133_stack_error(ERROR_BASE_SI1133);
 				if (si1133_status == SI1133_SUCCESS) {
 					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32_1;
 					_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
@@ -870,13 +870,13 @@ int main (void) {
 #ifdef SPSWS_WIND_MEASUREMENT
 			// Retrieve wind measurements.
 			wind_status = WIND_get_speed(&generic_u32_1, &generic_u32_2);
-			WIND_stack_error();
+			WIND_stack_error(ERROR_BASE_WIND);
 			spsws_ctx.sigfox_weather_data.wind_speed_average_kmh = (wind_status == WIND_SUCCESS) ? (generic_u32_1 / 1000) : SPSWS_ERROR_VALUE_WIND;
 			spsws_ctx.sigfox_weather_data.wind_speed_peak_kmh = (wind_status == WIND_SUCCESS) ? (generic_u32_2 / 1000) : SPSWS_ERROR_VALUE_WIND;
 			wind_status = WIND_get_direction(&generic_u32_1);
 			// Do not store undefined error (meaning that no wind has been detected so no direction can be computed).
 			if ((wind_status != WIND_SUCCESS) && (wind_status != (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED))) {
-				WIND_stack_error();
+				WIND_stack_error(ERROR_BASE_WIND);
 			}
 			spsws_ctx.sigfox_weather_data.wind_direction_average_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
 #else
@@ -889,7 +889,7 @@ int main (void) {
 #ifdef SPSWS_RAIN_MEASUREMENT
 			// Retrieve rain measurements.
 			rain_status = RAIN_get_rainfall(&generic_u8);
-			RAIN_stack_error();
+			RAIN_stack_error(ERROR_BASE_RAIN);
 			spsws_ctx.sigfox_weather_data.rain_mm = (rain_status == RAIN_SUCCESS) ? generic_u8 : SPSWS_ERROR_VALUE_RAIN;
 #else
 #ifdef SPSWS_WIND_MEASUREMENT
@@ -943,7 +943,7 @@ int main (void) {
 		case SPSWS_STATE_FLOOD_ALARM:
 			// Read level and rainfall.
 			rain_status = RAIN_get_rainfall(&generic_u8);
-			RAIN_stack_error();
+			RAIN_stack_error(ERROR_BASE_RAIN);
 			spsws_ctx.sigfox_flood_data.rain_mm = generic_u8;
 			spsws_ctx.sigfox_flood_data.level = spsws_ctx.flood_level;
 			// Send uplink flood alarm frame.
@@ -961,13 +961,13 @@ int main (void) {
 		case SPSWS_STATE_GEOLOC:
 			// Turn GPS on.
 			power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Get geolocation from GPS.
 			gps_status = GPS_get_position(&gps_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
-			GPS_stack_error();
+			GPS_stack_error(ERROR_BASE_GPS);
 			// Turn GPS off.
 			power_status = POWER_disable(POWER_DOMAIN_GPS);
-			POWER_stack_error();
+			POWER_stack_error(ERROR_BASE_POWER);
 			// Update flag whatever the result.
 			spsws_ctx.status.daily_geoloc = 1;
 			// Build Sigfox frame.
@@ -1044,13 +1044,13 @@ int main (void) {
 			if (spsws_ctx.flags.tick_second != 0) {
 #ifdef SPSWS_WIND_MEASUREMENT
 				wind_status = WIND_tick_second();
-				WIND_stack_error();
+				WIND_stack_error(ERROR_BASE_WIND);
 #endif
 #ifdef SPSWS_FLOOD_MEASUREMENT
 				// Check flood level if there is no pending alarm.
 				if (spsws_ctx.flags.flood_alarm == 0) {
 					rain_status = RAIN_get_flood_level(&generic_u8);
-					RAIN_stack_error();
+					RAIN_stack_error(ERROR_BASE_RAIN);
 					if (spsws_ctx.flood_level != generic_u8) {
 						spsws_ctx.flood_level_change_count++;
 					}

@@ -462,12 +462,12 @@ SX1232_status_t SX1232_get_rssi(int16_t* rssi_dbm);
 SX1232_status_t SX1232_read_fifo(uint8_t* fifo_data, uint8_t fifo_data_size);
 
 /*******************************************************************/
-#define SX1232_exit_error(error_base) { if (sx1232_status != SX1232_SUCCESS) { status = (error_base + sx1232_status); goto errors; } }
+#define SX1232_exit_error(base) { ERROR_check_exit(sx1232_status, SX1232_SUCCESS, base) }
 
 /*******************************************************************/
-#define SX1232_stack_error(void) { if (sx1232_status != SX1232_SUCCESS) { ERROR_stack_add(ERROR_BASE_SX1232 + sx1232_status); } }
+#define SX1232_stack_error(base) { ERROR_check_stack(sx1232_status, SX1232_SUCCESS, base) }
 
 /*******************************************************************/
-#define SX1232_stack_exit_error(error_code) { if (sx1232_status != SX1232_SUCCESS) { ERROR_stack_add(ERROR_BASE_SX1232 + sx1232_status); status = error_code; goto errors; } }
+#define SX1232_stack_exit_error(base, code) { ERROR_check_stack_exit(sx1232_status, SX1232_SUCCESS, base, code) }
 
 #endif /* __SX1232_H__ */

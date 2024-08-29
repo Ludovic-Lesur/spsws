@@ -284,7 +284,7 @@ static void _AT_reply_add_value(int32_t tx_value, STRING_format_t format, uint8_
 	for (idx=0 ; idx<AT_STRING_VALUE_BUFFER_SIZE ; idx++) str_value[idx] = STRING_CHAR_NULL;
 	// Convert value to string.
 	string_status = STRING_value_to_string(tx_value, format, print_prefix, str_value);
-	STRING_stack_error();
+	STRING_stack_error(ERROR_BASE_STRING);
 	// Add string.
 	_AT_reply_add_string(str_value);
 }
@@ -700,7 +700,7 @@ static void _AT_epts_callback(void) {
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
-	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
+	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
@@ -708,14 +708,14 @@ static void _AT_epts_callback(void) {
 	// Pressure.
 	_AT_reply_add_string("Pabs=");
 	dps310_status = DPS310_get_pressure(&generic_s32);
-	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
+	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
 	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("Pa");
 	_AT_reply_send();
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
 	dps310_status = DPS310_get_temperature(&generic_s32);
-	DPS310_stack_exit_error(ERROR_BASE_DPS310 + dps310_status);
+	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
 	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
@@ -741,14 +741,14 @@ static void _AT_euvs_callback(void) {
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
 	si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
-	SI1133_stack_exit_error(ERROR_BASE_SI1133 + si1133_status);
+	SI1133_stack_exit_error(ERROR_BASE_SI1133, (ERROR_BASE_SI1133 + si1133_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	_AT_reply_add_string("UVI=");
 	si1133_status = SI1133_get_uv_index(&uv_index);
-	SI1133_stack_exit_error(ERROR_BASE_SI1133 + si1133_status);
+	SI1133_stack_exit_error(ERROR_BASE_SI1133, (ERROR_BASE_SI1133 + si1133_status));
 	_AT_reply_add_value(uv_index, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_send();
 	_AT_print_ok();
@@ -780,7 +780,7 @@ static void _AT_wind_callback(void) {
 		at_ctx.wind_measurement_flag = 0;
 		// Get speeds.
 		wind_status = WIND_get_speed(&wind_speed_average, &wind_speed_peak);
-		WIND_stack_exit_error(ERROR_BASE_WIND + wind_status);
+		WIND_stack_exit_error(ERROR_BASE_WIND, (ERROR_BASE_WIND + wind_status));
 		_AT_reply_add_string("wspd_avrg=");
 		_AT_reply_add_value((int32_t) wind_speed_average, STRING_FORMAT_DECIMAL, 0);
 		_AT_reply_add_string("m/h=");
@@ -796,7 +796,7 @@ static void _AT_wind_callback(void) {
 			_AT_reply_add_string("N/A");
 		}
 		else {
-			WIND_stack_exit_error(ERROR_BASE_WIND + wind_status);
+			WIND_stack_exit_error(ERROR_BASE_WIND, (ERROR_BASE_WIND + wind_status));
 			_AT_reply_add_value((int32_t) wind_direction, STRING_FORMAT_DECIMAL, 0);
 			_AT_reply_add_string("d");
 		}
@@ -834,7 +834,7 @@ static void _AT_rain_callback(void) {
 		// Read and print data.
 		_AT_reply_add_string("rain=");
 		rain_status = RAIN_get_rainfall(&rain_mm);
-		RAIN_stack_exit_error(ERROR_BASE_RAIN + rain_status);
+		RAIN_stack_exit_error(ERROR_BASE_RAIN, (ERROR_BASE_RAIN + rain_status));
 		_AT_reply_add_value((int32_t) rain_mm, STRING_FORMAT_DECIMAL,0);
 		_AT_reply_add_string("mm");
 		_AT_reply_send();
@@ -1324,12 +1324,12 @@ static void _AT_rssi_callback(void) {
 	RF_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_RF_API * 0x0100) + rf_api_status);
 	// Start continuous listening.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
 	// Wait TS_FS=60us typical.
 	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
 	// Wait TS_TR=120us typical.
 	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
@@ -1337,7 +1337,7 @@ static void _AT_rssi_callback(void) {
 	while (report_loop < ((uint32_t) ((duration_seconds * 1000) / AT_RSSI_REPORT_PERIOD_MS))) {
 		// Read RSSI.
 		sx1232_status = SX1232_get_rssi(&rssi_dbm);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232 + sx1232_status);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
 		// Print RSSI.
 		_AT_reply_add_string("RSSI=");
 		_AT_reply_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
@@ -1427,10 +1427,10 @@ void AT_init(void) {
 	usart_config.nvic_priority = NVIC_PRIORITY_AT;
 	usart_config.rxne_callback = &_AT_fill_rx_buffer;
 	usart_status = USART_init(AT_USART_INSTANCE, &GPIO_AT_USART, &usart_config);
-	USART_stack_error();
+	USART_stack_error(ERROR_BASE_USART_AT);
 	// Start reception.
 	usart_status = USART_enable_rx(AT_USART_INSTANCE);
-	USART_stack_error();
+	USART_stack_error(ERROR_BASE_USART_AT);
 }
 #endif
 
@@ -1443,12 +1443,12 @@ void AT_task(void) {
 	if (at_ctx.line_end_flag != 0) {
 		// Stop reception.
 		usart_status = USART_disable_rx(AT_USART_INSTANCE);
-		USART_stack_error();
+		USART_stack_error(ERROR_BASE_USART_AT);
 		// Decode and execute command.
 		_AT_decode();
 		// Start reception.
 		usart_status = USART_enable_rx(AT_USART_INSTANCE);
-		USART_stack_error();
+		USART_stack_error(ERROR_BASE_USART_AT);
 	}
 }
 #endif

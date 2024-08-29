@@ -7,6 +7,7 @@
 
 #include "max11136.h"
 
+#include "error.h"
 #include "gpio.h"
 #include "gpio_mapping.h"
 #include "lptim.h"

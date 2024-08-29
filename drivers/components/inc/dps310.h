@@ -85,12 +85,12 @@ DPS310_status_t DPS310_get_pressure(int32_t* pressure_pa);
 DPS310_status_t DPS310_get_temperature(int32_t* temperature_degrees);
 
 /*******************************************************************/
-#define DPS310_exit_error(error_base) { if (dps310_status != DPS310_SUCCESS) { status = (error_base + dps310_status); goto errors; } }
+#define DPS310_exit_error(base) { ERROR_check_exit(dps310_status, DPS310_SUCCESS, base) }
 
 /*******************************************************************/
-#define DPS310_stack_error(void) { if (dps310_status != DPS310_SUCCESS) { ERROR_stack_add(ERROR_BASE_DPS310 + dps310_status); } }
+#define DPS310_stack_error(base) { ERROR_check_stack(dps310_status, DPS310_SUCCESS, base) }
 
 /*******************************************************************/
-#define DPS310_stack_exit_error(error_code) { if (dps310_status != DPS310_SUCCESS) { ERROR_stack_add(ERROR_BASE_DPS310 + dps310_status); status = error_code; goto errors; } }
+#define DPS310_stack_exit_error(base, code) { ERROR_check_stack_exit(dps310_status, DPS310_SUCCESS, base, code) }
 
 #endif /* __DPS310_H__ */

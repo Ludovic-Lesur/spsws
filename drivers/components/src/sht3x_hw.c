@@ -7,6 +7,7 @@
 
 #include "sht3x_hw.h"
 
+#include "error.h"
 #include "gpio_mapping.h"
 #include "i2c.h"
 #include "lptim.h"

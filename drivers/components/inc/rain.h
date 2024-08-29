@@ -94,12 +94,12 @@ RAIN_status_t RAIN_get_flood_level(uint8_t* flood_level);
 #endif
 
 /*******************************************************************/
-#define RAIN_exit_error(error_base) { if (rain_status != RAIN_SUCCESS) { status = (error_base + rain_status); goto errors; } }
+#define RAIN_exit_error(base) { ERROR_check_exit(rain_status, RAIN_SUCCESS, base) }
 
 /*******************************************************************/
-#define RAIN_stack_error(void) { if (rain_status != RAIN_SUCCESS) { ERROR_stack_add(ERROR_BASE_RAIN + rain_status); } }
+#define RAIN_stack_error(base) { ERROR_check_stack(rain_status, RAIN_SUCCESS, base) }
 
 /*******************************************************************/
-#define RAIN_stack_exit_error(error_code) { if (rain_status != RAIN_SUCCESS) { ERROR_stack_add(ERROR_BASE_RAIN + rain_status); status = error_code; goto errors; } }
+#define RAIN_stack_exit_error(base, code) { ERROR_check_stack_exit(rain_status, RAIN_SUCCESS, base, code) }
 
 #endif /* __RAIN_H__ */

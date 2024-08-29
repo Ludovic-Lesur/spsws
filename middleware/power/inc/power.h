@@ -101,12 +101,12 @@ POWER_status_t POWER_disable(POWER_domain_t domain);
 POWER_status_t POWER_get_state(POWER_domain_t domain, uint8_t* state);
 
 /*******************************************************************/
-#define POWER_exit_error(base) { if (power_status != POWER_SUCCESS) { status = (base + power_status); goto errors; } }
+#define POWER_exit_error(base) { ERROR_check_exit(power_status, POWER_SUCCESS, base) }
 
 /*******************************************************************/
-#define POWER_stack_error(base) { if (power_status != POWER_SUCCESS) { ERROR_stack_add(base + power_status); } }
+#define POWER_stack_error(base) { ERROR_check_stack(power_status, POWER_SUCCESS, base) }
 
 /*******************************************************************/
-#define POWER_stack_exit_error(base, code) { if (power_status != POWER_SUCCESS) { ERROR_stack_add(base + power_status); status = code; goto errors; } }
+#define POWER_stack_exit_error(base, code) { ERROR_check_stack_exit(power_status, POWER_SUCCESS, base, code) }
 
 #endif /* __POWER_H__ */

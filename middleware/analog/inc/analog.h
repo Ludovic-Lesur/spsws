@@ -77,12 +77,12 @@ ANALOG_status_t ANALOG_de_init(void);
 ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog_data);
 
 /*******************************************************************/
-#define ANALOG_exit_error(base) { if (analog_status != ANALOG_SUCCESS) { status = (base + analog_status); goto errors; } }
+#define ANALOG_exit_error(base) { ERROR_check_exit(analog_status, ANALOG_SUCCESS, base) }
 
 /*******************************************************************/
-#define ANALOG_stack_error(base) { if (analog_status != ANALOG_SUCCESS) { ERROR_stack_add(base + analog_status); } }
+#define ANALOG_stack_error(base) { ERROR_check_stack(analog_status, ANALOG_SUCCESS, base) }
 
 /*******************************************************************/
-#define ANALOG_stack_exit_error(base, code) { if (analog_status != ANALOG_SUCCESS) { ERROR_stack_add(base + analog_status); status = code; goto errors; } }
+#define ANALOG_stack_exit_error(base, code) { ERROR_check_stack_exit(analog_status, ANALOG_SUCCESS, base, code) }
 
 #endif /* __ANALOG_H__ */
