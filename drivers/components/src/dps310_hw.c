@@ -18,7 +18,7 @@
 
 #define DPS310_I2C_INSTANCE		I2C_INSTANCE_I2C1
 
-/*** SHT3x functions ***/
+/*** DPS310 HW functions ***/
 
 /*******************************************************************/
 DPS310_status_t DPS310_HW_init(void) {

@@ -737,15 +737,13 @@ static void _AT_euvs_callback(void) {
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
+	si1133_status = SI1133_get_uv_index(I2C_ADDRESS_SI1133, &uv_index);
 	SI1133_stack_exit_error(ERROR_BASE_SI1133, (ERROR_BASE_SI1133 + si1133_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Read and print data.
 	_AT_reply_add_string("UVI=");
-	si1133_status = SI1133_get_uv_index(&uv_index);
-	SI1133_stack_exit_error(ERROR_BASE_SI1133, (ERROR_BASE_SI1133 + si1133_status));
 	_AT_reply_add_value(uv_index, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_send();
 	_AT_print_ok();

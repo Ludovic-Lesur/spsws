@@ -849,20 +849,16 @@ int main (void) {
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 			}
 			// External UV index sensor.
-			si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
+			si1133_status = SI1133_get_uv_index(I2C_ADDRESS_SI1133, &generic_s32_1);
 			SI1133_stack_error(ERROR_BASE_SI1133);
-			power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-			POWER_stack_error(ERROR_BASE_POWER);
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
-				// Read data.
-				si1133_status = SI1133_get_uv_index(&generic_s32_1);
-				SI1133_stack_error(ERROR_BASE_SI1133);
-				if (si1133_status == SI1133_SUCCESS) {
-					spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
-				}
+				// Store UV index.
+				spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32_1;
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
 			}
+			power_status = POWER_disable(POWER_DOMAIN_SENSORS);
+			POWER_stack_error(ERROR_BASE_POWER);
 #ifdef SPSWS_WIND_MEASUREMENT
 			// Retrieve wind measurements.
 			wind_status = WIND_get_speed(&generic_u32_1, &generic_u32_2);

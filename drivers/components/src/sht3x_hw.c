@@ -18,7 +18,7 @@
 
 #define SHT3X_I2C_INSTANCE	I2C_INSTANCE_I2C1
 
-/*** SHT3x functions ***/
+/*** SHT3X HW functions ***/
 
 /*******************************************************************/
 SHT3X_status_t SHT3X_HW_init(void) {
