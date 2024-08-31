@@ -694,12 +694,13 @@ static void _AT_epts_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
-	int32_t generic_s32 = 0;
+	int32_t pressure_pa = 0;
+	int32_t temperature_degrees = 0;
 	// Turn digital sensors on.
 	power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
 	POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
 	// Perform measurements.
-	dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
+	dps310_status = DPS310_get_pressure_temperature(I2C_ADDRESS_DPS310, &pressure_pa, &temperature_degrees);
 	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
 	// Turn digital sensors off.
 	power_status = POWER_disable(POWER_DOMAIN_SENSORS);
@@ -707,16 +708,12 @@ static void _AT_epts_callback(void) {
 	// Read and print data.
 	// Pressure.
 	_AT_reply_add_string("Pabs=");
-	dps310_status = DPS310_get_pressure(&generic_s32);
-	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(pressure_pa, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("Pa");
 	_AT_reply_send();
 	// Temperature.
 	_AT_reply_add_string("Tamb=");
-	dps310_status = DPS310_get_temperature(&generic_s32);
-	DPS310_stack_exit_error(ERROR_BASE_DPS310, (ERROR_BASE_DPS310 + dps310_status));
-	_AT_reply_add_value(generic_s32, STRING_FORMAT_DECIMAL, 0);
+	_AT_reply_add_value(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dC");
 	_AT_reply_send();
 	_AT_print_ok();

@@ -7,6 +7,9 @@
 [submodule "embedded-utils"]
 	path = drivers/utils/embedded-utils
 	url = https://github.com/Ludovic-Lesur/embedded-utils.git
+[submodule "dps310-driver"]
+	path = drivers/components/dps310-driver
+	url = https://github.com/Ludovic-Lesur/dps310-driver.git
 [submodule "neom8x-driver"]
 	path = drivers/components/neom8x-driver
 	url = https://github.com/Ludovic-Lesur/neom8x-driver.git

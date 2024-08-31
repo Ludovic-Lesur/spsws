@@ -839,18 +839,14 @@ int main (void) {
 				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
 			}
 #endif
-			// External pressure/temperature sensor.
-			dps310_status = DPS310_perform_measurements(I2C_ADDRESS_DPS310);
+			// External pressure and temperature sensor.
+			dps310_status = DPS310_get_pressure_temperature(I2C_ADDRESS_DPS310, &generic_s32_1, &generic_s32_2);
 			DPS310_stack_error(ERROR_BASE_WIND);
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
-				// Read data.
-				dps310_status = DPS310_get_pressure(&generic_s32_1);
-				DPS310_stack_error(ERROR_BASE_DPS310);
-				if (dps310_status == DPS310_SUCCESS) {
-					spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32_1 / 10);
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
-				}
+				// Store pressure.
+				spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32_1 / 10);
+				_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
 			}
 			// External UV index sensor.
 			si1133_status = SI1133_perform_measurements(I2C_ADDRESS_SI1133);
@@ -875,7 +871,7 @@ int main (void) {
 			spsws_ctx.sigfox_weather_data.wind_speed_peak_kmh = (wind_status == WIND_SUCCESS) ? (generic_u32_2 / 1000) : SPSWS_ERROR_VALUE_WIND;
 			wind_status = WIND_get_direction(&generic_u32_1);
 			// Do not store undefined error (meaning that no wind has been detected so no direction can be computed).
-			if ((wind_status != WIND_SUCCESS) && (wind_status != (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED))) {
+			if (wind_status != (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED)) {
 				WIND_stack_error(ERROR_BASE_WIND);
 			}
 			spsws_ctx.sigfox_weather_data.wind_direction_average_two_degrees = (wind_status == WIND_SUCCESS) ? (generic_u32_1 / 2) : SPSWS_ERROR_VALUE_WIND;
