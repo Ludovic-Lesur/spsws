@@ -61,7 +61,7 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
 	gps_acquisition.process_cb = &_GPS_process_callback;
 	// Start acquisition.
 	neom8x_status = NEOM8X_start_acquisition(&gps_acquisition);
-	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 	// Processing loop.
 	while (RTC_get_uptime_seconds() < (start_time + timeout_seconds)) {
 		// Enter sleep mode.
@@ -72,13 +72,13 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
 		// Check flag.
 		if (gps_ctx.process_flag != 0) {
 			neom8x_status = NEOM8X_process();
-			NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+			NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 		}
 		// Check acquisition status.
 		if (gps_ctx.acquisition_status == expected_acquisition_status) break;
 	}
 	neom8x_status = NEOM8X_stop_acquisition();
-	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 errors:
 	return status;
 }
@@ -92,7 +92,7 @@ GPS_status_t GPS_init(void) {
 	NEOM8X_status_t neom8x_status = NEOM8X_SUCCESS;
 	// Init GPS module.
 	neom8x_status = NEOM8X_init();
-	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 errors:
 	return status;
 }
@@ -104,7 +104,7 @@ GPS_status_t GPS_de_init(void) {
 	NEOM8X_status_t neom8x_status = NEOM8X_SUCCESS;
 	// Init GPS module.
 	neom8x_status = NEOM8X_de_init();
-	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 errors:
 	return status;
 }
@@ -129,7 +129,7 @@ GPS_status_t GPS_get_time(GPS_time_t* gps_time, uint32_t timeout_seconds, uint32
 	if (gps_ctx.acquisition_status != NEOM8X_ACQUISITION_STATUS_FAIL) {
 		// Read data.
 		neom8x_status = NEOM8X_get_time(gps_time);
-		NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+		NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 		// Update status.
 		(*acquisition_status) = GPS_ACQUISITION_SUCCESS;
 	}
@@ -157,7 +157,7 @@ GPS_status_t GPS_get_position(GPS_position_t* gps_position, uint32_t timeout_sec
 	if (gps_ctx.acquisition_status != NEOM8X_ACQUISITION_STATUS_FAIL) {
 		// Read data.
 		neom8x_status = NEOM8X_get_position(gps_position);
-		NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8X);
+		NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 		// Update status.
 		(*acquisition_status) = GPS_ACQUISITION_SUCCESS;
 	}

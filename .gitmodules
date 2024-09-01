@@ -10,6 +10,9 @@
 [submodule "dps310-driver"]
 	path = drivers/components/dps310-driver
 	url = https://github.com/Ludovic-Lesur/dps310-driver.git
+[submodule "max111xx-driver"]
+	path = drivers/components/max111xx-driver
+	url = https://github.com/Ludovic-Lesur/max111xx-driver.git
 [submodule "neom8x-driver"]
 	path = drivers/components/neom8x-driver
 	url = https://github.com/Ludovic-Lesur/neom8x-driver.git

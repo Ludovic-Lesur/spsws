@@ -9,7 +9,7 @@
 
 #include "adc.h"
 #include "error.h"
-#include "max11136.h"
+#include "max111xx.h"
 #include "mode.h"
 #include "types.h"
 
@@ -26,19 +26,19 @@
 #define ANALOG_VCAP_DIVIDER_RATIO_DEN			34
 
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-#define ANALOG_MAX11136_CHANNEL_WIND_DIRECTION	MAX11136_CHANNEL_AIN0
+#define ANALOG_MAX11136_CHANNEL_WIND_DIRECTION	MAX111XX_CHANNEL_AIN0
 #endif
 #ifdef HW1_0
-#define ANALOG_MAX11136_CHANNEL_VPV				MAX11136_CHANNEL_AIN4
-#define ANALOG_MAX11136_CHANNEL_VCAP			MAX11136_CHANNEL_AIN5
-#define ANALOG_MAX11136_CHANNEL_LDR				MAX11136_CHANNEL_AIN6
-#define ANALOG_MAX11136_CHANNEL_REF191			MAX11136_CHANNEL_AIN7
+#define ANALOG_MAX11136_CHANNEL_VPV				MAX111XX_CHANNEL_AIN4
+#define ANALOG_MAX11136_CHANNEL_VCAP			MAX111XX_CHANNEL_AIN5
+#define ANALOG_MAX11136_CHANNEL_LDR				MAX111XX_CHANNEL_AIN6
+#define ANALOG_MAX11136_CHANNEL_REF191			MAX111XX_CHANNEL_AIN7
 #endif
 #ifdef HW2_0
-#define ANALOG_MAX11136_CHANNEL_LDR				MAX11136_CHANNEL_AIN1
-#define ANALOG_MAX11136_CHANNEL_REF191			MAX11136_CHANNEL_AIN5
-#define ANALOG_MAX11136_CHANNEL_VPV				MAX11136_CHANNEL_AIN6
-#define ANALOG_MAX11136_CHANNEL_VCAP			MAX11136_CHANNEL_AIN7
+#define ANALOG_MAX11136_CHANNEL_LDR				MAX111XX_CHANNEL_AIN1
+#define ANALOG_MAX11136_CHANNEL_REF191			MAX111XX_CHANNEL_AIN5
+#define ANALOG_MAX11136_CHANNEL_VPV				MAX111XX_CHANNEL_AIN6
+#define ANALOG_MAX11136_CHANNEL_VCAP			MAX111XX_CHANNEL_AIN7
 #endif
 
 #define ANALOG_ERROR_VALUE						0xFFFF
@@ -58,18 +58,18 @@ static ANALOG_context_t analog_ctx = {.ref191_data_12bits = ANALOG_ERROR_VALUE};
 /*** ANALOG local functions ***/
 
 /*******************************************************************/
-static ANALOG_status_t _ANALOG_convert_max11136_channel(MAX11136_channel_t channel, uint16_t* adc_data_12bits) {
+static ANALOG_status_t _ANALOG_convert_max11136_channel(MAX111XX_channel_t channel, uint16_t* adc_data_12bits) {
 	// Local variables.
 	ANALOG_status_t status = ANALOG_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
+	MAX111XX_status_t max111xx_status = MAX111XX_SUCCESS;
 	// Check current value.
 	if (analog_ctx.ref191_data_12bits == ANALOG_ERROR_VALUE) {
 		// Update calibration value.
-		max11136_status = MAX11136_convert_channel(ANALOG_MAX11136_CHANNEL_REF191, &(analog_ctx.ref191_data_12bits));
-		MAX11136_exit_error(ANALOG_ERROR_BASE_MAX11136);
+		max111xx_status = MAX111XX_convert_channel(ANALOG_MAX11136_CHANNEL_REF191, &(analog_ctx.ref191_data_12bits));
+		MAX111XX_exit_error(ANALOG_ERROR_BASE_MAX11136);
 	}
-	max11136_status = MAX11136_convert_channel(channel, adc_data_12bits);
-	MAX11136_exit_error(ANALOG_ERROR_BASE_MAX11136);
+	max111xx_status = MAX111XX_convert_channel(channel, adc_data_12bits);
+	MAX111XX_exit_error(ANALOG_ERROR_BASE_MAX11136);
 errors:
 	return status;
 }
@@ -81,7 +81,7 @@ ANALOG_status_t ANALOG_init(void) {
 	// Local variables.
 	ANALOG_status_t status = ANALOG_SUCCESS;
 	ADC_status_t adc_status = ADC_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
+	MAX111XX_status_t max111xx_status = MAX111XX_SUCCESS;
 	// Init context.
 	analog_ctx.vmcu_mv = ANALOG_VMCU_MV_DEFAULT;
 	analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
@@ -89,8 +89,8 @@ ANALOG_status_t ANALOG_init(void) {
 	adc_status = ADC_init(NULL);
 	ADC_exit_error(ANALOG_ERROR_BASE_ADC);
 	// Init external ADC.
-	max11136_status = MAX11136_init();
-	MAX11136_exit_error(ANALOG_ERROR_BASE_MAX11136);
+	max111xx_status = MAX111XX_init();
+	MAX111XX_exit_error(ANALOG_ERROR_BASE_MAX11136);
 errors:
 	return status;
 }
@@ -100,15 +100,15 @@ ANALOG_status_t ANALOG_de_init(void) {
 	// Local variables.
 	ANALOG_status_t status = ANALOG_SUCCESS;
 	ADC_status_t adc_status = ADC_SUCCESS;
-	MAX11136_status_t max11136_status = MAX11136_SUCCESS;
+	MAX111XX_status_t max111xx_status = MAX111XX_SUCCESS;
 	// Erase calibration value.
 	analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
 	// Release internal ADC.
 	adc_status = ADC_de_init();
 	ADC_exit_error(ANALOG_ERROR_BASE_ADC);
 	// Release external ADC.
-	max11136_status = MAX11136_de_init();
-	MAX11136_exit_error(ANALOG_ERROR_BASE_MAX11136);
+	max111xx_status = MAX111XX_de_init();
+	MAX111XX_exit_error(ANALOG_ERROR_BASE_MAX11136);
 errors:
 	return status;
 }
@@ -163,7 +163,7 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
 		status = _ANALOG_convert_max11136_channel(ANALOG_MAX11136_CHANNEL_LDR, &adc_data_12bits);
 		if (status != ANALOG_SUCCESS) goto errors;
 		// Convert to percent.
-		(*analog_data) = (adc_data_12bits * 100) / (MAX11136_FULL_SCALE);
+		(*analog_data) = (adc_data_12bits * 100) / (MAX111XX_FULL_SCALE);
 		break;
 #ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
 	case ANALOG_CHANNEL_WIND_DIRECTION_RATIO:
@@ -171,7 +171,7 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
 		status = _ANALOG_convert_max11136_channel(ANALOG_MAX11136_CHANNEL_WIND_DIRECTION, &adc_data_12bits);
 		if (status != ANALOG_SUCCESS) goto errors;
 		// Convert to ratio.
-		(*analog_data) = (adc_data_12bits * 1000) / (MAX11136_FULL_SCALE);
+		(*analog_data) = (adc_data_12bits * 1000) / (MAX111XX_FULL_SCALE);
 		break;
 #endif
 	default:

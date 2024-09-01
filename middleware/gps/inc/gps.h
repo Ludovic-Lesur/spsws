@@ -22,9 +22,9 @@ typedef enum {
 	GPS_SUCCESS = 0,
 	GPS_ERROR_NULL_PARAMETER,
 	// Low level drivers errors.
-	GPS_ERROR_BASE_NEOM8X = 0x0100,
+	GPS_ERROR_BASE_NEOM8N = 0x0100,
 	// Last base value.
-	GPS_ERROR_BASE_LAST = (GPS_ERROR_BASE_NEOM8X + NEOM8X_ERROR_BASE_LAST)
+	GPS_ERROR_BASE_LAST = (GPS_ERROR_BASE_NEOM8N + NEOM8X_ERROR_BASE_LAST)
 } GPS_status_t;
 
 /*!******************************************************************

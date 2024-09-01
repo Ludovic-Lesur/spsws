@@ -9,7 +9,7 @@
 #define __ANALOG_H__
 
 #include "adc.h"
-#include "max11136.h"
+#include "max111xx.h"
 #include "mode.h"
 #include "types.h"
 
@@ -28,7 +28,7 @@ typedef enum {
 	ANALOG_ERROR_BASE_ADC = 0x0100,
 	ANALOG_ERROR_BASE_MAX11136 = (ANALOG_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
 	// Last base value.
-	ANALOG_ERROR_BASE_LAST = (ANALOG_ERROR_BASE_MAX11136 + MAX11136_ERROR_BASE_LAST)
+	ANALOG_ERROR_BASE_LAST = (ANALOG_ERROR_BASE_MAX11136 + MAX111XX_ERROR_BASE_LAST)
 } ANALOG_status_t;
 
 /*!******************************************************************
