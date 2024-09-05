@@ -12,6 +12,7 @@
 #include "dps310.h"
 #include "gps.h"
 #include "lptim.h"
+#include "rfe.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sx1232.h"
@@ -44,8 +45,9 @@ typedef enum {
 	POWER_ERROR_BASE_SX1232 = (POWER_ERROR_BASE_SI1133 + SI1133_ERROR_BASE_LAST),
 	POWER_ERROR_BASE_ANALOG = (POWER_ERROR_BASE_SX1232 + SX1232_ERROR_BASE_LAST),
 	POWER_ERROR_BASE_GPS = (POWER_ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST),
+	POWER_ERROR_BASE_RFE = (POWER_ERROR_BASE_GPS + GPS_ERROR_BASE_LAST),
 	// Last base value.
-	POWER_ERROR_BASE_LAST = (POWER_ERROR_BASE_GPS + GPS_ERROR_BASE_LAST)
+	POWER_ERROR_BASE_LAST = (POWER_ERROR_BASE_GPS + RFE_ERROR_BASE_LAST)
 } POWER_status_t;
 
 /*!******************************************************************

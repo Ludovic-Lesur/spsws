@@ -10,6 +10,7 @@
 // Peripherals.
 #include "gpio_mapping.h"
 #include "i2c_address.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "nvic_priority.h"
 #include "nvm.h"
@@ -28,13 +29,13 @@
 #include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
-#include "sky13317.h"
 #include "sx1232.h"
 #include "wind.h"
 // Middleware.
 #include "analog.h"
 #include "gps.h"
 #include "power.h"
+#include "rfe.h"
 // Sigfox.
 #include "manuf/rf_api.h"
 #include "sigfox_ep_addon_rfp_api.h"
@@ -1292,9 +1293,10 @@ static void _AT_rssi_callback(void) {
 	ERROR_code_t status = SUCCESS;
 	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
 	RF_API_status_t rf_api_status = RF_API_SUCCESS;
-	RF_API_radio_parameters_t radio_params;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	RFE_status_t rfe_status = RFE_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	RF_API_radio_parameters_t radio_params;
 	int32_t frequency_hz = 0;
 	int32_t duration_seconds = 0;
 	int16_t rssi_dbm = 0;
@@ -1318,21 +1320,13 @@ static void _AT_rssi_callback(void) {
 	rf_api_status = RF_API_init(&radio_params);
 	RF_API_check_status(ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_RF_API * 0x0100) + rf_api_status);
 	// Start continuous listening.
-	sx1232_status = SX1232_set_mode(SX1232_MODE_FSRX);
+	sx1232_status = SX1232_start_rx();
 	SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
-	// Wait TS_FS=60us typical.
-	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
-	sx1232_status = SX1232_set_mode(SX1232_MODE_RX);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
-	// Wait TS_TR=120us typical.
-	lptim_status = LPTIM_delay_milliseconds(5, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 	// Measurement loop.
 	while (report_loop < ((uint32_t) ((duration_seconds * 1000) / AT_RSSI_REPORT_PERIOD_MS))) {
 		// Read RSSI.
-		sx1232_status = SX1232_get_rssi(&rssi_dbm);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, (ERROR_BASE_SX1232 + sx1232_status));
+		rfe_status = RFE_get_rssi(&rssi_dbm);
+		RFE_stack_exit_error(ERROR_BASE_RFE, (ERROR_BASE_RFE + rfe_status));
 		// Print RSSI.
 		_AT_reply_add_string("RSSI=");
 		_AT_reply_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
@@ -1342,6 +1336,8 @@ static void _AT_rssi_callback(void) {
 		lptim_status = LPTIM_delay_milliseconds(AT_RSSI_REPORT_PERIOD_MS, LPTIM_DELAY_MODE_ACTIVE);
 		LPTIM_stack_exit_error(ERROR_BASE_LPTIM, (ERROR_BASE_LPTIM + lptim_status));
 		report_loop++;
+		// Reload watchdog.
+		IWDG_reload();
 	}
 	// Turn radio off.
 	rf_api_status = RF_API_de_init();

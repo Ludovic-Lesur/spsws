@@ -14,9 +14,9 @@
 #include "gpio_mapping.h"
 #include "gps.h"
 #include "lptim.h"
+#include "rfe.h"
 #include "sht3x.h"
 #include "si1133.h"
-#include "sky13317.h"
 #include "sx1232.h"
 #include "types.h"
 
@@ -165,12 +165,14 @@ static POWER_status_t _POWER_radio_init(void) {
 	// Local variables.
 	POWER_status_t status = POWER_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	RFE_status_t rfe_status = RFE_SUCCESS;
 	// Turn radio on.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
 	// Init SX1232 and SKY13317 drivers.
 	sx1232_status = SX1232_init();
 	SX1232_exit_error(POWER_ERROR_BASE_SX1232);
-	SKY13317_init();
+	rfe_status = RFE_init();
+	RFE_exit_error(POWER_ERROR_BASE_RFE);
 #ifdef HW1_0
 	power_ctx.effective_state[POWER_DOMAIN_RADIO] = 1;
 #endif
@@ -183,10 +185,12 @@ static POWER_status_t _POWER_radio_de_init(void) {
 	// Local variables.
 	POWER_status_t status = POWER_SUCCESS;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
+	RFE_status_t rfe_status = RFE_SUCCESS;
 	// Release SX1232 and SKY13317 drivers.
 	sx1232_status = SX1232_de_init();
 	SX1232_exit_error(POWER_ERROR_BASE_SX1232);
-	SKY13317_de_init();
+	rfe_status = RFE_de_init();
+	RFE_exit_error(POWER_ERROR_BASE_RFE);
 	// Turn radio off.
 	GPIO_write(&GPIO_RF_POWER_ENABLE, 0);
 #ifdef HW1_0

@@ -22,6 +22,9 @@
 [submodule "si1133-driver"]
 	path = drivers/components/si1133-driver
 	url = https://github.com/Ludovic-Lesur/si1133-driver.git
+[submodule "sx1232-driver"]
+	path = drivers/components/sx1232-driver
+	url = https://github.com/Ludovic-Lesur/sx1232-driver.git
 [submodule "sigfox-ep-lib"]
 	path = middleware/sigfox/sigfox-ep-lib
 	url = https://github.com/sigfox-tech-radio/sigfox-ep-lib.git

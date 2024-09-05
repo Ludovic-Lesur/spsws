@@ -11,7 +11,6 @@
 #include "gpio.h"
 #include "gpio_mapping.h"
 #include "lptim.h"
-#include "mode.h"
 #include "spi.h"
 #include "types.h"
 
