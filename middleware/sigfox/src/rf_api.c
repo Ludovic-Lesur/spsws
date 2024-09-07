@@ -360,7 +360,6 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 	RF_API_status_t status = RF_API_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	TIM_status_t tim_status = TIM_SUCCESS;
-	TIM_configuration_t tim_config;
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	RFE_status_t rfe_status = RFE_SUCCESS;
 	SX1232_modulation_t modulation = SX1232_MODULATION_LAST;
@@ -369,6 +368,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 	sfx_u32 bitrate_bps = 0;
 	sfx_u32 deviation_hz = 0;
 	sfx_u32 frequency_hz = 0;
+	sfx_u32 modulation_timer_period_ns = 0;
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (radio_parameters == SFX_NULL) {
@@ -410,11 +410,8 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		sx1232_status = SX1232_enable_manual_pa_control();
 		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
 		// Init symbol profile timer.
-		tim_config.mode = TIM_MODE_STANDARD;
-		tim_config.nvic_priority = NVIC_PRIORITY_SIGFOX_MODULATION_TIMER;
-		tim_config.period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
-		tim_config.irq_callback = &_RF_API_modulation_timer_irq_callback;
-		tim_status = TIM_init(RF_API_MODULATION_TIMER_INSTANCE, NULL, &tim_config);
+		modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
+		tim_status = TIM_STD_init(RF_API_MODULATION_TIMER_INSTANCE, modulation_timer_period_ns, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER, &_RF_API_modulation_timer_irq_callback);
 		TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
 		break;
 	case RF_API_MODULATION_GFSK:
@@ -516,7 +513,7 @@ RF_API_status_t RF_API_de_init(void) {
 	EXTI_release_gpio(&GPIO_SX1232_DIO0);
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Release symbol profile timer.
-	tim_status = TIM_de_init(RF_API_MODULATION_TIMER_INSTANCE, NULL);
+	tim_status = TIM_STD_de_init(RF_API_MODULATION_TIMER_INSTANCE);
 	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
 	// Disable front-end.
 	rfe_status = RFE_set_path(RFE_PATH_NONE);
@@ -557,7 +554,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 	status = _RF_API_internal_process();
 	CHECK_STATUS(RF_API_SUCCESS);
 	// Start timer.
-	tim_status = TIM_start(RF_API_MODULATION_TIMER_INSTANCE);
+	tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE);
 	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
 	// Wait for transmission to complete.
 	while (rf_api_ctx.state != RF_API_STATE_READY) {
@@ -569,7 +566,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 		status = _RF_API_internal_process();
 		CHECK_STATUS(RF_API_SUCCESS);
 	}
-	tim_status = TIM_stop(RF_API_MODULATION_TIMER_INSTANCE);
+	tim_status = TIM_STD_stop(RF_API_MODULATION_TIMER_INSTANCE);
 	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
 errors:
 	RETURN();

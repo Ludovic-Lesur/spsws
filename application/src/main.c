@@ -137,31 +137,25 @@ typedef union {
 
 /*******************************************************************/
 typedef struct {
-	uint8_t data[MEASUREMENT_BUFFER_LENGTH];
-	uint8_t count;
+	int32_t sample_buffer[MEASUREMENT_BUFFER_LENGTH];
+	uint32_t sample_count;
+	uint32_t last_sample_index;
 	uint8_t full_flag;
-} SPSWS_measurement_u8_t;
+} SPSWS_measurement_t;
 
 /*******************************************************************/
 typedef struct {
-	uint16_t data[MEASUREMENT_BUFFER_LENGTH];
-	uint8_t count;
-	uint8_t full_flag;
-} SPSWS_measurement_u16_t;
-
-/*******************************************************************/
-typedef struct {
-	SPSWS_measurement_u8_t tamb_degrees;
-	SPSWS_measurement_u8_t hamb_percent;
-	SPSWS_measurement_u8_t light_percent;
-	SPSWS_measurement_u8_t uv_index;
-	SPSWS_measurement_u16_t patm_abs_tenth_hpa;
-	SPSWS_measurement_u8_t tmcu_degrees;
-	SPSWS_measurement_u8_t tpcb_degrees;
-	SPSWS_measurement_u8_t hpcb_percent;
-	SPSWS_measurement_u16_t vsrc_mv;
-	SPSWS_measurement_u16_t vmcu_mv;
-	// Note: VCAP is not averaged since the last value is the most relevant.
+	SPSWS_measurement_t tamb_degrees;
+	SPSWS_measurement_t hamb_percent;
+	SPSWS_measurement_t light_percent;
+	SPSWS_measurement_t uv_index;
+	SPSWS_measurement_t patm_abs_pa;
+	SPSWS_measurement_t tmcu_degrees;
+	SPSWS_measurement_t tpcb_degrees;
+	SPSWS_measurement_t hpcb_percent;
+	SPSWS_measurement_t vsrc_mv;
+	SPSWS_measurement_t vcap_mv;
+	SPSWS_measurement_t vmcu_mv;
 } SPSWS_measurements_t;
 
 /*******************************************************************/
@@ -283,17 +277,6 @@ static SPSWS_context_t spsws_ctx;
 /*** SPSWS local functions ***/
 
 /*******************************************************************/
-#define _SPSWS_increment_measurement_count(measurement_struct) { \
-	/* Increment index */ \
-	measurement_struct.count++; \
-	/* Manage rollover and flag */ \
-	if (measurement_struct.count >= MEASUREMENT_BUFFER_LENGTH) { \
-		measurement_struct.count = 0; \
-		measurement_struct.full_flag = 1; \
-	} \
-}
-
-/*******************************************************************/
 static void _SPSWS_tick_second_callback(void) {
 	// Update context.
 	spsws_ctx.flags.tick_second = 1;
@@ -307,18 +290,33 @@ static void _SPSWS_fixed_hour_alarm_callback(void) {
 }
 
 /*******************************************************************/
+static void _SPSWS_measurement_add_sample(SPSWS_measurement_t* measurement, int32_t sample) {
+	/* Update last sample index */
+	measurement -> last_sample_index = (measurement -> sample_count);
+	/* Add sample to buffer */
+	measurement -> sample_buffer[measurement -> sample_count] = sample;
+	/* Increment index */
+	(measurement -> sample_count)++;
+	/* Manage rollover and flag */
+	if ((measurement -> sample_count) >= MEASUREMENT_BUFFER_LENGTH) {
+		(measurement -> sample_count) = 0;
+		(measurement -> full_flag) = 1;
+	}
+}
+
+/*******************************************************************/
 static void _SPSWS_reset_measurements(void) {
 	// Weather data
-	spsws_ctx.measurements.tamb_degrees.count = 0;
+	spsws_ctx.measurements.tamb_degrees.sample_count = 0;
 	spsws_ctx.measurements.tamb_degrees.full_flag = 0;
-	spsws_ctx.measurements.hamb_percent.count = 0;
+	spsws_ctx.measurements.hamb_percent.sample_count = 0;
 	spsws_ctx.measurements.hamb_percent.full_flag = 0;
-	spsws_ctx.measurements.light_percent.count = 0;
+	spsws_ctx.measurements.light_percent.sample_count = 0;
 	spsws_ctx.measurements.light_percent.full_flag = 0;
-	spsws_ctx.measurements.uv_index.count = 0;
+	spsws_ctx.measurements.uv_index.sample_count = 0;
 	spsws_ctx.measurements.uv_index.full_flag = 0;
-	spsws_ctx.measurements.patm_abs_tenth_hpa.count = 0;
-	spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag = 0;
+	spsws_ctx.measurements.patm_abs_pa.sample_count = 0;
+	spsws_ctx.measurements.patm_abs_pa.full_flag = 0;
 #ifdef SPSWS_WIND_MEASUREMENT
 	WIND_reset_data();
 #endif
@@ -326,15 +324,15 @@ static void _SPSWS_reset_measurements(void) {
 	RAIN_reset_rainfall();
 #endif
 	// Monitoring data.
-	spsws_ctx.measurements.tmcu_degrees.count = 0;
+	spsws_ctx.measurements.tmcu_degrees.sample_count = 0;
 	spsws_ctx.measurements.tmcu_degrees.full_flag = 0;
-	spsws_ctx.measurements.tpcb_degrees.count = 0;
+	spsws_ctx.measurements.tpcb_degrees.sample_count = 0;
 	spsws_ctx.measurements.tpcb_degrees.full_flag = 0;
-	spsws_ctx.measurements.hpcb_percent.count = 0;
+	spsws_ctx.measurements.hpcb_percent.sample_count = 0;
 	spsws_ctx.measurements.hpcb_percent.full_flag = 0;
-	spsws_ctx.measurements.vsrc_mv.count = 0;
+	spsws_ctx.measurements.vsrc_mv.sample_count = 0;
 	spsws_ctx.measurements.vsrc_mv.full_flag = 0;
-	spsws_ctx.measurements.vmcu_mv.count = 0;
+	spsws_ctx.measurements.vmcu_mv.sample_count = 0;
 	spsws_ctx.measurements.vmcu_mv.full_flag = 0;
 }
 
@@ -343,59 +341,141 @@ static void _SPSWS_reset_measurements(void) {
 static void _SPSWS_compute_final_measurements(void) {
 	// Local variables.
 	MATH_status_t math_status = MATH_SUCCESS;
-	uint8_t data_length = 0;
-	uint8_t generic_u8 = 0;
-	uint16_t generic_u16 = 0;
-	// Temperature
-	data_length = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tamb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_weather_data.tamb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	uint32_t sample_count = 0;
+	int32_t result = 0;
+	uint32_t generic_u32 = 0;
+	// Temperature.
+	spsws_ctx.sigfox_weather_data.tamb_degrees = SPSWS_ERROR_VALUE_TEMPERATURE;
+	sample_count = (spsws_ctx.measurements.tamb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tamb_degrees.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_min(spsws_ctx.measurements.tamb_degrees.sample_buffer, sample_count, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			// Convert temperature.
+			math_status = MATH_integer_to_signed_magnitude(result, 7, &generic_u32);
+			MATH_stack_error(ERROR_BASE_MATH);
+			if (math_status == MATH_SUCCESS) {
+				spsws_ctx.sigfox_weather_data.tamb_degrees = (uint8_t) generic_u32;
+			}
+		}
+	}
 	// Humidity.
-	data_length = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hamb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_weather_data.hamb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
+	spsws_ctx.sigfox_weather_data.hamb_percent = SPSWS_ERROR_VALUE_HUMIDITY;
+	sample_count = (spsws_ctx.measurements.hamb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hamb_percent.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.hamb_percent.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_weather_data.hamb_percent = (uint8_t) result;
+		}
+	}
 	// Light.
-	data_length = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.light_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_weather_data.light_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_LIGHT : generic_u8;
+	spsws_ctx.sigfox_weather_data.light_percent = SPSWS_ERROR_VALUE_LIGHT;
+	sample_count = (spsws_ctx.measurements.light_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.light_percent.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.light_percent.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_weather_data.light_percent = (uint8_t) result;
+		}
+	}
 	// UV index.
-	data_length = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.count;
-	math_status = MATH_max_u8(spsws_ctx.measurements.uv_index.data, data_length, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_weather_data.uv_index = (data_length == 0) ? SPSWS_ERROR_VALUE_UV_INDEX : generic_u8;
+	spsws_ctx.sigfox_weather_data.uv_index = SPSWS_ERROR_VALUE_UV_INDEX;
+	sample_count = (spsws_ctx.measurements.uv_index.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.uv_index.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_max(spsws_ctx.measurements.uv_index.sample_buffer, sample_count, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_weather_data.uv_index = (uint8_t) result;
+		}
+	}
 	// Absolute pressure.
-	data_length = (spsws_ctx.measurements.patm_abs_tenth_hpa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_tenth_hpa.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.patm_abs_tenth_hpa.data, data_length, 0, &generic_u16);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (data_length == 0) ? SPSWS_ERROR_VALUE_PRESSURE : generic_u16;
+	spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = SPSWS_ERROR_VALUE_PRESSURE;
+	sample_count = (spsws_ctx.measurements.patm_abs_pa.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.patm_abs_pa.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.patm_abs_pa.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_weather_data.patm_abs_tenth_hpa = (uint16_t) (result / 10);
+		}
+	}
 	// MCU temperature.
-	data_length = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tmcu_degrees.data, data_length, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	spsws_ctx.sigfox_monitoring_data.tmcu_degrees = SPSWS_ERROR_VALUE_TEMPERATURE;
+	sample_count = (spsws_ctx.measurements.tmcu_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tmcu_degrees.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_min(spsws_ctx.measurements.tmcu_degrees.sample_buffer, sample_count, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			// Convert temperature.
+			math_status = MATH_integer_to_signed_magnitude(result, 7, &generic_u32);
+			MATH_stack_error(ERROR_BASE_MATH);
+			if (math_status == MATH_SUCCESS) {
+				spsws_ctx.sigfox_monitoring_data.tmcu_degrees = (uint8_t) generic_u32;
+			}
+		}
+	}
 	// PCB temperature.
-	data_length = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.count;
-	math_status = MATH_min_u8(spsws_ctx.measurements.tpcb_degrees.data, data_length, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (data_length == 0) ? SPSWS_ERROR_VALUE_TEMPERATURE : generic_u8;
+	spsws_ctx.sigfox_monitoring_data.tpcb_degrees = SPSWS_ERROR_VALUE_TEMPERATURE;
+	sample_count = (spsws_ctx.measurements.tpcb_degrees.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.tpcb_degrees.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_min(spsws_ctx.measurements.tpcb_degrees.sample_buffer, sample_count, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			// Convert temperature.
+			math_status = MATH_integer_to_signed_magnitude(result, 7, &generic_u32);
+			MATH_stack_error(ERROR_BASE_MATH);
+			if (math_status == MATH_SUCCESS) {
+				spsws_ctx.sigfox_monitoring_data.tpcb_degrees = (uint8_t) generic_u32;
+			}
+		}
+	}
 	// PCB humidity.
-	data_length = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.count;
-	math_status = MATH_median_filter_u8(spsws_ctx.measurements.hpcb_percent.data, data_length, 0, &generic_u8);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_monitoring_data.hpcb_percent = (data_length == 0) ? SPSWS_ERROR_VALUE_HUMIDITY : generic_u8;
+	spsws_ctx.sigfox_monitoring_data.hpcb_percent = SPSWS_ERROR_VALUE_HUMIDITY;
+	sample_count = (spsws_ctx.measurements.hpcb_percent.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.hpcb_percent.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.hpcb_percent.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_monitoring_data.hpcb_percent = (uint8_t) result;
+		}
+	}
 	// Solar cell voltage.
-	data_length = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vsrc_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_monitoring_data.vsrc_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_16BITS : generic_u16;
+	spsws_ctx.sigfox_monitoring_data.vsrc_mv = SPSWS_ERROR_VALUE_ANALOG_16BITS;
+	sample_count = (spsws_ctx.measurements.vsrc_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vsrc_mv.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.vsrc_mv.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_monitoring_data.vsrc_mv = (uint16_t) result;
+		}
+	}
+	// Supercap voltage.
+	spsws_ctx.sigfox_monitoring_data.vcap_mv = SPSWS_ERROR_VALUE_ANALOG_12BITS;
+	sample_count = (spsws_ctx.measurements.vcap_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vcap_mv.sample_count;
+	if (sample_count > 0) {
+		// Select last value.
+		spsws_ctx.sigfox_monitoring_data.vcap_mv = spsws_ctx.measurements.vcap_mv.sample_buffer[spsws_ctx.measurements.vcap_mv.last_sample_index];
+	}
 	// MCU voltage.
-	data_length = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.count;
-	math_status = MATH_median_filter_u16(spsws_ctx.measurements.vmcu_mv.data, data_length, 0, &generic_u16);
-	MATH_stack_error(ERROR_BASE_MATH);
-	spsws_ctx.sigfox_monitoring_data.vmcu_mv = (data_length == 0) ? SPSWS_ERROR_VALUE_ANALOG_12BITS : generic_u16;
+	spsws_ctx.sigfox_monitoring_data.vmcu_mv = SPSWS_ERROR_VALUE_ANALOG_12BITS;
+	sample_count = (spsws_ctx.measurements.vmcu_mv.full_flag != 0) ? MEASUREMENT_BUFFER_LENGTH : spsws_ctx.measurements.vmcu_mv.sample_count;
+	if (sample_count > 0) {
+		// Compute single value.
+		math_status = MATH_median_filter(spsws_ctx.measurements.vmcu_mv.sample_buffer, sample_count, 0, &result);
+		MATH_stack_error(ERROR_BASE_MATH);
+		if (math_status == MATH_SUCCESS) {
+			spsws_ctx.sigfox_monitoring_data.vmcu_mv = (uint16_t) result;
+		}
+	}
 }
 #endif
 
@@ -609,7 +689,6 @@ int main (void) {
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	ANALOG_status_t analog_status = ADC_SUCCESS;
 	GPS_status_t gps_status = GPS_SUCCESS;
-	MATH_status_t math_status = MATH_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
 	DPS310_status_t dps310_status = DPS310_SUCCESS;
@@ -628,8 +707,8 @@ int main (void) {
 	ERROR_code_t error_code = 0;
 	int32_t generic_s32_1 = 0;
 	int32_t generic_s32_2 = 0;
-	uint32_t generic_u32_1 = 0;
 #ifdef SPSWS_WIND_MEASUREMENT
+	uint32_t generic_u32_1 = 0;
 	uint32_t generic_u32_2 = 0;
 #endif
 #if ((defined SPSWS_RAIN_MEASUREMENT) || (defined SPSWS_FLOOD_MEASUREMENT))
@@ -756,20 +835,13 @@ int main (void) {
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32_1);
 			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.vmcu_mv.data[spsws_ctx.measurements.vmcu_mv.count] = (uint16_t) generic_s32_1;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vmcu_mv);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vmcu_mv), generic_s32_1);
 			}
 			// MCU temperature.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32_1);
 			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
-				// Convert to 1-complement.
-				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error(ERROR_BASE_MATH);
-				if (math_status == MATH_SUCCESS) {
-					spsws_ctx.measurements.tmcu_degrees.data[spsws_ctx.measurements.tmcu_degrees.count] = (uint8_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tmcu_degrees);
-				}
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.tmcu_degrees), generic_s32_1);
 			}
 			// Retrieve external ADC data.
 			// Note: digital sensors power supply must also be enabled at this step to power the LDR.
@@ -779,19 +851,20 @@ int main (void) {
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
 			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.vsrc_mv.data[spsws_ctx.measurements.vsrc_mv.count] = (uint16_t) generic_s32_1;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.vsrc_mv);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vsrc_mv), generic_s32_1);
 			}
 			// Supercap voltage.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32_1);
 			ANALOG_stack_error(ERROR_BASE_ANALOG);
-			spsws_ctx.sigfox_monitoring_data.vcap_mv = (analog_status == ANALOG_SUCCESS) ? (uint16_t) generic_s32_1 : SPSWS_ERROR_VALUE_ANALOG_12BITS;
+			if (analog_status == ANALOG_SUCCESS) {
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vcap_mv), generic_s32_1);
+			}
+
 			// Light sensor.
 			analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32_1);
 			ANALOG_stack_error(ERROR_BASE_ANALOG);
 			if (analog_status == ANALOG_SUCCESS) {
-				spsws_ctx.measurements.light_percent.data[spsws_ctx.measurements.light_percent.count] = (uint8_t) generic_s32_1;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.light_percent);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.light_percent), generic_s32_1);
 			}
 			power_status = POWER_disable(POWER_DOMAIN_ANALOG);
 			POWER_stack_error(ERROR_BASE_POWER);
@@ -800,24 +873,12 @@ int main (void) {
 			SHT3X_stack_error(ERROR_BASE_SHT30_INTERNAL);
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				// Convert temperature.
-				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error(ERROR_BASE_MATH);
-				if (math_status == MATH_SUCCESS) {
-					// Store temperature.
-					spsws_ctx.measurements.tpcb_degrees.data[spsws_ctx.measurements.tpcb_degrees.count] = (uint8_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tpcb_degrees);
+				// Store temperature and humidity.
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.tpcb_degrees), generic_s32_1);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.hpcb_percent), generic_s32_2);
 #ifdef HW1_0
-					spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-#endif
-				}
-				// Store humidity.
-				spsws_ctx.measurements.hpcb_percent.data[spsws_ctx.measurements.hpcb_percent.count] = (uint8_t) generic_s32_2;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hpcb_percent);
-#ifdef HW1_0
-				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = (uint8_t) generic_s32_2;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.tamb_degrees), generic_s32_1);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.hamb_percent), generic_s32_2);
 #endif
 			}
 #ifdef HW2_0
@@ -826,17 +887,9 @@ int main (void) {
 			SHT3X_stack_error(ERROR_BASE_SHT30_EXTERNAL);
 			// Check status.
 			if (sht3x_status == SHT3X_SUCCESS) {
-				// Convert temperature.
-				math_status = MATH_int32_to_signed_magnitude(generic_s32_1, 7, &generic_u32_1);
-				MATH_stack_error(ERROR_BASE_MATH);
-				if (math_status == MATH_SUCCESS) {
-					// Store temperature.
-					spsws_ctx.measurements.tamb_degrees.data[spsws_ctx.measurements.tamb_degrees.count] = (uint8_t) generic_u32_1;
-					_SPSWS_increment_measurement_count(spsws_ctx.measurements.tamb_degrees);
-				}
-				// Store humidity.
-				spsws_ctx.measurements.hamb_percent.data[spsws_ctx.measurements.hamb_percent.count] = generic_s32_2;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.hamb_percent);
+				// Store temperature and humidity.
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.tamb_degrees), generic_s32_1);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.hamb_percent), generic_s32_2);
 			}
 #endif
 			// External pressure and temperature sensor.
@@ -845,8 +898,7 @@ int main (void) {
 			// Check status.
 			if (dps310_status == DPS310_SUCCESS) {
 				// Store pressure.
-				spsws_ctx.measurements.patm_abs_tenth_hpa.data[spsws_ctx.measurements.patm_abs_tenth_hpa.count] = (uint16_t) (generic_s32_1 / 10);
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.patm_abs_tenth_hpa);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.patm_abs_pa), generic_s32_1);
 			}
 			// External UV index sensor.
 			si1133_status = SI1133_get_uv_index(I2C_ADDRESS_SI1133, &generic_s32_1);
@@ -854,8 +906,7 @@ int main (void) {
 			// Check status.
 			if (si1133_status == SI1133_SUCCESS) {
 				// Store UV index.
-				spsws_ctx.measurements.uv_index.data[spsws_ctx.measurements.uv_index.count] = (uint8_t) generic_s32_1;
-				_SPSWS_increment_measurement_count(spsws_ctx.measurements.uv_index);
+				_SPSWS_measurement_add_sample(&(spsws_ctx.measurements.uv_index), generic_s32_1);
 			}
 			power_status = POWER_disable(POWER_DOMAIN_SENSORS);
 			POWER_stack_error(ERROR_BASE_POWER);

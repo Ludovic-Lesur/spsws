@@ -48,7 +48,7 @@
 /*******************************************************************/
 typedef struct {
 	int32_t vmcu_mv;
-	uint16_t ref191_data_12bits;
+	int32_t ref191_data_12bits;
 } ANALOG_context_t;
 
 /*** ANALOG local global variables ***/
@@ -58,7 +58,7 @@ static ANALOG_context_t analog_ctx = {.ref191_data_12bits = ANALOG_ERROR_VALUE};
 /*** ANALOG local functions ***/
 
 /*******************************************************************/
-static ANALOG_status_t _ANALOG_convert_max11136_channel(MAX111XX_channel_t channel, uint16_t* adc_data_12bits) {
+static ANALOG_status_t _ANALOG_convert_max11136_channel(MAX111XX_channel_t channel, int32_t* adc_data_12bits) {
 	// Local variables.
 	ANALOG_status_t status = ANALOG_SUCCESS;
 	MAX111XX_status_t max111xx_status = MAX111XX_SUCCESS;
@@ -118,7 +118,7 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
 	// Local variables.
 	ANALOG_status_t status = ANALOG_SUCCESS;
 	ADC_status_t adc_status = ADC_SUCCESS;
-	uint16_t adc_data_12bits = 0;
+	int32_t adc_data_12bits = 0;
 	// Check parameter.
 	if (analog_data == NULL) {
 		status = ANALOG_ERROR_NULL_PARAMETER;
