@@ -62,7 +62,7 @@
 #endif
 #define SPSWS_SIGFOX_MONITORING_DATA_SIZE			9
 #define SPSWS_SIGFOX_GEOLOC_DATA_SIZE				11
-#define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE		3
+#define SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE		2
 #define SPSWS_SIGFOX_ERROR_STACK_DATA_SIZE			12
 // Error values.
 #define SPSWS_ERROR_VALUE_ANALOG_12BITS				0xFFF
@@ -218,7 +218,7 @@ typedef union {
 typedef union {
 	uint8_t frame[SPSWS_SIGFOX_GEOLOC_TIMEOUT_DATA_SIZE];
 	struct {
-		unsigned error_code : 16;
+		unsigned gps_acquisition_status : 8;
 		unsigned gps_acquisition_duration_seconds : 8;
 	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SPSWS_sigfox_geoloc_timeout_data_t;
@@ -988,7 +988,7 @@ int main (void) {
 				application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_DATA_SIZE;
 			}
 			else {
-				spsws_ctx.sigfox_geoloc_timeout_data.error_code = gps_acquisition_status;
+				spsws_ctx.sigfox_geoloc_timeout_data.gps_acquisition_status = gps_acquisition_status;
 				spsws_ctx.sigfox_geoloc_timeout_data.gps_acquisition_duration_seconds = gps_acquisition_duration_seconds;
 				// Update message parameters.
 				application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
