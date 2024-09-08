@@ -13,6 +13,8 @@
 #include "lpuart.h"
 #include "nvic_priority.h"
 
+#ifndef NEOM8X_DRIVER_DISABLE
+
 /*** NEOM8X HW functions ***/
 
 /*******************************************************************/
@@ -104,3 +106,5 @@ NEOM8X_status_t NEOM8X_HW_set_backup_voltage(uint8_t state) {
 	return status;
 }
 #endif
+
+#endif /* NEOM8X_DRIVER_DISABLE */

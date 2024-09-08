@@ -9,6 +9,8 @@
 
 #include "sensors_hw.h"
 
+#ifndef SI1133_DRIVER_DISABLE
+
 /*** SI1133 HW functions ***/
 
 /*******************************************************************/
@@ -35,3 +37,5 @@ SI1133_status_t SI1133_HW_i2c_read(uint8_t i2c_address, uint8_t* data, uint8_t d
 SI1133_status_t SI1133_HW_delay_milliseconds(uint32_t delay_ms) {
 	return ((SI1133_status_t) SENSORS_HW_delay_milliseconds(SI1133_ERROR_BASE_DELAY, delay_ms));
 }
+
+#endif /* SI1133_DRIVER_DISABLE */

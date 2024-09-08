@@ -26,11 +26,9 @@
 #include "types.h"
 // Components.
 #include "dps310.h"
-#include "rain.h"
 #include "sht3x.h"
 #include "si1133.h"
 #include "sx1232.h"
-#include "wind.h"
 // Middleware.
 #include "analog.h"
 #include "gps.h"
@@ -104,12 +102,6 @@ static void _AT_eths_callback(void);
 #endif
 static void _AT_epts_callback(void);
 static void _AT_euvs_callback(void);
-#ifdef SPSWS_WIND_MEASUREMENT
-static void _AT_wind_callback(void);
-#endif
-#ifdef SPSWS_RAIN_MEASUREMENT
-static void _AT_rain_callback(void);
-#endif
 #endif
 /*******************************************************************/
 #ifdef AT_COMMAND_GPS
@@ -161,9 +153,6 @@ typedef struct {
 	// Reply.
 	char_t reply[AT_REPLY_BUFFER_SIZE];
 	uint32_t reply_size;
-#ifdef SPSWS_WIND_MEASUREMENT
-	uint8_t wind_measurement_flag;
-#endif
 } AT_context_t;
 #endif
 
@@ -192,12 +181,6 @@ static const AT_command_t AT_COMMAND_LIST[] = {
 #endif
 	{PARSER_MODE_COMMAND, "AT$EPTS?", STRING_NULL, "Get pressure and temperature", _AT_epts_callback},
 	{PARSER_MODE_COMMAND, "AT$EUVS?", STRING_NULL, "Get UV index", _AT_euvs_callback},
-#ifdef SPSWS_WIND_MEASUREMENT
-	{PARSER_MODE_HEADER,  "AT$WIND=", "enable[bit]", "Enable or disable wind measurements", _AT_wind_callback},
-#endif
-#ifdef SPSWS_RAIN_MEASUREMENT
-	{PARSER_MODE_HEADER,  "AT$RAIN=", "enable[bit]", "Enable or disable rain detection", _AT_rain_callback},
-#endif
 #endif
 #ifdef AT_COMMAND_GPS
 	{PARSER_MODE_HEADER,  "AT$TIME=", "timeout[s]", "Get GPS time", _AT_time_callback},
@@ -751,98 +734,6 @@ static void _AT_euvs_callback(void) {
 	return;
 errors:
 	POWER_disable(POWER_DOMAIN_SENSORS);
-	_AT_print_error(status);
-	return;
-}
-#endif
-
-#if (defined ATM) && (defined AT_COMMAND_SENSORS) && (defined SPSWS_WIND_MEASUREMENT)
-/*******************************************************************/
-static void _AT_wind_callback(void) {
-	// Local variables.
-	ERROR_code_t status = SUCCESS;
-	PARSER_status_t parser_status = PARSER_SUCCESS;
-	WIND_status_t wind_status = WIND_SUCCESS;
-	int32_t enable = 0;
-	uint32_t wind_speed_average = 0;
-	uint32_t wind_speed_peak = 0;
-	uint32_t wind_direction = 0;
-	// Read enable parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
-	// Start or stop wind continuous measurements.
-	if (enable == 0) {
-		WIND_stop_continuous_measure();
-		at_ctx.wind_measurement_flag = 0;
-		// Get speeds.
-		wind_status = WIND_get_speed(&wind_speed_average, &wind_speed_peak);
-		WIND_stack_exit_error(ERROR_BASE_WIND, (ERROR_BASE_WIND + wind_status));
-		_AT_reply_add_string("wspd_avrg=");
-		_AT_reply_add_value((int32_t) wind_speed_average, STRING_FORMAT_DECIMAL, 0);
-		_AT_reply_add_string("m/h=");
-		_AT_reply_send();
-		_AT_reply_add_string("wpsd_peak=");
-		_AT_reply_add_value((int32_t) wind_speed_peak, STRING_FORMAT_DECIMAL, 0);
-		_AT_reply_add_string("m/h=");
-		_AT_reply_send();
-		// Get direction.
-		_AT_reply_add_string("wdir_avrg=");
-		wind_status = WIND_get_direction(&wind_direction);
-		if (wind_status == (WIND_ERROR_BASE_MATH + MATH_ERROR_UNDEFINED)) {
-			_AT_reply_add_string("N/A");
-		}
-		else {
-			WIND_stack_exit_error(ERROR_BASE_WIND, (ERROR_BASE_WIND + wind_status));
-			_AT_reply_add_value((int32_t) wind_direction, STRING_FORMAT_DECIMAL, 0);
-			_AT_reply_add_string("d");
-		}
-		_AT_reply_send();
-		// Reset data.
-		WIND_reset_data();
-	}
-	else {
-		WIND_start_continuous_measure();
-		at_ctx.wind_measurement_flag = 1;
-	}
-	_AT_print_ok();
-	return;
-errors:
-	_AT_print_error(status);
-	return;
-}
-#endif
-
-#if (defined ATM) && (defined AT_COMMAND_SENSORS) && (defined SPSWS_RAIN_MEASUREMENT)
-/*******************************************************************/
-static void _AT_rain_callback(void) {
-	// Local variables.
-	ERROR_code_t status = SUCCESS;
-	PARSER_status_t parser_status = PARSER_ERROR_UNKNOWN_COMMAND;
-	RAIN_status_t rain_status = RAIN_SUCCESS;
-	int32_t enable = 0;
-	uint8_t rain_mm = 0;
-	// Read enable parameter.
-	parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
-	PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
-	// Start or stop rain continuous measurements.
-	if (enable == 0) {
-		RAIN_stop_continuous_measure();
-		// Read and print data.
-		_AT_reply_add_string("rain=");
-		rain_status = RAIN_get_rainfall(&rain_mm);
-		RAIN_stack_exit_error(ERROR_BASE_RAIN, (ERROR_BASE_RAIN + rain_status));
-		_AT_reply_add_value((int32_t) rain_mm, STRING_FORMAT_DECIMAL,0);
-		_AT_reply_add_string("mm");
-		_AT_reply_send();
-		// Reset data.
-		RAIN_reset_rainfall();
-	}
-	else {
-		RAIN_start_continuous_measure();
-	}
-	_AT_print_ok();
-	return;
-errors:
 	_AT_print_error(status);
 	return;
 }
@@ -1410,9 +1301,6 @@ void AT_init(void) {
 	USART_configuration_t usart_config;
 	// Init context.
 	_AT_reset_parser();
-#ifdef SPSWS_WIND_MEASUREMENT
-	at_ctx.wind_measurement_flag = 0;
-#endif
 	// Init USART.
 	usart_config.baud_rate = AT_USART_BAUD_RATE;
 	usart_config.nvic_priority = NVIC_PRIORITY_AT;
@@ -1444,13 +1332,6 @@ void AT_task(void) {
 }
 #endif
 
-#if (defined ATM) && (defined SPSWS_WIND_MEASUREMENT)
-/*******************************************************************/
-uint8_t AT_get_wind_measurement_flag(void) {
-	return (at_ctx.wind_measurement_flag);
-}
-#endif
-
 #ifdef ATM
 /*******************************************************************/
 void AT_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm) {
@@ -1464,41 +1345,6 @@ void AT_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rss
 	_AT_reply_add_string(" (RSSI=");
 	_AT_reply_add_value(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_add_string("dBm)");
-	_AT_reply_send();
-}
-#endif
-
-#ifdef ATM
-/*******************************************************************/
-void AT_print_rainfall(uint32_t rain_edge_count) {
-	// Print data.
-	_AT_reply_add_string("Rain_edge_count=");
-	_AT_reply_add_value((int32_t) rain_edge_count, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_send();
-}
-#endif
-
-#ifdef ATM
-/*******************************************************************/
-void AT_print_wind_speed(uint32_t speed_mh) {
-	// Print data.
-	_AT_reply_add_string("Wind_speed=");
-	_AT_reply_add_value((int32_t) speed_mh, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("m/h");
-	_AT_reply_send();
-}
-#endif
-
-#ifdef ATM
-/*******************************************************************/
-void AT_print_wind_direction(uint32_t direction_degrees, int32_t direction_x, int32_t direction_y) {
-	// Print data.
-	_AT_reply_add_string("Wind_direction=");
-	_AT_reply_add_value((int32_t) direction_degrees, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string("d x=");
-	_AT_reply_add_value(direction_x, STRING_FORMAT_DECIMAL, 0);
-	_AT_reply_add_string(" y=");
-	_AT_reply_add_value(direction_y, STRING_FORMAT_DECIMAL, 0);
 	_AT_reply_send();
 }
 #endif

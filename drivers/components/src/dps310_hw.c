@@ -9,6 +9,8 @@
 
 #include "sensors_hw.h"
 
+#ifndef DPS310_DRIVER_DISABLE
+
 /*** DPS310 HW functions ***/
 
 /*******************************************************************/
@@ -35,3 +37,5 @@ DPS310_status_t DPS310_HW_i2c_read(uint8_t i2c_address, uint8_t* data, uint8_t d
 DPS310_status_t DPS310_HW_delay_milliseconds(uint32_t delay_ms) {
 	return ((DPS310_status_t) SENSORS_HW_delay_milliseconds(DPS310_ERROR_BASE_DELAY, delay_ms));
 }
+
+#endif /* DPS310_DRIVER_DISABLE */

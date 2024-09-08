@@ -14,6 +14,8 @@
 #include "spi.h"
 #include "types.h"
 
+#ifndef SX1232_DRIVER_DISABLE
+
 /*** SX1232 HW local macros ***/
 
 #define SX1232_SPI_INSTANCE		SPI_INSTANCE_SPI1
@@ -87,3 +89,5 @@ SX1232_status_t SX1232_HW_delay_milliseconds(uint32_t delay_ms) {
 errors:
 	return status;
 }
+
+#endif /* SX1232_DRIVER_DISABLE */

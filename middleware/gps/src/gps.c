@@ -57,8 +57,8 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
 	(*acquisition_duration_seconds) = 0;
 	// Configure GPS acquisition.
 	gps_acquisition.gps_data = gps_data;
-	gps_acquisition.completion_cb = &_GPS_completion_callback;
-	gps_acquisition.process_cb = &_GPS_process_callback;
+	gps_acquisition.completion_callback = &_GPS_completion_callback;
+	gps_acquisition.process_callback = &_GPS_process_callback;
 	// Start acquisition.
 	neom8x_status = NEOM8X_start_acquisition(&gps_acquisition);
 	NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);

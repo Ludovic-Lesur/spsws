@@ -14,6 +14,8 @@
 #include "spi.h"
 #include "types.h"
 
+#ifndef MAX111XX_DRIVER_DISABLE
+
 /*** MAX111XX HW local macros ***/
 
 #ifdef HW1_0
@@ -103,3 +105,5 @@ MAX111XX_status_t MAX111XX_HW_delay_milliseconds(uint32_t delay_ms) {
 errors:
 	return status;
 }
+
+#endif /* MAX111XX_DRIVER_DISABLE */

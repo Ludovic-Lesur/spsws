@@ -15,23 +15,6 @@
 
 /*** Board options ***/
 
-// Measurement features.
-#define SPSWS_WIND_MEASUREMENT
-#define SPSWS_RAIN_MEASUREMENT
-#if (defined SPSWS_RAIN_MEASUREMENT) && (defined HW2_0)
-//#define SPSWS_FLOOD_MEASUREMENT
-#endif
-
-// Wind vane type.
-#ifdef SPSWS_WIND_MEASUREMENT
-//#define WIND_VANE_ULTIMETER
-#define WIND_VANE_ARGENT_DATA_SYSTEMS
-#endif
-
-/*** Errors management ***/
-
-#if (defined WIND_VANE_ULTIMETER && defined WIND_VANE_ARGENT_DATA_SYSTEMS)
-#error "Only one wind vane type must be selected"
-#endif
+#define SPSWS_WIND_RAINFALL_MEASUREMENTS
 
 #endif /* __MODE_H__ */

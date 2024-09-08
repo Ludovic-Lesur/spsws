@@ -12,13 +12,21 @@
 #include "gpio_mapping.h"
 #include "i2c.h"
 #include "lptim.h"
+#include "mode.h"
+#include "sen15901_hw.h"
 #include "types.h"
 
 /*** SENSORS HW local macros ***/
 
 #define SENSORS_I2C_INSTANCE	I2C_INSTANCE_I2C1
 
-/*** SHT3x functions ***/
+/*** SENSORS HW local global variables ***/
+
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+static SEN15901_HW_tick_second_irq_cb_t sensors_hw_sen15901_tick_second_callback = NULL;
+#endif
+
+/*** SENSORS HW functions ***/
 
 /*******************************************************************/
 ERROR_code_t SENSORS_HW_init(ERROR_code_t i2c_error_base) {
@@ -79,3 +87,17 @@ ERROR_code_t SENSORS_HW_delay_milliseconds(ERROR_code_t delay_error_base, uint32
 errors:
 	return status;
 }
+
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+/*******************************************************************/
+void SENSORS_HW_set_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t tick_second_callback) {
+	sensors_hw_sen15901_tick_second_callback = tick_second_callback;
+}
+#endif
+
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+/*******************************************************************/
+void SENSORS_HW_get_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t* tick_second_callback) {
+	(*tick_second_callback) = sensors_hw_sen15901_tick_second_callback;
+}
+#endif

@@ -25,7 +25,7 @@
 #define ANALOG_VCAP_DIVIDER_RATIO_NUM			269
 #define ANALOG_VCAP_DIVIDER_RATIO_DEN			34
 
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 #define ANALOG_MAX11136_CHANNEL_WIND_DIRECTION	MAX111XX_CHANNEL_AIN0
 #endif
 #ifdef HW1_0
@@ -165,8 +165,8 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
 		// Convert to percent.
 		(*analog_data) = (adc_data_12bits * 100) / (MAX111XX_FULL_SCALE);
 		break;
-#ifdef WIND_VANE_ARGENT_DATA_SYSTEMS
-	case ANALOG_CHANNEL_WIND_DIRECTION_RATIO:
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+	case ANALOG_CHANNEL_WIND_DIRECTION_RATIO_PERMILLE:
 		// Wind vane direction.
 		status = _ANALOG_convert_max11136_channel(ANALOG_MAX11136_CHANNEL_WIND_DIRECTION, &adc_data_12bits);
 		if (status != ANALOG_SUCCESS) goto errors;

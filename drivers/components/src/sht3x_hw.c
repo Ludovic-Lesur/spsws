@@ -9,6 +9,8 @@
 
 #include "sensors_hw.h"
 
+#ifndef SHT3X_DRIVER_DISABLE
+
 /*** SHT3X HW functions ***/
 
 /*******************************************************************/
@@ -35,3 +37,5 @@ SHT3X_status_t SHT3X_HW_i2c_read(uint8_t i2c_address, uint8_t* data, uint8_t dat
 SHT3X_status_t SHT3X_HW_delay_milliseconds(uint32_t delay_ms) {
 	return ((SHT3X_status_t) SENSORS_HW_delay_milliseconds(SHT3X_ERROR_BASE_DELAY, delay_ms));
 }
+
+#endif /* SHT3X_DRIVER_DISABLE */
