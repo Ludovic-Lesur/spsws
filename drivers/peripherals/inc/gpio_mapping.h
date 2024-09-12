@@ -14,7 +14,7 @@
 #include "spi.h"
 #include "usart.h"
 
-/*** MAPPING macros ***/
+/*** GPIO MAPPING macros ***/
 
 #ifdef HW1_0
 #define GPIO_SX1232_DIO2_LOW(void)		{ GPIOA -> ODR &= 0xFFFFFEFF; }
@@ -31,7 +31,7 @@
 #define GPIO_SX1232_CS_HIGH(void)		{ GPIOA -> ODR |= 0x00000010; }
 #endif
 
-/*** MAPPING global variables ***/
+/*** GPIO MAPPING global variables ***/
 
 // MCU TCXO.
 extern const GPIO_pin_t 	GPIO_TCXO16_POWER_ENABLE;
@@ -78,6 +78,5 @@ extern const I2C_gpio_t 	GPIO_SENSORS_I2C;
 extern const USART_gpio_t 	GPIO_AT_USART;
 // Debug LED.
 extern const GPIO_pin_t 	GPIO_LED;
-
 
 #endif /* __GPIO_MAPPING_H__ */

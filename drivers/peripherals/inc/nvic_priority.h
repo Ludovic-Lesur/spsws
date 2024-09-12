@@ -1,8 +1,8 @@
 /*
  * nvic_priority.h
  *
- *  Created on: Aug 11, 2024
- *      Author: ludo
+ *  Created on: 11 aug. 2024
+ *      Author: Ludo
  */
 
 #ifndef __NVIC_PRIORITY_H__
