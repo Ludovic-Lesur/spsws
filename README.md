@@ -44,11 +44,14 @@ The project is organized as follow:
     * `registers` : MCU **registers** address definition.
     * `peripherals` : internal MCU **peripherals** drivers.
     * `components` : external **components** drivers.
-* `middleware` :
     * `utils` : **utility** functions.
+* `middleware` :
+    * `analog` : High level **analog measurements** driver.
     * `at` : **AT commands** parser.
+    * `gps` : High level **GPS** driver.
+    * `power` : Board **power tree** manager.
     * `sigfox` : **Sigfox EP_LIB** and **ADDON_RFP** submodules and low level implementation.
-* `application` : high-level **application** layers.
+* `application` : Main **application**.
 
 ## Sigfox library
 
