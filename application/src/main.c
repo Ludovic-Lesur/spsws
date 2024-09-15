@@ -542,11 +542,11 @@ static void _SPSWS_update_time_flags(void) {
 	nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), &nvm_byte);
 	NVM_stack_error(ERROR_BASE_NVM);
 	spsws_ctx.previous_wake_up_time.year |= nvm_byte;
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
+	nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
+	nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
+	nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
 	NVM_stack_error(ERROR_BASE_NVM);
 	// Check time are different (avoiding false wake-up due to RTC calibration).
 	if ((spsws_ctx.current_time.year != spsws_ctx.previous_wake_up_time.year) ||
@@ -585,15 +585,15 @@ static void _SPSWS_update_pwut(void) {
 	rtc_status = RTC_get_time(&spsws_ctx.current_time);
 	RTC_stack_error(ERROR_BASE_RTC);
 	// Update previous wake-up time.
-	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
+	nvm_status = NVM_write_byte((NVM_address_t) (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
+	nvm_status = NVM_write_byte((NVM_address_t) (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
+	nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
+	nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
 	NVM_stack_error(ERROR_BASE_NVM);
-	nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
+	nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
 	NVM_stack_error(ERROR_BASE_NVM);
 }
 #endif
@@ -713,7 +713,7 @@ int main (void) {
 	_SPSWS_init_hw();
 	// Local variables.
 	RTC_status_t rtc_status = RTC_SUCCESS;
-	ANALOG_status_t analog_status = ADC_SUCCESS;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
 	GPS_status_t gps_status = GPS_SUCCESS;
 	POWER_status_t power_status = POWER_SUCCESS;
 	SHT3X_status_t sht3x_status = SHT3X_SUCCESS;

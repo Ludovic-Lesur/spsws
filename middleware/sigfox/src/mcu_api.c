@@ -94,7 +94,7 @@ MCU_API_status_t MCU_API_open(MCU_API_config_t *mcu_api_config) {
 	UNUSED(mcu_api_config);
 	// Init timer.
 	tim_status = TIM_MCH_init(MCU_API_TIMER_INSTANCE, NVIC_PRIORITY_SIGFOX_TIMER);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -108,7 +108,7 @@ MCU_API_status_t MCU_API_close(void) {
 	TIM_status_t tim_status = TIM_SUCCESS;
 	// Release timer.
 	tim_status = TIM_MCH_de_init(MCU_API_TIMER_INSTANCE);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -132,7 +132,7 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t *timer) {
 	TIM_waiting_mode_t tim2_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
 	// Check parameter.
 	if (timer == SFX_NULL) {
-		EXIT_ERROR(MCU_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_NULL_PARAMETER);
 	}
 #ifdef BIDIRECTIONAL
 	// Update waiting mode according to timer reason.
@@ -143,8 +143,8 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t *timer) {
 	}
 #endif
 	// Start timer.
-	tim_status = TIM_MCH_start_channel(MCU_API_TIMER_INSTANCE, (timer -> instance), (timer -> duration_ms), tim2_waiting_mode);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	tim_status = TIM_MCH_start_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) (timer -> instance), (timer -> duration_ms), tim2_waiting_mode);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -157,8 +157,8 @@ MCU_API_status_t MCU_API_timer_stop(MCU_API_timer_instance_t timer_instance) {
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	TIM_status_t tim_status = TIM_SUCCESS;
 	// Stop timer.
-	tim_status = TIM_MCH_stop_channel(MCU_API_TIMER_INSTANCE, timer_instance);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	tim_status = TIM_MCH_stop_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -171,8 +171,8 @@ MCU_API_status_t MCU_API_timer_status(MCU_API_timer_instance_t timer_instance, s
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	TIM_status_t tim_status = TIM_SUCCESS;
 	// Read status.
-	tim_status = TIM_MCH_get_channel_status(MCU_API_TIMER_INSTANCE, timer_instance, timer_has_elapsed);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	tim_status = TIM_MCH_get_channel_status(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance, timer_has_elapsed);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -185,8 +185,8 @@ MCU_API_status_t MCU_API_timer_wait_cplt(MCU_API_timer_instance_t timer_instance
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	TIM_status_t tim_status = TIM_SUCCESS;
 	// Wait for timer completion.
-	tim_status = TIM_MCH_wait_channel_completion(MCU_API_TIMER_INSTANCE, timer_instance);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, MCU_API_ERROR_DRIVER_TIM);
+	tim_status = TIM_MCH_wait_channel_completion(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
 	RETURN();
 }
@@ -207,7 +207,7 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t *aes_data
 		// Retrieve private key from NVM.
 		for (idx=0 ; idx<SIGFOX_EP_KEY_SIZE_BYTES ; idx++) {
 			nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), &(local_key[idx]));
-			NVM_stack_exit_error(ERROR_BASE_NVM, MCU_API_ERROR_DRIVER_NVM);
+			NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
 		}
 		break;
 	case SIGFOX_EP_KEY_PUBLIC:
@@ -224,14 +224,14 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t *aes_data
 	// Retrieve private key from NVM.
 	for (idx=0 ; idx<SIGFOX_EP_KEY_SIZE_BYTES ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), &(local_key[idx]));
-		NVM_stack_exit_error(ERROR_BASE_NVM, MCU_API_ERROR_DRIVER_NVM);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
 	}
 #endif
 	// Init peripheral.
 	AES_init();
 	// Perform AES.
 	aes_status = AES_encrypt((aes_data -> data), (aes_data -> data), local_key);
-	AES_stack_exit_error(ERROR_BASE_AES, MCU_API_ERROR_DRIVER_AES);
+	AES_stack_exit_error(ERROR_BASE_AES, (MCU_API_status_t) MCU_API_ERROR_DRIVER_AES);
 errors:
 	// Release peripheral.
 	AES_de_init();
@@ -265,7 +265,7 @@ MCU_API_status_t MCU_API_get_ep_id(sfx_u8 *ep_id, sfx_u8 ep_id_size_bytes) {
 	// Get device ID.
 	for (idx=0 ; idx<ep_id_size_bytes ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + idx), &(ep_id[idx]));
-		NVM_stack_exit_error(ERROR_BASE_NVM, MCU_API_ERROR_DRIVER_NVM);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
 	}
 errors:
 	RETURN();
@@ -280,7 +280,7 @@ MCU_API_status_t MCU_API_get_nvm(sfx_u8 *nvm_data, sfx_u8 nvm_data_size_bytes) {
 	// Read data.
 	for (idx=0 ; idx<nvm_data_size_bytes ; idx++) {
 		nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_LIB_DATA + idx), &(nvm_data[idx]));
-		NVM_stack_exit_error(ERROR_BASE_NVM, MCU_API_ERROR_DRIVER_NVM);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
 	}
 errors:
 	RETURN();
@@ -295,7 +295,7 @@ MCU_API_status_t MCU_API_set_nvm(sfx_u8 *nvm_data, sfx_u8 nvm_data_size_bytes) {
 	// Write data.
 	for (idx=0 ; idx<nvm_data_size_bytes ; idx++) {
 		nvm_status = NVM_write_byte((NVM_ADDRESS_SIGFOX_EP_LIB_DATA + idx), nvm_data[idx]);
-		NVM_stack_exit_error(ERROR_BASE_NVM, MCU_API_ERROR_DRIVER_NVM);
+		NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
 	}
 errors:
 	RETURN();
@@ -311,18 +311,18 @@ MCU_API_status_t MCU_API_get_voltage_temperature(sfx_u16 *voltage_idle_mv, sfx_u
 	int32_t data = 0;
 	// Perform analog measurements.
 	power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER, MCU_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (MCU_API_status_t) MCU_API_ERROR_DRIVER_POWER);
 	// Get MCU supply voltage.
 	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &data);
-	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, MCU_API_ERROR_DRIVER_ANALOG);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (MCU_API_status_t) MCU_API_ERROR_DRIVER_ANALOG);
 	(*voltage_idle_mv) = (sfx_u16) data;
 	(*voltage_tx_mv) = (sfx_u16) data;
 	// Get MCU internal temperature.
 	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &data);
-	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, MCU_API_ERROR_DRIVER_ANALOG);
+	ANALOG_stack_exit_error(ERROR_BASE_ANALOG, (MCU_API_status_t) MCU_API_ERROR_DRIVER_ANALOG);
 	(*temperature_tenth_degrees) = ((sfx_s16) data) * 10;
 	power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-	POWER_stack_exit_error(ERROR_BASE_POWER, MCU_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (MCU_API_status_t) MCU_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }
@@ -361,7 +361,7 @@ MCU_API_status_t MCU_API_get_latency(MCU_API_latency_t latency_type, sfx_u32 *la
 	MCU_API_status_t status = MCU_API_SUCCESS;
 	// Check parameter.
 	if (latency_type >= MCU_API_LATENCY_LAST) {
-		EXIT_ERROR(MCU_API_ERROR_LATENCY_TYPE);
+		EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_LATENCY_TYPE);
 	}
 	// Set latency.
 	(*latency_ms) = MCU_API_LATENCY_MS[latency_type];

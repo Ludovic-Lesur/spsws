@@ -186,7 +186,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
 		// Start radio.
 		SX1232_set_pa_power_value(0x00);
 		sx1232_status = SX1232_start_tx();
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Enable interrupt.
 		rf_api_ctx.flags.field.timer_irq_enable = 1;
 		// Update state.
@@ -257,7 +257,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
 		// Stop radio.
 		SX1232_set_pa_power_value(0x00);
 		sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Update state.
 		rf_api_ctx.state = RF_API_STATE_READY;
 		break;
@@ -265,7 +265,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
 	case RF_API_STATE_RX_START:
 		// Start radio.
 		sx1232_status = SX1232_start_rx();
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Enable interrupt.
 		rf_api_ctx.flags.field.gpio_irq_enable = 1;
 		// Update state.
@@ -276,13 +276,13 @@ static RF_API_status_t _RF_API_internal_process(void) {
 		if (rf_api_ctx.flags.field.gpio_irq_flag != 0) {
 			// Read RSSI.
 			rfe_status = RFE_get_rssi(&rf_api_ctx.dl_rssi_dbm);
-			RFE_stack_exit_error(ERROR_BASE_RFE, RF_API_ERROR_DRIVER_RFE);
+			RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
 			// Stop radio.
 			sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-			SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+			SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 			// Read FIFO
 			sx1232_status = SX1232_read_fifo((sfx_u8*) rf_api_ctx.dl_phy_content, SIGFOX_DL_PHY_CONTENT_SIZE_BYTES);
-			SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+			SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 			// Disable interrupt.
 			rf_api_ctx.flags.field.gpio_irq_enable = 0;
 			// Update state.
@@ -291,7 +291,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
 		break;
 #endif /* BIDIRECTIONAL */
 	default:
-		EXIT_ERROR(RF_API_ERROR_STATE);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_STATE);
 		break;
 	}
 errors:
@@ -337,7 +337,7 @@ RF_API_status_t RF_API_wake_up(void) {
 	POWER_status_t power_status = POWER_SUCCESS;
 	// Turn radio TCXO on.
 	power_status = POWER_enable(POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }
@@ -349,7 +349,7 @@ RF_API_status_t RF_API_sleep(void) {
 	POWER_status_t power_status = POWER_SUCCESS;
 	// Turn radio TCXO off.
 	power_status = POWER_disable(POWER_DOMAIN_RADIO_TCXO);
-	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
 errors:
 	RETURN();
 }
@@ -372,18 +372,18 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (radio_parameters == SFX_NULL) {
-		EXIT_ERROR(RF_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_NULL_PARAMETER);
 	}
 #endif
 	// Turn radio on.
 	power_status = POWER_enable(POWER_DOMAIN_RADIO, LPTIM_DELAY_MODE_SLEEP);
-	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
 	// Init transceiver.
 	sx1232_status = SX1232_set_mode(SX1232_MODE_SLEEP);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Oscillator.
 	sx1232_status = SX1232_set_oscillator(SX1232_OSCILLATOR_TCXO);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Modulation parameters.
 	switch (radio_parameters -> modulation) {
 	case RF_API_MODULATION_NONE:
@@ -397,7 +397,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		data_mode = SX1232_DATA_MODE_CONTINUOUS;
 		// Set CW output power.
 		sx1232_status = SX1232_set_rf_output_power(radio_parameters -> tx_power_dbm_eirp);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		break;
 	case RF_API_MODULATION_DBPSK:
 		modulation = SX1232_MODULATION_FSK;
@@ -408,11 +408,11 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		data_mode = SX1232_DATA_MODE_CONTINUOUS;
 		// Use manual control of the PA.
 		sx1232_status = SX1232_enable_manual_pa_control();
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Init symbol profile timer.
 		modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
 		tim_status = TIM_STD_init(RF_API_MODULATION_TIMER_INSTANCE, modulation_timer_period_ns, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER, &_RF_API_modulation_timer_irq_callback);
-		TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
+		TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 		break;
 	case RF_API_MODULATION_GFSK:
 		modulation = SX1232_MODULATION_FSK;
@@ -425,34 +425,34 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		data_mode = SX1232_DATA_MODE_PACKET;
 		break;
 	default:
-		EXIT_ERROR(RF_API_ERROR_MODULATION);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_MODULATION);
 		break;
 	}
 	// Frequency.
 	sx1232_status = SX1232_set_rf_frequency(frequency_hz);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Modulation.
 	sx1232_status = SX1232_set_modulation(modulation, modulation_shaping);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Bit rate.
 	if (bitrate_bps != 0) {
 		sx1232_status = SX1232_set_bitrate(bitrate_bps);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	}
 	// Deviation.
 	if (deviation_hz != 0) {
 		sx1232_status = SX1232_set_fsk_deviation(deviation_hz);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	}
 	// Data mode.
 	sx1232_status = SX1232_set_data_mode(data_mode);
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Configure specific registers.
 	switch (radio_parameters -> rf_mode) {
 	case RF_API_MODE_TX:
 		// Specific uplink settings.
 		sx1232_status = SX1232_set_pll_mode(SX1232_PLL_MODE_LOW_PHASE_NOISE);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 #if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION)
 		// Start latency = ramp-up.
 		RF_API_LATENCY_MS[RF_API_LATENCY_SEND_START] = SX1232_START_TX_DELAY_MS + ((1000) / ((sfx_u32) (radio_parameters -> bit_rate_bps)));
@@ -463,37 +463,37 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		GPIO_configure(&GPIO_SX1232_DIO2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 		// Switch to TX.
 		sx1232_status = SX1232_set_rf_output_pin(SX1232_RF_OUTPUT_PIN_PABOOST);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		rfe_status = RFE_set_path(RFE_PATH_TX_BYPASS);
-		RFE_stack_exit_error(ERROR_BASE_RFE, RF_API_ERROR_DRIVER_RFE);
+		RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
 		break;
 #ifdef BIDIRECTIONAL
 	case RF_API_MODE_RX:
 		// Specific downlink settings.
 		sx1232_status = SX1232_set_rx_bandwidth(SX1232_RXBW_MANTISSA_24, SX1232_RXBW_EXPONENT_7);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		sx1232_status = SX1232_set_lna_configuration(SX1232_LNA_MODE_BOOST, SX1232_LNA_GAIN_ATTENUATION_0DB, 0);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		sx1232_status = SX1232_set_rssi_sampling(SX1232_RSSI_SAMPLING_256);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		sx1232_status = SX1232_set_preamble_detector(1, 0);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		sx1232_status = SX1232_set_sync_word((sfx_u8*) RF_API_DL_FT, SIGFOX_DL_FT_SIZE_BYTES);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		sx1232_status = SX1232_set_data_size(SIGFOX_DL_PHY_CONTENT_SIZE_BYTES);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Init DIO0 to detect payload ready interrupt.
 		sx1232_status = SX1232_set_dio_mapping(SX1232_DIO0, SX1232_DIO_MAPPING0);
-		SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 		EXTI_configure_gpio(&GPIO_SX1232_DIO0, EXTI_TRIGGER_RISING_EDGE, &_RF_API_sx1232_gpio_irq_callback, NVIC_PRIORITY_SIGFOX_MODULATION_GPIO);
 		// Switch to RX.
 		rfe_status = RFE_set_path(RFE_PATH_RX_LNA);
-		RFE_stack_exit_error(ERROR_BASE_RFE, RF_API_ERROR_DRIVER_RFE);
+		RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
 		break;
 #endif
 	default:
-		EXIT_ERROR(RF_API_ERROR_MODE);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_MODE);
 		break;
 	}
 errors:
@@ -514,13 +514,13 @@ RF_API_status_t RF_API_de_init(void) {
 	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Release symbol profile timer.
 	tim_status = TIM_STD_de_init(RF_API_MODULATION_TIMER_INSTANCE);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 	// Disable front-end.
 	rfe_status = RFE_set_path(RFE_PATH_NONE);
-	RFE_stack_exit_error(ERROR_BASE_RFE, RF_API_ERROR_DRIVER_RFE);
+	RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
 	// Turn radio off.
 	power_status = POWER_disable(POWER_DOMAIN_RADIO);
-	POWER_stack_exit_error(ERROR_BASE_POWER, RF_API_ERROR_DRIVER_POWER);
+	POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
 	RETURN();
 errors:
 	POWER_disable(POWER_DOMAIN_RADIO);
@@ -536,7 +536,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (tx_data == SFX_NULL) {
-		EXIT_ERROR(RF_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_NULL_PARAMETER);
 	}
 #endif
 	// Store TX data.
@@ -555,7 +555,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 	CHECK_STATUS(RF_API_SUCCESS);
 	// Start timer.
 	tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 	// Wait for transmission to complete.
 	while (rf_api_ctx.state != RF_API_STATE_READY) {
 		// Wait for GPIO interrupt.
@@ -567,7 +567,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 		CHECK_STATUS(RF_API_SUCCESS);
 	}
 	tim_status = TIM_STD_stop(RF_API_MODULATION_TIMER_INSTANCE);
-	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, RF_API_ERROR_DRIVER_TIMER_MODULATION);
+	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 errors:
 	RETURN();
 }
@@ -583,7 +583,7 @@ RF_API_status_t RF_API_receive(RF_API_rx_data_t *rx_data) {
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (rx_data == SFX_NULL) {
-		EXIT_ERROR(RF_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_NULL_PARAMETER);
 	}
 #endif
 	// Enable GPIO interrupt.
@@ -606,12 +606,12 @@ RF_API_status_t RF_API_receive(RF_API_rx_data_t *rx_data) {
 			IWDG_reload();
 			// Check timeout.
 			mcu_api_status = MCU_API_timer_status(MCU_API_TIMER_INSTANCE_T_RX, &dl_timeout);
-			MCU_API_check_status(RF_API_ERROR_DRIVER_MCU_API);
+			MCU_API_check_status((RF_API_status_t) RF_API_ERROR_DRIVER_MCU_API);
 			// Exit if timeout.
 			if (dl_timeout == SFX_TRUE) {
 				// Stop radio.
 				sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-				SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+				SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 				// Exit loop.
 				goto errors;
 			}
@@ -640,10 +640,10 @@ RF_API_status_t RF_API_get_dl_phy_content_and_rssi(sfx_u8 *dl_phy_content, sfx_u
 #ifdef PARAMETERS_CHECK
 	// Check parameters.
 	if ((dl_phy_content == SFX_NULL) || (dl_rssi_dbm == SFX_NULL)) {
-		EXIT_ERROR(RF_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_NULL_PARAMETER);
 	}
 	if (dl_phy_content_size > SIGFOX_DL_PHY_CONTENT_SIZE_BYTES) {
-		EXIT_ERROR(RF_API_ERROR_BUFFER_SIZE);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_BUFFER_SIZE);
 	}
 #endif
 	// Fill data.
@@ -673,10 +673,10 @@ RF_API_status_t RF_API_get_latency(RF_API_latency_t latency_type, sfx_u32 *laten
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (latency_ms == SFX_NULL) {
-		EXIT_ERROR(RF_API_ERROR_NULL_PARAMETER);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_NULL_PARAMETER);
 	}
 	if (latency_type >= RF_API_LATENCY_LAST) {
-		EXIT_ERROR(RF_API_ERROR_LATENCY_TYPE);
+		EXIT_ERROR((RF_API_status_t) RF_API_ERROR_LATENCY_TYPE);
 	}
 #endif
 	// Set latency.
@@ -696,7 +696,7 @@ RF_API_status_t RF_API_start_continuous_wave(void) {
 	SX1232_status_t sx1232_status = SX1232_SUCCESS;
 	// Start radio.
 	sx1232_status = SX1232_start_tx();
-	SX1232_stack_exit_error(ERROR_BASE_SX1232, RF_API_ERROR_DRIVER_SX1232);
+	SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 	// Start OOK data signal.
 	GPIO_write(&GPIO_SX1232_DIO2, 1);
 errors:
