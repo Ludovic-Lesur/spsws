@@ -40,7 +40,7 @@ SEN15901_status_t SEN15901_HW_init(SEN15901_HW_configuration_t* configuration) {
 	EXTI_configure_gpio(&SEN15901_HW_GPIO_RAINFALL, EXTI_TRIGGER_FALLING_EDGE, (configuration -> rainfall_edge_irq_callback), NVIC_PRIORITY_RAINFALL);
 	// Store tick second callback which will be used in main (RTC).
 	SENSORS_HW_set_sen15901_tick_second_callback(configuration -> tick_second_irq_callback);
-	// Note: ADC will initialized in the power enable function.
+	// Note: ADC will be initialized in the power enable function.
 	return status;
 }
 
