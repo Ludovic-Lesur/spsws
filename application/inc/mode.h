@@ -17,4 +17,8 @@
 
 #define SPSWS_WIND_RAINFALL_MEASUREMENTS
 
+#if ((defined SPSWS_WIND_RAINFALL_MEASUREMENTS) && (defined HW2_0))
+//#define SPSWS_SEN15901_EMULATOR
+#endif
+
 #endif /* __MODE_H__ */
