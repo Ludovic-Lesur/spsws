@@ -232,6 +232,7 @@ typedef struct {
     SPSWS_state_t state;
     SPSWS_status_t status;
     volatile SPSWS_flags_t flags;
+    volatile uint32_t seconds_counter;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
     SEN15901_HW_tick_second_irq_cb_t sen15901_tick_second_callback;
 #endif
@@ -241,7 +242,6 @@ typedef struct {
     RTC_time_t previous_wake_up_time;
     // Measurements buffers.
     SPSWS_measurements_t measurements;
-    volatile uint32_t seconds_counter;
     // Sigfox frames.
     SPSWS_sigfox_startup_data_t sigfox_startup_data;
     SPSWS_sigfox_monitoring_data_t sigfox_monitoring_data;
@@ -276,7 +276,7 @@ static void _SPSWS_fixed_hour_alarm_callback(void) {
     spsws_ctx.flags.fixed_hour_alarm = 1;
 }
 
-#if (!(defined ATM) && (defined SPSWS_WIND_RAINFALL_MEASUREMENTS))
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 /*******************************************************************/
 static void _SPSWS_sen15901_process_callback(void) {
     // Update local flag.
@@ -809,16 +809,13 @@ int main(void) {
         case SPSWS_STATE_RTC_CALIBRATION:
             // Turn GPS on.
             power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Get current time from GPS.
             gps_status = GPS_get_time(&gps_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
-            GPS_stack_error(ERROR_BASE_GPS)
-            ;
+            GPS_stack_error(ERROR_BASE_GPS);
             // Turn GPS off.
             power_status = POWER_disable(POWER_DOMAIN_GPS);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Calibrate RTC if time is available.
             if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
                 // Copy structure.
@@ -850,56 +847,46 @@ int main(void) {
         case SPSWS_STATE_MEASURE:
             // Retrieve internal ADC data.
             power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // MCU voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32_1);
-            ANALOG_stack_error(ERROR_BASE_ANALOG)
-            ;
+            ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vmcu_mv), generic_s32_1);
             }
             // MCU temperature.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32_1);
-            ANALOG_stack_error(ERROR_BASE_ANALOG)
-            ;
+            ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.tmcu_degrees), generic_s32_1);
             }
             // Retrieve external ADC data.
             // Note: digital sensors power supply must also be enabled at this step to power the LDR.
             power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Solar cell voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
-            ANALOG_stack_error(ERROR_BASE_ANALOG)
-            ;
+            ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vsrc_mv), generic_s32_1);
             }
             // Supercap voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32_1);
-            ANALOG_stack_error(ERROR_BASE_ANALOG)
-            ;
+            ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vcap_mv), generic_s32_1);
             }
-            
             // Light sensor.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32_1);
-            ANALOG_stack_error(ERROR_BASE_ANALOG)
-            ;
+            ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.light_percent), generic_s32_1);
             }
             power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Internal temperature/humidity sensor.
             sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &generic_s32_1, &generic_s32_2);
-            SHT3X_stack_error(ERROR_BASE_SHT30_INTERNAL)
-            ;
+            SHT3X_stack_error(ERROR_BASE_SHT30_INTERNAL);
             // Check status.
             if (sht3x_status == SHT3X_SUCCESS) {
                 // Store temperature and humidity.
@@ -913,8 +900,7 @@ int main(void) {
 #ifdef HW2_0
             // External temperature/humidity sensor.
             sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_EXTERNAL, &generic_s32_1, &generic_s32_2);
-            SHT3X_stack_error(ERROR_BASE_SHT30_EXTERNAL)
-            ;
+            SHT3X_stack_error(ERROR_BASE_SHT30_EXTERNAL);
             // Check status.
             if (sht3x_status == SHT3X_SUCCESS) {
                 // Store temperature and humidity.
@@ -939,8 +925,7 @@ int main(void) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.uv_index), generic_s32_1);
             }
             power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Go to off state.
             spsws_ctx.state = SPSWS_STATE_OFF;
             break;
@@ -990,16 +975,13 @@ int main(void) {
         case SPSWS_STATE_GEOLOC:
             // Turn GPS on.
             power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Get geolocation from GPS.
             gps_status = GPS_get_position(&gps_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
-            GPS_stack_error(ERROR_BASE_GPS)
-            ;
+            GPS_stack_error(ERROR_BASE_GPS);
             // Turn GPS off.
             power_status = POWER_disable(POWER_DOMAIN_GPS);
-            POWER_stack_error(ERROR_BASE_POWER)
-            ;
+            POWER_stack_error(ERROR_BASE_POWER);
             // Update flag whatever the result.
             spsws_ctx.status.daily_geoloc = 1;
             // Build Sigfox frame.
@@ -1107,7 +1089,6 @@ int main(void) {
                 spsws_ctx.state = SPSWS_STATE_WAKEUP;
             }
             break;
-            // UNKNOWN STATE.
         default:
             // Enter standby mode.
             spsws_ctx.state = SPSWS_STATE_OFF;

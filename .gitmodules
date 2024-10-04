@@ -1,36 +1,36 @@
 [submodule "stm32l0xx-registers"]
-	path = drivers/registers/stm32l0xx-registers
-	url = https://github.com/Ludovic-Lesur/stm32l0xx-registers.git
+    path = drivers/registers/stm32l0xx-registers
+    url = https://github.com/Ludovic-Lesur/stm32l0xx-registers.git
 [submodule "stm32l0xx-drivers"]
-	path = drivers/peripherals/stm32l0xx-drivers
-	url = https://github.com/Ludovic-Lesur/stm32l0xx-drivers.git
+    path = drivers/peripherals/stm32l0xx-drivers
+    url = https://github.com/Ludovic-Lesur/stm32l0xx-drivers.git
 [submodule "embedded-utils"]
-	path = drivers/utils/embedded-utils
-	url = https://github.com/Ludovic-Lesur/embedded-utils.git
+    path = drivers/utils/embedded-utils
+    url = https://github.com/Ludovic-Lesur/embedded-utils.git
 [submodule "dps310-driver"]
-	path = drivers/components/dps310-driver
-	url = https://github.com/Ludovic-Lesur/dps310-driver.git
+    path = drivers/components/dps310-driver
+    url = https://github.com/Ludovic-Lesur/dps310-driver.git
 [submodule "max111xx-driver"]
-	path = drivers/components/max111xx-driver
-	url = https://github.com/Ludovic-Lesur/max111xx-driver.git
+    path = drivers/components/max111xx-driver
+    url = https://github.com/Ludovic-Lesur/max111xx-driver.git
 [submodule "neom8x-driver"]
-	path = drivers/components/neom8x-driver
-	url = https://github.com/Ludovic-Lesur/neom8x-driver.git
+    path = drivers/components/neom8x-driver
+    url = https://github.com/Ludovic-Lesur/neom8x-driver.git
 [submodule "sen15901-driver"]
-	path = drivers/components/sen15901-driver
-	url = https://github.com/Ludovic-Lesur/sen15901-driver.git
+    path = drivers/components/sen15901-driver
+    url = https://github.com/Ludovic-Lesur/sen15901-driver.git
 [submodule "sht3x-driver"]
-	path = drivers/components/sht3x-driver
-	url = https://github.com/Ludovic-Lesur/sht3x-driver.git
+    path = drivers/components/sht3x-driver
+    url = https://github.com/Ludovic-Lesur/sht3x-driver.git
 [submodule "si1133-driver"]
-	path = drivers/components/si1133-driver
-	url = https://github.com/Ludovic-Lesur/si1133-driver.git
+    path = drivers/components/si1133-driver
+    url = https://github.com/Ludovic-Lesur/si1133-driver.git
 [submodule "sx1232-driver"]
-	path = drivers/components/sx1232-driver
-	url = https://github.com/Ludovic-Lesur/sx1232-driver.git
+    path = drivers/components/sx1232-driver
+    url = https://github.com/Ludovic-Lesur/sx1232-driver.git
 [submodule "sigfox-ep-lib"]
-	path = middleware/sigfox/sigfox-ep-lib
-	url = https://github.com/sigfox-tech-radio/sigfox-ep-lib.git
+    path = middleware/sigfox/sigfox-ep-lib
+    url = https://github.com/sigfox-tech-radio/sigfox-ep-lib.git
 [submodule "sigfox-ep-addon-rfp"]
-	path = middleware/sigfox/sigfox-ep-addon-rfp
-	url = https://github.com/sigfox-tech-radio/sigfox-ep-addon-rfp.git
+    path = middleware/sigfox/sigfox-ep-addon-rfp
+    url = https://github.com/sigfox-tech-radio/sigfox-ep-addon-rfp.git

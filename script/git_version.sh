@@ -1,9 +1,9 @@
 #!/bin/bash
 
 sscanf() {
-	local str="$1"
-	local format="$2"
-	[[ "$str" =~ $format ]]
+    local str="$1"
+    local format="$2"
+    [[ "$str" =~ $format ]]
 }
 
 # Touch files to force makefile operation.
@@ -23,7 +23,7 @@ sscanf $git_version "sw([0-9]+).([0-9]+)-([0-9]+)-g(.+)"
 # Manage dirty flag.
 dirty_flag=0
 if [[ $diff ]]; then
-	dirty_flag=1
+    dirty_flag=1
 fi
 
 echo "/*" > ../application/inc/version.h

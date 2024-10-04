@@ -18,9 +18,9 @@
 /*!******************************************************************
  * \fn void AT_init(void)
  * \brief Init AT interface.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		none
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      none
  *******************************************************************/
 void AT_init(void);
 #endif
@@ -29,9 +29,9 @@ void AT_init(void);
 /*!******************************************************************
  * \fn void AT_task(void)
  * \brief AT interface task.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		none
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      none
  *******************************************************************/
 void AT_task(void);
 #endif
@@ -40,13 +40,13 @@ void AT_task(void);
 /*!******************************************************************
  * \fn void AT_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm)
  * \brief Print a downlink frame (only used by the RFP addon during downlink test modes).
- * \param[in]  	dl_payload: Downlink payload to print.
- * \param[in] 	dl_payload_size: Number of bytes to print.
- * \param[in]	rssi_dbm: RSSI of the received downlink frame (16-bits signed value).
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   dl_payload: Downlink payload to print.
+ * \param[in]   dl_payload_size: Number of bytes to print.
+ * \param[in]   rssi_dbm: RSSI of the received downlink frame (16-bits signed value).
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
-void AT_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm);
+void AT_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm);
 #endif
 
 #endif /* __AT_H__ */

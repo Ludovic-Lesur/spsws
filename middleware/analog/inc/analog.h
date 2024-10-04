@@ -20,15 +20,15 @@
  * \brief ANALOG driver error codes.
  *******************************************************************/
 typedef enum {
-	// Driver errors.
-	ANALOG_SUCCESS = 0,
-	ANALOG_ERROR_NULL_PARAMETER,
-	ANALOG_ERROR_CHANNEL,
-	// Low level drivers errors.
-	ANALOG_ERROR_BASE_ADC = 0x0100,
-	ANALOG_ERROR_BASE_MAX11136 = (ANALOG_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
-	// Last base value.
-	ANALOG_ERROR_BASE_LAST = (ANALOG_ERROR_BASE_MAX11136 + MAX111XX_ERROR_BASE_LAST)
+    // Driver errors.
+    ANALOG_SUCCESS = 0,
+    ANALOG_ERROR_NULL_PARAMETER,
+    ANALOG_ERROR_CHANNEL,
+    // Low level drivers errors.
+    ANALOG_ERROR_BASE_ADC = 0x0100,
+    ANALOG_ERROR_BASE_MAX11136 = (ANALOG_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
+    // Last base value.
+    ANALOG_ERROR_BASE_LAST = (ANALOG_ERROR_BASE_MAX11136 + MAX111XX_ERROR_BASE_LAST)
 } ANALOG_status_t;
 
 /*!******************************************************************
@@ -36,15 +36,15 @@ typedef enum {
  * \brief ANALOG data indexes.
  *******************************************************************/
 typedef enum {
-	ANALOG_CHANNEL_VMCU_MV = 0,
-	ANALOG_CHANNEL_TMCU_DEGREES,
-	ANALOG_CHANNEL_VPV_MV,
-	ANALOG_CHANNEL_VCAP_MV,
-	ANALOG_CHANNEL_LDR_PERCENT,
+    ANALOG_CHANNEL_VMCU_MV = 0,
+    ANALOG_CHANNEL_TMCU_DEGREES,
+    ANALOG_CHANNEL_VPV_MV,
+    ANALOG_CHANNEL_VCAP_MV,
+    ANALOG_CHANNEL_LDR_PERCENT,
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-	ANALOG_CHANNEL_WIND_DIRECTION_RATIO_PERMILLE,
+    ANALOG_CHANNEL_WIND_DIRECTION_RATIO_PERMILLE,
 #endif
-	ANALOG_CHANNEL_LAST
+    ANALOG_CHANNEL_LAST
 } ANALOG_channel_t;
 
 /*** ANALOG functions ***/
@@ -52,27 +52,27 @@ typedef enum {
 /*!******************************************************************
  * \fn ANALOG_status_t ANALOG_init(void)
  * \brief Init ANALOG driver.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
 ANALOG_status_t ANALOG_init(void);
 
 /*!******************************************************************
  * \fn ANALOG_status_t ANALOG_de_init(void)
  * \brief Release ANALOG driver.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
 ANALOG_status_t ANALOG_de_init(void);
 
 /*!******************************************************************
  * \fn ANALOG_status_t ANALOG_perform(void)
  * \brief Perform all analog measurements.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
 ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog_data);
 

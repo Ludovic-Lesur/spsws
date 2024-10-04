@@ -18,13 +18,13 @@
  * \brief GPS driver error codes.
  *******************************************************************/
 typedef enum {
-	// Driver errors.
-	GPS_SUCCESS = 0,
-	GPS_ERROR_NULL_PARAMETER,
-	// Low level drivers errors.
-	GPS_ERROR_BASE_NEOM8N = 0x0100,
-	// Last base value.
-	GPS_ERROR_BASE_LAST = (GPS_ERROR_BASE_NEOM8N + NEOM8X_ERROR_BASE_LAST)
+    // Driver errors.
+    GPS_SUCCESS = 0,
+    GPS_ERROR_NULL_PARAMETER,
+    // Low level drivers errors.
+    GPS_ERROR_BASE_NEOM8N = 0x0100,
+    // Last base value.
+    GPS_ERROR_BASE_LAST = (GPS_ERROR_BASE_NEOM8N + NEOM8X_ERROR_BASE_LAST)
 } GPS_status_t;
 
 /*!******************************************************************
@@ -32,9 +32,9 @@ typedef enum {
  * \brief GPS driver error codes.
  *******************************************************************/
 typedef enum {
-	GPS_ACQUISITION_SUCCESS = 0,
-	GPS_ACQUISITION_ERROR_TIMEOUT,
-	GPS_ACQUISITION_ERROR_LAST
+    GPS_ACQUISITION_SUCCESS = 0,
+    GPS_ACQUISITION_ERROR_TIMEOUT,
+    GPS_ACQUISITION_ERROR_LAST
 } GPS_acquisition_status_t;
 
 /*!******************************************************************
@@ -54,40 +54,40 @@ typedef NEOM8X_position_t GPS_position_t;
 /*!******************************************************************
  * \fn GPS_status_t GPS_init(void)
  * \brief Init GPS driver.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
 GPS_status_t GPS_init(void);
 
 /*!******************************************************************
  * \fn GPS_status_t GPS_de_init(void)
  * \brief Release GPS driver.
- * \param[in]  	none
- * \param[out] 	none
- * \retval		Function execution status.
+ * \param[in]   none
+ * \param[out]  none
+ * \retval      Function execution status.
  *******************************************************************/
 GPS_status_t GPS_de_init(void);
 
 /*!******************************************************************
  * \fn GPS_status_t GPS_get_time(GPS_time_t* gps_time, uint32_t timeout_seconds, uint32_t* acquisition_duration_seconds, GPS_acquisition_status_t* acquisition_status)
  * \brief Perform GPS position acquisition.
- * \param[in]  	timeout_seconds: Fix timeout in seconds.
- * \param[out] 	gps_time: Pointer to the GPS time if found.
- * \param[out]	acquisition_duration_seconds; Pointer to integer that will contain the GPS acquisition duration in seconds.
- * \param[out]	acquisition_success: Pointer to the acquisition success flag.
- * \retval		Function execution status.
+ * \param[in]   timeout_seconds: Fix timeout in seconds.
+ * \param[out]  gps_time: Pointer to the GPS time if found.
+ * \param[out]  acquisition_duration_seconds; Pointer to integer that will contain the GPS acquisition duration in seconds.
+ * \param[out]  acquisition_success: Pointer to the acquisition success flag.
+ * \retval      Function execution status.
  *******************************************************************/
 GPS_status_t GPS_get_time(GPS_time_t* gps_time, uint32_t timeout_seconds, uint32_t* acquisition_duration_seconds, GPS_acquisition_status_t* acquisition_status);
 
 /*!******************************************************************
  * \fn GPS_status_t GPS_get_position(GPS_position_t* gps_position, uint32_t timeout_seconds, uint32_t* acquisition_duration_seconds, GPS_acquisition_status_t* acquisition_status)
  * \brief Perform GPS position acquisition.
- * \param[in]  	timeout_seconds: Fix timeout in seconds.
- * \param[out] 	gps_position: Pointer to the GPS position if found.
- * \param[out]	acquisition_duration_seconds; Pointer to integer that will contain the GPS acquisition duration in seconds.
- * \param[out]	acquisition_success: Pointer to the acquisition success flag.
- * \retval		Function execution status.
+ * \param[in]   timeout_seconds: Fix timeout in seconds.
+ * \param[out]  gps_position: Pointer to the GPS position if found.
+ * \param[out]  acquisition_duration_seconds; Pointer to integer that will contain the GPS acquisition duration in seconds.
+ * \param[out]  acquisition_success: Pointer to the acquisition success flag.
+ * \retval      Function execution status.
  *******************************************************************/
 GPS_status_t GPS_get_position(GPS_position_t* gps_position, uint32_t timeout_seconds, uint32_t* acquisition_duration_seconds, GPS_acquisition_status_t* acquisition_status);
 

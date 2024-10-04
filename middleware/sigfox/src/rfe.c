@@ -20,9 +20,9 @@
 
 /*******************************************************************/
 RFE_status_t RFE_init(void) {
-	// Local variables.
-	RFE_status_t status = RFE_SUCCESS;
-	// Configure GPIOs.
+    // Local variables.
+    RFE_status_t status = RFE_SUCCESS;
+    // Configure GPIOs.
 #ifdef HW1_0
 	GPIO_configure(&GPIO_RF_CHANNEL_A, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_RF_CHANNEL_B, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -30,87 +30,87 @@ RFE_status_t RFE_init(void) {
 	GPIO_write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
-	GPIO_configure(&GPIO_RF_TX_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_RF_RX_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_RF_TX_ENABLE, 0);
-	GPIO_write(&GPIO_RF_RX_ENABLE, 0);
+    GPIO_configure(&GPIO_RF_TX_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+    GPIO_configure(&GPIO_RF_RX_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+    GPIO_write(&GPIO_RF_TX_ENABLE, 0);
+    GPIO_write(&GPIO_RF_RX_ENABLE, 0);
 #endif
-	return status;
+    return status;
 }
 
 /*******************************************************************/
 RFE_status_t RFE_de_init(void) {
-	// Local variables.
-	RFE_status_t status = RFE_SUCCESS;
-	// Set all pins to output low.
-	status = RFE_set_path(RFE_PATH_NONE);
-	if (status != RFE_SUCCESS) goto errors;
+    // Local variables.
+    RFE_status_t status = RFE_SUCCESS;
+    // Set all pins to output low.
+    status = RFE_set_path(RFE_PATH_NONE);
+    if (status != RFE_SUCCESS) goto errors;
 errors:
-	return status;
+    return status;
 }
 
 /*******************************************************************/
 RFE_status_t RFE_set_path(RFE_path_t radio_path) {
-	// Local variables.
-	RFE_status_t status = RFE_SUCCESS;
-	// Reset channels.
+    // Local variables.
+    RFE_status_t status = RFE_SUCCESS;
+    // Reset channels.
 #ifdef HW1_0
 	GPIO_write(&GPIO_RF_CHANNEL_A, 0);
 	GPIO_write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
-	GPIO_write(&GPIO_RF_TX_ENABLE, 0);
-	GPIO_write(&GPIO_RF_RX_ENABLE, 0);
+    GPIO_write(&GPIO_RF_TX_ENABLE, 0);
+    GPIO_write(&GPIO_RF_RX_ENABLE, 0);
 #endif
-	// Select channel.
-	switch (radio_path) {
-	case RFE_PATH_NONE:
-		// Already done by previous reset.
-		break;
-	case RFE_PATH_TX_BYPASS:
+    // Select channel.
+    switch (radio_path) {
+    case RFE_PATH_NONE:
+        // Already done by previous reset.
+        break;
+    case RFE_PATH_TX_BYPASS:
 #ifdef HW1_0
 		GPIO_write(&GPIO_RF_CHANNEL_A, 1);
 #endif
 #ifdef HW2_0
-		GPIO_write(&GPIO_RF_TX_ENABLE, 1);
+        GPIO_write(&GPIO_RF_TX_ENABLE, 1);
 #endif
-		break;
+        break;
 #ifdef HW1_0
 	case RFE_PATH_TX_PA:
 		GPIO_write(&GPIO_RF_CHANNEL_B, 1);
 		break;
 #endif
 #ifdef BIDIRECTIONAL
-	case RFE_PATH_RX_LNA:
+    case RFE_PATH_RX_LNA:
 #ifdef HW1_0
 		GPIO_write(&GPIO_RF_CHANNEL_A, 1);
 		GPIO_write(&GPIO_RF_CHANNEL_B, 1);
 #endif
 #ifdef HW2_0
-		GPIO_write(&GPIO_RF_RX_ENABLE, 1);
+        GPIO_write(&GPIO_RF_RX_ENABLE, 1);
 #endif
-		break;
+        break;
 #endif
-	default:
-		status = RFE_ERROR_PATH;
-		goto errors;
-	}
+    default:
+        status = RFE_ERROR_PATH;
+        goto errors;
+    }
 errors:
-	return status;
+    return status;
 }
 
 #ifdef BIDIRECTIONAL
 /*******************************************************************/
 RFE_status_t RFE_get_rssi(int16_t* rssi_dbm) {
-	// Local variables.
-	RFE_status_t status = RFE_SUCCESS;
-	SX1232_status_t sx1232_status = SX1232_SUCCESS;
-	// Read raw RSSI.
-	sx1232_status = SX1232_get_rssi(rssi_dbm);
-	SX1232_exit_error(RFE_ERROR_BASE_SX1232);
-	// Apply calibration gain.
-	(*rssi_dbm) -= RFE_RX_GAIN_DB;
+    // Local variables.
+    RFE_status_t status = RFE_SUCCESS;
+    SX1232_status_t sx1232_status = SX1232_SUCCESS;
+    // Read raw RSSI.
+    sx1232_status = SX1232_get_rssi(rssi_dbm);
+    SX1232_exit_error(RFE_ERROR_BASE_SX1232);
+    // Apply calibration gain.
+    (*rssi_dbm) -= RFE_RX_GAIN_DB;
 errors:
-	return status;
+    return status;
 }
 #endif
