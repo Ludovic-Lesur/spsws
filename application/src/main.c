@@ -502,7 +502,11 @@ static void _SPSWS_compute_final_measurements(void) {
     SEN15901_stack_error(ERROR_BASE_SEN15901);
     // Check status.
     if (sen15901_status == SEN15901_SUCCESS) {
-        spsws_ctx.sigfox_weather_data.rainfall_mm = (generic_s32_1 / 1000); // TODO rounding.
+        spsws_ctx.sigfox_weather_data.rainfall_mm = (generic_s32_1 / 1000);
+        // Rounding operation.
+        if ((generic_s32_1 - (spsws_ctx.sigfox_weather_data.rainfall_mm * 1000)) >= 500) {
+            spsws_ctx.sigfox_weather_data.rainfall_mm++;
+        }
     }
 #endif
 }
