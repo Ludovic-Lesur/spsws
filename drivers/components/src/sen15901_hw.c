@@ -10,7 +10,6 @@
 #include "analog.h"
 #include "error.h"
 #include "exti.h"
-#include "gpio.h"
 #include "gpio_mapping.h"
 #include "nvic.h"
 #include "nvic_priority.h"
@@ -33,11 +32,9 @@ SEN15901_status_t SEN15901_HW_init(SEN15901_HW_configuration_t* configuration) {
 	// Local variables.
 	SEN15901_status_t status = SEN15901_SUCCESS;
 	// Init wind speed GPIO.
-	GPIO_configure(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&SEN15901_HW_GPIO_WIND_SPEED, EXTI_TRIGGER_FALLING_EDGE, (configuration -> wind_speed_edge_irq_callback), NVIC_PRIORITY_WIND_SPEED);
+	EXTI_configure_gpio(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_PULL_NONE, EXTI_TRIGGER_FALLING_EDGE, (configuration -> wind_speed_edge_irq_callback), NVIC_PRIORITY_WIND_SPEED);
 	// Init rainfall GPIO.
-	GPIO_configure(&SEN15901_HW_GPIO_RAINFALL, GPIO_MODE_INPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	EXTI_configure_gpio(&SEN15901_HW_GPIO_RAINFALL, EXTI_TRIGGER_FALLING_EDGE, (configuration -> rainfall_edge_irq_callback), NVIC_PRIORITY_RAINFALL);
+	EXTI_configure_gpio(&SEN15901_HW_GPIO_RAINFALL, GPIO_PULL_NONE, EXTI_TRIGGER_FALLING_EDGE, (configuration -> rainfall_edge_irq_callback), NVIC_PRIORITY_RAINFALL);
 	// Store tick second callback which will be used in main (RTC).
 	SENSORS_HW_set_sen15901_tick_second_callback(configuration -> tick_second_irq_callback);
 	// Note: ADC will be initialized in the power enable function.
@@ -49,31 +46,38 @@ SEN15901_status_t SEN15901_HW_de_init(void) {
 	// Local variables.
 	SEN15901_status_t status = SEN15901_SUCCESS;
 	// Release GPIOs.
-	GPIO_configure(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&SEN15901_HW_GPIO_RAINFALL, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_release_gpio(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_MODE_ANALOG);
+	EXTI_release_gpio(&SEN15901_HW_GPIO_RAINFALL, GPIO_MODE_ANALOG);
 	return status;
 }
 
 /*******************************************************************/
-SEN15901_status_t SEN15901_HW_start_measurements(void) {
+SEN15901_status_t SEN15901_HW_set_wind_speed_interrupt(uint8_t enable) {
 	// Local variables.
 	SEN15901_status_t status = SEN15901_SUCCESS;
-	// Clear flags.
-	EXTI_clear_gpio_flag(&SEN15901_HW_GPIO_WIND_SPEED);
-	EXTI_clear_gpio_flag(&SEN15901_HW_GPIO_RAINFALL);
-	// Enable interrupt.
-	EXTI_enable_gpio_interrupt(&SEN15901_HW_GPIO_WIND_SPEED);
-	EXTI_enable_gpio_interrupt(&SEN15901_HW_GPIO_RAINFALL);
+	// Check enable bit.
+	if (enable == 0) {
+		EXTI_disable_gpio_interrupt(&SEN15901_HW_GPIO_WIND_SPEED);
+		EXTI_clear_gpio_flag(&SEN15901_HW_GPIO_WIND_SPEED);
+	}
+	else {
+		EXTI_enable_gpio_interrupt(&SEN15901_HW_GPIO_WIND_SPEED);
+	}
 	return status;
 }
 
 /*******************************************************************/
-SEN15901_status_t SEN15901_HW_stop_measurements(void) {
+SEN15901_status_t SEN15901_HW_set_rainfall_interrupt(uint8_t enable) {
 	// Local variables.
 	SEN15901_status_t status = SEN15901_SUCCESS;
-	// Disable interrupt.
-	EXTI_disable_gpio_interrupt(&SEN15901_HW_GPIO_WIND_SPEED);
-	EXTI_disable_gpio_interrupt(&SEN15901_HW_GPIO_RAINFALL);
+	// Check enable bit.
+	if (enable == 0) {
+		EXTI_disable_gpio_interrupt(&SEN15901_HW_GPIO_RAINFALL);
+		EXTI_clear_gpio_flag(&SEN15901_HW_GPIO_RAINFALL);
+	}
+	else {
+		EXTI_enable_gpio_interrupt(&SEN15901_HW_GPIO_RAINFALL);
+	}
 	return status;
 }
 

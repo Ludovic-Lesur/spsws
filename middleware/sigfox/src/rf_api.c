@@ -117,6 +117,7 @@ typedef struct {
 	sfx_u8 tx_byte_idx;
 	sfx_u8 tx_bit_idx;
 	sfx_u8 tx_symbol_profile_idx;
+	sfx_u32 tx_modulation_timer_period_ns;
 #ifdef BIDIRECTIONAL
 	// RX.
 	sfx_u8 dl_phy_content[SIGFOX_DL_PHY_CONTENT_SIZE_BYTES];
@@ -368,7 +369,6 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 	sfx_u32 bitrate_bps = 0;
 	sfx_u32 deviation_hz = 0;
 	sfx_u32 frequency_hz = 0;
-	sfx_u32 modulation_timer_period_ns = 0;
 #ifdef PARAMETERS_CHECK
 	// Check parameter.
 	if (radio_parameters == SFX_NULL) {
@@ -410,8 +410,8 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		sx1232_status = SX1232_enable_manual_pa_control();
 		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
 		// Init symbol profile timer.
-		modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
-		tim_status = TIM_STD_init(RF_API_MODULATION_TIMER_INSTANCE, modulation_timer_period_ns, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER, &_RF_API_modulation_timer_irq_callback);
+		rf_api_ctx.tx_modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters -> bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
+		tim_status = TIM_STD_init(RF_API_MODULATION_TIMER_INSTANCE, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER);
 		TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 		break;
 	case RF_API_MODULATION_GFSK:
@@ -485,8 +485,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t *radio_parameters) {
 		// Init DIO0 to detect payload ready interrupt.
 		sx1232_status = SX1232_set_dio_mapping(SX1232_DIO0, SX1232_DIO_MAPPING0);
 		SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
-		GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-		EXTI_configure_gpio(&GPIO_SX1232_DIO0, EXTI_TRIGGER_RISING_EDGE, &_RF_API_sx1232_gpio_irq_callback, NVIC_PRIORITY_SIGFOX_MODULATION_GPIO);
+		EXTI_configure_gpio(&GPIO_SX1232_DIO0, GPIO_PULL_NONE, EXTI_TRIGGER_RISING_EDGE, &_RF_API_sx1232_gpio_irq_callback, NVIC_PRIORITY_SIGFOX_MODULATION_GPIO);
 		// Switch to RX.
 		rfe_status = RFE_set_path(RFE_PATH_RX_LNA);
 		RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
@@ -510,8 +509,7 @@ RF_API_status_t RF_API_de_init(void) {
 	// Release DIO2.
 	GPIO_write(&GPIO_SX1232_DIO2, 0);
 	// Release DIO0.
-	EXTI_release_gpio(&GPIO_SX1232_DIO0);
-	GPIO_configure(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	EXTI_release_gpio(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT);
 	// Release symbol profile timer.
 	tim_status = TIM_STD_de_init(RF_API_MODULATION_TIMER_INSTANCE);
 	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
@@ -554,7 +552,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t *tx_data) {
 	status = _RF_API_internal_process();
 	CHECK_STATUS(RF_API_SUCCESS);
 	// Start timer.
-	tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE);
+	tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE, rf_api_ctx.tx_modulation_timer_period_ns, &_RF_API_modulation_timer_irq_callback);
 	TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 	// Wait for transmission to complete.
 	while (rf_api_ctx.state != RF_API_STATE_READY) {

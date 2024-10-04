@@ -11,10 +11,10 @@
 /*** STM32L0xx registers compilation flags ***/
 
 #ifdef HW1_0
-#define STM32L0XX_REGISTERS_MCU_CATEGORY	2
+#define STM32L0XX_REGISTERS_MCU_CATEGORY    2
 #endif
 #ifdef HW2_0
-#define STM32L0XX_REGISTERS_MCU_CATEGORY	5
+#define STM32L0XX_REGISTERS_MCU_CATEGORY    5
 #endif
 
 #endif /* __STM32L0XX_REGISTERS_FLAGS_H__ */

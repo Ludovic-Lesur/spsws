@@ -70,8 +70,11 @@ errors:
 NEOM8X_status_t NEOM8X_HW_start_rx(void) {
 	// Local variables.
 	NEOM8X_status_t status = NEOM8X_SUCCESS;
+	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	// Start LPUART.
-	LPUART_enable_rx();
+	lpuart_status = LPUART_enable_rx();
+	LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
+errors:
 	return status;
 }
 
@@ -79,8 +82,11 @@ NEOM8X_status_t NEOM8X_HW_start_rx(void) {
 NEOM8X_status_t NEOM8X_HW_stop_rx(void) {
 	// Local variables.
 	NEOM8X_status_t status = NEOM8X_SUCCESS;
+	LPUART_status_t lpuart_status = LPUART_SUCCESS;
 	// Stop LPUART.
-	LPUART_disable_rx();
+	lpuart_status = LPUART_disable_rx();
+	LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
+errors:
 	return status;
 }
 
