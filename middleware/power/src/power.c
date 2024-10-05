@@ -229,6 +229,12 @@ POWER_status_t POWER_enable(POWER_domain_t domain, LPTIM_delay_mode_t delay_mode
     uint32_t delay_ms = 0;
     // Check domain.
     switch (domain) {
+    case POWER_DOMAIN_MCU_TCXO:
+        // Turn MCU TCXO on.
+        GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 1);
+        // Update delay.
+        delay_ms = POWER_ON_DELAY_MS_MCU_TCXO;
+        break;
     case POWER_DOMAIN_ANALOG:
 #ifdef HW1_0
         if (power_ctx.effective_state[POWER_DOMAIN_RADIO] == 0) {
@@ -311,6 +317,10 @@ POWER_status_t POWER_disable(POWER_domain_t domain) {
     POWER_status_t status = POWER_SUCCESS;
     // Check domain.
     switch (domain) {
+    case POWER_DOMAIN_MCU_TCXO:
+       // Turn MCU TCXO off.
+       GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 0);
+       break;
     case POWER_DOMAIN_ANALOG:
 #ifdef HW1_0
         if ((power_ctx.state[POWER_DOMAIN_RADIO] == 0) && (power_ctx.state[POWER_DOMAIN_SENSORS] == 0)) {

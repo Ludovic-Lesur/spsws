@@ -87,7 +87,7 @@ SEN15901_status_t SEN15901_HW_adc_get_wind_direction_ratio(int32_t* wind_directi
     SEN15901_status_t status = SEN15901_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     // Turn external ADC on.
-    POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_STOP);
+    POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
     // Get direction from ADC.
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_WIND_DIRECTION_RATIO_PERMILLE, wind_direction_ratio_permille);
     ANALOG_exit_error(SEN15901_ERROR_BASE_ADC);

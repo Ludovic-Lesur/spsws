@@ -530,6 +530,30 @@ static void _SPSWS_update_clocks(void) {
     spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
 }
 
+/*******************************************************************/
+static void _SPSWS_set_clock(uint8_t device_state) {
+    // Local variables.
+    RCC_status_t rcc_status = RCC_SUCCESS;
+    POWER_status_t power_status = POWER_SUCCESS;
+    // Switch to HSE or HSI depending on state.
+    if (device_state == 0) {
+        // Switch to internal clock.
+        rcc_status = RCC_switch_to_hsi();
+        RCC_stack_error(ERROR_BASE_RCC);
+        // Turn TCXO off.
+        power_status = POWER_disable(POWER_DOMAIN_MCU_TCXO);
+        POWER_stack_error(ERROR_BASE_POWER);
+    }
+    else {
+        // Turn TCXO on.
+        power_status = POWER_enable(POWER_DOMAIN_MCU_TCXO, LPTIM_DELAY_MODE_SLEEP);
+        POWER_stack_error(ERROR_BASE_POWER);
+        // Switch to external clock.
+        rcc_status = RCC_switch_to_hse(RCC_HSE_MODE_BYPASS);
+        RCC_stack_error(ERROR_BASE_RCC);
+    }
+}
+
 #ifndef ATM
 /*******************************************************************/
 static void _SPSWS_update_time_flags(void) {
@@ -764,6 +788,8 @@ int main(void) {
             // Power on delay to wait for main power supply stabilization.
             lptim_status = LPTIM_delay_milliseconds(SPSWS_POWER_ON_DELAY_MS, LPTIM_DELAY_MODE_STOP);
             LPTIM_stack_error(ERROR_BASE_LPTIM);
+            // Switch to accurate clock.
+            _SPSWS_set_clock(1);
             // Fill reset reason and software version.
             spsws_ctx.sigfox_startup_data.reset_reason = ((RCC->CSR) >> 24) & 0xFF;
             spsws_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
@@ -800,8 +826,9 @@ int main(void) {
                         spsws_ctx.flags.is_afternoon = 0;
                     }
                     spsws_ctx.flags.hour_changed = 0; // Reset flag.
-                    // Calibrate and update clocks.
+                    // Calibrate and switch to accurate clock.
                     _SPSWS_update_clocks();
+                    _SPSWS_set_clock(1);
                     // Next state
                     spsws_ctx.state = SPSWS_STATE_MONITORING;
                 }
@@ -817,7 +844,7 @@ int main(void) {
             break;
         case SPSWS_STATE_RTC_CALIBRATION:
             // Turn GPS on.
-            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
+            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             POWER_stack_error(ERROR_BASE_POWER);
             // Get current time from GPS.
             gps_status = GPS_get_time(&gps_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
@@ -871,7 +898,7 @@ int main(void) {
             }
             // Retrieve external ADC data.
             // Note: digital sensors power supply must also be enabled at this step to power the LDR.
-            power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_STOP);
+            power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
             POWER_stack_error(ERROR_BASE_POWER);
             // Solar cell voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
@@ -983,7 +1010,7 @@ int main(void) {
             break;
         case SPSWS_STATE_GEOLOC:
             // Turn GPS on.
-            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
+            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             POWER_stack_error(ERROR_BASE_POWER);
             // Get geolocation from GPS.
             gps_status = GPS_get_position(&gps_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
@@ -1044,6 +1071,8 @@ int main(void) {
             spsws_ctx.state = SPSWS_STATE_OFF;
             break;
         case SPSWS_STATE_OFF:
+            // Switch to internal clock.
+            _SPSWS_set_clock(0);
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
             sen15901_status = SEN15901_set_wind_measurement(1);
             SEN15901_stack_error(ERROR_BASE_SEN15901);
@@ -1114,6 +1143,8 @@ int main (void) {
     // Init board.
     _SPSWS_init_context();
     _SPSWS_init_hw();
+    // Switch to accurate clock.
+    _SPSWS_set_clock(1);
     // Init AT command layer.
     AT_init();
     // Main loop.

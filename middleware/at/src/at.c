@@ -758,7 +758,7 @@ static void _AT_time_callback(void) {
     parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
     PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
     // Turn GPS on.
-    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
+    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
     POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
     // Perform time acquisition.
     gps_status = GPS_get_time(&gps_time, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);
@@ -830,7 +830,7 @@ static void _AT_gps_callback(void) {
     parser_status = PARSER_get_parameter(&at_ctx.parser, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
     PARSER_stack_exit_error(ERROR_BASE_PARSER, (ERROR_BASE_PARSER + parser_status));
     // Turn GPS on.
-    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_STOP);
+    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
     POWER_stack_exit_error(ERROR_BASE_POWER, ERROR_BASE_POWER + power_status);
     // Perform time acquisition.
     gps_status = GPS_get_position(&gps_position, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);

@@ -20,6 +20,7 @@
 
 /*** POWER macros ***/
 
+#define POWER_ON_DELAY_MS_MCU_TCXO      1000
 #define POWER_ON_DELAY_MS_ANALOG        100
 #define POWER_ON_DELAY_MS_GPS           1000
 #define POWER_ON_DELAY_MS_SENSORS       100
@@ -55,7 +56,8 @@ typedef enum {
  * \brief Board external power domains list.
  *******************************************************************/
 typedef enum {
-    POWER_DOMAIN_ANALOG = 0,
+    POWER_DOMAIN_MCU_TCXO = 0,
+    POWER_DOMAIN_ANALOG,
     POWER_DOMAIN_SENSORS,
     POWER_DOMAIN_GPS,
     POWER_DOMAIN_RADIO_TCXO,
