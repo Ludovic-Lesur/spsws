@@ -49,7 +49,8 @@
 
 /*** SPSWS macros ***/
 
-// Timeouts.
+// Timing.
+#define SPSWS_POWER_ON_DELAY_MS                     7000
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS       180
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS                120
 // Sigfox UL payloads size.
@@ -725,6 +726,7 @@ int main(void) {
     _SPSWS_init_hw();
     // Local variables.
     RTC_status_t rtc_status = RTC_SUCCESS;
+    LPTIM_status_t lptim_status = LPTIM_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     GPS_status_t gps_status = GPS_SUCCESS;
     POWER_status_t power_status = POWER_SUCCESS;
@@ -759,6 +761,9 @@ int main(void) {
         // Perform state machine.
         switch (spsws_ctx.state) {
         case SPSWS_STATE_STARTUP:
+            // Power on delay to wait for main power supply stabilization.
+            lptim_status = LPTIM_delay_milliseconds(SPSWS_POWER_ON_DELAY_MS, LPTIM_DELAY_MODE_STOP);
+            LPTIM_stack_error(ERROR_BASE_LPTIM);
             // Fill reset reason and software version.
             spsws_ctx.sigfox_startup_data.reset_reason = ((RCC->CSR) >> 24) & 0xFF;
             spsws_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
