@@ -514,27 +514,12 @@ static void _SPSWS_compute_final_measurements(void) {
 #endif
 
 /*******************************************************************/
-static void _SPSWS_update_clocks(void) {
-    // Local variables.
-    RCC_status_t rcc_status = RCC_SUCCESS;
-    uint8_t clock_status = 0;
-    // Calibrate clocks.
-    rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
-    RCC_stack_error(ERROR_BASE_RCC);
-    // Update clock status.
-    rcc_status = RCC_get_status(RCC_CLOCK_LSI, &clock_status);
-    RCC_stack_error(ERROR_BASE_RCC);
-    spsws_ctx.status.lsi_status = (clock_status == 0) ? 0b0 : 0b1;
-    rcc_status = RCC_get_status(RCC_CLOCK_LSE, &clock_status);
-    RCC_stack_error(ERROR_BASE_RCC);
-    spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
-}
-
-/*******************************************************************/
 static void _SPSWS_set_clock(uint8_t device_state) {
     // Local variables.
     RCC_status_t rcc_status = RCC_SUCCESS;
     POWER_status_t power_status = POWER_SUCCESS;
+    RCC_clock_t mcu_clock_source = RCC_CLOCK_NONE;
+    uint8_t clock_status = 0;
     // Switch to HSE or HSI depending on state.
     if (device_state == 0) {
         // Switch to internal clock.
@@ -552,6 +537,17 @@ static void _SPSWS_set_clock(uint8_t device_state) {
         rcc_status = RCC_switch_to_hse(RCC_HSE_MODE_BYPASS);
         RCC_stack_error(ERROR_BASE_RCC);
     }
+    // Update MCU clock source.
+    mcu_clock_source = RCC_get_system_clock();
+    spsws_ctx.status.mcu_clock_source = (mcu_clock_source == RCC_CLOCK_HSE) ? 0b1 : 0b0;
+    // Update LSI status.
+    rcc_status = RCC_get_status(RCC_CLOCK_LSI, &clock_status);
+    RCC_stack_error(ERROR_BASE_RCC);
+    spsws_ctx.status.lsi_status = (clock_status == 0) ? 0b0 : 0b1;
+    // Update LSE status.
+    rcc_status = RCC_get_status(RCC_CLOCK_LSE, &clock_status);
+    RCC_stack_error(ERROR_BASE_RCC);
+    spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
 }
 
 #ifndef ATM
@@ -702,8 +698,9 @@ static void _SPSWS_init_hw(void) {
     // High speed oscillator.
     rcc_status = RCC_switch_to_hsi();
     RCC_stack_error(ERROR_BASE_RCC);
-    // Calibrate and update clock status.
-    _SPSWS_update_clocks();
+    // Calibrate clocks.
+    rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
+    RCC_stack_error(ERROR_BASE_RCC);
     // Init RTC.
     rtc_status = RTC_init(&_SPSWS_tick_second_callback, NVIC_PRIORITY_RTC);
     RTC_stack_error(ERROR_BASE_RTC);
@@ -749,6 +746,7 @@ int main(void) {
     _SPSWS_init_context();
     _SPSWS_init_hw();
     // Local variables.
+    RCC_status_t rcc_status = RCC_SUCCESS;
     RTC_status_t rtc_status = RTC_SUCCESS;
     LPTIM_status_t lptim_status = LPTIM_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
@@ -826,8 +824,10 @@ int main(void) {
                         spsws_ctx.flags.is_afternoon = 0;
                     }
                     spsws_ctx.flags.hour_changed = 0; // Reset flag.
-                    // Calibrate and switch to accurate clock.
-                    _SPSWS_update_clocks();
+                    // Calibrate clocks.
+                    rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
+                    RCC_stack_error(ERROR_BASE_RCC);
+                    // Switch to accurate clock.
                     _SPSWS_set_clock(1);
                     // Next state
                     spsws_ctx.state = SPSWS_STATE_MONITORING;
