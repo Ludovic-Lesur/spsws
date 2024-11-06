@@ -32,8 +32,8 @@ typedef enum {
 } ANALOG_status_t;
 
 /*!******************************************************************
- * \enum ANALOG_index_t
- * \brief ANALOG data indexes.
+ * \enum ANALOG_channel_t
+ * \brief ANALOG channels list.
  *******************************************************************/
 typedef enum {
     ANALOG_CHANNEL_VMCU_MV = 0,
@@ -68,10 +68,10 @@ ANALOG_status_t ANALOG_init(void);
 ANALOG_status_t ANALOG_de_init(void);
 
 /*!******************************************************************
- * \fn ANALOG_status_t ANALOG_perform(void)
- * \brief Perform all analog measurements.
- * \param[in]   none
- * \param[out]  none
+ * \fn ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog_data)
+ * \brief Convert an analog channel.
+ * \param[in]   channel: Channel to convert.
+ * \param[out]  analog_data: Pointer to integer that will contain the result.
  * \retval      Function execution status.
  *******************************************************************/
 ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog_data);

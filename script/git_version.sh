@@ -6,16 +6,20 @@ sscanf() {
     [[ "$str" =~ $format ]]
 }
 
+# Files location.
+main_file="../application/src/main.c"
+version_file="../application/inc/version.h"
+
 # Touch files to force makefile operation.
-touch ../application/src/main.c
-touch ../application/inc/version.h
+touch $main_file
+touch $version_file
 
 # Get current date.
 date=`date -R`
 
 # Execute git commands.
 git_version=`git describe --long --always`
-diff=`git diff ':(exclude)../application/inc/mode.h' ':(exclude)../.settings' ':(exclude)../script'`
+diff=`git diff`
 
 # Extract fields
 sscanf $git_version "sw([0-9]+).([0-9]+)-([0-9]+)-g(.+)"
@@ -26,21 +30,21 @@ if [[ $diff ]]; then
     dirty_flag=1
 fi
 
-echo "/*" > ../application/inc/version.h
-echo " * version.h" >> ../application/inc/version.h
-echo " *" >> ../application/inc/version.h
-echo " * Auto-generated on: $date" >> ../application/inc/version.h
-echo " * Author: Ludo" >> ../application/inc/version.h
-echo " */" >> ../application/inc/version.h
-echo "" >> ../application/inc/version.h
-echo "#ifndef __VERSION_H__" >> ../application/inc/version.h
-echo "#define __VERSION_H__" >> ../application/inc/version.h
-echo "" >> ../application/inc/version.h
-echo "#define GIT_VERSION       \"$git_version\"" >> ../application/inc/version.h
-echo "#define GIT_MAJOR_VERSION ${BASH_REMATCH[1]}" >> ../application/inc/version.h
-echo "#define GIT_MINOR_VERSION ${BASH_REMATCH[2]}" >> ../application/inc/version.h
-echo "#define GIT_COMMIT_INDEX  ${BASH_REMATCH[3]}" >> ../application/inc/version.h
-echo "#define GIT_COMMIT_ID     0x${BASH_REMATCH[4]}" >> ../application/inc/version.h
-echo "#define GIT_DIRTY_FLAG    $dirty_flag" >> ../application/inc/version.h
-echo "" >> ../application/inc/version.h
-echo "#endif /* __VERSION_H__ */" >> ../application/inc/version.h
+echo "/*" > $version_file
+echo " * version.h" >> $version_file
+echo " *" >> $version_file
+echo " * Auto-generated on: $date" >> $version_file
+echo " * Author: Ludo" >> $version_file
+echo " */" >> $version_file
+echo "" >> $version_file
+echo "#ifndef __VERSION_H__" >> $version_file
+echo "#define __VERSION_H__" >> $version_file
+echo "" >> $version_file
+echo "#define GIT_VERSION       \"$git_version\"" >> $version_file
+echo "#define GIT_MAJOR_VERSION ${BASH_REMATCH[1]}" >> $version_file
+echo "#define GIT_MINOR_VERSION ${BASH_REMATCH[2]}" >> $version_file
+echo "#define GIT_COMMIT_INDEX  ${BASH_REMATCH[3]}" >> $version_file
+echo "#define GIT_COMMIT_ID     0x${BASH_REMATCH[4]}" >> $version_file
+echo "#define GIT_DIRTY_FLAG    $dirty_flag" >> $version_file
+echo "" >> $version_file
+echo "#endif /* __VERSION_H__ */" >> $version_file

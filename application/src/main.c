@@ -742,9 +742,6 @@ static void _SPSWS_init_hw(void) {
 #ifndef ATM
 /*******************************************************************/
 int main(void) {
-    // Init board.
-    _SPSWS_init_context();
-    _SPSWS_init_hw();
     // Local variables.
     RCC_status_t rcc_status = RCC_SUCCESS;
     RTC_status_t rtc_status = RTC_SUCCESS;
@@ -767,6 +764,9 @@ int main(void) {
     int32_t generic_s32_1 = 0;
     int32_t generic_s32_2 = 0;
     uint8_t idx = 0;
+    // Init board.
+    _SPSWS_init_context();
+    _SPSWS_init_hw();
     // Application message default parameters.
     application_message.common_parameters.number_of_frames = 3;
     application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;

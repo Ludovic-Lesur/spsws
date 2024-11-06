@@ -129,24 +129,20 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
     case ANALOG_CHANNEL_VMCU_MV:
         // MCU voltage.
         adc_status = ADC_convert_channel(ADC_CHANNEL_VREFINT, &adc_data_12bits);
-        ADC_exit_error(ANALOG_ERROR_BASE_ADC)
-        ;
+        ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
         adc_status = ADC_compute_vmcu(adc_data_12bits, ADC_get_vrefint_voltage_mv(), analog_data);
-        ADC_exit_error(ANALOG_ERROR_BASE_ADC)
-        ;
+        ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Update local value for temperature computation.
         analog_ctx.vmcu_mv = (*analog_data);
         break;
     case ANALOG_CHANNEL_TMCU_DEGREES:
         // MCU temperature.
         adc_status = ADC_convert_channel(ADC_CHANNEL_TEMPERATURE_SENSOR, &adc_data_12bits);
-        ADC_exit_error(ANALOG_ERROR_BASE_ADC)
-        ;
+        ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to degrees.
         adc_status = ADC_compute_tmcu(analog_ctx.vmcu_mv, adc_data_12bits, analog_data);
-        ADC_exit_error(ANALOG_ERROR_BASE_ADC)
-        ;
+        ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         break;
     case ANALOG_CHANNEL_VPV_MV:
         // Solar cell voltage.

@@ -1,4 +1,4 @@
-/application/inc/version.h
 .settings/
-/hw1-0/
-/hw2-0/
+application/inc/version.h
+hw1-0/
+hw2-0/
