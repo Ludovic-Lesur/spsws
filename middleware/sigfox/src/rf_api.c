@@ -485,7 +485,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
         // Init DIO0 to detect payload ready interrupt.
         sx1232_status = SX1232_set_dio_mapping(SX1232_DIO0, SX1232_DIO_MAPPING0);
         SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
-        EXTI_configure_gpio(&GPIO_SX1232_DIO0, GPIO_PULL_NONE, EXTI_TRIGGER_RISING_EDGE, &_RF_API_sx1232_gpio_irq_callback, NVIC_PRIORITY_SIGFOX_MODULATION_GPIO);
+        EXTI_configure_gpio(&GPIO_SX1232_DIO0, GPIO_PULL_NONE, EXTI_TRIGGER_RISING_EDGE, &_RF_API_sx1232_gpio_irq_callback, NVIC_PRIORITY_SIGFOX_DOWNLINK_GPIO);
         // Switch to RX.
         rfe_status = RFE_set_path(RFE_PATH_RX_LNA);
         RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);

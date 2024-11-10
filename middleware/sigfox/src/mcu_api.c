@@ -44,7 +44,7 @@
 
 #include "aes.h"
 #include "analog.h"
-#include "at.h"
+#include "cli.h"
 #include "error.h"
 #include "error_base.h"
 #include "mode.h"
@@ -337,7 +337,7 @@ MCU_API_status_t MCU_API_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_
     MCU_API_status_t status = MCU_API_SUCCESS;
 #ifdef ATM
     // Print data on bus.
-    AT_print_dl_payload(dl_payload, dl_payload_size, rssi_dbm);
+    CLI_print_dl_payload(dl_payload, dl_payload_size, rssi_dbm);
 #else
     UNUSED(dl_payload);
     UNUSED(dl_payload_size);

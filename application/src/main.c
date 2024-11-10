@@ -35,6 +35,7 @@
 #include "sigfox_types.h"
 // Middleware.
 #include "analog.h"
+#include "cli.h"
 #include "gps.h"
 #include "power.h"
 // Sigfox.
@@ -42,7 +43,6 @@
 #include "sigfox_rc.h"
 #include "sigfox_types.h"
 // Applicative.
-#include "at.h"
 #include "error_base.h"
 #include "mode.h"
 #include "version.h"
@@ -1140,21 +1140,25 @@ int main(void) {
 #ifdef ATM
 /*******************************************************************/
 int main (void) {
+    // Local variables.
+    CLI_status_t cli_status = CLI_SUCCESS;
     // Init board.
     _SPSWS_init_context();
     _SPSWS_init_hw();
     // Switch to accurate clock.
     _SPSWS_set_clock(1);
-    // Init AT command layer.
-    AT_init();
+    // Init command line interface.
+    cli_status = CLI_init();
+    CLI_stack_error(ERROR_BASE_CLI);
     // Main loop.
     while (1) {
         // Enter sleep mode.
         IWDG_reload();
         PWR_enter_sleep_mode();
         IWDG_reload();
-        // Perform AT command parsing.
-        AT_task();
+        // Process command line interface.
+        cli_status = CLI_process();
+        CLI_stack_error(ERROR_BASE_CLI);
     }
     return 0;
 }
