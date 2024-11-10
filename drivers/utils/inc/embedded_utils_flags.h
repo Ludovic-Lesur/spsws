@@ -8,7 +8,7 @@
 #ifndef __EMBEDDED_UTILS_FLAGS_H__
 #define __EMBEDDED_UTILS_FLAGS_H__
 
-#include "mode.h"
+#include "spsws_flags.h"
 #include "usart.h"
 #include "version.h"
 

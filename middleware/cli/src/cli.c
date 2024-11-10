@@ -44,10 +44,10 @@
 #include "sigfox_types.h"
 // Applicative.
 #include "error_base.h"
-#include "mode.h"
+#include "spsws_flags.h"
 #include "version.h"
 
-#ifdef ATM
+#ifdef SPSWS_MODE_CLI
 
 /*** CLI local macros ***/
 
@@ -1190,4 +1190,4 @@ void CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rs
     AT_send_reply(AT_INSTANCE_CLI);
 }
 
-#endif /* ATM */
+#endif /* SPSWS_MODE_CLI */

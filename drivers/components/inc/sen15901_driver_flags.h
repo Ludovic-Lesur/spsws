@@ -9,7 +9,7 @@
 #define __SEN15901_DRIVER_FLAGS_H__
 
 #include "analog.h"
-#include "mode.h"
+#include "spsws_flags.h"
 
 /*** SEN15901 driver compilation flags ***/
 

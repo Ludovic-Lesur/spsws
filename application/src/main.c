@@ -44,7 +44,7 @@
 #include "sigfox_types.h"
 // Applicative.
 #include "error_base.h"
-#include "mode.h"
+#include "spsws_flags.h"
 #include "version.h"
 
 /*** SPSWS macros ***/
@@ -237,7 +237,7 @@ typedef struct {
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
     SEN15901_HW_tick_second_irq_cb_t sen15901_tick_second_callback;
 #endif
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
     // Wake-up management.
     RTC_time_t current_time;
     RTC_time_t previous_wake_up_time;
@@ -285,7 +285,7 @@ static void _SPSWS_sen15901_process_callback(void) {
 }
 #endif
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_measurement_add_sample(SPSWS_measurement_t* measurement, int32_t sample) {
     /* Update last sample index */
@@ -302,7 +302,7 @@ static void _SPSWS_measurement_add_sample(SPSWS_measurement_t* measurement, int3
 }
 #endif
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_reset_measurements(void) {
     // Weather data
@@ -333,7 +333,7 @@ static void _SPSWS_reset_measurements(void) {
 }
 #endif
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_compute_final_measurements(void) {
     // Local variables.
@@ -550,7 +550,7 @@ static void _SPSWS_set_clock(uint8_t device_state) {
     spsws_ctx.status.lse_status = (clock_status == 0) ? 0b0 : 0b1;
 }
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_update_time_flags(void) {
     // Local variables.
@@ -600,7 +600,7 @@ static void _SPSWS_update_time_flags(void) {
 }
 #endif
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_update_pwut(void) {
     // Local variables.
@@ -623,7 +623,7 @@ static void _SPSWS_update_pwut(void) {
 }
 #endif
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* application_message) {
     // Local variables.
@@ -650,7 +650,7 @@ static void _SPSWS_init_context(void) {
     spsws_ctx.flags.all = 0;
     spsws_ctx.flags.por = 1;
     spsws_ctx.status.all = 0;
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
     spsws_ctx.seconds_counter = 0;
 #endif
     // Init station mode.
@@ -659,7 +659,7 @@ static void _SPSWS_init_context(void) {
 #else
     spsws_ctx.status.station_mode = 0b0;
 #endif
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
     // Reset measurements.
     _SPSWS_reset_measurements();
 #endif
@@ -671,7 +671,7 @@ static void _SPSWS_init_hw(void) {
     RCC_status_t rcc_status = RCC_SUCCESS;
     NVM_status_t nvm_status = NVM_SUCCESS;
     RTC_status_t rtc_status = RTC_SUCCESS;
-#ifndef DEBUG
+#ifndef SPSWS_MODE_DEBUG
     IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
@@ -690,7 +690,7 @@ static void _SPSWS_init_hw(void) {
     // Init GPIOs.
     GPIO_init();
     EXTI_init();
-#ifndef DEBUG
+#ifndef SPSWS_MODE_DEBUG
     // Start independent watchdog.
     iwdg_status = IWDG_init();
     IWDG_stack_error(ERROR_BASE_IWDG);
@@ -739,7 +739,7 @@ static void _SPSWS_init_hw(void) {
 
 /*** SPSWS main function ***/
 
-#ifndef ATM
+#ifndef SPSWS_MODE_CLI
 /*******************************************************************/
 int main(void) {
     // Local variables.
@@ -1137,7 +1137,7 @@ int main(void) {
 }
 #endif
 
-#ifdef ATM
+#ifdef SPSWS_MODE_CLI
 /*******************************************************************/
 int main (void) {
     // Local variables.

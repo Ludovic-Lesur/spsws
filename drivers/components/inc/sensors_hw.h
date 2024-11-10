@@ -9,8 +9,8 @@
 #define __SENSORS_HW_H__
 
 #include "error.h"
-#include "mode.h"
 #include "sen15901_hw.h"
+#include "spsws_flags.h"
 #include "types.h"
 
 /*** SENSORS HW functions ***/

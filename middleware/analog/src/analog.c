@@ -10,7 +10,7 @@
 #include "adc.h"
 #include "error.h"
 #include "max111xx.h"
-#include "mode.h"
+#include "spsws_flags.h"
 #include "types.h"
 
 /*** ANALOG local macros ***/

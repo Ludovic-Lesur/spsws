@@ -9,8 +9,8 @@
 #define __CLI_H__
 
 #include "at.h"
-#include "mode.h"
 #include "sigfox_types.h"
+#include "spsws_flags.h"
 #include "types.h"
 
 /*** CLI structures ***/
@@ -28,7 +28,7 @@ typedef enum {
     CLI_ERROR_BASE_LAST = (CLI_ERROR_BASE_AT + AT_ERROR_BASE_LAST)
 } CLI_status_t;
 
-#ifdef ATM
+#ifdef SPSWS_MODE_CLI
 
 /*** AT functions ***/
 
@@ -79,6 +79,6 @@ void CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rs
 /*******************************************************************/
 #define CLI_stack_exit_error(base, code) { ERROR_check_stack_exit(cli_status, CLI_SUCCESS, base, code) }
 
-#endif /* ATM */
+#endif /* SPSWS_MODE_CLI */
 
 #endif /* __CLI_H__ */

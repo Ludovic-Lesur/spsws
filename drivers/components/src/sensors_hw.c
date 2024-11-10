@@ -12,8 +12,8 @@
 #include "gpio_mapping.h"
 #include "i2c.h"
 #include "lptim.h"
-#include "mode.h"
 #include "sen15901_hw.h"
+#include "spsws_flags.h"
 #include "types.h"
 
 /*** SENSORS HW local macros ***/

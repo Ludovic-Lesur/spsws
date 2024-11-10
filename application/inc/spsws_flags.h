@@ -1,17 +1,17 @@
 /*
- * mode.h
+ * spsws_flags.h
  *
  *  Created on: 22 dec. 2018
  *      Author: Ludo
  */
 
-#ifndef __MODE_H__
-#define __MODE_H__
+#ifndef __SPSWS_FLAGS_H__
+#define __SPSWS_FLAGS_H__
 
 /*** Board modes ***/
 
-//#define ATM
-//#define DEBUG
+//#define SPSWS_MODE_CLI
+//#define SPSWS_MODE_DEBUG
 
 /*** Board options ***/
 
@@ -21,4 +21,4 @@
 //#define SPSWS_SEN15901_EMULATOR
 #endif
 
-#endif /* __MODE_H__ */
+#endif /* __SPSWS_FLAGS_H__ */

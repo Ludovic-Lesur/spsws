@@ -26,7 +26,7 @@ NEOM8X_status_t NEOM8X_HW_init(NEOM8X_HW_configuration_t* configuration) {
         status = NEOM8X_ERROR_NULL_PARAMETER;
         goto errors;
     }
-#if !(defined HW1_0) || !(defined DEBUG)
+#if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     LPUART_configuration_t lpuart_config;
     // Init LPUART.
@@ -44,7 +44,7 @@ errors:
 NEOM8X_status_t NEOM8X_HW_de_init(void) {
     // Local variables.
     NEOM8X_status_t status = NEOM8X_SUCCESS;
-#if !(defined HW1_0) || !(defined DEBUG)
+#if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release LPUART.
     lpuart_status = LPUART_de_init(&GPIO_GPS_LPUART);
