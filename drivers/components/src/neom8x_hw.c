@@ -21,11 +21,6 @@
 NEOM8X_status_t NEOM8X_HW_init(NEOM8X_HW_configuration_t* configuration) {
     // Local variables.
     NEOM8X_status_t status = NEOM8X_SUCCESS;
-    // Check parameter.
-    if (configuration == NULL) {
-        status = NEOM8X_ERROR_NULL_PARAMETER;
-        goto errors;
-    }
 #if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     LPUART_configuration_t lpuart_config;
@@ -35,8 +30,10 @@ NEOM8X_status_t NEOM8X_HW_init(NEOM8X_HW_configuration_t* configuration) {
     lpuart_config.rxne_callback = (LPUART_rx_irq_cb_t) (configuration->rx_irq_callback);
     lpuart_status = LPUART_init(&GPIO_GPS_LPUART, &lpuart_config);
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
-#endif
 errors:
+#else
+    UNUSED(configuration);
+#endif
     return status;
 }
 
@@ -58,11 +55,16 @@ errors:
 NEOM8X_status_t NEOM8X_HW_send_message(uint8_t* message, uint32_t message_size_bytes) {
     // Local variables.
     NEOM8X_status_t status = NEOM8X_SUCCESS;
+#if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Use LPUART.
     lpuart_status = LPUART_write(message, message_size_bytes);
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:
+#else
+    UNUSED(message);
+    UNUSED(message_size_bytes);
+#endif
     return status;
 }
 
@@ -70,11 +72,13 @@ errors:
 NEOM8X_status_t NEOM8X_HW_start_rx(void) {
     // Local variables.
     NEOM8X_status_t status = NEOM8X_SUCCESS;
+#if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Start LPUART.
     lpuart_status = LPUART_enable_rx();
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:
+#endif
     return status;
 }
 
@@ -82,11 +86,13 @@ errors:
 NEOM8X_status_t NEOM8X_HW_stop_rx(void) {
     // Local variables.
     NEOM8X_status_t status = NEOM8X_SUCCESS;
+#if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Stop LPUART.
     lpuart_status = LPUART_disable_rx();
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:
+#endif
     return status;
 }
 
