@@ -177,6 +177,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
     sfx_u8 symbol_profile_idx = 0;
 #ifdef BIDIRECTIONAL
     RFE_status_t rfe_status = RFE_SUCCESS;
+    sfx_u8 sx1232_payload_ready_irq = 0;
 #endif
     // Perform state machine.
     switch (rf_api_ctx.state) {
@@ -273,8 +274,11 @@ static RF_API_status_t _RF_API_internal_process(void) {
         rf_api_ctx.state = RF_API_STATE_RX;
         break;
     case RF_API_STATE_RX:
+        // Read payload ready flag.
+        sx1232_status = SX1232_get_irq_flag(SX1232_IRQ_INDEX_PAYLOAD_READY, &sx1232_payload_ready_irq);
+        SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
         // Check flag.
-        if (rf_api_ctx.flags.field.gpio_irq_flag != 0) {
+        if (sx1232_payload_ready_irq != 0) {
             // Read RSSI.
             rfe_status = RFE_get_rssi(&rf_api_ctx.dl_rssi_dbm);
             RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
