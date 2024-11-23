@@ -47,7 +47,7 @@ The project is organized as follow:
     * `utils` : **utility** functions.
 * `middleware` :
     * `analog` : High level **analog measurements** driver.
-    * `at` : **AT commands** parser.
+    * `cli` : **AT commands** implementation.
     * `gps` : High level **GPS** driver.
     * `power` : Board **power tree** manager.
     * `sigfox` : **Sigfox EP_LIB** and **ADDON_RFP** submodules and low level implementation.

@@ -53,7 +53,10 @@ typedef struct {
 
 /*** ANALOG local global variables ***/
 
-static ANALOG_context_t analog_ctx = { .ref191_data_12bits = ANALOG_ERROR_VALUE };
+static ANALOG_context_t analog_ctx = {
+    .vmcu_mv = ANALOG_VMCU_MV_DEFAULT,
+    .ref191_data_12bits = ANALOG_ERROR_VALUE
+};
 
 /*** ANALOG local functions ***/
 
@@ -149,14 +152,14 @@ ANALOG_status_t ANALOG_convert_channel(ANALOG_channel_t channel, int32_t* analog
         status = _ANALOG_convert_max11136_channel(ANALOG_MAX11136_CHANNEL_VPV, &adc_data_12bits);
         if (status != ANALOG_SUCCESS) goto errors;
         // Convert to mV.
-        (*analog_data) = ((int32_t) adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VSRC_DIVIDER_RATIO_NUM) / ((int32_t) analog_ctx.ref191_data_12bits * ANALOG_VSRC_DIVIDER_RATIO_DEN);
+        (*analog_data) = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VSRC_DIVIDER_RATIO_NUM) / (analog_ctx.ref191_data_12bits * ANALOG_VSRC_DIVIDER_RATIO_DEN);
         break;
     case ANALOG_CHANNEL_VCAP_MV:
         // Supercap voltage.
         status = _ANALOG_convert_max11136_channel(ANALOG_MAX11136_CHANNEL_VCAP, &adc_data_12bits);
         if (status != ANALOG_SUCCESS) goto errors;
         // Convert to mV.
-        (*analog_data) = ((int32_t) adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VCAP_DIVIDER_RATIO_NUM) / ((int32_t) analog_ctx.ref191_data_12bits * ANALOG_VCAP_DIVIDER_RATIO_DEN);
+        (*analog_data) = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VCAP_DIVIDER_RATIO_NUM) / (analog_ctx.ref191_data_12bits * ANALOG_VCAP_DIVIDER_RATIO_DEN);
         break;
     case ANALOG_CHANNEL_LDR_PERCENT:
         // Light sensor.

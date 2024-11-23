@@ -122,7 +122,6 @@ static AT_status_t _CLI_rssi_callback(void);
 
 /*** AT local global variables ***/
 
-// @formatter:off
 static const AT_command_t CLI_COMMANDS_LIST[] = {
     {
         .syntax = "$RST",
@@ -263,7 +262,7 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
     }
 #endif
 };
-// @formatter:on
+
 static CLI_context_t cli_ctx;
 
 /*** AT local functions ***/

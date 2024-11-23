@@ -93,7 +93,7 @@ static POWER_status_t _POWER_sensors_init(void) {
     dps310_status = DPS310_init();
     DPS310_exit_error(POWER_ERROR_BASE_DPS310);
     sht3x_status = SHT3X_init();
-    SHT3X_exit_error(POWER_ERROR_BASE_SHT3X);
+    SHT3X_exit_error(POWER_ERROR_BASE_SHT30);
     si1133_status = SI1133_init();
     SI1133_exit_error(POWER_ERROR_BASE_SI1133);
 #ifdef HW1_0
@@ -114,7 +114,7 @@ static POWER_status_t _POWER_sensors_de_init(void) {
     dps310_status = DPS310_de_init();
     DPS310_exit_error(POWER_ERROR_BASE_DPS310);
     sht3x_status = SHT3X_de_init();
-    SHT3X_exit_error(POWER_ERROR_BASE_SHT3X);
+    SHT3X_exit_error(POWER_ERROR_BASE_SHT30);
     si1133_status = SI1133_de_init();
     SI1133_exit_error(POWER_ERROR_BASE_SI1133);
     // Turn sensors off.
@@ -168,7 +168,7 @@ static POWER_status_t _POWER_radio_init(void) {
     RFE_status_t rfe_status = RFE_SUCCESS;
     // Turn radio on.
     GPIO_write(&GPIO_RF_POWER_ENABLE, 1);
-    // Init SX1232 and SKY13317 drivers.
+    // Init transceiver and front-end.
     sx1232_status = SX1232_init();
     SX1232_exit_error(POWER_ERROR_BASE_SX1232);
     rfe_status = RFE_init();
@@ -186,7 +186,7 @@ static POWER_status_t _POWER_radio_de_init(void) {
     POWER_status_t status = POWER_SUCCESS;
     SX1232_status_t sx1232_status = SX1232_SUCCESS;
     RFE_status_t rfe_status = RFE_SUCCESS;
-    // Release SX1232 and SKY13317 drivers.
+    // Release transceiver and front-end.
     sx1232_status = SX1232_de_init();
     SX1232_exit_error(POWER_ERROR_BASE_SX1232);
     rfe_status = RFE_de_init();

@@ -45,7 +45,7 @@
 #include "rfe.h"
 #include "sigfox_error.h"
 
-/*** ERROR structures ***/
+/*** ERROR BASE structures ***/
 
 /*!******************************************************************
  * \enum ERROR_base_t

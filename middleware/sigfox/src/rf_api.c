@@ -134,7 +134,6 @@ static const sfx_u8 RF_API_BIT0_AMPLITUDE_PROFILE[RF_API_SYMBOL_PROFILE_SIZE_BYT
 static const sfx_u8 RF_API_DL_FT[SIGFOX_DL_FT_SIZE_BYTES] = SIGFOX_DL_FT;
 #endif
 #if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION)
-// @formatter:off
 static sfx_u32 RF_API_LATENCY_MS[RF_API_LATENCY_LAST] = {
     POWER_ON_DELAY_MS_RADIO_TCXO, // Wake-up.
     (POWER_ON_DELAY_MS_RADIO + SX1232_OSCILLATOR_DELAY_MS + 1), // TX init (power on delay + 750us).
@@ -149,7 +148,6 @@ static sfx_u32 RF_API_LATENCY_MS[RF_API_LATENCY_LAST] = {
     0, // RX de-init (215us).
 #endif
 };
-// @formatter:on
 #endif
 static RF_API_context_t rf_api_ctx;
 

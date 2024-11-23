@@ -47,9 +47,9 @@
 #include "cli.h"
 #include "error.h"
 #include "error_base.h"
+#include "nvic_priority.h"
 #include "nvm.h"
 #include "nvm_address.h"
-#include "nvic_priority.h"
 #include "power.h"
 #include "spsws_flags.h"
 #include "tim.h"
@@ -77,11 +77,9 @@ typedef enum {
 /*** MCU API local global variables ***/
 
 #if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION) && (defined BIDIRECTIONAL)
-// @formatter:off
 static sfx_u32 MCU_API_LATENCY_MS[MCU_API_LATENCY_LAST] = {
     (POWER_ON_DELAY_MS_ANALOG + ADC_INIT_DELAY_MS) // Get voltage and temperature function.
 };
-// @formatter:on
 #endif
 
 /*** MCU API functions ***/
@@ -131,7 +129,7 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
-    TIM_waiting_mode_t tim2_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
+    TIM_waiting_mode_t tim_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
     // Check parameter.
     if (timer == SFX_NULL) {
         EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_NULL_PARAMETER);
@@ -141,11 +139,11 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     if ((timer->reason) == MCU_API_TIMER_REASON_T_RX) {
         // T_RX completion is directly checked with the raw timer status within the RF_API_receive() function.
         // All other timers completion are checked with the MCU_API_timer_wait_cplt() function, using low power sleep waiting mode.
-        tim2_waiting_mode = TIM_WAITING_MODE_ACTIVE;
+        tim_waiting_mode = TIM_WAITING_MODE_ACTIVE;
     }
 #endif
     // Start timer.
-    tim_status = TIM_MCH_start_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) (timer->instance), (timer->duration_ms), tim2_waiting_mode);
+    tim_status = TIM_MCH_start_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) (timer->instance), (timer->duration_ms), tim_waiting_mode);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     RETURN();

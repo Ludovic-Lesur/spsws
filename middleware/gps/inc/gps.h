@@ -28,8 +28,8 @@ typedef enum {
 } GPS_status_t;
 
 /*!******************************************************************
- * \enum GPS_status_t
- * \brief GPS driver error codes.
+ * \enum GPS_acquisition_status_t
+ * \brief GPS acquisition status.
  *******************************************************************/
 typedef enum {
     GPS_ACQUISITION_SUCCESS = 0,

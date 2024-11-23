@@ -47,11 +47,6 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
     NEOM8X_status_t neom8x_status;
     NEOM8X_acquisition_t gps_acquisition;
     uint32_t start_time = RTC_get_uptime_seconds();
-    // Check parameters.
-    if (acquisition_duration_seconds == NULL) {
-        status = GPS_ERROR_NULL_PARAMETER;
-        goto errors;
-    }
     // Reset data.
     gps_ctx.acquisition_status = NEOM8X_ACQUISITION_STATUS_FAIL;
     (*acquisition_duration_seconds) = 0;
@@ -150,7 +145,7 @@ GPS_status_t GPS_get_position(GPS_position_t* gps_position, uint32_t timeout_sec
     // Reset output data.
     (*acquisition_duration_seconds) = 0;
     (*acquisition_status) = GPS_ACQUISITION_ERROR_TIMEOUT;
-    // Perform time acquisition.
+    // Perform position acquisition.
     status = _GPS_perform_acquisition(NEOM8X_GPS_DATA_POSITION, NEOM8X_ACQUISITION_STATUS_STABLE, timeout_seconds, acquisition_duration_seconds);
     if (status != GPS_SUCCESS) goto errors;
     // Check status.
