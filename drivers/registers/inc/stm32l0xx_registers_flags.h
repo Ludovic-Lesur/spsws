@@ -1,7 +1,7 @@
 /*
  * stm32l0xx_registers_flags.h
  *
- *  Created on: 15 aug 2024
+ *  Created on: 15 aug. 2024
  *      Author: Ludo
  */
 

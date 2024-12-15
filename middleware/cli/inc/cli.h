@@ -30,7 +30,7 @@ typedef enum {
 
 #ifdef SPSWS_MODE_CLI
 
-/*** AT functions ***/
+/*** CLI functions ***/
 
 /*!******************************************************************
  * \fn CLI_status_t CLI_init(void)
