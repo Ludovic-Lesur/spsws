@@ -1150,6 +1150,12 @@ CLI_status_t CLI_de_init(void) {
     // Local variables.
     CLI_status_t status = CLI_SUCCESS;
     AT_status_t at_status = AT_SUCCESS;
+    uint8_t idx = 0;
+    // Unregister commands.
+    for (idx = 0; idx < (sizeof(CLI_COMMANDS_LIST) / sizeof(AT_command_t)); idx++) {
+        at_status = AT_unregister_command(AT_INSTANCE_CLI, &(CLI_COMMANDS_LIST[idx]));
+        AT_exit_error(CLI_ERROR_BASE_AT);
+    }
     // Release AT driver.
     at_status = AT_de_init(AT_INSTANCE_CLI);
     AT_exit_error(CLI_ERROR_BASE_AT);
