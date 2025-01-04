@@ -118,11 +118,10 @@ typedef union {
 typedef union {
     struct {
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-        unsigned unused :1;
         unsigned sen15901_process :1;
-#else
-        unsigned unused : 2;
 #endif
+        unsigned daily_geoloc_done : 1;
+        unsigned daily_rtc_calibration_done : 1;
         unsigned fixed_hour_alarm :1;
         unsigned wake_up :1;
         unsigned is_afternoon :1;
@@ -130,7 +129,7 @@ typedef union {
         unsigned hour_changed :1;
         unsigned por :1;
     } __attribute__((scalar_storage_order("big-endian")))__attribute__((packed));
-    uint8_t all;
+    uint16_t all;
 } SPSWS_flags_t;
 
 /*******************************************************************/
@@ -716,7 +715,7 @@ static void _SPSWS_init_hw(void) {
     rtc_alarm_config.minutes.mask = 0;
     rtc_alarm_config.minutes.value = 0;
     rtc_alarm_config.seconds.mask = 0;
-    rtc_alarm_config.seconds.value = (device_id_lsbyte % 60) & 0x7F;
+    rtc_alarm_config.seconds.value = (device_id_lsbyte % 60);
     rtc_status = RTC_start_alarm(RTC_ALARM_A, &rtc_alarm_config, &_SPSWS_fixed_hour_alarm_callback);
     RTC_stack_error(ERROR_BASE_RTC);
     // Init delay timer.
@@ -808,6 +807,8 @@ int main(void) {
             _SPSWS_update_time_flags();
             // Check alarm flag..
             if (spsws_ctx.flags.fixed_hour_alarm != 0) {
+                // Clear flag.
+                spsws_ctx.flags.fixed_hour_alarm = 0;
                 // Check hour change flag.
                 if (spsws_ctx.flags.hour_changed != 0) {
                     // Valid fixed hour wake-up.
@@ -815,15 +816,12 @@ int main(void) {
                     // Check if day changed.
                     if (spsws_ctx.flags.day_changed != 0) {
                         // Reset daily flags.
-                        spsws_ctx.status.daily_rtc_calibration = 0;
-                        spsws_ctx.status.daily_geoloc = 0;
-                        spsws_ctx.status.daily_downlink = 0;
-                        // Reset flags.
                         spsws_ctx.flags.day_changed = 0;
-                        spsws_ctx.flags.hour_changed = 0;
                         spsws_ctx.flags.is_afternoon = 0;
+                        spsws_ctx.flags.daily_geoloc_done = 0;
+                        spsws_ctx.flags.daily_rtc_calibration_done = 0;
                     }
-                    spsws_ctx.flags.hour_changed = 0; // Reset flag.
+                    spsws_ctx.flags.hour_changed = 0;
                     // Calibrate clocks.
                     rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
                     RCC_stack_error(ERROR_BASE_RCC);
@@ -843,6 +841,8 @@ int main(void) {
             }
             break;
         case SPSWS_STATE_RTC_CALIBRATION:
+            // Reset status to default.
+            spsws_ctx.status.daily_rtc_calibration = 0;
             // Turn GPS on.
             power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             POWER_stack_error(ERROR_BASE_POWER);
@@ -868,17 +868,21 @@ int main(void) {
                 if (spsws_ctx.status.first_rtc_calibration == 0) {
                     _SPSWS_update_pwut();
                 }
-                // Update calibration flags.
-                spsws_ctx.status.first_rtc_calibration = 1;
-                spsws_ctx.status.daily_rtc_calibration = 1;
+                // Update status bit.
+                if (rtc_status == RTC_SUCCESS) {
+                    spsws_ctx.status.first_rtc_calibration = 1;
+                    spsws_ctx.status.daily_rtc_calibration = 1;
+                }
             }
             else {
                 // In POR case, to avoid wake-up directly after RTC calibration (alarm A will occur during the first GPS time acquisition because of the RTC reset and the random delay).
                 spsws_ctx.flags.fixed_hour_alarm = 0;
-                spsws_ctx.flags.wake_up = 0;
             }
+            // Update done flag.
+            spsws_ctx.flags.daily_rtc_calibration_done = 1;
             // Send error stack at start
             spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;
+            spsws_ctx.flags.por = 0;
             break;
         case SPSWS_STATE_MEASURE:
             // Retrieve internal ADC data.
@@ -993,12 +997,12 @@ int main(void) {
             GPIO_write(&SPSWS_SEN15901_EMULATOR_SYNCHRO_GPIO, 0);
 #endif
             // Compute next state.
-            if (spsws_ctx.status.daily_rtc_calibration == 0) {
+            if (spsws_ctx.flags.daily_rtc_calibration_done == 0) {
                 // Perform RTC calibration.
                 spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
             }
             else {
-                if ((spsws_ctx.status.daily_geoloc == 0) && (spsws_ctx.flags.is_afternoon != 0)) {
+                if ((spsws_ctx.flags.daily_geoloc_done == 0) && (spsws_ctx.flags.is_afternoon != 0)) {
                     // Perform device geolocation.
                     spsws_ctx.state = SPSWS_STATE_GEOLOC;
                 }
@@ -1009,6 +1013,8 @@ int main(void) {
             }
             break;
         case SPSWS_STATE_GEOLOC:
+            // Reset status to default.
+            spsws_ctx.status.daily_geoloc = 0;
             // Turn GPS on.
             power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             POWER_stack_error(ERROR_BASE_POWER);
@@ -1018,8 +1024,6 @@ int main(void) {
             // Turn GPS off.
             power_status = POWER_disable(POWER_DOMAIN_GPS);
             POWER_stack_error(ERROR_BASE_POWER);
-            // Update flag whatever the result.
-            spsws_ctx.status.daily_geoloc = 1;
             // Build Sigfox frame.
             if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
                 spsws_ctx.sigfox_geoloc_data.latitude_degrees = gps_position.lat_degrees;
@@ -1036,6 +1040,8 @@ int main(void) {
                 application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
                 application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_geoloc_data.frame);
                 application_message.ul_payload_size_bytes = SPSWS_SIGFOX_GEOLOC_DATA_SIZE;
+                // Update status bit.
+                spsws_ctx.status.daily_geoloc = 1;
             }
             else {
                 spsws_ctx.sigfox_geoloc_timeout_data.gps_acquisition_status = gps_acquisition_status;
@@ -1047,6 +1053,8 @@ int main(void) {
             }
             // Send uplink geolocation frame.
             _SPSWS_send_sigfox_message(&application_message);
+            // Update done flag.
+            spsws_ctx.flags.daily_geoloc_done = 1;
             // Send error stack frame.
             spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
             break;
@@ -1079,9 +1087,7 @@ int main(void) {
             sen15901_status = SEN15901_set_rainfall_measurement(1);
             SEN15901_stack_error(ERROR_BASE_SEN15901);
 #endif
-            // Clear flags and enter sleep mode.
-            spsws_ctx.flags.por = 0;
-            spsws_ctx.flags.fixed_hour_alarm = 0;
+            // Enter sleep mode.
             spsws_ctx.state = SPSWS_STATE_SLEEP;
             break;
         case SPSWS_STATE_SLEEP:
