@@ -66,6 +66,7 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
         (*acquisition_duration_seconds) = (RTC_get_uptime_seconds() - start_time);
         // Check flag.
         if (gps_ctx.process_flag != 0) {
+            // Process driver.
             neom8x_status = NEOM8X_process();
             NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
         }
@@ -75,6 +76,7 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
     neom8x_status = NEOM8X_stop_acquisition();
     NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
 errors:
+    NEOM8X_stop_acquisition();
     return status;
 }
 
