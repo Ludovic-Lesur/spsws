@@ -53,6 +53,9 @@
 #define SPSWS_POWER_ON_DELAY_MS                     7000
 #define SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS       180
 #define SPSWS_GEOLOC_TIMEOUT_SECONDS                120
+// Voltage hysteresis for radio.
+#define SPSWS_RADIO_OFF_VCAP_THRESHOLD_MV           1000
+#define SPSWS_RADIO_ON_VCAP_THRESHOLD_MV            1500
 // Sigfox UL payloads size.
 #define SPSWS_SIGFOX_STARTUP_DATA_SIZE              8
 #define SPSWS_SIGFOX_ERROR_DATA_SIZE                12
@@ -120,6 +123,7 @@ typedef union {
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
         unsigned sen15901_process :1;
 #endif
+        unsigned radio_enabled : 1;
         unsigned daily_geoloc_done : 1;
         unsigned daily_rtc_calibration_done : 1;
         unsigned fixed_hour_alarm :1;
@@ -628,6 +632,8 @@ static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* appl
     // Local variables.
     SIGFOX_EP_API_status_t sigfox_ep_api_status = SIGFOX_EP_API_SUCCESS;
     SIGFOX_EP_API_config_t lib_config;
+    // Directly exit of the radio is disabled due to low supercap voltage.
+    if (spsws_ctx.flags.radio_enabled == 0) goto errors;
     // Library configuration.
     lib_config.rc = &SIGFOX_RC1;
     // Open library.
@@ -639,6 +645,8 @@ static void _SPSWS_send_sigfox_message(SIGFOX_EP_API_application_message_t* appl
     // Close library.
     sigfox_ep_api_status = SIGFOX_EP_API_close();
     SIGFOX_EP_API_stack_error();
+errors:
+    return;
 }
 #endif
 
@@ -648,6 +656,7 @@ static void _SPSWS_init_context(void) {
     spsws_ctx.state = SPSWS_STATE_STARTUP;
     spsws_ctx.flags.all = 0;
     spsws_ctx.flags.por = 1;
+    spsws_ctx.flags.radio_enabled = 1;
     spsws_ctx.status.all = 0;
 #ifndef SPSWS_MODE_CLI
     spsws_ctx.seconds_counter = 0;
@@ -915,6 +924,13 @@ int main(void) {
             ANALOG_stack_error(ERROR_BASE_ANALOG);
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.vcap_mv), generic_s32_1);
+                // Voltage hysteresis for radio.
+                if (generic_s32_1 < SPSWS_RADIO_OFF_VCAP_THRESHOLD_MV) {
+                    spsws_ctx.flags.radio_enabled = 0;
+                }
+                if (generic_s32_1 > SPSWS_RADIO_ON_VCAP_THRESHOLD_MV) {
+                    spsws_ctx.flags.radio_enabled = 1;
+                }
             }
             // Light sensor.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32_1);
