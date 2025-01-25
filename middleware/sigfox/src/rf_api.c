@@ -554,7 +554,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t* tx_data) {
     status = _RF_API_internal_process();
     CHECK_STATUS(RF_API_SUCCESS);
     // Start timer.
-    tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE, rf_api_ctx.tx_modulation_timer_period_ns, &_RF_API_modulation_timer_irq_callback);
+    tim_status = TIM_STD_start(RF_API_MODULATION_TIMER_INSTANCE, rf_api_ctx.tx_modulation_timer_period_ns, TIM_UNIT_NS, &_RF_API_modulation_timer_irq_callback);
     TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
     // Wait for transmission to complete.
     while (rf_api_ctx.state != RF_API_STATE_READY) {

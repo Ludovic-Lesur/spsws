@@ -8,7 +8,7 @@
 #include "gpio_mapping.h"
 
 #include "gpio.h"
-#include "gpio_reg.h"
+#include "gpio_registers.h"
 #include "i2c.h"
 #include "lpuart.h"
 #include "spi.h"

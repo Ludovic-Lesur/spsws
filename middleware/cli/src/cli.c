@@ -18,7 +18,6 @@
 #include "rcc.h"
 // Utils.
 #include "at.h"
-#include "at_instance.h"
 #include "error.h"
 #include "math.h"
 #include "parser.h"
@@ -318,11 +317,11 @@ static AT_status_t _CLI_rcc_callback(void) {
         rcc_status = RCC_get_frequency_hz(rcc_clock_index, &clock_frequency);
         _CLI_check_driver_status(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC);
         // Print data.
-        AT_reply_add_string(AT_INSTANCE_CLI, rcc_clock_name[idx]);
-        AT_reply_add_string(AT_INSTANCE_CLI, (clock_status == 0) ? ": OFF " : ": ON  ");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) clock_frequency, STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "Hz");
-        AT_send_reply(AT_INSTANCE_CLI);
+        AT_reply_add_string(rcc_clock_name[idx]);
+        AT_reply_add_string((clock_status == 0) ? ": OFF " : ": ON  ");
+        AT_reply_add_integer((int32_t) clock_frequency, STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("Hz");
+        AT_send_reply();
     }
 errors:
     return status;
@@ -344,8 +343,8 @@ static AT_status_t _CLI_nvm_callback(void) {
     nvm_status = NVM_read_byte((NVM_address_t) address, &nvm_data);
     _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
     // Print data.
-    AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_integer((int32_t) nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
+    AT_send_reply();
 errors:
     return status;
 }
@@ -363,9 +362,9 @@ static AT_status_t _CLI_get_ep_id_callback(void) {
     for (idx = 0; idx < SIGFOX_EP_ID_SIZE_BYTES; idx++) {
         nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + idx), &id_byte);
         _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
-        AT_reply_add_integer(AT_INSTANCE_CLI, id_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
+        AT_reply_add_integer(id_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
     }
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_send_reply();
 errors:
     return status;
 }
@@ -406,9 +405,9 @@ static AT_status_t _CLI_get_ep_key_callback(void) {
     for (idx = 0; idx < SIGFOX_EP_KEY_SIZE_BYTES; idx++) {
         nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), &key_byte);
         _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
-        AT_reply_add_integer(AT_INSTANCE_CLI, key_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
+        AT_reply_add_integer(key_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
     }
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_send_reply();
 errors:
     return status;
 }
@@ -451,38 +450,38 @@ static AT_status_t _CLI_adc_callback(void) {
     // MCU voltage.
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
-    AT_reply_add_string(AT_INSTANCE_CLI, "Vmcu=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, generic_s32, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "mV");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Vmcu=");
+    AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("mV");
+    AT_send_reply();
     // MCU temperature.
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
-    AT_reply_add_string(AT_INSTANCE_CLI, "Tmcu=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, generic_s32, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "dC");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Tmcu=");
+    AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dC");
+    AT_send_reply();
     // Source voltage.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Vpv=");
+    AT_reply_add_string("Vpv=");
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
-    AT_reply_add_integer(AT_INSTANCE_CLI, generic_s32, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "mV");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("mV");
+    AT_send_reply();
     // Supercap voltage.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Vcap=");
+    AT_reply_add_string("Vcap=");
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VCAP_MV, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
-    AT_reply_add_integer(AT_INSTANCE_CLI, generic_s32, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "mV");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("mV");
+    AT_send_reply();
     // Light.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Light=");
+    AT_reply_add_string("Light=");
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_LDR_PERCENT, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
-    AT_reply_add_integer(AT_INSTANCE_CLI, generic_s32, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "%");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("%");
+    AT_send_reply();
     // Turn analog front-end off.
     power_status = POWER_disable(POWER_DOMAIN_ANALOG);
     _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
@@ -514,15 +513,15 @@ static AT_status_t _CLI_iths_callback(void) {
     _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Temperature.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Tpcb=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, temperature_degrees, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "dC");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Tpcb=");
+    AT_reply_add_integer(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dC");
+    AT_send_reply();
     // Humidity.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Hpcb=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, humidity_percent, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "%");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Hpcb=");
+    AT_reply_add_integer(humidity_percent, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("%");
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_SENSORS);
@@ -551,15 +550,15 @@ static AT_status_t _CLI_eths_callback(void) {
     _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Temperature.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Tamb=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, temperature_degrees, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "dC");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Tamb=");
+    AT_reply_add_integer(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dC");
+    AT_send_reply();
     // Humidity.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Hamb=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, humidity_percent, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "%");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Hamb=");
+    AT_reply_add_integer(humidity_percent, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("%");
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_SENSORS);
@@ -588,15 +587,15 @@ static AT_status_t _CLI_epts_callback(void) {
     _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Pressure.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Pabs=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, pressure_pa, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "Pa");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Pabs=");
+    AT_reply_add_integer(pressure_pa, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("Pa");
+    AT_send_reply();
     // Temperature.
-    AT_reply_add_string(AT_INSTANCE_CLI, "Tamb=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, temperature_degrees, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "dC");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("Tamb=");
+    AT_reply_add_integer(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dC");
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_SENSORS);
@@ -623,9 +622,9 @@ static AT_status_t _CLI_euvs_callback(void) {
     power_status = POWER_disable(POWER_DOMAIN_SENSORS);
     _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
-    AT_reply_add_string(AT_INSTANCE_CLI, "UVI=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, uv_index, STRING_FORMAT_DECIMAL, 0);
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string("UVI=");
+    AT_reply_add_integer(uv_index, STRING_FORMAT_DECIMAL, 0);
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_SENSORS);
@@ -661,42 +660,42 @@ static AT_status_t _CLI_time_callback(void) {
     // Check status.
     if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
         // Year.
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.year), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "-");
+        AT_reply_add_integer((int32_t) (gps_time.year), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("-");
         // Month.
         if ((gps_time.month) < 10) {
-            AT_reply_add_integer(AT_INSTANCE_CLI, 0, STRING_FORMAT_DECIMAL, 0);
+            AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.month), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "-");
+        AT_reply_add_integer((int32_t) (gps_time.month), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("-");
         // Day.
         if ((gps_time.date) < 10) {
-            AT_reply_add_integer(AT_INSTANCE_CLI, 0, STRING_FORMAT_DECIMAL, 0);
+            AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.date), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, " ");
+        AT_reply_add_integer((int32_t) (gps_time.date), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string(" ");
         // Hours.
         if ((gps_time.hours) < 10) {
-            AT_reply_add_integer(AT_INSTANCE_CLI, 0, STRING_FORMAT_DECIMAL, 0);
+            AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.hours), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, ":");
+        AT_reply_add_integer((int32_t) (gps_time.hours), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string(":");
         // Minutes.
         if ((gps_time.minutes) < 10) {
-            AT_reply_add_integer(AT_INSTANCE_CLI, 0, STRING_FORMAT_DECIMAL, 0);
+            AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, ":");
+        AT_reply_add_integer((int32_t) (gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string(":");
         // Seconds.
         if ((gps_time.seconds) < 10) {
-            AT_reply_add_integer(AT_INSTANCE_CLI, 0, STRING_FORMAT_DECIMAL, 0);
+            AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
-        AT_reply_add_integer(AT_INSTANCE_CLI, (int32_t) (gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_integer((int32_t) (gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
     }
     else {
-        AT_reply_add_string(AT_INSTANCE_CLI, "GPS timeout");
+        AT_reply_add_string("GPS timeout");
     }
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_GPS);
@@ -732,35 +731,35 @@ static AT_status_t _CLI_gps_callback(void) {
     // Check status.
     if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
         // Latitude.
-        AT_reply_add_string(AT_INSTANCE_CLI, "Lat=");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "d");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "'");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "''");
-        AT_reply_add_string(AT_INSTANCE_CLI, ((gps_position.lat_north_flag) == 0) ? "S" : "N");
+        AT_reply_add_string("Lat=");
+        AT_reply_add_integer((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("d");
+        AT_reply_add_integer((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("'");
+        AT_reply_add_integer((gps_position.lat_seconds), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("''");
+        AT_reply_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
         // Longitude.
-        AT_reply_add_string(AT_INSTANCE_CLI, " Long=");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "d");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "'");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "''");
-        AT_reply_add_string(AT_INSTANCE_CLI, ((gps_position.long_east_flag) == 0) ? "W" : "E");
+        AT_reply_add_string(" Long=");
+        AT_reply_add_integer((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("d");
+        AT_reply_add_integer((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("'");
+        AT_reply_add_integer((gps_position.long_seconds), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("''");
+        AT_reply_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
         // Altitude.
-        AT_reply_add_string(AT_INSTANCE_CLI, " Alt=");
-        AT_reply_add_integer(AT_INSTANCE_CLI, (gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string(" Alt=");
+        AT_reply_add_integer((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
         // Fix duration.
-        AT_reply_add_string(AT_INSTANCE_CLI, "m Fix=");
-        AT_reply_add_integer(AT_INSTANCE_CLI, fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "s");
+        AT_reply_add_string("m Fix=");
+        AT_reply_add_integer(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("s");
     }
     else {
-        AT_reply_add_string(AT_INSTANCE_CLI, "GPS timeout");
+        AT_reply_add_string("GPS timeout");
     }
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_send_reply();
     goto end;
 errors:
     POWER_disable(POWER_DOMAIN_GPS);
@@ -1043,8 +1042,8 @@ static AT_status_t _CLI_cw_callback(void) {
         // Start CW.
         rf_api_status = RF_API_start_continuous_wave();
         _CLI_check_driver_status(rf_api_status, RF_API_SUCCESS, (ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_RF_API * ERROR_BASE_STEP)));
-        AT_reply_add_string(AT_INSTANCE_CLI, "CW running...");
-        AT_send_reply(AT_INSTANCE_CLI);
+        AT_reply_add_string("CW running...");
+        AT_send_reply();
     }
     goto end;
 errors:
@@ -1097,10 +1096,10 @@ static AT_status_t _CLI_rssi_callback(void) {
         rfe_status = RFE_get_rssi(&rssi_dbm);
         _CLI_check_driver_status(rfe_status, RFE_SUCCESS, ERROR_BASE_RFE);
         // Print RSSI.
-        AT_reply_add_string(AT_INSTANCE_CLI, "RSSI=");
-        AT_reply_add_integer(AT_INSTANCE_CLI, rssi_dbm, STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(AT_INSTANCE_CLI, "dBm");
-        AT_send_reply(AT_INSTANCE_CLI);
+        AT_reply_add_string("RSSI=");
+        AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string("dBm");
+        AT_send_reply();
         // Report delay.
         lptim_status = LPTIM_delay_milliseconds(CLI_RSSI_REPORT_PERIOD_MS, LPTIM_DELAY_MODE_ACTIVE);
         _CLI_check_driver_status(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM);
@@ -1129,16 +1128,19 @@ CLI_status_t CLI_init(void) {
     // Local variables.
     CLI_status_t status = CLI_SUCCESS;
     AT_status_t at_status = AT_SUCCESS;
+    AT_configuration_t at_config;
     uint8_t idx = 0;
     // Init context.
     cli_ctx.at_process_flag = 0;
     cli_ctx.at_parser_ptr = NULL;
     // Init AT driver.
-    at_status = AT_init(AT_INSTANCE_CLI, TERMINAL_INSTANCE_CLI, &_CLI_at_process_callback, &(cli_ctx.at_parser_ptr));
+    at_config.terminal_instance = TERMINAL_INSTANCE_CLI;
+    at_config.process_callback = &_CLI_at_process_callback;
+    at_status = AT_init(&at_config, &(cli_ctx.at_parser_ptr));
     AT_exit_error(CLI_ERROR_BASE_AT);
     // Register commands.
     for (idx = 0; idx < (sizeof(CLI_COMMANDS_LIST) / sizeof(AT_command_t)); idx++) {
-        at_status = AT_register_command(AT_INSTANCE_CLI, &(CLI_COMMANDS_LIST[idx]));
+        at_status = AT_register_command(&(CLI_COMMANDS_LIST[idx]));
         AT_exit_error(CLI_ERROR_BASE_AT);
     }
 errors:
@@ -1153,11 +1155,11 @@ CLI_status_t CLI_de_init(void) {
     uint8_t idx = 0;
     // Unregister commands.
     for (idx = 0; idx < (sizeof(CLI_COMMANDS_LIST) / sizeof(AT_command_t)); idx++) {
-        at_status = AT_unregister_command(AT_INSTANCE_CLI, &(CLI_COMMANDS_LIST[idx]));
+        at_status = AT_unregister_command(&(CLI_COMMANDS_LIST[idx]));
         AT_exit_error(CLI_ERROR_BASE_AT);
     }
     // Release AT driver.
-    at_status = AT_de_init(AT_INSTANCE_CLI);
+    at_status = AT_de_init();
     AT_exit_error(CLI_ERROR_BASE_AT);
 errors:
     return status;
@@ -1173,7 +1175,7 @@ CLI_status_t CLI_process(void) {
         // Clear flag.
         cli_ctx.at_process_flag = 0;
         // Process AT driver.
-        at_status = AT_process(AT_INSTANCE_CLI);
+        at_status = AT_process();
         AT_exit_error(CLI_ERROR_BASE_AT);
     }
 errors:
@@ -1185,14 +1187,14 @@ void CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rs
     // Local variables.
     uint8_t idx = 0;
     // Print DL payload.
-    AT_reply_add_string(AT_INSTANCE_CLI, "+RX=");
+    AT_reply_add_string("+RX=");
     for (idx = 0; idx < dl_payload_size; idx++) {
-        AT_reply_add_integer(AT_INSTANCE_CLI, dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
+        AT_reply_add_integer(dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
     }
-    AT_reply_add_string(AT_INSTANCE_CLI, " (RSSI=");
-    AT_reply_add_integer(AT_INSTANCE_CLI, rssi_dbm, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string(AT_INSTANCE_CLI, "dBm)");
-    AT_send_reply(AT_INSTANCE_CLI);
+    AT_reply_add_string(" (RSSI=");
+    AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dBm)");
+    AT_send_reply();
 }
 
 #endif /* SPSWS_MODE_CLI */

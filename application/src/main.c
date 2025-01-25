@@ -5,8 +5,6 @@
  *      Author: Ludo
  */
 
-// Registers
-#include "rcc_reg.h"
 // Peripherals.
 #include "exti.h"
 #include "gpio.h"
@@ -797,7 +795,7 @@ int main(void) {
             // Switch to accurate clock.
             _SPSWS_set_clock(1);
             // Fill reset reason and software version.
-            spsws_ctx.sigfox_startup_data.reset_reason = ((RCC->CSR) >> 24) & 0xFF;
+            spsws_ctx.sigfox_startup_data.reset_reason = PWR_get_reset_flags();
             spsws_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
             spsws_ctx.sigfox_startup_data.minor_version = GIT_MINOR_VERSION;
             spsws_ctx.sigfox_startup_data.commit_index = GIT_COMMIT_INDEX;
@@ -1109,8 +1107,10 @@ int main(void) {
         case SPSWS_STATE_SLEEP:
             // Enter sleep mode.
             IWDG_reload();
+#ifndef SPSWS_MODE_DEBUG
             PWR_enter_stop_mode();
             IWDG_reload();
+#endif
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
             // Check SEN15901 process flag.
             if (spsws_ctx.flags.sen15901_process != 0) {
