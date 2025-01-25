@@ -38,9 +38,8 @@ The SPSWS boards are based on the **STM32L041K6U6** (HW1.0) and the **STM32L081C
 
 The project is organized as follow:
 
-* `startup` : MCU **startup** code (from ARM).
-* `linker` : MCU **linker** script (from ARM).
 * `drivers` :
+    * `device` : MCU **startup** code and **linker** script.
     * `registers` : MCU **registers** address definition.
     * `peripherals` : internal MCU **peripherals** drivers.
     * `components` : external **components** drivers.
