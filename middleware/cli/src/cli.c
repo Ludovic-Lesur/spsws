@@ -77,7 +77,7 @@ typedef struct {
 /*** CLI local functions declaration ***/
 
 /*******************************************************************/
-static AT_status_t _CLI_rst_callback(void);
+static AT_status_t _CLI_z_callback(void);
 static AT_status_t _CLI_rcc_callback(void);
 /*******************************************************************/
 #ifdef CLI_COMMAND_NVM
@@ -128,7 +128,7 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
         .syntax = "Z",
         .parameters = NULL,
         .description = "Reset MCU",
-        .callback = &_CLI_rst_callback
+        .callback = &_CLI_z_callback
     },
     {
         .syntax = "$RCC?",
@@ -281,7 +281,7 @@ static void _CLI_at_process_callback(void) {
 }
 
 /*******************************************************************/
-static AT_status_t _CLI_rst_callback(void) {
+static AT_status_t _CLI_z_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
     // Execute command.
