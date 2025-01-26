@@ -81,7 +81,6 @@ static AT_status_t _CLI_rst_callback(void);
 static AT_status_t _CLI_rcc_callback(void);
 /*******************************************************************/
 #ifdef CLI_COMMAND_NVM
-static AT_status_t _CLI_nvm_callback(void);
 static AT_status_t _CLI_get_ep_id_callback(void);
 static AT_status_t _CLI_set_ep_id_callback(void);
 static AT_status_t _CLI_get_ep_key_callback(void);
@@ -126,7 +125,7 @@ static AT_status_t _CLI_rssi_callback(void);
 
 static const AT_command_t CLI_COMMANDS_LIST[] = {
     {
-        .syntax = "$RST",
+        .syntax = "Z",
         .parameters = NULL,
         .description = "Reset MCU",
         .callback = &_CLI_rst_callback
@@ -138,12 +137,6 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
         .callback = &_CLI_rcc_callback
     },
 #ifdef CLI_COMMAND_NVM
-    {
-        .syntax = "$NVM=",
-        .parameters = "<address[dec]>",
-        .description = "Read NVM byte",
-        .callback = &_CLI_nvm_callback
-    },
     {
         .syntax = "$ID?",
         .parameters = NULL,
@@ -321,7 +314,7 @@ static AT_status_t _CLI_rcc_callback(void) {
         _CLI_check_driver_status(rcc_status, RCC_SUCCESS, ERROR_BASE_RCC);
         // Print data.
         AT_reply_add_string(rcc_clock_name[idx]);
-        AT_reply_add_string((clock_status == 0) ? ": OFF " : ": ON  ");
+        AT_reply_add_string((clock_status == 0) ? ":OFF:" : ":ON:");
         AT_reply_add_integer((int32_t) clock_frequency, STRING_FORMAT_DECIMAL, 0);
         AT_reply_add_string("Hz");
         AT_send_reply();
@@ -329,29 +322,6 @@ static AT_status_t _CLI_rcc_callback(void) {
 errors:
     return status;
 }
-
-#ifdef CLI_COMMAND_NVM
-/*******************************************************************/
-static AT_status_t _CLI_nvm_callback(void) {
-    // Local variables.
-    AT_status_t status = AT_SUCCESS;
-    PARSER_status_t parser_status = PARSER_SUCCESS;
-    NVM_status_t nvm_status = NVM_SUCCESS;
-    int32_t address = 0;
-    uint8_t nvm_data = 0;
-    // Read address parameter.
-    parser_status = PARSER_get_parameter(cli_ctx.at_parser_ptr, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &address);
-    PARSER_exit_error(AT_ERROR_BASE_PARSER);
-    // Read byte at requested address.
-    nvm_status = NVM_read_byte((NVM_address_t) address, &nvm_data);
-    _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
-    // Print data.
-    AT_reply_add_integer((int32_t) nvm_data, STRING_FORMAT_HEXADECIMAL, 1);
-    AT_send_reply();
-errors:
-    return status;
-}
-#endif
 
 #ifdef CLI_COMMAND_NVM
 /*******************************************************************/
@@ -365,7 +335,7 @@ static AT_status_t _CLI_get_ep_id_callback(void) {
     for (idx = 0; idx < SIGFOX_EP_ID_SIZE_BYTES; idx++) {
         nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_ID + idx), &id_byte);
         _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
-        AT_reply_add_integer(id_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
+        AT_reply_add_integer(id_byte, STRING_FORMAT_HEXADECIMAL, 0);
     }
     AT_send_reply();
 errors:
@@ -408,7 +378,7 @@ static AT_status_t _CLI_get_ep_key_callback(void) {
     for (idx = 0; idx < SIGFOX_EP_KEY_SIZE_BYTES; idx++) {
         nvm_status = NVM_read_byte((NVM_ADDRESS_SIGFOX_EP_KEY + idx), &key_byte);
         _CLI_check_driver_status(nvm_status, NVM_SUCCESS, ERROR_BASE_NVM);
-        AT_reply_add_integer(key_byte, STRING_FORMAT_HEXADECIMAL, ((idx == 0) ? 1 : 0));
+        AT_reply_add_integer(key_byte, STRING_FORMAT_HEXADECIMAL, 0);
     }
     AT_send_reply();
 errors:
@@ -636,28 +606,31 @@ static AT_status_t _CLI_time_callback(void) {
             AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
         AT_reply_add_integer((int32_t) (gps_time.date), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(" ");
+        AT_reply_add_string(":");
         // Hours.
         if ((gps_time.hours) < 10) {
             AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
         AT_reply_add_integer((int32_t) (gps_time.hours), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(":");
+        AT_reply_add_string(".");
         // Minutes.
         if ((gps_time.minutes) < 10) {
             AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
         AT_reply_add_integer((int32_t) (gps_time.minutes), STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string(":");
+        AT_reply_add_string(".");
         // Seconds.
         if ((gps_time.seconds) < 10) {
             AT_reply_add_integer(0, STRING_FORMAT_DECIMAL, 0);
         }
         AT_reply_add_integer((int32_t) (gps_time.seconds), STRING_FORMAT_DECIMAL, 0);
+        AT_reply_add_string(":");
     }
     else {
-        AT_reply_add_string("GPS timeout");
+        AT_reply_add_string("TIMEOUT:");
     }
+    AT_reply_add_integer((int32_t) fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("s");
     AT_send_reply();
 errors:
     POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS);
@@ -687,7 +660,6 @@ static AT_status_t _CLI_gps_callback(void) {
     // Check status.
     if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
         // Latitude.
-        AT_reply_add_string("Lat=");
         AT_reply_add_integer((gps_position.lat_degrees), STRING_FORMAT_DECIMAL, 0);
         AT_reply_add_string("d");
         AT_reply_add_integer((gps_position.lat_minutes), STRING_FORMAT_DECIMAL, 0);
@@ -696,7 +668,7 @@ static AT_status_t _CLI_gps_callback(void) {
         AT_reply_add_string("''");
         AT_reply_add_string(((gps_position.lat_north_flag) == 0) ? "S" : "N");
         // Longitude.
-        AT_reply_add_string(" Long=");
+        AT_reply_add_string(":");
         AT_reply_add_integer((gps_position.long_degrees), STRING_FORMAT_DECIMAL, 0);
         AT_reply_add_string("d");
         AT_reply_add_integer((gps_position.long_minutes), STRING_FORMAT_DECIMAL, 0);
@@ -705,16 +677,15 @@ static AT_status_t _CLI_gps_callback(void) {
         AT_reply_add_string("''");
         AT_reply_add_string(((gps_position.long_east_flag) == 0) ? "W" : "E");
         // Altitude.
-        AT_reply_add_string(" Alt=");
+        AT_reply_add_string(":");
         AT_reply_add_integer((gps_position.altitude), STRING_FORMAT_DECIMAL, 0);
-        // Fix duration.
-        AT_reply_add_string("m Fix=");
-        AT_reply_add_integer(fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
-        AT_reply_add_string("s");
+        AT_reply_add_string("m:");
     }
     else {
-        AT_reply_add_string("GPS timeout");
+        AT_reply_add_string("TIMEOUT:");
     }
+    AT_reply_add_integer((int32_t) fix_duration_seconds, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("s");
     AT_send_reply();
 errors:
     POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS);
@@ -732,9 +703,9 @@ static void _CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sf
     for (idx = 0; idx < dl_payload_size; idx++) {
         AT_reply_add_integer(dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
     }
-    AT_reply_add_string(" (RSSI=");
+    AT_reply_add_string(":");
     AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string("dBm)");
+    AT_reply_add_string("dBm");
     AT_send_reply();
 }
 #endif
@@ -958,12 +929,6 @@ static AT_status_t _CLI_tm_callback(void) {
 errors:
     SIGFOX_EP_ADDON_RFP_API_close();
 end:
-#if defined SIGFOX_EP_BIDIRECTIONAL
-    if (test_mode.test_mode_reference == SIGFOX_EP_ADDON_RFP_API_TEST_MODE_D) {
-        AT_reply_add_string("OK");
-        AT_send_reply();
-    }
-#endif
     return status;
 }
 #endif
@@ -1022,8 +987,6 @@ static AT_status_t _CLI_cw_callback(void) {
         // Start CW.
         rf_api_status = RF_API_start_continuous_wave();
         _CLI_check_driver_status(rf_api_status, RF_API_SUCCESS, (ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_RF_API * ERROR_BASE_STEP)));
-        AT_reply_add_string("CW running...");
-        AT_send_reply();
     }
     goto end;
 errors:
@@ -1076,7 +1039,6 @@ static AT_status_t _CLI_rssi_callback(void) {
         rfe_status = RFE_get_rssi(&rssi_dbm);
         _CLI_check_driver_status(rfe_status, RFE_SUCCESS, ERROR_BASE_RFE);
         // Print RSSI.
-        AT_reply_add_string("RSSI=");
         AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
         AT_reply_add_string("dBm");
         AT_send_reply();
