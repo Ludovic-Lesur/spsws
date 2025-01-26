@@ -441,12 +441,10 @@ errors:
 static AT_status_t _CLI_adc_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     int32_t generic_s32 = 0;
     // Turn analog front-end on.
-    power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_ACTIVE);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_ACTIVE);
     // MCU voltage.
     analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32);
     _CLI_check_driver_status(analog_status, ANALOG_SUCCESS, ERROR_BASE_ANALOG);
@@ -482,13 +480,8 @@ static AT_status_t _CLI_adc_callback(void) {
     AT_reply_add_integer(generic_s32, STRING_FORMAT_DECIMAL, 0);
     AT_reply_add_string("%");
     AT_send_reply();
-    // Turn analog front-end off.
-    power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_ANALOG);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_ANALOG);
     return status;
 }
 #endif
@@ -498,19 +491,14 @@ end:
 static AT_status_t _CLI_iths_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
     int32_t temperature_degrees = 0;
     int32_t humidity_percent = 0;
     // Turn digital sensors on.
-    power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
     // Perform measurements.
     sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &temperature_degrees, &humidity_percent);
     _CLI_check_driver_status(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT30_INTERNAL);
-    // Turn digital sensors off.
-    power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Temperature.
     AT_reply_add_string("Tpcb=");
@@ -522,10 +510,8 @@ static AT_status_t _CLI_iths_callback(void) {
     AT_reply_add_integer(humidity_percent, STRING_FORMAT_DECIMAL, 0);
     AT_reply_add_string("%");
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_SENSORS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS);
     return status;
 }
 #endif
@@ -535,19 +521,14 @@ end:
 static AT_status_t _CLI_eths_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
     int32_t temperature_degrees = 0;
     int32_t humidity_percent = 0;
     // Turn digital sensors on.
-    power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
     // Perform measurements.
     sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_EXTERNAL, &temperature_degrees, &humidity_percent);
     _CLI_check_driver_status(sht3x_status, SHT3X_SUCCESS, ERROR_BASE_SHT30_EXTERNAL);
-    // Turn digital sensors off.
-    power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Temperature.
     AT_reply_add_string("Tamb=");
@@ -559,10 +540,8 @@ static AT_status_t _CLI_eths_callback(void) {
     AT_reply_add_integer(humidity_percent, STRING_FORMAT_DECIMAL, 0);
     AT_reply_add_string("%");
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_SENSORS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS);
     return status;
 }
 #endif
@@ -572,19 +551,14 @@ end:
 static AT_status_t _CLI_epts_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     DPS310_status_t dps310_status = DPS310_SUCCESS;
     int32_t pressure_pa = 0;
     int32_t temperature_degrees = 0;
     // Turn digital sensors on.
-    power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
     // Perform measurements.
     dps310_status = DPS310_get_pressure_temperature(I2C_ADDRESS_DPS310, &pressure_pa, &temperature_degrees);
     _CLI_check_driver_status(dps310_status, DPS310_SUCCESS, ERROR_BASE_DPS310);
-    // Turn digital sensors off.
-    power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     // Pressure.
     AT_reply_add_string("Pabs=");
@@ -596,10 +570,8 @@ static AT_status_t _CLI_epts_callback(void) {
     AT_reply_add_integer(temperature_degrees, STRING_FORMAT_DECIMAL, 0);
     AT_reply_add_string("dC");
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_SENSORS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS);
     return status;
 }
 #endif
@@ -609,26 +581,19 @@ end:
 static AT_status_t _CLI_euvs_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     SI1133_status_t si1133_status = SI1133_SUCCESS;
     int32_t uv_index = 0;
     // Turn digital sensors on.
-    power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
     // Perform measurements.
     si1133_status = SI1133_get_uv_index(I2C_ADDRESS_SI1133, &uv_index);
     _CLI_check_driver_status(si1133_status, SI1133_SUCCESS, ERROR_BASE_SI1133);
-    // Turn digital sensors off.
-    power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Read and print data.
     AT_reply_add_string("UVI=");
     AT_reply_add_integer(uv_index, STRING_FORMAT_DECIMAL, 0);
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_SENSORS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_SENSORS);
     return status;
 }
 #endif
@@ -638,7 +603,6 @@ end:
 static AT_status_t _CLI_time_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     PARSER_status_t parser_status = PARSER_SUCCESS;
     GPS_status_t gps_status = GPS_SUCCESS;
     GPS_acquisition_status_t acquisition_status = GPS_ACQUISITION_ERROR_LAST;
@@ -649,14 +613,10 @@ static AT_status_t _CLI_time_callback(void) {
     parser_status = PARSER_get_parameter(cli_ctx.at_parser_ptr, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
     PARSER_exit_error(AT_ERROR_BASE_PARSER);
     // Turn GPS on.
-    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
     // Perform time acquisition.
     gps_status = GPS_get_time(&gps_time, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);
     _CLI_check_driver_status(gps_status, GPS_SUCCESS, ERROR_BASE_GPS);
-    // Turn GPS off.
-    power_status = POWER_disable(POWER_DOMAIN_GPS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Check status.
     if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
         // Year.
@@ -696,10 +656,8 @@ static AT_status_t _CLI_time_callback(void) {
         AT_reply_add_string("GPS timeout");
     }
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_GPS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS);
     return status;
 }
 #endif
@@ -709,7 +667,6 @@ end:
 static AT_status_t _CLI_gps_callback(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     PARSER_status_t parser_status = PARSER_SUCCESS;
     GPS_status_t gps_status = GPS_SUCCESS;
     GPS_position_t gps_position;
@@ -720,14 +677,10 @@ static AT_status_t _CLI_gps_callback(void) {
     parser_status = PARSER_get_parameter(cli_ctx.at_parser_ptr, STRING_FORMAT_DECIMAL, STRING_CHAR_NULL, &timeout_seconds);
     PARSER_exit_error(AT_ERROR_BASE_PARSER);
     // Turn GPS on.
-    power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
+    POWER_enable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
     // Perform time acquisition.
     gps_status = GPS_get_position(&gps_position, (uint32_t) timeout_seconds, &fix_duration_seconds, &acquisition_status);
     _CLI_check_driver_status(gps_status, GPS_SUCCESS, ERROR_BASE_GPS);
-    // Turn GPS off.
-    power_status = POWER_disable(POWER_DOMAIN_GPS);
-    _CLI_check_driver_status(power_status, POWER_SUCCESS, ERROR_BASE_POWER);
     // Check status.
     if (acquisition_status == GPS_ACQUISITION_SUCCESS) {
         // Latitude.
@@ -760,10 +713,8 @@ static AT_status_t _CLI_gps_callback(void) {
         AT_reply_add_string("GPS timeout");
     }
     AT_send_reply();
-    goto end;
 errors:
-    POWER_disable(POWER_DOMAIN_GPS);
-end:
+    POWER_disable(POWER_REQUESTER_ID_CLI, POWER_DOMAIN_GPS);
     return status;
 }
 #endif

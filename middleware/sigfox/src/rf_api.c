@@ -75,7 +75,6 @@ typedef enum {
     // Low level drivers errors.
     RF_API_ERROR_DRIVER_TIMER_MODULATION,
     RF_API_ERROR_DRIVER_MCU_API,
-    RF_API_ERROR_DRIVER_POWER,
     RF_API_ERROR_DRIVER_SX1232,
     RF_API_ERROR_DRIVER_RFE
 } RF_API_custom_status_t;
@@ -337,11 +336,8 @@ RF_API_status_t RF_API_process(void) {
 RF_API_status_t RF_API_wake_up(void) {
     // Local variables.
     RF_API_status_t status = RF_API_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     // Turn radio TCXO on.
-    power_status = POWER_enable(POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_SLEEP);
-    POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
-errors:
+    POWER_enable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO_TCXO, LPTIM_DELAY_MODE_SLEEP);
     RETURN();
 }
 
@@ -349,11 +345,8 @@ errors:
 RF_API_status_t RF_API_sleep(void) {
     // Local variables.
     RF_API_status_t status = RF_API_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     // Turn radio TCXO off.
-    power_status = POWER_disable(POWER_DOMAIN_RADIO_TCXO);
-    POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
-errors:
+    POWER_disable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO_TCXO);
     RETURN();
 }
 
@@ -361,7 +354,6 @@ errors:
 RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
     // Local variables.
     RF_API_status_t status = RF_API_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     SX1232_status_t sx1232_status = SX1232_SUCCESS;
     RFE_status_t rfe_status = RFE_SUCCESS;
@@ -378,8 +370,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
     }
 #endif
     // Turn radio on.
-    power_status = POWER_enable(POWER_DOMAIN_RADIO, LPTIM_DELAY_MODE_SLEEP);
-    POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
+    POWER_enable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO, LPTIM_DELAY_MODE_SLEEP);
     // Init transceiver.
     sx1232_status = SX1232_set_mode(SX1232_MODE_SLEEP);
     SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
@@ -506,7 +497,6 @@ RF_API_status_t RF_API_de_init(void) {
     // Local variables.
     RF_API_status_t status = RF_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     RFE_status_t rfe_status = RFE_SUCCESS;
     // Release DIO2.
     GPIO_write(&GPIO_SX1232_DIO2, 0);
@@ -518,12 +508,8 @@ RF_API_status_t RF_API_de_init(void) {
     // Disable front-end.
     rfe_status = RFE_set_path(RFE_PATH_NONE);
     RFE_stack_exit_error(ERROR_BASE_RFE, (RF_API_status_t) RF_API_ERROR_DRIVER_RFE);
-    // Turn radio off.
-    power_status = POWER_disable(POWER_DOMAIN_RADIO);
-    POWER_stack_exit_error(ERROR_BASE_POWER, (RF_API_status_t) RF_API_ERROR_DRIVER_POWER);
-    RETURN();
 errors:
-    POWER_disable(POWER_DOMAIN_RADIO);
+    POWER_disable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO);
     RETURN();
 }
 
@@ -716,7 +702,9 @@ RF_API_status_t RF_API_get_version(sfx_u8 **version, sfx_u8 *version_size_char) 
 #ifdef ERROR_CODES
 /*******************************************************************/
 void RF_API_error(void) {
+    // Force all front-end off.
     RFE_set_path(RFE_PATH_NONE);
-    POWER_disable(POWER_DOMAIN_RADIO);
+    POWER_disable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO_TCXO);
+    POWER_disable(POWER_REQUESTER_ID_RF_API, POWER_DOMAIN_RADIO);
 }
 #endif

@@ -518,7 +518,6 @@ static void _SPSWS_compute_final_measurements(void) {
 static void _SPSWS_set_clock(uint8_t device_state) {
     // Local variables.
     RCC_status_t rcc_status = RCC_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     RCC_clock_t mcu_clock_source = RCC_CLOCK_NONE;
     uint8_t clock_status = 0;
     // Switch to HSE or HSI depending on state.
@@ -527,13 +526,11 @@ static void _SPSWS_set_clock(uint8_t device_state) {
         rcc_status = RCC_switch_to_hsi();
         RCC_stack_error(ERROR_BASE_RCC);
         // Turn TCXO off.
-        power_status = POWER_disable(POWER_DOMAIN_MCU_TCXO);
-        POWER_stack_error(ERROR_BASE_POWER);
+        POWER_disable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_MCU_TCXO);
     }
     else {
         // Turn TCXO on.
-        power_status = POWER_enable(POWER_DOMAIN_MCU_TCXO, LPTIM_DELAY_MODE_SLEEP);
-        POWER_stack_error(ERROR_BASE_POWER);
+        POWER_enable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_MCU_TCXO, LPTIM_DELAY_MODE_SLEEP);
         // Switch to external clock.
         rcc_status = RCC_switch_to_hse(RCC_HSE_MODE_BYPASS);
         RCC_stack_error(ERROR_BASE_RCC);
@@ -754,7 +751,6 @@ int main(void) {
     LPTIM_status_t lptim_status = LPTIM_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     GPS_status_t gps_status = GPS_SUCCESS;
-    POWER_status_t power_status = POWER_SUCCESS;
     SHT3X_status_t sht3x_status = SHT3X_SUCCESS;
     DPS310_status_t dps310_status = DPS310_SUCCESS;
     SI1133_status_t si1133_status = SI1133_SUCCESS;
@@ -851,14 +847,12 @@ int main(void) {
             // Reset status to default.
             spsws_ctx.status.daily_rtc_calibration = 0;
             // Turn GPS on.
-            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_enable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             // Get current time from GPS.
             gps_status = GPS_get_time(&gps_time, SPSWS_RTC_CALIBRATION_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
             GPS_stack_error(ERROR_BASE_GPS);
             // Turn GPS off.
-            power_status = POWER_disable(POWER_DOMAIN_GPS);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_disable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_GPS);
             // Calibrate RTC if time is available.
             if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
                 // Copy structure.
@@ -893,8 +887,7 @@ int main(void) {
             break;
         case SPSWS_STATE_MEASURE:
             // Retrieve internal ADC data.
-            power_status = POWER_enable(POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_enable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_ANALOG, LPTIM_DELAY_MODE_SLEEP);
             // MCU voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_s32_1);
             ANALOG_stack_error(ERROR_BASE_ANALOG);
@@ -909,8 +902,7 @@ int main(void) {
             }
             // Retrieve external ADC data.
             // Note: digital sensors power supply must also be enabled at this step to power the LDR.
-            power_status = POWER_enable(POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_enable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_SENSORS, LPTIM_DELAY_MODE_SLEEP);
             // Solar cell voltage.
             analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VPV_MV, &generic_s32_1);
             ANALOG_stack_error(ERROR_BASE_ANALOG);
@@ -936,8 +928,7 @@ int main(void) {
             if (analog_status == ANALOG_SUCCESS) {
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.light_percent), generic_s32_1);
             }
-            power_status = POWER_disable(POWER_DOMAIN_ANALOG);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_disable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_ANALOG);
             // Internal temperature/humidity sensor.
             sht3x_status = SHT3X_get_temperature_humidity(I2C_ADDRESS_SHT30_INTERNAL, &generic_s32_1, &generic_s32_2);
             SHT3X_stack_error(ERROR_BASE_SHT30_INTERNAL);
@@ -978,8 +969,7 @@ int main(void) {
                 // Store UV index.
                 _SPSWS_measurement_add_sample(&(spsws_ctx.measurements.uv_index), generic_s32_1);
             }
-            power_status = POWER_disable(POWER_DOMAIN_SENSORS);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_disable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_SENSORS);
             // Go to off state.
             spsws_ctx.state = SPSWS_STATE_OFF;
             break;
@@ -1030,14 +1020,12 @@ int main(void) {
             // Reset status to default.
             spsws_ctx.status.daily_geoloc = 0;
             // Turn GPS on.
-            power_status = POWER_enable(POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_enable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_GPS, LPTIM_DELAY_MODE_SLEEP);
             // Get geolocation from GPS.
             gps_status = GPS_get_position(&gps_position, SPSWS_GEOLOC_TIMEOUT_SECONDS, &gps_acquisition_duration_seconds, &gps_acquisition_status);
             GPS_stack_error(ERROR_BASE_GPS);
             // Turn GPS off.
-            power_status = POWER_disable(POWER_DOMAIN_GPS);
-            POWER_stack_error(ERROR_BASE_POWER);
+            POWER_disable(POWER_REQUESTER_ID_MAIN, POWER_DOMAIN_GPS);
             // Build Sigfox frame.
             if (gps_acquisition_status == GPS_ACQUISITION_SUCCESS) {
                 spsws_ctx.sigfox_geoloc_data.latitude_degrees = gps_position.lat_degrees;
