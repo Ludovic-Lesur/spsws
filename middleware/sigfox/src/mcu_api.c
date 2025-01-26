@@ -36,7 +36,7 @@
 
 #include "manuf/mcu_api.h"
 
-#ifdef USE_SIGFOX_EP_FLAGS_H
+#ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
 #include "sigfox_ep_flags.h"
 #endif
 #include "sigfox_types.h"
@@ -44,7 +44,6 @@
 
 #include "aes.h"
 #include "analog.h"
-#include "cli.h"
 #include "error.h"
 #include "error_base.h"
 #include "nvic_priority.h"
@@ -75,7 +74,7 @@ typedef enum {
 
 /*** MCU API local global variables ***/
 
-#if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION) && (defined BIDIRECTIONAL)
+#if (defined SIGFOX_EP_TIMER_REQUIRED) && (defined SIGFOX_EP_LATENCY_COMPENSATION) && (defined SIGFOX_EP_BIDIRECTIONAL)
 static sfx_u32 MCU_API_LATENCY_MS[MCU_API_LATENCY_LAST] = {
     (POWER_ON_DELAY_MS_ANALOG + ADC_INIT_DELAY_MS) // Get voltage and temperature function.
 };
@@ -83,23 +82,23 @@ static sfx_u32 MCU_API_LATENCY_MS[MCU_API_LATENCY_LAST] = {
 
 /*** MCU API functions ***/
 
-#if (defined ASYNCHRONOUS) || (defined LOW_LEVEL_OPEN_CLOSE)
+#if (defined SIGFOX_EP_ASYNCHRONOUS) || (defined SIGFOX_EP_LOW_LEVEL_OPEN_CLOSE)
 /*******************************************************************/
 MCU_API_status_t MCU_API_open(MCU_API_config_t* mcu_api_config) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Ignore unused parameters.
-    UNUSED(mcu_api_config);
+    SIGFOX_UNUSED(mcu_api_config);
     // Init timer.
     tim_status = TIM_MCH_init(MCU_API_TIMER_INSTANCE, NVIC_PRIORITY_SIGFOX_TIMER);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef LOW_LEVEL_OPEN_CLOSE
+#ifdef SIGFOX_EP_LOW_LEVEL_OPEN_CLOSE
 /*******************************************************************/
 MCU_API_status_t MCU_API_close(void) {
     // Local variables.
@@ -109,20 +108,20 @@ MCU_API_status_t MCU_API_close(void) {
     tim_status = TIM_MCH_de_init(MCU_API_TIMER_INSTANCE);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef ASYNCHRONOUS
+#ifdef SIGFOX_EP_ASYNCHRONOUS
 /*******************************************************************/
 MCU_API_status_t MCU_API_process(void) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef TIMER_REQUIRED
+#ifdef SIGFOX_EP_TIMER_REQUIRED
 /*******************************************************************/
 MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     // Local variables.
@@ -130,10 +129,10 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     TIM_status_t tim_status = TIM_SUCCESS;
     TIM_waiting_mode_t tim_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
     // Check parameter.
-    if (timer == SFX_NULL) {
-        EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_NULL_PARAMETER);
+    if (timer == SIGFOX_NULL) {
+        SIGFOX_EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_NULL_PARAMETER);
     }
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     // Update waiting mode according to timer reason.
     if ((timer->reason) == MCU_API_TIMER_REASON_T_RX) {
         // T_RX completion is directly checked with the raw timer status within the RF_API_receive() function.
@@ -145,11 +144,11 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     tim_status = TIM_MCH_start_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) (timer->instance), (timer->duration_ms), tim_waiting_mode);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef TIMER_REQUIRED
+#ifdef SIGFOX_EP_TIMER_REQUIRED
 /*******************************************************************/
 MCU_API_status_t MCU_API_timer_stop(MCU_API_timer_instance_t timer_instance) {
     // Local variables.
@@ -159,11 +158,11 @@ MCU_API_status_t MCU_API_timer_stop(MCU_API_timer_instance_t timer_instance) {
     tim_status = TIM_MCH_stop_channel(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#if (defined TIMER_REQUIRED) && !(defined ASYNCHRONOUS)
+#if (defined SIGFOX_EP_TIMER_REQUIRED) && !(defined SIGFOX_EP_ASYNCHRONOUS)
 /*******************************************************************/
 MCU_API_status_t MCU_API_timer_status(MCU_API_timer_instance_t timer_instance, sfx_bool* timer_has_elapsed) {
     // Local variables.
@@ -173,11 +172,11 @@ MCU_API_status_t MCU_API_timer_status(MCU_API_timer_instance_t timer_instance, s
     tim_status = TIM_MCH_get_channel_status(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance, timer_has_elapsed);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#if (defined TIMER_REQUIRED) && !(defined ASYNCHRONOUS)
+#if (defined SIGFOX_EP_TIMER_REQUIRED) && !(defined SIGFOX_EP_ASYNCHRONOUS)
 /*******************************************************************/
 MCU_API_status_t MCU_API_timer_wait_cplt(MCU_API_timer_instance_t timer_instance) {
     // Local variables.
@@ -187,10 +186,11 @@ MCU_API_status_t MCU_API_timer_wait_cplt(MCU_API_timer_instance_t timer_instance
     tim_status = TIM_MCH_wait_channel_completion(MCU_API_TIMER_INSTANCE, (TIM_channel_t) timer_instance);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
+#ifdef SIGFOX_EP_AES_HW
 /*******************************************************************/
 MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t* aes_data) {
     // Local variables.
@@ -200,7 +200,7 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t* aes_data
     uint8_t idx = 0;
     uint8_t local_key[SIGFOX_EP_KEY_SIZE_BYTES];
     // Get right key.
-#ifdef PUBLIC_KEY_CAPABLE
+#ifdef SIGFOX_EP_PUBLIC_KEY_CAPABLE
     switch (aes_data -> key) {
     case SIGFOX_EP_KEY_PRIVATE:
         // Retrieve private key from NVM.
@@ -216,7 +216,7 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t* aes_data
         }
         break;
     default:
-        EXIT_ERROR(MCU_API_ERROR_EP_KEY);
+        SIGFOX_EXIT_ERROR(MCU_API_ERROR_EP_KEY);
         break;
     }
 #else
@@ -234,24 +234,33 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t* aes_data
 errors:
     // Release peripheral.
     AES_de_init();
-    RETURN();
+    SIGFOX_RETURN();
 }
+#endif
 
-#ifdef CRC_HW
+#ifdef SIGFOX_EP_CRC_HW
 /*******************************************************************/
 MCU_API_status_t MCU_API_compute_crc16(sfx_u8 *data, sfx_u8 data_size, sfx_u16 polynom, sfx_u16 *crc) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
-    RETURN();
+    SIGFOX_UNUSED(data);
+    SIGFOX_UNUSED(data_size);
+    SIGFOX_UNUSED(polynom);
+    SIGFOX_UNUSED(crc);
+    SIGFOX_RETURN();
 }
 #endif
 
-#if (defined CRC_HW) && (defined BIDIRECTIONAL)
+#if (defined SIGFOX_EP_CRC_HW) && (defined SIGFOX_EP_BIDIRECTIONAL)
 /*******************************************************************/
 MCU_API_status_t MCU_API_compute_crc8(sfx_u8 *data, sfx_u8 data_size, sfx_u16 polynom, sfx_u8 *crc) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
-    RETURN();
+    SIGFOX_UNUSED(data);
+    SIGFOX_UNUSED(data_size);
+    SIGFOX_UNUSED(polynom);
+    SIGFOX_UNUSED(crc);
+    SIGFOX_RETURN();
 }
 #endif
 
@@ -267,8 +276,19 @@ MCU_API_status_t MCU_API_get_ep_id(sfx_u8* ep_id, sfx_u8 ep_id_size_bytes) {
         NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
     }
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
+
+#ifndef SIGFOX_EP_AES_HW
+/*******************************************************************/
+MCU_API_status_t MCU_API_get_ep_key(sfx_u8 *ep_key, sfx_u8 ep_key_size_bytes) {
+    // Local variables.
+    MCU_API_status_t status = MCU_API_SUCCESS;
+    SIGFOX_UNUSED(ep_key);
+    SIGFOX_UNUSED(ep_key_size_bytes);
+    SIGFOX_RETURN();
+}
+#endif
 
 /*******************************************************************/
 MCU_API_status_t MCU_API_get_nvm(sfx_u8* nvm_data, sfx_u8 nvm_data_size_bytes) {
@@ -282,7 +302,7 @@ MCU_API_status_t MCU_API_get_nvm(sfx_u8* nvm_data, sfx_u8 nvm_data_size_bytes) {
         NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
     }
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 
 /*******************************************************************/
@@ -297,10 +317,10 @@ MCU_API_status_t MCU_API_set_nvm(sfx_u8* nvm_data, sfx_u8 nvm_data_size_bytes) {
         NVM_stack_exit_error(ERROR_BASE_NVM, (MCU_API_status_t) MCU_API_ERROR_DRIVER_NVM);
     }
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 
-#if (defined CONTROL_KEEP_ALIVE_MESSAGE) || (defined BIDIRECTIONAL)
+#if (defined SIGFOX_EP_CONTROL_KEEP_ALIVE_MESSAGE) || (defined SIGFOX_EP_BIDIRECTIONAL)
 /*******************************************************************/
 MCU_API_status_t MCU_API_get_voltage_temperature(sfx_u16* voltage_idle_mv, sfx_u16* voltage_tx_mv, sfx_s16* temperature_tenth_degrees) {
     // Local variables.
@@ -320,65 +340,52 @@ MCU_API_status_t MCU_API_get_voltage_temperature(sfx_u16* voltage_idle_mv, sfx_u
     (*temperature_tenth_degrees) = ((sfx_s16) data) * 10;
 errors:
     POWER_disable(POWER_REQUESTER_ID_MCU_API, POWER_DOMAIN_ANALOG);
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#if (defined CERTIFICATION) && (defined BIDIRECTIONAL)
-/*******************************************************************/
-MCU_API_status_t MCU_API_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm) {
-    // Local variables.
-    MCU_API_status_t status = MCU_API_SUCCESS;
-#ifdef SPSWS_MODE_CLI
-    // Print data on bus.
-    CLI_print_dl_payload(dl_payload, dl_payload_size, rssi_dbm);
-#else
-    UNUSED(dl_payload);
-    UNUSED(dl_payload_size);
-    UNUSED(rssi_dbm);
-#endif
-    RETURN();
-}
-#endif
-
-#ifdef VERBOSE
+#ifdef SIGFOX_EP_VERBOSE
 /*******************************************************************/
 MCU_API_status_t MCU_API_get_initial_pac(sfx_u8 *initial_pac, sfx_u8 initial_pac_size_bytes) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
-    RETURN();
+    SIGFOX_UNUSED(initial_pac);
+    SIGFOX_UNUSED(initial_pac_size_bytes);
+    SIGFOX_RETURN();
 }
 #endif
 
-#if (defined TIMER_REQUIRED) && (defined LATENCY_COMPENSATION) && (defined BIDIRECTIONAL)
+#if (defined SIGFOX_EP_TIMER_REQUIRED) && (defined SIGFOX_EP_LATENCY_COMPENSATION) && (defined SIGFOX_EP_BIDIRECTIONAL)
 /*******************************************************************/
 MCU_API_status_t MCU_API_get_latency(MCU_API_latency_t latency_type, sfx_u32* latency_ms) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
     // Check parameter.
     if (latency_type >= MCU_API_LATENCY_LAST) {
-        EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_LATENCY_TYPE);
+        SIGFOX_EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_LATENCY_TYPE);
     }
     // Set latency.
     (*latency_ms) = MCU_API_LATENCY_MS[latency_type];
 errors:
-    RETURN();
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef VERBOSE
+#ifdef SIGFOX_EP_VERBOSE
 /*******************************************************************/
 MCU_API_status_t MCU_API_get_version(sfx_u8 **version, sfx_u8 *version_size_char) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
-    RETURN();
+    SIGFOX_UNUSED(version);
+    SIGFOX_UNUSED(version_size_char);
+    SIGFOX_RETURN();
 }
 #endif
 
-#ifdef ERROR_CODES
+#ifdef SIGFOX_EP_ERROR_CODES
 /*******************************************************************/
 void MCU_API_error(void) {
-#if (defined CONTROL_KEEP_ALIVE_MESSAGE) || (defined BIDIRECTIONAL)
+#if (defined SIGFOX_EP_CONTROL_KEEP_ALIVE_MESSAGE) || (defined SIGFOX_EP_BIDIRECTIONAL)
     // Force all power off.
     POWER_disable(POWER_REQUESTER_ID_MCU_API, POWER_DOMAIN_ANALOG);
 #endif

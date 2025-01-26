@@ -35,6 +35,9 @@
 #include "power.h"
 #include "rfe.h"
 // Sigfox.
+#ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
+#include "sigfox_ep_flags.h"
+#endif
 #include "manuf/rf_api.h"
 #include "sigfox_ep_addon_rfp_api.h"
 #include "sigfox_ep_api.h"
@@ -101,7 +104,7 @@ static AT_status_t _CLI_gps_callback(void);
 #endif
 /*******************************************************************/
 #ifdef CLI_COMMAND_SIGFOX_EP_LIB
-#ifdef CONTROL_KEEP_ALIVE_MESSAGE
+#ifdef SIGFOX_EP_CONTROL_KEEP_ALIVE_MESSAGE
 static AT_status_t _CLI_so_callback(void);
 #endif
 static AT_status_t _CLI_sb_callback(void);
@@ -115,7 +118,7 @@ static AT_status_t _CLI_tm_callback(void);
 #ifdef CLI_COMMAND_CW
 static AT_status_t _CLI_cw_callback(void);
 #endif
-#if (defined CLI_COMMAND_RSSI) && (defined BIDIRECTIONAL)
+#if (defined CLI_COMMAND_RSSI) && (defined SIGFOX_EP_BIDIRECTIONAL)
 static AT_status_t _CLI_rssi_callback(void);
 #endif
 
@@ -215,7 +218,7 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
     },
 #endif
 #ifdef CLI_COMMAND_SIGFOX_EP_LIB
-#ifdef CONTROL_KEEP_ALIVE_MESSAGE
+#ifdef SIGFOX_EP_CONTROL_KEEP_ALIVE_MESSAGE
     {
         .syntax = "$SO",
         .parameters = NULL,
@@ -252,7 +255,7 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
         .callback = &_CLI_cw_callback
     },
 #endif
-#if (defined CLI_COMMAND_RSSI) && (defined BIDIRECTIONAL)
+#if (defined CLI_COMMAND_RSSI) && (defined SIGFOX_EP_BIDIRECTIONAL)
     {
         .syntax = "$RSSI=",
         .parameters = "<frequency[hz]>,<duration[s]>",
@@ -719,9 +722,26 @@ errors:
 }
 #endif
 
-#if (defined CLI_COMMAND_SIGFOX_EP_LIB) && (defined BIDIRECTIONAL)
+#if (((defined CLI_COMMAND_SIGFOX_EP_LIB) || (defined CLI_COMMAND_SIGFOX_EP_ADDON_RFP)) && (defined SIGFOX_EP_BIDIRECTIONAL))
 /*******************************************************************/
-static AT_status_t _CLI_print_dl_payload(void) {
+static void _CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm) {
+    // Local variables.
+    uint8_t idx = 0;
+    // Print DL payload.
+    AT_reply_add_string("+RX=");
+    for (idx = 0; idx < dl_payload_size; idx++) {
+        AT_reply_add_integer(dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
+    }
+    AT_reply_add_string(" (RSSI=");
+    AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
+    AT_reply_add_string("dBm)");
+    AT_send_reply();
+}
+#endif
+
+#if (defined CLI_COMMAND_SIGFOX_EP_LIB) && (defined SIGFOX_EP_BIDIRECTIONAL)
+/*******************************************************************/
+static AT_status_t _CLI_read_print_dl_payload(void) {
     // Local variables.
     AT_status_t status = AT_SUCCESS;
     SIGFOX_EP_API_status_t sigfox_ep_api_status = SIGFOX_EP_API_SUCCESS;
@@ -731,13 +751,13 @@ static AT_status_t _CLI_print_dl_payload(void) {
     sigfox_ep_api_status = SIGFOX_EP_API_get_dl_payload(dl_payload, SIGFOX_DL_PAYLOAD_SIZE_BYTES, &dl_rssi_dbm);
     _CLI_check_driver_status(sigfox_ep_api_status, SIGFOX_EP_API_SUCCESS, (ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * ERROR_BASE_STEP)));
     // Print downlink payload.
-    CLI_print_dl_payload(dl_payload, SIGFOX_DL_PAYLOAD_SIZE_BYTES, dl_rssi_dbm);
+    _CLI_print_dl_payload(dl_payload, SIGFOX_DL_PAYLOAD_SIZE_BYTES, dl_rssi_dbm);
 errors:
     return status;
 }
 #endif
 
-#if (defined CLI_COMMAND_SIGFOX_EP_LIB) && (defined CONTROL_KEEP_ALIVE_MESSAGE)
+#if (defined CLI_COMMAND_SIGFOX_EP_LIB) && (defined SIGFOX_EP_CONTROL_KEEP_ALIVE_MESSAGE)
 /*******************************************************************/
 static AT_status_t _CLI_so_callback(void) {
     // Local variables.
@@ -784,7 +804,7 @@ static AT_status_t _CLI_sb_callback(void) {
     // Default application message parameters.
     application_message.common_parameters.number_of_frames = 3;
     application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
-    application_message.ul_payload = SFX_NULL;
+    application_message.ul_payload = SIGFOX_NULL;
     application_message.ul_payload_size_bytes = 0;
     // First try with 2 parameters.
     parser_status = PARSER_get_parameter(cli_ctx.at_parser_ptr, STRING_FORMAT_BOOLEAN, CLI_CHAR_SEPARATOR, &ul_bit);
@@ -794,7 +814,7 @@ static AT_status_t _CLI_sb_callback(void) {
         PARSER_exit_error(AT_ERROR_BASE_PARSER);
         // Update parameters.
         application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
         application_message.bidirectional_flag = bidir_flag;
 #endif
     }
@@ -804,7 +824,7 @@ static AT_status_t _CLI_sb_callback(void) {
         PARSER_exit_error(AT_ERROR_BASE_PARSER);
         // Update parameters.
         application_message.type = (SIGFOX_APPLICATION_MESSAGE_TYPE_BIT0 + ul_bit);
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
         application_message.bidirectional_flag = 0;
 #endif
     }
@@ -814,10 +834,10 @@ static AT_status_t _CLI_sb_callback(void) {
     // Send application message.
     sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(&application_message);
     _CLI_check_driver_status(sigfox_ep_api_status, SIGFOX_EP_API_SUCCESS, (ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * ERROR_BASE_STEP)));
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     // Read and print DL payload if needed.
-    if ((application_message.bidirectional_flag) == SFX_TRUE) {
-        status = _CLI_print_dl_payload();
+    if ((application_message.bidirectional_flag) == SIGFOX_TRUE) {
+        status = _CLI_read_print_dl_payload();
         if (status != AT_SUCCESS) goto errors;
     }
 #endif
@@ -850,10 +870,10 @@ static AT_status_t _CLI_sf_callback(void) {
     application_message.common_parameters.number_of_frames = 3;
     application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
     application_message.type = SIGFOX_APPLICATION_MESSAGE_TYPE_BYTE_ARRAY;
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     application_message.bidirectional_flag = 0;
 #endif
-    application_message.ul_payload = SFX_NULL;
+    application_message.ul_payload = SIGFOX_NULL;
     application_message.ul_payload_size_bytes = 0;
     // First try with 2 parameters.
     parser_status = PARSER_get_byte_array(cli_ctx.at_parser_ptr, CLI_CHAR_SEPARATOR, SIGFOX_UL_PAYLOAD_MAX_SIZE_BYTES, 0, data, &extracted_size);
@@ -864,7 +884,7 @@ static AT_status_t _CLI_sf_callback(void) {
         // Update parameters.
         application_message.ul_payload = (sfx_u8*) data;
         application_message.ul_payload_size_bytes = extracted_size;
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
         application_message.bidirectional_flag = bidir_flag;
 #endif
     }
@@ -882,10 +902,10 @@ static AT_status_t _CLI_sf_callback(void) {
     // Send application message.
     sigfox_ep_api_status = SIGFOX_EP_API_send_application_message(&application_message);
     _CLI_check_driver_status(sigfox_ep_api_status, SIGFOX_EP_API_SUCCESS, (ERROR_BASE_SIGFOX_EP_LIB + (SIGFOX_ERROR_SOURCE_SIGFOX_EP_API * ERROR_BASE_STEP)));
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     // Read and print DL payload if needed.
-    if ((application_message.bidirectional_flag) == SFX_TRUE) {
-        status = _CLI_print_dl_payload();
+    if ((application_message.bidirectional_flag) == SIGFOX_TRUE) {
+        status = _CLI_read_print_dl_payload();
         if (status != AT_SUCCESS) goto errors;
     }
 #endif
@@ -922,6 +942,9 @@ static AT_status_t _CLI_tm_callback(void) {
     // Test mode parameters.
     test_mode.test_mode_reference = (SIGFOX_EP_ADDON_RFP_API_test_mode_reference_t) test_mode_reference;
     test_mode.ul_bit_rate = (SIGFOX_ul_bit_rate_t) bit_rate_index;
+#ifdef SIGFOX_EP_BIDIRECTIONAL
+    test_mode.downlink_cplt_cb = &_CLI_print_dl_payload;
+#endif
     // Open addon.
     sigfox_ep_addon_rfp_status = SIGFOX_EP_ADDON_RFP_API_open(&addon_config);
     _CLI_check_driver_status(sigfox_ep_addon_rfp_status, SIGFOX_EP_ADDON_RFP_API_SUCCESS, ERROR_BASE_SIGFOX_EP_ADDON_RFP);
@@ -935,6 +958,12 @@ static AT_status_t _CLI_tm_callback(void) {
 errors:
     SIGFOX_EP_ADDON_RFP_API_close();
 end:
+#if defined SIGFOX_EP_BIDIRECTIONAL
+    if (test_mode.test_mode_reference == SIGFOX_EP_ADDON_RFP_API_TEST_MODE_D) {
+        AT_reply_add_string("OK");
+        AT_send_reply();
+    }
+#endif
     return status;
 }
 #endif
@@ -954,7 +983,7 @@ static AT_status_t _CLI_cw_callback(void) {
     radio_params.rf_mode = RF_API_MODE_TX;
     radio_params.modulation = RF_API_MODULATION_NONE;
     radio_params.bit_rate_bps = 0;
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     radio_params.deviation_hz = 0;
 #endif
     // Read frequency parameter.
@@ -976,7 +1005,7 @@ static AT_status_t _CLI_cw_callback(void) {
         parser_status = PARSER_get_parameter(cli_ctx.at_parser_ptr, STRING_FORMAT_BOOLEAN, STRING_CHAR_NULL, &enable);
         PARSER_exit_error(AT_ERROR_BASE_PARSER);
         // Update radio configuration.
-        radio_params.tx_power_dbm_eirp = TX_POWER_DBM_EIRP;
+        radio_params.tx_power_dbm_eirp = SIGFOX_EP_TX_POWER_DBM_EIRP;
     }
     // Stop CW.
     rf_api_status = RF_API_de_init();
@@ -1005,7 +1034,7 @@ end:
 }
 #endif
 
-#if (defined CLI_COMMAND_RSSI) && (defined BIDIRECTIONAL)
+#if (defined CLI_COMMAND_RSSI) && (defined SIGFOX_EP_BIDIRECTIONAL)
 /*******************************************************************/
 static AT_status_t _CLI_rssi_callback(void) {
     // Local variables.
@@ -1031,7 +1060,7 @@ static AT_status_t _CLI_rssi_callback(void) {
     radio_params.frequency_hz = (sfx_u32) frequency_hz;
     radio_params.modulation = RF_API_MODULATION_NONE;
     radio_params.bit_rate_bps = 0;
-    radio_params.tx_power_dbm_eirp = TX_POWER_DBM_EIRP;
+    radio_params.tx_power_dbm_eirp = SIGFOX_EP_TX_POWER_DBM_EIRP;
     radio_params.deviation_hz = 0;
     // Init radio.
     rf_api_status = RF_API_wake_up();
@@ -1131,21 +1160,6 @@ CLI_status_t CLI_process(void) {
     }
 errors:
     return status;
-}
-
-/*******************************************************************/
-void CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm) {
-    // Local variables.
-    uint8_t idx = 0;
-    // Print DL payload.
-    AT_reply_add_string("+RX=");
-    for (idx = 0; idx < dl_payload_size; idx++) {
-        AT_reply_add_integer(dl_payload[idx], STRING_FORMAT_HEXADECIMAL, 0);
-    }
-    AT_reply_add_string(" (RSSI=");
-    AT_reply_add_integer(rssi_dbm, STRING_FORMAT_DECIMAL, 0);
-    AT_reply_add_string("dBm)");
-    AT_send_reply();
 }
 
 #endif /* SPSWS_MODE_CLI */

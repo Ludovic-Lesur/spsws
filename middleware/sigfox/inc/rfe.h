@@ -8,6 +8,9 @@
 #ifndef __RFE_H__
 #define __RFE_H__
 
+#ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
+#include "sigfox_ep_flags.h"
+#endif
 #include "types.h"
 #include "sx1232.h"
 
@@ -37,7 +40,7 @@ typedef enum {
 #ifdef HW1_0
 	RFE_PATH_TX_PA,
 #endif
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     RFE_PATH_RX_LNA,
 #endif
     RFE_PATH_LAST
@@ -72,7 +75,7 @@ RFE_status_t RFE_de_init(void);
  *******************************************************************/
 RFE_status_t RFE_set_path(RFE_path_t radio_path);
 
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
 /*!******************************************************************
  * \fn RFE_status_t RFE_get_rssi(int16_t* rssi_dbm)
  * \brief Get calibrated RSSI at board connector.

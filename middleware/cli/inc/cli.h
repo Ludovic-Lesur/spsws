@@ -59,17 +59,6 @@ CLI_status_t CLI_de_init(void);
  *******************************************************************/
 CLI_status_t CLI_process(void);
 
-/*!******************************************************************
- * \fn void CLI_print_dl_payload(sfx_u8 *dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm)
- * \brief Print a downlink frame (only used by the RFP addon during downlink test modes).
- * \param[in]   dl_payload: Downlink payload to print.
- * \param[in]   dl_payload_size: Number of bytes to print.
- * \param[in]   rssi_dbm: RSSI of the received downlink frame (16-bits signed value).
- * \param[out]  none
- * \retval      Function execution status.
- *******************************************************************/
-void CLI_print_dl_payload(sfx_u8* dl_payload, sfx_u8 dl_payload_size, sfx_s16 rssi_dbm);
-
 /*******************************************************************/
 #define CLI_exit_error(base) { ERROR_check_exit(cli_status, CLI_SUCCESS, base) }
 

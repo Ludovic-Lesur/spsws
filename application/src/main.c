@@ -773,10 +773,10 @@ int main(void) {
     application_message.common_parameters.number_of_frames = 3;
     application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_100BPS;
     application_message.type = SIGFOX_APPLICATION_MESSAGE_TYPE_BYTE_ARRAY;
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     application_message.bidirectional_flag = 0;
 #endif
-    application_message.ul_payload = SFX_NULL;
+    application_message.ul_payload = SIGFOX_NULL;
     application_message.ul_payload_size_bytes = 0;
     // Main loop.
     while (1) {

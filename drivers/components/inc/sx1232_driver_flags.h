@@ -8,6 +8,9 @@
 #ifndef __SX1232_DRIVER_FLAGS_H__
 #define __SX1232_DRIVER_FLAGS_H__
 
+#ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
+#include "sigfox_ep_flags.h"
+#endif
 #include "lptim.h"
 #include "spi.h"
 
@@ -19,7 +22,7 @@
 #define SX1232_DRIVER_FXOSC_HZ                  32000000
 
 #define SX1232_DRIVER_TX_ENABLE
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
 #define SX1232_DRIVER_RX_ENABLE
 #endif
 

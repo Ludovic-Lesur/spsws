@@ -7,6 +7,9 @@
 
 #include "rfe.h"
 
+#ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
+#include "sigfox_ep_flags.h"
+#endif
 #include "error.h"
 #include "gpio.h"
 #include "gpio_mapping.h"
@@ -81,7 +84,7 @@ RFE_status_t RFE_set_path(RFE_path_t radio_path) {
 		GPIO_write(&GPIO_RF_CHANNEL_B, 1);
 		break;
 #endif
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     case RFE_PATH_RX_LNA:
 #ifdef HW1_0
 		GPIO_write(&GPIO_RF_CHANNEL_A, 1);
@@ -100,7 +103,7 @@ errors:
     return status;
 }
 
-#ifdef BIDIRECTIONAL
+#ifdef SIGFOX_EP_BIDIRECTIONAL
 /*******************************************************************/
 RFE_status_t RFE_get_rssi(int16_t* rssi_dbm) {
     // Local variables.
