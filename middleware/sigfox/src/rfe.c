@@ -18,7 +18,7 @@
 
 /*** RFE local macros ***/
 
-#define RFE_RX_GAIN_DB	27
+#define RFE_RX_GAIN_DB  27
 
 /*** RFE functions ***/
 
@@ -28,10 +28,10 @@ RFE_status_t RFE_init(void) {
     RFE_status_t status = RFE_SUCCESS;
     // Configure GPIOs.
 #ifdef HW1_0
-	GPIO_configure(&GPIO_RF_CHANNEL_A, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_configure(&GPIO_RF_CHANNEL_B, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	GPIO_write(&GPIO_RF_CHANNEL_A, 0);
-	GPIO_write(&GPIO_RF_CHANNEL_B, 0);
+    GPIO_configure(&GPIO_RF_CHANNEL_A, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+    GPIO_configure(&GPIO_RF_CHANNEL_B, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+    GPIO_write(&GPIO_RF_CHANNEL_A, 0);
+    GPIO_write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
     GPIO_configure(&GPIO_RF_TX_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -59,8 +59,8 @@ RFE_status_t RFE_set_path(RFE_path_t radio_path) {
     RFE_status_t status = RFE_SUCCESS;
     // Reset channels.
 #ifdef HW1_0
-	GPIO_write(&GPIO_RF_CHANNEL_A, 0);
-	GPIO_write(&GPIO_RF_CHANNEL_B, 0);
+    GPIO_write(&GPIO_RF_CHANNEL_A, 0);
+    GPIO_write(&GPIO_RF_CHANNEL_B, 0);
 #endif
 #ifdef HW2_0
     GPIO_write(&GPIO_RF_TX_ENABLE, 0);
@@ -73,22 +73,22 @@ RFE_status_t RFE_set_path(RFE_path_t radio_path) {
         break;
     case RFE_PATH_TX_BYPASS:
 #ifdef HW1_0
-		GPIO_write(&GPIO_RF_CHANNEL_A, 1);
+        GPIO_write(&GPIO_RF_CHANNEL_A, 1);
 #endif
 #ifdef HW2_0
         GPIO_write(&GPIO_RF_TX_ENABLE, 1);
 #endif
         break;
 #ifdef HW1_0
-	case RFE_PATH_TX_PA:
-		GPIO_write(&GPIO_RF_CHANNEL_B, 1);
-		break;
+    case RFE_PATH_TX_PA:
+        GPIO_write(&GPIO_RF_CHANNEL_B, 1);
+        break;
 #endif
 #ifdef SIGFOX_EP_BIDIRECTIONAL
     case RFE_PATH_RX_LNA:
 #ifdef HW1_0
-		GPIO_write(&GPIO_RF_CHANNEL_A, 1);
-		GPIO_write(&GPIO_RF_CHANNEL_B, 1);
+        GPIO_write(&GPIO_RF_CHANNEL_A, 1);
+        GPIO_write(&GPIO_RF_CHANNEL_B, 1);
 #endif
 #ifdef HW2_0
         GPIO_write(&GPIO_RF_RX_ENABLE, 1);

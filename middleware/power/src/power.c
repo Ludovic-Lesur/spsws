@@ -159,7 +159,7 @@ void POWER_init(void) {
     uint8_t idx = 0;
     // Init context.
     for (idx = 0; idx < POWER_DOMAIN_LAST; idx++) {
-       power_domain_state[idx] = 0;
+        power_domain_state[idx] = 0;
     }
     // Init power control pins.
     GPIO_configure(&GPIO_TCXO16_POWER_ENABLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);

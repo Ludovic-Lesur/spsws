@@ -38,7 +38,7 @@ typedef enum {
     RFE_PATH_NONE = 0,
     RFE_PATH_TX_BYPASS,
 #ifdef HW1_0
-	RFE_PATH_TX_PA,
+    RFE_PATH_TX_PA,
 #endif
 #ifdef SIGFOX_EP_BIDIRECTIONAL
     RFE_PATH_RX_LNA,
