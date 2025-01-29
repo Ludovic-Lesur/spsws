@@ -197,10 +197,10 @@ void POWER_enable(POWER_requester_id_t requester_id, POWER_domain_t domain, LPTI
     case POWER_DOMAIN_MCU_TCXO:
         // Turn MCU TCXO on.
         GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 1);
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_MCU_TCXO;
         break;
     case POWER_DOMAIN_ANALOG:
+        // Turn analog front-end on and init attached drivers.
 #ifdef HW1_0
         if (power_domain_state[POWER_DOMAIN_RADIO] == 0) {
             _POWER_radio_init();
@@ -212,10 +212,10 @@ void POWER_enable(POWER_requester_id_t requester_id, POWER_domain_t domain, LPTI
         }
 #endif
         _POWER_analog_init();
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_ANALOG;
         break;
     case POWER_DOMAIN_SENSORS:
+        // Turn digital sensors and init attached drivers.
 #ifdef HW1_0
         if (power_domain_state[POWER_DOMAIN_ANALOG] == 0) {
             _POWER_analog_init();
@@ -227,22 +227,21 @@ void POWER_enable(POWER_requester_id_t requester_id, POWER_domain_t domain, LPTI
         }
 #endif
         _POWER_sensors_init();
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_SENSORS;
         break;
     case POWER_DOMAIN_GPS:
+        // Turn GPS on and init attached drivers.
         _POWER_gps_init();
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_GPS;
         break;
     case POWER_DOMAIN_RADIO_TCXO:
         // Turn radio TCXO on.
         GPIO_write(&GPIO_TCXO32_POWER_ENABLE, 1);
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_RADIO_TCXO;
         break;
     case POWER_DOMAIN_RADIO:
 #ifdef HW1_0
+        // Turn radio on and init attached drivers.
         if (power_domain_state[POWER_DOMAIN_ANALOG] == 0) {
             GPIO_write(&GPIO_SENSORS_POWER_ENABLE, 1);
             _POWER_analog_init();
@@ -254,7 +253,6 @@ void POWER_enable(POWER_requester_id_t requester_id, POWER_domain_t domain, LPTI
         }
 #endif
         _POWER_radio_init();
-        // Update delay.
         delay_ms = POWER_ON_DELAY_MS_RADIO;
         break;
     default:
@@ -293,6 +291,7 @@ void POWER_disable(POWER_requester_id_t requester_id, POWER_domain_t domain) {
        GPIO_write(&GPIO_TCXO16_POWER_ENABLE, 0);
        break;
     case POWER_DOMAIN_ANALOG:
+        // Release attached drivers and turn analog front-end off.
 #ifdef HW1_0
         power_domain_state[POWER_DOMAIN_RADIO] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
         power_domain_state[POWER_DOMAIN_SENSORS] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
@@ -308,6 +307,7 @@ void POWER_disable(POWER_requester_id_t requester_id, POWER_domain_t domain) {
 #endif
         break;
     case POWER_DOMAIN_SENSORS:
+       // Release attached drivers and turn sensors off.
 #ifdef HW1_0
         power_domain_state[POWER_DOMAIN_RADIO] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
         power_domain_state[POWER_DOMAIN_ANALOG] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
@@ -323,6 +323,7 @@ void POWER_disable(POWER_requester_id_t requester_id, POWER_domain_t domain) {
 #endif
         break;
     case POWER_DOMAIN_GPS:
+        // Release attached drivers and turn GPS off.
         _POWER_gps_de_init();
         break;
     case POWER_DOMAIN_RADIO_TCXO:
@@ -330,7 +331,7 @@ void POWER_disable(POWER_requester_id_t requester_id, POWER_domain_t domain) {
         GPIO_write(&GPIO_TCXO32_POWER_ENABLE, 0);
         break;
     case POWER_DOMAIN_RADIO:
-        // Turn radio off.
+        // Release attached drivers and turn radio off.
 #ifdef HW1_0
         power_domain_state[POWER_DOMAIN_SENSORS] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
         power_domain_state[POWER_DOMAIN_ANALOG] &= ~(0b1 << POWER_REQUESTER_ID_POWER);
