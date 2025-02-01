@@ -50,7 +50,6 @@
 #include "nvm.h"
 #include "nvm_address.h"
 #include "power.h"
-#include "spsws_flags.h"
 #include "tim.h"
 #include "types.h"
 
@@ -216,7 +215,7 @@ MCU_API_status_t MCU_API_aes_128_cbc_encrypt(MCU_API_encryption_data_t* aes_data
         }
         break;
     default:
-        SIGFOX_EXIT_ERROR(MCU_API_ERROR_EP_KEY);
+        SIGFOX_EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_EP_KEY);
         break;
     }
 #else
