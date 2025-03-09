@@ -401,7 +401,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
         // Init symbol profile timer.
         rf_api_ctx.tx_modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters->bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
         tim_status = TIM_STD_init(TIMER_INSTANCE_RF_API, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER);
-        TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
+        TIM_stack_exit_error(ERROR_BASE_TIM_RF_API, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
         break;
     case RF_API_MODULATION_GFSK:
         modulation = SX1232_MODULATION_FSK;
@@ -502,7 +502,7 @@ RF_API_status_t RF_API_de_init(void) {
     tim_status = TIM_STD_de_init(TIMER_INSTANCE_RF_API);
     // Check status.
     if (tim_status != TIM_SUCCESS) {
-        TIM_stack_error(ERROR_BASE_TIM_MODULATION);
+        TIM_stack_error(ERROR_BASE_TIM_RF_API);
         status = (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION;
     }
     // Disable front-end.
@@ -544,7 +544,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t* tx_data) {
     SIGFOX_CHECK_STATUS(RF_API_SUCCESS);
     // Start timer.
     tim_status = TIM_STD_start(TIMER_INSTANCE_RF_API, rf_api_ctx.tx_modulation_timer_period_ns, TIM_UNIT_NS, &_RF_API_modulation_timer_irq_callback);
-    TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
+    TIM_stack_exit_error(ERROR_BASE_TIM_RF_API, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
     // Wait for transmission to complete.
     while (rf_api_ctx.state != RF_API_STATE_READY) {
         // Wait for GPIO interrupt.
@@ -556,7 +556,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t* tx_data) {
         SIGFOX_CHECK_STATUS(RF_API_SUCCESS);
     }
     tim_status = TIM_STD_stop(TIMER_INSTANCE_RF_API);
-    TIM_stack_exit_error(ERROR_BASE_TIM_MODULATION, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
+    TIM_stack_exit_error(ERROR_BASE_TIM_RF_API, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
 errors:
     SIGFOX_RETURN();
 }
