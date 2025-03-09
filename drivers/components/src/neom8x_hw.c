@@ -28,7 +28,7 @@ NEOM8X_status_t NEOM8X_HW_init(NEOM8X_HW_configuration_t* configuration) {
     // Init LPUART.
     lpuart_config.baud_rate = (configuration->uart_baud_rate);
     lpuart_config.nvic_priority = NVIC_PRIORITY_GPS_UART;
-    lpuart_config.rxne_callback = (LPUART_rx_irq_cb_t) (configuration->rx_irq_callback);
+    lpuart_config.rxne_irq_callback = (LPUART_rx_irq_cb_t) (configuration->rx_irq_callback);
     lpuart_status = LPUART_init(&LPUART_GPIO_GPS, &lpuart_config);
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:

@@ -62,7 +62,7 @@ static GPS_status_t _GPS_perform_acquisition(NEOM8X_gps_data_t gps_data, NEOM8X_
     while (RTC_get_uptime_seconds() < (start_time + timeout_seconds)) {
         // Enter sleep mode.
         IWDG_reload();
-        PWR_enter_sleep_mode();
+        PWR_enter_sleep_mode(PWR_SLEEP_MODE_NORMAL);
         // Update acquisition duration.
         (*acquisition_duration_seconds) = (RTC_get_uptime_seconds() - start_time);
         // Check flag.

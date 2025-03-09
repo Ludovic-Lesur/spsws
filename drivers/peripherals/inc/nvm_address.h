@@ -11,7 +11,7 @@
 #include "sigfox_types.h"
 
 /*!******************************************************************
- * \enum NVM_address_mapping_t
+ * \enum NVM_address_t
  * \brief NVM address mapping.
  *******************************************************************/
 typedef enum {
@@ -22,6 +22,6 @@ typedef enum {
     NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH = (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 2),
     NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE,
     NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR,
-} NVM_address_mapping_t;
+} NVM_address_t;
 
 #endif /* __NVM_ADDRESS_H__ */

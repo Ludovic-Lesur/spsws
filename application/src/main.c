@@ -567,11 +567,11 @@ static void _SPSWS_update_time_flags(void) {
     nvm_status = NVM_read_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), &nvm_byte);
     NVM_stack_error(ERROR_BASE_NVM);
     spsws_ctx.previous_wake_up_time.year |= nvm_byte;
-    nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
+    nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, &spsws_ctx.previous_wake_up_time.month);
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
+    nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, &spsws_ctx.previous_wake_up_time.date);
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_read_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
+    nvm_status = NVM_read_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, &spsws_ctx.previous_wake_up_time.hours);
     NVM_stack_error(ERROR_BASE_NVM);
     // Check time are different (avoiding false wake-up due to RTC calibration).
     if ((spsws_ctx.current_time.year != spsws_ctx.previous_wake_up_time.year) || (spsws_ctx.current_time.month != spsws_ctx.previous_wake_up_time.month) || (spsws_ctx.current_time.date != spsws_ctx.previous_wake_up_time.date)) {
@@ -608,15 +608,15 @@ static void _SPSWS_update_pwut(void) {
     rtc_status = RTC_get_time(&spsws_ctx.current_time);
     RTC_stack_error(ERROR_BASE_RTC);
     // Update previous wake-up time.
-    nvm_status = NVM_write_byte((NVM_address_t) (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
+    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_write_byte((NVM_address_t) (NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
+    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
+    nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
+    nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_DATE, spsws_ctx.current_time.date);
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_write_byte((NVM_address_t) NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
+    nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_HOUR, spsws_ctx.current_time.hours);
     NVM_stack_error(ERROR_BASE_NVM);
 }
 #endif
@@ -674,6 +674,7 @@ static void _SPSWS_init_hw(void) {
     RCC_status_t rcc_status = RCC_SUCCESS;
     NVM_status_t nvm_status = NVM_SUCCESS;
     RTC_status_t rtc_status = RTC_SUCCESS;
+    LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 #ifndef SPSWS_MODE_DEBUG
     IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
@@ -724,7 +725,8 @@ static void _SPSWS_init_hw(void) {
     rtc_status = RTC_start_alarm(RTC_ALARM_A, &rtc_alarm_config, &_SPSWS_fixed_hour_alarm_callback);
     RTC_stack_error(ERROR_BASE_RTC);
     // Init delay timer.
-    LPTIM_init(NVIC_PRIORITY_DELAY);
+    lptim_status = LPTIM_init(NVIC_PRIORITY_DELAY);
+    LPTIM_stack_error(ERROR_BASE_LPTIM);
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
     // Init wind vane and rainfall driver.
     sen15901_status = SEN15901_init(&_SPSWS_sen15901_process_callback);
@@ -1097,7 +1099,7 @@ int main(void) {
             // Enter sleep mode.
             IWDG_reload();
 #ifndef SPSWS_MODE_DEBUG
-            PWR_enter_stop_mode();
+            PWR_enter_deepsleep_mode(PWR_DEEPSLEEP_MODE_STOP);
             IWDG_reload();
 #endif
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
@@ -1165,7 +1167,7 @@ int main (void) {
     while (1) {
         // Enter sleep mode.
         IWDG_reload();
-        PWR_enter_sleep_mode();
+        PWR_enter_sleep_mode(PWR_SLEEP_MODE_NORMAL);
         IWDG_reload();
         // Process command line interface.
         cli_status = CLI_process();
