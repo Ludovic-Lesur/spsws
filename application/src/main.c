@@ -692,6 +692,7 @@ static void _SPSWS_init_hw(void) {
     RCC_stack_error(ERROR_BASE_RCC);
     // Init GPIOs.
     GPIO_init();
+    POWER_init();
     EXTI_init();
 #ifndef SPSWS_MODE_DEBUG
     // Start independent watchdog.
@@ -730,8 +731,6 @@ static void _SPSWS_init_hw(void) {
     SEN15901_stack_error(ERROR_BASE_SEN15901);
     SENSORS_HW_get_sen15901_tick_second_callback(&spsws_ctx.sen15901_tick_second_callback);
 #endif
-    // Init power module.
-    POWER_init();
     // Init LED pin.
     GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 #ifdef SPSWS_SEN15901_EMULATOR
@@ -797,6 +796,8 @@ int main(void) {
             spsws_ctx.sigfox_startup_data.commit_index = GIT_COMMIT_INDEX;
             spsws_ctx.sigfox_startup_data.commit_id = GIT_COMMIT_ID;
             spsws_ctx.sigfox_startup_data.dirty_flag = GIT_DIRTY_FLAG;
+            // Clear reset flags.
+            PWR_clear_reset_flags();
             // Send SW version frame.
             application_message.common_parameters.ul_bit_rate = SIGFOX_UL_BIT_RATE_600BPS;
             application_message.ul_payload = (sfx_u8*) (spsws_ctx.sigfox_startup_data.frame);
