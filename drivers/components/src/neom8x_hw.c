@@ -8,6 +8,7 @@
 #include "neom8x_hw.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "lptim.h"
 #include "lpuart.h"
 #include "mcu_mapping.h"
@@ -45,8 +46,7 @@ NEOM8X_status_t NEOM8X_HW_de_init(void) {
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release LPUART.
     lpuart_status = LPUART_de_init(&LPUART_GPIO_GPS);
-    LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
-errors:
+    LPUART_stack_error(ERROR_BASE_NEOM8N + NEOM8X_ERROR_BASE_UART);
 #endif
     return status;
 }

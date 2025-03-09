@@ -8,6 +8,7 @@
 #include "max111xx.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mcu_mapping.h"
@@ -50,8 +51,7 @@ MAX111XX_status_t MAX111XX_HW_de_init(void) {
     GPIO_configure(&GPIO_MAX11136_EOC, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
     // Release SPI.
     spi_status = SPI_de_init(SPI_INSTANCE_ADC, &SPI_GPIO_MAX11136);
-    SPI_exit_error(MAX111XX_ERROR_BASE_SPI);
-errors:
+    SPI_stack_error(ERROR_BASE_MAX11136 + MAX111XX_ERROR_BASE_SPI);
     return status;
 }
 

@@ -11,6 +11,7 @@
 #include "sigfox_ep_flags.h"
 #endif
 #include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "mcu_mapping.h"
 #include "sx1232.h"
@@ -46,10 +47,10 @@ RFE_status_t RFE_init(void) {
 RFE_status_t RFE_de_init(void) {
     // Local variables.
     RFE_status_t status = RFE_SUCCESS;
+    RFE_status_t rfe_status = RFE_SUCCESS;
     // Set all pins to output low.
-    status = RFE_set_path(RFE_PATH_NONE);
-    if (status != RFE_SUCCESS) goto errors;
-errors:
+    rfe_status = RFE_set_path(RFE_PATH_NONE);
+    RFE_stack_error(ERROR_BASE_RFE);
     return status;
 }
 

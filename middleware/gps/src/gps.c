@@ -8,6 +8,7 @@
 #include "gps.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "iwdg.h"
 #include "neom8x.h"
 #include "pwr.h"
@@ -101,8 +102,7 @@ GPS_status_t GPS_de_init(void) {
     NEOM8X_status_t neom8x_status = NEOM8X_SUCCESS;
     // Init GPS module.
     neom8x_status = NEOM8X_de_init();
-    NEOM8X_exit_error(GPS_ERROR_BASE_NEOM8N);
-errors:
+    NEOM8X_stack_error(ERROR_BASE_GPS + GPS_ERROR_BASE_NEOM8N);
     return status;
 }
 

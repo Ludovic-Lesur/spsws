@@ -43,8 +43,7 @@ ERROR_code_t SENSORS_HW_de_init(ERROR_code_t i2c_error_base) {
     I2C_status_t i2c_status = I2C_SUCCESS;
     // Init I2C.
     i2c_status = I2C_de_init(I2C_INSTANCE_SENSORS, &I2C_GPIO_SENSORS);
-    I2C_exit_error(i2c_error_base);
-errors:
+    I2C_stack_error(i2c_error_base);
     return status;
 }
 

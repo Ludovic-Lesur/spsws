@@ -8,6 +8,7 @@
 #include "sx1232.h"
 
 #include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mcu_mapping.h"
@@ -46,8 +47,7 @@ SX1232_status_t SX1232_HW_de_init(void) {
     GPIO_write(&GPIO_SX1232_CS, 0);
     // Release SPI.
     spi_status = SPI_de_init(SPI_INSTANCE_RADIO, &SPI_GPIO_SX1232);
-    SPI_exit_error(SX1232_ERROR_BASE_SPI);
-errors:
+    SPI_stack_error(ERROR_BASE_SX1232 + SX1232_ERROR_BASE_SPI);
     return status;
 }
 

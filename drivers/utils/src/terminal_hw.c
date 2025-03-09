@@ -11,6 +11,7 @@
 #include "embedded_utils_flags.h"
 #endif
 #include "error.h"
+#include "error_base.h"
 #include "mcu_mapping.h"
 #include "nvic_priority.h"
 #include "types.h"
@@ -50,8 +51,7 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
     UNUSED(instance);
     // Release USART.
     usart_status = USART_de_init(USART_INSTANCE_AT, &USART_GPIO_AT);
-    USART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
-errors:
+    USART_stack_error(ERROR_BASE_TERMINAL_AT + TERMINAL_ERROR_BASE_HW_INTERFACE);
     return status;
 }
 

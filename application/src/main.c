@@ -956,7 +956,7 @@ int main(void) {
 #endif
             // External pressure and temperature sensor.
             dps310_status = DPS310_get_pressure_temperature(I2C_ADDRESS_DPS310, &generic_s32_1, &generic_s32_2);
-            DPS310_stack_error(ERROR_BASE_SEN15901);
+            DPS310_stack_error(ERROR_BASE_DPS310);
             // Check status.
             if (dps310_status == DPS310_SUCCESS) {
                 // Store pressure.

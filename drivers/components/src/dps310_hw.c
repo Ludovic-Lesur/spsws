@@ -7,6 +7,7 @@
 
 #include "dps310_hw.h"
 
+#include "error_base.h"
 #include "sensors_hw.h"
 
 #ifndef DPS310_DRIVER_DISABLE
@@ -20,7 +21,7 @@ DPS310_status_t DPS310_HW_init(void) {
 
 /*******************************************************************/
 DPS310_status_t DPS310_HW_de_init(void) {
-    return ((DPS310_status_t) SENSORS_HW_de_init(DPS310_ERROR_BASE_I2C));
+    return ((DPS310_status_t) SENSORS_HW_de_init(ERROR_BASE_DPS310 + DPS310_ERROR_BASE_I2C));
 }
 
 /*******************************************************************/

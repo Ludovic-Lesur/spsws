@@ -1098,12 +1098,11 @@ CLI_status_t CLI_de_init(void) {
     // Unregister commands.
     for (idx = 0; idx < (sizeof(CLI_COMMANDS_LIST) / sizeof(AT_command_t)); idx++) {
         at_status = AT_unregister_command(&(CLI_COMMANDS_LIST[idx]));
-        AT_exit_error(CLI_ERROR_BASE_AT);
+        AT_stack_error(ERROR_BASE_CLI + CLI_ERROR_BASE_AT);
     }
     // Release AT driver.
     at_status = AT_de_init();
-    AT_exit_error(CLI_ERROR_BASE_AT);
-errors:
+    AT_stack_error(ERROR_BASE_CLI + CLI_ERROR_BASE_AT);
     return status;
 }
 

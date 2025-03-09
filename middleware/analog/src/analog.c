@@ -9,6 +9,7 @@
 
 #include "adc.h"
 #include "error.h"
+#include "error_base.h"
 #include "max111xx.h"
 #include "spsws_flags.h"
 #include "types.h"
@@ -108,11 +109,10 @@ ANALOG_status_t ANALOG_de_init(void) {
     analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
     // Release internal ADC.
     adc_status = ADC_de_init();
-    ADC_exit_error(ANALOG_ERROR_BASE_ADC);
+    ADC_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_ADC);
     // Release external ADC.
     max111xx_status = MAX111XX_de_init();
-    MAX111XX_exit_error(ANALOG_ERROR_BASE_MAX11136);
-errors:
+    MAX111XX_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_MAX11136);
     return status;
 }
 

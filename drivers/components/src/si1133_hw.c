@@ -7,6 +7,7 @@
 
 #include "si1133_hw.h"
 
+#include "error_base.h"
 #include "sensors_hw.h"
 
 #ifndef SI1133_DRIVER_DISABLE
@@ -20,7 +21,7 @@ SI1133_status_t SI1133_HW_init(void) {
 
 /*******************************************************************/
 SI1133_status_t SI1133_HW_de_init(void) {
-    return ((SI1133_status_t) SENSORS_HW_de_init(SI1133_ERROR_BASE_I2C));
+    return ((SI1133_status_t) SENSORS_HW_de_init(ERROR_BASE_SI1133 + SI1133_ERROR_BASE_I2C));
 }
 
 /*******************************************************************/
