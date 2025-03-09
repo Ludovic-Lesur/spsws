@@ -12,7 +12,7 @@
 #include "error.h"
 #include "error_base.h"
 #include "gpio.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "gps.h"
 #include "lptim.h"
 #include "rfe.h"

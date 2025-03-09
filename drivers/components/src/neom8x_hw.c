@@ -8,9 +8,9 @@
 #include "neom8x_hw.h"
 
 #include "error.h"
-#include "gpio_mapping.h"
 #include "lptim.h"
 #include "lpuart.h"
+#include "mcu_mapping.h"
 #include "nvic_priority.h"
 
 #ifndef NEOM8X_DRIVER_DISABLE
@@ -28,7 +28,7 @@ NEOM8X_status_t NEOM8X_HW_init(NEOM8X_HW_configuration_t* configuration) {
     lpuart_config.baud_rate = (configuration->uart_baud_rate);
     lpuart_config.nvic_priority = NVIC_PRIORITY_GPS_UART;
     lpuart_config.rxne_callback = (LPUART_rx_irq_cb_t) (configuration->rx_irq_callback);
-    lpuart_status = LPUART_init(&GPIO_GPS_LPUART, &lpuart_config);
+    lpuart_status = LPUART_init(&LPUART_GPIO_GPS, &lpuart_config);
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:
 #else
@@ -44,7 +44,7 @@ NEOM8X_status_t NEOM8X_HW_de_init(void) {
 #if !(defined HW1_0) || !(defined SPSWS_MODE_DEBUG)
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release LPUART.
-    lpuart_status = LPUART_de_init(&GPIO_GPS_LPUART);
+    lpuart_status = LPUART_de_init(&LPUART_GPIO_GPS);
     LPUART_exit_error(NEOM8X_ERROR_BASE_UART);
 errors:
 #endif

@@ -10,7 +10,7 @@
 #include "analog.h"
 #include "error.h"
 #include "exti.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "nvic.h"
 #include "nvic_priority.h"
 #include "power.h"

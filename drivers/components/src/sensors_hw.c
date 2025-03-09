@@ -9,16 +9,12 @@
 
 #include "error.h"
 #include "error_base.h"
-#include "gpio_mapping.h"
 #include "i2c.h"
 #include "lptim.h"
+#include "mcu_mapping.h"
 #include "sen15901_hw.h"
 #include "spsws_flags.h"
 #include "types.h"
-
-/*** SENSORS HW local macros ***/
-
-#define SENSORS_I2C_INSTANCE    I2C_INSTANCE_I2C1
 
 /*** SENSORS HW local global variables ***/
 
@@ -34,7 +30,7 @@ ERROR_code_t SENSORS_HW_init(ERROR_code_t i2c_error_base) {
     ERROR_code_t status = SUCCESS;
     I2C_status_t i2c_status = I2C_SUCCESS;
     // Init I2C.
-    i2c_status = I2C_init(SENSORS_I2C_INSTANCE, &GPIO_SENSORS_I2C);
+    i2c_status = I2C_init(I2C_INSTANCE_SENSORS, &I2C_GPIO_SENSORS);
     I2C_exit_error(i2c_error_base);
 errors:
     return status;
@@ -46,7 +42,7 @@ ERROR_code_t SENSORS_HW_de_init(ERROR_code_t i2c_error_base) {
     ERROR_code_t status = SUCCESS;
     I2C_status_t i2c_status = I2C_SUCCESS;
     // Init I2C.
-    i2c_status = I2C_de_init(SENSORS_I2C_INSTANCE, &GPIO_SENSORS_I2C);
+    i2c_status = I2C_de_init(I2C_INSTANCE_SENSORS, &I2C_GPIO_SENSORS);
     I2C_exit_error(i2c_error_base);
 errors:
     return status;
@@ -58,7 +54,7 @@ ERROR_code_t SENSORS_HW_i2c_write(ERROR_code_t i2c_error_base, uint8_t i2c_addre
     ERROR_code_t status = SUCCESS;
     I2C_status_t i2c_status = I2C_SUCCESS;
     // I2C transfer.
-    i2c_status = I2C_write(SENSORS_I2C_INSTANCE, i2c_address, data, data_size_bytes, stop_flag);
+    i2c_status = I2C_write(I2C_INSTANCE_SENSORS, i2c_address, data, data_size_bytes, stop_flag);
     I2C_exit_error(i2c_error_base);
 errors:
     return status;
@@ -70,7 +66,7 @@ ERROR_code_t SENSORS_HW_i2c_read(ERROR_code_t i2c_error_base, uint8_t i2c_addres
     ERROR_code_t status = SUCCESS;
     I2C_status_t i2c_status = I2C_SUCCESS;
     // I2C transfer.
-    i2c_status = I2C_read(SENSORS_I2C_INSTANCE, i2c_address, data, data_size_bytes);
+    i2c_status = I2C_read(I2C_INSTANCE_SENSORS, i2c_address, data, data_size_bytes);
     I2C_exit_error(i2c_error_base);
 errors:
     return status;

@@ -12,7 +12,7 @@
 #endif
 #include "error.h"
 #include "gpio.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "sx1232.h"
 #include "types.h"
 
