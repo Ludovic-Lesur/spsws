@@ -126,7 +126,8 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     // Local variables.
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
-    TIM_waiting_mode_t tim_waiting_mode = TIM_WAITING_MODE_LOW_POWER_SLEEP;
+    // Note: low power sleep mode is useless since the MCU is clocked by the TCXO.
+    TIM_waiting_mode_t tim_waiting_mode = TIM_WAITING_MODE_SLEEP;
     // Check parameter.
     if (timer == SIGFOX_NULL) {
         SIGFOX_EXIT_ERROR((MCU_API_status_t) MCU_API_ERROR_NULL_PARAMETER);
@@ -135,7 +136,7 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     // Update waiting mode according to timer reason.
     if ((timer->reason) == MCU_API_TIMER_REASON_T_RX) {
         // T_RX completion is directly checked with the raw timer status within the RF_API_receive() function.
-        // All other timers completion are checked with the MCU_API_timer_wait_cplt() function, using low power sleep waiting mode.
+        // All other timers completion are checked with the MCU_API_timer_wait_cplt() function, using sleep waiting mode.
         tim_waiting_mode = TIM_WAITING_MODE_ACTIVE;
     }
 #endif
