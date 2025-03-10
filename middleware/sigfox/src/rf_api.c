@@ -253,8 +253,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
         rf_api_ctx.flags.field.timer_irq_enable = 0;
         // Stop radio.
         SX1232_set_pa_power_value(0x00);
-        sx1232_status = SX1232_set_mode(SX1232_MODE_STANDBY);
-        SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
+        SX1232_set_mode(SX1232_MODE_STANDBY);
         // Update state.
         rf_api_ctx.state = RF_API_STATE_READY;
         break;
@@ -392,7 +391,7 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
         modulation = SX1232_MODULATION_FSK;
         modulation_shaping = SX1232_MODULATION_SHAPING_NONE;
         bitrate_bps = 0; // Unused directly.
-        deviation_hz = ((radio_parameters->bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES) / (4);
+        deviation_hz = (((radio_parameters->bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES) >> 2);
         frequency_hz = (radio_parameters->frequency_hz) + deviation_hz;
         data_mode = SX1232_DATA_MODE_CONTINUOUS;
         // Use manual control of the PA.
@@ -552,8 +551,7 @@ RF_API_status_t RF_API_send(RF_API_tx_data_t* tx_data) {
         // Clear flag.
         rf_api_ctx.flags.field.timer_irq_flag = 0;
         // Call process function.
-        status = _RF_API_internal_process();
-        SIGFOX_CHECK_STATUS(RF_API_SUCCESS);
+        _RF_API_internal_process();
     }
     tim_status = TIM_STD_stop(TIMER_INSTANCE_RF_API);
     TIM_stack_exit_error(ERROR_BASE_TIM_RF_API, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
