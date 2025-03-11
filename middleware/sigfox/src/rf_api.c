@@ -57,7 +57,8 @@
 
 /*** RF API local macros ***/
 
-#define RF_API_SYMBOL_PROFILE_SIZE_BYTES    40
+#define RF_API_SLOW_BR_SYMBOL_PROFILE_SIZE_BYTES    40
+#define RF_API_FAST_BR_SYMBOL_PROFILE_SIZE_BYTES    20
 
 /*** RF API local structures ***/
 
@@ -111,6 +112,9 @@ typedef struct {
     // TX.
     sfx_u8 tx_bitstream[SIGFOX_UL_BITSTREAM_SIZE_BYTES];
     sfx_u8 tx_bitstream_size_bytes;
+    sfx_u8* tx_ramp_amplitude_profile;
+    sfx_u8* tx_bit0_amplitude_profile;
+    sfx_u8 tx_symbol_profile_size_bytes;
     sfx_u8 tx_byte_idx;
     sfx_u8 tx_bit_idx;
     sfx_u8 tx_symbol_profile_idx;
@@ -125,8 +129,18 @@ typedef struct {
 
 /*** RF API local global variables ***/
 
-static const sfx_u8 RF_API_RAMP_AMPLITUDE_PROFILE[RF_API_SYMBOL_PROFILE_SIZE_BYTES] = { 0, 8, 16, 23, 29, 36, 43, 49, 55, 60, 65, 70, 74, 78, 81, 84, 86, 88, 89, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90 };
-static const sfx_u8 RF_API_BIT0_AMPLITUDE_PROFILE[RF_API_SYMBOL_PROFILE_SIZE_BYTES] = { 90, 89, 88, 86, 84, 81, 78, 74, 70, 65, 60, 55, 49, 43, 36, 29, 23, 16, 8, 0, 0, 8, 16, 23, 29, 36, 43, 49, 55, 60, 65, 70, 74, 78, 81, 84, 86, 88, 89, 90 };
+static const sfx_u8 RF_API_SLOW_BR_RAMP_AMPLITUDE_PROFILE[RF_API_SLOW_BR_SYMBOL_PROFILE_SIZE_BYTES] = {
+    0, 9, 16, 23, 29, 36, 43, 49, 55, 60, 65, 70, 74, 78, 81, 84, 86, 88, 89, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90
+};
+static const sfx_u8 RF_API_SLOW_BR_BIT0_AMPLITUDE_PROFILE[RF_API_SLOW_BR_SYMBOL_PROFILE_SIZE_BYTES] = {
+    90, 89, 88, 86, 84, 81, 78, 74, 70, 65, 60, 55, 49, 43, 36, 29, 23, 16, 9, 0, 0, 9, 16, 23, 29, 36, 43, 49, 55, 60, 65, 70, 74, 78, 81, 84, 86, 88, 89, 90
+};
+static const sfx_u8 RF_API_FAST_BR_RAMP_AMPLITUDE_PROFILE[RF_API_FAST_BR_SYMBOL_PROFILE_SIZE_BYTES] = {
+    0, 9, 16, 23, 29, 36, 43, 49, 55, 60, 65, 70, 74, 78, 81, 84, 86, 88, 89, 90
+};
+static const sfx_u8 RF_API_FAST_BR_BIT0_AMPLITUDE_PROFILE[RF_API_FAST_BR_SYMBOL_PROFILE_SIZE_BYTES] = {
+    90, 86, 82, 73, 66, 55, 39, 23, 9, 0, 0, 9, 23, 39, 55, 66, 73, 82, 86, 90
+};
 #ifdef SIGFOX_EP_BIDIRECTIONAL
 static const sfx_u8 RF_API_DL_FT[SIGFOX_DL_FT_SIZE_BYTES] = SIGFOX_DL_FT;
 #endif
@@ -191,10 +205,10 @@ static RF_API_status_t _RF_API_internal_process(void) {
         break;
     case RF_API_STATE_TX_RAMP_UP:
         // Load ramp profile.
-        SX1232_set_pa_power_value(RF_API_RAMP_AMPLITUDE_PROFILE[rf_api_ctx.tx_symbol_profile_idx]);
+        SX1232_set_pa_power_value(rf_api_ctx.tx_ramp_amplitude_profile[rf_api_ctx.tx_symbol_profile_idx]);
         // Increment symbol profile index.
         rf_api_ctx.tx_symbol_profile_idx++;
-        if (rf_api_ctx.tx_symbol_profile_idx >= RF_API_SYMBOL_PROFILE_SIZE_BYTES) {
+        if (rf_api_ctx.tx_symbol_profile_idx >= rf_api_ctx.tx_symbol_profile_size_bytes) {
             rf_api_ctx.tx_symbol_profile_idx = 0;
             // Update state.
             rf_api_ctx.state = RF_API_STATE_TX_BITSTREAM;
@@ -204,7 +218,7 @@ static RF_API_status_t _RF_API_internal_process(void) {
         // Check bit.
         if ((rf_api_ctx.tx_bitstream[rf_api_ctx.tx_byte_idx] & (1 << (7 - rf_api_ctx.tx_bit_idx))) == 0) {
             // Invert phase at the middle of the symbol profile.
-            if (rf_api_ctx.tx_symbol_profile_idx == (RF_API_SYMBOL_PROFILE_SIZE_BYTES >> 1)) {
+            if (rf_api_ctx.tx_symbol_profile_idx == (rf_api_ctx.tx_symbol_profile_size_bytes >> 1)) {
                 GPIO_SX1232_DIO2_HIGH();
             }
             else {
@@ -217,10 +231,10 @@ static RF_API_status_t _RF_API_internal_process(void) {
             // Constant CW.
             symbol_profile_idx = 0;
         }
-        SX1232_set_pa_power_value(RF_API_BIT0_AMPLITUDE_PROFILE[symbol_profile_idx]);
+        SX1232_set_pa_power_value(rf_api_ctx.tx_bit0_amplitude_profile[symbol_profile_idx]);
         // Increment symbol profile index.
         rf_api_ctx.tx_symbol_profile_idx++;
-        if (rf_api_ctx.tx_symbol_profile_idx >= RF_API_SYMBOL_PROFILE_SIZE_BYTES) {
+        if (rf_api_ctx.tx_symbol_profile_idx >= rf_api_ctx.tx_symbol_profile_size_bytes) {
             rf_api_ctx.tx_symbol_profile_idx = 0;
             // Increment bit index.
             rf_api_ctx.tx_bit_idx++;
@@ -239,10 +253,10 @@ static RF_API_status_t _RF_API_internal_process(void) {
         break;
     case RF_API_STATE_TX_RAMP_DOWN:
         // Load ramp profile.
-        SX1232_set_pa_power_value(RF_API_RAMP_AMPLITUDE_PROFILE[RF_API_SYMBOL_PROFILE_SIZE_BYTES - rf_api_ctx.tx_symbol_profile_idx - 1]);
+        SX1232_set_pa_power_value(rf_api_ctx.tx_ramp_amplitude_profile[rf_api_ctx.tx_symbol_profile_size_bytes - rf_api_ctx.tx_symbol_profile_idx - 1]);
         // Increment symbol profile index.
         rf_api_ctx.tx_symbol_profile_idx++;
-        if (rf_api_ctx.tx_symbol_profile_idx >= RF_API_SYMBOL_PROFILE_SIZE_BYTES) {
+        if (rf_api_ctx.tx_symbol_profile_idx >= rf_api_ctx.tx_symbol_profile_size_bytes) {
             rf_api_ctx.tx_symbol_profile_idx = 0;
             // Update state.
             rf_api_ctx.state = RF_API_STATE_TX_END;
@@ -388,17 +402,30 @@ RF_API_status_t RF_API_init(RF_API_radio_parameters_t* radio_parameters) {
         SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
         break;
     case RF_API_MODULATION_DBPSK:
+        // Update tables according to bit rate.
+        if ((radio_parameters->bit_rate_bps) > SIGFOX_UL_BIT_RATE_BPS_LIST[SIGFOX_UL_BIT_RATE_100BPS]) {
+            // Use fast bit rate tables.
+            rf_api_ctx.tx_ramp_amplitude_profile = (sfx_u8*) RF_API_FAST_BR_RAMP_AMPLITUDE_PROFILE;
+            rf_api_ctx.tx_bit0_amplitude_profile = (sfx_u8*) RF_API_FAST_BR_BIT0_AMPLITUDE_PROFILE;
+            rf_api_ctx.tx_symbol_profile_size_bytes = RF_API_FAST_BR_SYMBOL_PROFILE_SIZE_BYTES;
+        }
+        else {
+            // Use slow bit rate tables.
+            rf_api_ctx.tx_ramp_amplitude_profile = (sfx_u8*) RF_API_SLOW_BR_RAMP_AMPLITUDE_PROFILE;
+            rf_api_ctx.tx_bit0_amplitude_profile = (sfx_u8*) RF_API_SLOW_BR_BIT0_AMPLITUDE_PROFILE;
+            rf_api_ctx.tx_symbol_profile_size_bytes = RF_API_SLOW_BR_SYMBOL_PROFILE_SIZE_BYTES;
+        }
         modulation = SX1232_MODULATION_FSK;
         modulation_shaping = SX1232_MODULATION_SHAPING_NONE;
         bitrate_bps = 0; // Unused directly.
-        deviation_hz = (((radio_parameters->bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES) >> 2);
+        deviation_hz = (((radio_parameters->bit_rate_bps) * rf_api_ctx.tx_symbol_profile_size_bytes) >> 2);
         frequency_hz = (radio_parameters->frequency_hz) + deviation_hz;
         data_mode = SX1232_DATA_MODE_CONTINUOUS;
         // Use manual control of the PA.
         sx1232_status = SX1232_enable_manual_pa_control();
         SX1232_stack_exit_error(ERROR_BASE_SX1232, (RF_API_status_t) RF_API_ERROR_DRIVER_SX1232);
         // Init symbol profile timer.
-        rf_api_ctx.tx_modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters->bit_rate_bps) * RF_API_SYMBOL_PROFILE_SIZE_BYTES);
+        rf_api_ctx.tx_modulation_timer_period_ns = (MATH_POWER_10[9]) / ((radio_parameters->bit_rate_bps) * rf_api_ctx.tx_symbol_profile_size_bytes);
         tim_status = TIM_STD_init(TIMER_INSTANCE_RF_API, NVIC_PRIORITY_SIGFOX_MODULATION_TIMER);
         TIM_stack_exit_error(ERROR_BASE_TIM_RF_API, (RF_API_status_t) RF_API_ERROR_DRIVER_TIMER_MODULATION);
         break;
