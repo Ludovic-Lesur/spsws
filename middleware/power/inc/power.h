@@ -8,6 +8,7 @@
 #ifndef __POWER_H__
 #define __POWER_H__
 
+#include "error.h"
 #include "lptim.h"
 #include "types.h"
 
@@ -41,7 +42,7 @@ typedef enum {
     POWER_ERROR_DRIVER_SI1133,
     POWER_ERROR_DRIVER_SX1232,
     // Last base value.
-    POWER_ERROR_BASE_LAST = 0x0100
+    POWER_ERROR_BASE_LAST = ERROR_BASE_STEP
 } POWER_status_t;
 
 /*!******************************************************************

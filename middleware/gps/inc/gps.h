@@ -8,6 +8,7 @@
 #ifndef __GPS_H__
 #define __GPS_H__
 
+#include "error.h"
 #include "neom8x.h"
 #include "types.h"
 
@@ -22,7 +23,7 @@ typedef enum {
     GPS_SUCCESS = 0,
     GPS_ERROR_NULL_PARAMETER,
     // Low level drivers errors.
-    GPS_ERROR_BASE_NEOM8N = 0x0100,
+    GPS_ERROR_BASE_NEOM8N = ERROR_BASE_STEP,
     // Last base value.
     GPS_ERROR_BASE_LAST = (GPS_ERROR_BASE_NEOM8N + NEOM8X_ERROR_BASE_LAST)
 } GPS_status_t;

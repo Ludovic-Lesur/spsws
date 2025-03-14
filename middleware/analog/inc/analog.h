@@ -9,6 +9,7 @@
 #define __ANALOG_H__
 
 #include "adc.h"
+#include "error.h"
 #include "max111xx.h"
 #include "spsws_flags.h"
 #include "types.h"
@@ -25,7 +26,7 @@ typedef enum {
     ANALOG_ERROR_NULL_PARAMETER,
     ANALOG_ERROR_CHANNEL,
     // Low level drivers errors.
-    ANALOG_ERROR_BASE_ADC = 0x0100,
+    ANALOG_ERROR_BASE_ADC = ERROR_BASE_STEP,
     ANALOG_ERROR_BASE_MAX11136 = (ANALOG_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
     // Last base value.
     ANALOG_ERROR_BASE_LAST = (ANALOG_ERROR_BASE_MAX11136 + MAX111XX_ERROR_BASE_LAST)

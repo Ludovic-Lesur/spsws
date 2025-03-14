@@ -9,6 +9,7 @@
 #define __CLI_H__
 
 #include "at.h"
+#include "error.h"
 #include "sigfox_types.h"
 #include "spsws_flags.h"
 #include "types.h"
@@ -23,7 +24,7 @@ typedef enum {
     // Driver errors.
     CLI_SUCCESS = 0,
     // Low level drivers errors.
-    CLI_ERROR_BASE_AT = 0x0100,
+    CLI_ERROR_BASE_AT = ERROR_BASE_STEP,
     // Last base value.
     CLI_ERROR_BASE_LAST = (CLI_ERROR_BASE_AT + AT_ERROR_BASE_LAST)
 } CLI_status_t;

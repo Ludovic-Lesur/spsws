@@ -11,6 +11,7 @@
 #ifndef SIGFOX_EP_DISABLE_FLAGS_FILE
 #include "sigfox_ep_flags.h"
 #endif
+#include "error.h"
 #include "types.h"
 #include "sx1232.h"
 
@@ -25,7 +26,7 @@ typedef enum {
     RFE_SUCCESS = 0,
     RFE_ERROR_PATH,
     // Low level drivers errors.
-    RFE_ERROR_BASE_SX1232 = 0x0100,
+    RFE_ERROR_BASE_SX1232 = ERROR_BASE_STEP,
     // Last base value.
     RFE_ERROR_BASE_LAST = (RFE_ERROR_BASE_SX1232 + SX1232_ERROR_BASE_LAST)
 } RFE_status_t;
