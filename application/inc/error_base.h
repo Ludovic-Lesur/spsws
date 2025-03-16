@@ -17,6 +17,7 @@
 #include "rtc.h"
 #include "tim.h"
 // Utils.
+#include "error.h"
 #include "math.h"
 #include "terminal.h"
 // Components.

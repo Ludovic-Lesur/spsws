@@ -23,7 +23,7 @@
 
 /*** POWER local global variables ***/
 
-static uint32_t power_domain_state[POWER_DOMAIN_LAST];
+static uint32_t power_domain_state[POWER_DOMAIN_LAST] = { [0 ... (POWER_DOMAIN_LAST - 1)] = 0 };
 
 /*** POWER local functions ***/
 

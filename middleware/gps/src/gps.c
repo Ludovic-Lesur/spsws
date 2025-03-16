@@ -25,7 +25,10 @@ typedef struct {
 
 /*** GPS local global variables ***/
 
-static GPS_context_t gps_ctx;
+static GPS_context_t gps_ctx = {
+    .process_flag = 0,
+    .acquisition_status = NEOM8X_ACQUISITION_STATUS_FAIL
+};
 
 /*** GPS local functions ***/
 

@@ -87,7 +87,7 @@ MCU_API_status_t MCU_API_open(MCU_API_config_t* mcu_api_config) {
     // Ignore unused parameters.
     SIGFOX_UNUSED(mcu_api_config);
     // Init timer.
-    tim_status = TIM_MCH_init(TIMER_INSTANCE_MCU_API, NVIC_PRIORITY_SIGFOX_TIMER);
+    tim_status = TIM_MCH_init(TIM_INSTANCE_MCU_API, NVIC_PRIORITY_SIGFOX_TIMER);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     SIGFOX_RETURN();
@@ -101,7 +101,7 @@ MCU_API_status_t MCU_API_close(void) {
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Release timer.
-    tim_status = TIM_MCH_de_init(TIMER_INSTANCE_MCU_API);
+    tim_status = TIM_MCH_de_init(TIM_INSTANCE_MCU_API);
     // Check status.
     if (tim_status != TIM_SUCCESS) {
         TIM_stack_error(ERROR_BASE_TIM_MCU_API);
@@ -141,7 +141,7 @@ MCU_API_status_t MCU_API_timer_start(MCU_API_timer_t* timer) {
     }
 #endif
     // Start timer.
-    tim_status = TIM_MCH_start_channel(TIMER_INSTANCE_MCU_API, (TIM_channel_t) (timer->instance), (timer->duration_ms), tim_waiting_mode);
+    tim_status = TIM_MCH_start_channel(TIM_INSTANCE_MCU_API, (TIM_channel_t) (timer->instance), (timer->duration_ms), tim_waiting_mode);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     SIGFOX_RETURN();
@@ -155,7 +155,7 @@ MCU_API_status_t MCU_API_timer_stop(MCU_API_timer_instance_t timer_instance) {
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Stop timer.
-    tim_status = TIM_MCH_stop_channel(TIMER_INSTANCE_MCU_API, (TIM_channel_t) timer_instance);
+    tim_status = TIM_MCH_stop_channel(TIM_INSTANCE_MCU_API, (TIM_channel_t) timer_instance);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     SIGFOX_RETURN();
@@ -169,7 +169,7 @@ MCU_API_status_t MCU_API_timer_status(MCU_API_timer_instance_t timer_instance, s
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Read status.
-    tim_status = TIM_MCH_get_channel_status(TIMER_INSTANCE_MCU_API, (TIM_channel_t) timer_instance, timer_has_elapsed);
+    tim_status = TIM_MCH_get_channel_status(TIM_INSTANCE_MCU_API, (TIM_channel_t) timer_instance, timer_has_elapsed);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     SIGFOX_RETURN();
@@ -183,7 +183,7 @@ MCU_API_status_t MCU_API_timer_wait_cplt(MCU_API_timer_instance_t timer_instance
     MCU_API_status_t status = MCU_API_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Wait for timer completion.
-    tim_status = TIM_MCH_wait_channel_completion(TIMER_INSTANCE_MCU_API, (TIM_channel_t) timer_instance);
+    tim_status = TIM_MCH_wait_channel_completion(TIM_INSTANCE_MCU_API, (TIM_channel_t) timer_instance);
     TIM_stack_exit_error(ERROR_BASE_TIM_MCU_API, (MCU_API_status_t) MCU_API_ERROR_DRIVER_TIM);
 errors:
     SIGFOX_RETURN();

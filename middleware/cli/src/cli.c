@@ -258,7 +258,10 @@ static const AT_command_t CLI_COMMANDS_LIST[] = {
 #endif
 };
 
-static CLI_context_t cli_ctx;
+static CLI_context_t cli_ctx = {
+    .at_process_flag = 0,
+    .at_parser_ptr = NULL
+};
 
 /*** CLI local functions ***/
 
