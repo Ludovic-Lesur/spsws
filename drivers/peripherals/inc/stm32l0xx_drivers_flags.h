@@ -8,6 +8,7 @@
 #ifndef __STM32L0XX_DRIVERS_FLAGS_H__
 #define __STM32L0XX_DRIVERS_FLAGS_H__
 
+#include "sigfox_ep_flags.h"
 #include "spsws_flags.h"
 
 /*** STM32L0xx drivers compilation flags ***/
@@ -15,15 +16,39 @@
 #define STM32L0XX_DRIVERS_DMA_CHANNEL_MASK              0x00
 
 #ifdef HW1_0
+#ifdef SIGFOX_EP_BIDIRECTIONAL
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 #define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x8006
+#else
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x0004
 #endif
+#else /* SIGFOX_EP_BIDIRECTIONAL */
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x8002
+#else
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x0000
+#endif
+#endif /* SIGFOX_EP_BIDIRECTIONAL */
+#endif /* HW1_0 */
 #ifdef HW2_0
+#ifdef SIGFOX_EP_BIDIRECTIONAL
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 #define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x8402
+#else
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x0002
 #endif
+#else /* SIGFOX_EP_BIDIRECTIONAL */
+#ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x8400
+#else
+#define STM32L0XX_DRIVERS_EXTI_GPIO_MASK                0x0000
+#endif
+#endif /* SIGFOX_EP_BIDIRECTIONAL */
+#endif /* HW2_0 */
 
 //#define STM32L0XX_DRIVERS_I2C_FAST_MODE
 
-#define STM32L0XX_DRIVERS_LPUART_MODE                   0
+//#define STM32L0XX_DRIVERS_LPUART_RS485
 //#define STM32L0XX_DRIVERS_LPUART_DISABLE_TX_0
 
 #define STM32L0XX_DRIVERS_RCC_HSE_ENABLE
@@ -36,7 +61,6 @@
 
 #define STM32L0XX_DRIVERS_TIM_MODE_MASK                 0x07
 
-#define STM32L0XX_DRIVERS_USART_MODE                    0
 #define STM32L0XX_DRIVERS_USART_DISABLE_TX_0
 
 #endif /* __STM32L0XX_DRIVERS_FLAGS_H__ */

@@ -522,8 +522,10 @@ RF_API_status_t RF_API_de_init(void) {
     RFE_status_t rfe_status = RFE_SUCCESS;
     // Release DIO2.
     GPIO_write(&GPIO_SX1232_DIO2, 0);
+#ifdef SIGFOX_EP_BIDIRECTIONAL
     // Release DIO0.
     EXTI_release_gpio(&GPIO_SX1232_DIO0, GPIO_MODE_OUTPUT);
+#endif
     // Release symbol profile timer.
     tim_status = TIM_STD_de_init(TIM_INSTANCE_RF_API);
     // Check status.
