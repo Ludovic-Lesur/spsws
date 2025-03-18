@@ -21,7 +21,7 @@
 #include "rtc.h"
 // Utils.
 #include "error.h"
-#include "math.h"
+#include "maths.h"
 #include "types.h"
 // Components.
 #include "dps310.h"

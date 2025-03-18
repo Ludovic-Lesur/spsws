@@ -18,7 +18,7 @@
 #include "tim.h"
 // Utils.
 #include "error.h"
-#include "math.h"
+#include "maths.h"
 #include "terminal.h"
 // Components.
 #include "dps310.h"
