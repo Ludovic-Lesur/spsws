@@ -608,9 +608,9 @@ static void _SPSWS_update_pwut(void) {
     rtc_status = RTC_get_time(&spsws_ctx.current_time);
     RTC_stack_error(ERROR_BASE_RTC);
     // Update previous wake-up time.
-    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), ((spsws_ctx.current_time.year & 0xFF00) >> 8));
+    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 0), (uint8_t) (spsws_ctx.current_time.year >> 8));
     NVM_stack_error(ERROR_BASE_NVM);
-    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), ((spsws_ctx.current_time.year & 0x00FF) >> 0));
+    nvm_status = NVM_write_byte((NVM_ADDRESS_PREVIOUS_WAKE_UP_YEAR + 1), (uint8_t) (spsws_ctx.current_time.year >> 0));
     NVM_stack_error(ERROR_BASE_NVM);
     nvm_status = NVM_write_byte(NVM_ADDRESS_PREVIOUS_WAKE_UP_MONTH, spsws_ctx.current_time.month);
     NVM_stack_error(ERROR_BASE_NVM);
@@ -809,12 +809,12 @@ int main(void) {
             spsws_ctx.state = SPSWS_STATE_RTC_CALIBRATION;
             break;
         case SPSWS_STATE_WAKEUP:
-            // Update flags.
-            _SPSWS_update_time_flags();
             // Check alarm flag..
             if (spsws_ctx.flags.fixed_hour_alarm != 0) {
                 // Clear flag.
                 spsws_ctx.flags.fixed_hour_alarm = 0;
+                // Update flags.
+                _SPSWS_update_time_flags();
                 // Check hour change flag.
                 if (spsws_ctx.flags.hour_changed != 0) {
                     // Valid fixed hour wake-up.
@@ -868,24 +868,26 @@ int main(void) {
                 // Update RTC registers.
                 rtc_status = RTC_set_time(&spsws_ctx.current_time);
                 RTC_stack_error(ERROR_BASE_RTC);
-                // Update PWUT when first calibration.
-                if (spsws_ctx.status.first_rtc_calibration == 0) {
-                    _SPSWS_update_pwut();
-                }
                 // Update status bit.
                 if (rtc_status == RTC_SUCCESS) {
                     spsws_ctx.status.first_rtc_calibration = 1;
                     spsws_ctx.status.daily_rtc_calibration = 1;
                 }
             }
-            else {
-                // In POR case, to avoid wake-up directly after RTC calibration (alarm A will occur during the first GPS time acquisition because of the RTC reset and the random delay).
+            // Compute next state.
+            if (spsws_ctx.flags.por != 0) {
+                // In POR condition, RTC alarm will occur during the first GPS time acquisition because of the RTC reset and the random delay.
+                // Flags are manually cleared to avoid wake-up directly after the first RTC calibration.
                 spsws_ctx.flags.fixed_hour_alarm = 0;
+                spsws_ctx.flags.wake_up = 0;
+                // Update state.
+                spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
             }
-            // Update done flag.
+            else {
+                spsws_ctx.state = SPSWS_STATE_OFF;
+            }
+            // Update flags.
             spsws_ctx.flags.daily_rtc_calibration_done = 1;
-            // Send error stack at start
-            spsws_ctx.state = (spsws_ctx.flags.por != 0) ? SPSWS_STATE_ERROR_STACK : SPSWS_STATE_OFF;
             spsws_ctx.flags.por = 0;
             break;
         case SPSWS_STATE_MEASURE:
