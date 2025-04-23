@@ -36,9 +36,6 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, uint32_t baud_rate, TERMINA
     usart_config.rxne_irq_callback = rx_irq_callback;
     usart_status = USART_init(USART_INSTANCE_AT, &USART_GPIO_AT, &usart_config);
     USART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
-    // Start reception.
-    usart_status = USART_enable_rx(USART_INSTANCE_AT);
-    USART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
 errors:
     return status;
 }
@@ -57,6 +54,34 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
 }
 
 /*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_enable_rx(uint8_t instance) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    USART_status_t usart_status = USART_SUCCESS;
+    // Unused parameter.
+    UNUSED(instance);
+    // Start reception.
+    usart_status = USART_enable_rx(USART_INSTANCE_AT);
+    USART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
+errors:
+    return status;
+}
+
+/*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_disable_rx(uint8_t instance) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    USART_status_t usart_status = USART_SUCCESS;
+    // Unused parameter.
+    UNUSED(instance);
+    // Stop reception.
+    usart_status = USART_disable_rx(USART_INSTANCE_AT);
+    USART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
+errors:
+    return status;
+}
+
+/*******************************************************************/
 TERMINAL_status_t TERMINAL_HW_write(uint8_t instance, uint8_t* data, uint32_t data_size_bytes) {
     // Local variables.
     TERMINAL_status_t status = TERMINAL_SUCCESS;
@@ -69,5 +94,17 @@ TERMINAL_status_t TERMINAL_HW_write(uint8_t instance, uint8_t* data, uint32_t da
 errors:
     return status;
 }
+
+#ifdef EMBEDDED_UTILS_TERMINAL_MODE_BUS
+/*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_set_destination_address(uint8_t instance, uint8_t destination_address) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    /* To be implemented */
+    UNUSED(instance);
+    UNUSED(destination_address);
+    return status;
+}
+#endif
 
 #endif /* EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE */
