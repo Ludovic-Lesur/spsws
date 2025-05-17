@@ -16,6 +16,7 @@
 #include "power.h"
 #include "sen15901.h"
 #include "sensors_hw.h"
+#include "spsws_flags.h"
 #include "types.h"
 
 #ifndef SEN15901_DRIVER_DISABLE
@@ -31,13 +32,17 @@
 SEN15901_status_t SEN15901_HW_init(SEN15901_HW_configuration_t* configuration) {
     // Local variables.
     SEN15901_status_t status = SEN15901_SUCCESS;
+#ifndef SPSWS_WIND_VANE_ULTIMETER
     // Init wind speed GPIO.
     EXTI_configure_gpio(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_PULL_NONE, EXTI_TRIGGER_FALLING_EDGE, (configuration->wind_speed_edge_irq_callback), NVIC_PRIORITY_WIND_SPEED);
+#endif
     // Init rainfall GPIO.
     EXTI_configure_gpio(&SEN15901_HW_GPIO_RAINFALL, GPIO_PULL_NONE, EXTI_TRIGGER_FALLING_EDGE, (configuration->rainfall_edge_irq_callback), NVIC_PRIORITY_RAINFALL);
+#ifndef SPSWS_WIND_VANE_ULTIMETER
     // Store tick second callback which will be used in main (RTC).
-    SENSORS_HW_set_sen15901_tick_second_callback(configuration->tick_second_irq_callback);
+    SENSORS_HW_set_wind_tick_second_callback(configuration->tick_second_irq_callback);
     // Note: ADC will be initialized in the power enable function.
+#endif
     return status;
 }
 
@@ -46,11 +51,14 @@ SEN15901_status_t SEN15901_HW_de_init(void) {
     // Local variables.
     SEN15901_status_t status = SEN15901_SUCCESS;
     // Release GPIOs.
+#ifndef SPSWS_WIND_VANE_ULTIMETER
     EXTI_release_gpio(&SEN15901_HW_GPIO_WIND_SPEED, GPIO_MODE_ANALOG);
+#endif
     EXTI_release_gpio(&SEN15901_HW_GPIO_RAINFALL, GPIO_MODE_ANALOG);
     return status;
 }
 
+#ifndef SPSWS_WIND_VANE_ULTIMETER
 /*******************************************************************/
 SEN15901_status_t SEN15901_HW_set_wind_speed_interrupt(uint8_t enable) {
     // Local variables.
@@ -65,6 +73,7 @@ SEN15901_status_t SEN15901_HW_set_wind_speed_interrupt(uint8_t enable) {
     }
     return status;
 }
+#endif
 
 /*******************************************************************/
 SEN15901_status_t SEN15901_HW_set_rainfall_interrupt(uint8_t enable) {
@@ -81,6 +90,7 @@ SEN15901_status_t SEN15901_HW_set_rainfall_interrupt(uint8_t enable) {
     return status;
 }
 
+#ifndef SPSWS_WIND_VANE_ULTIMETER
 /*******************************************************************/
 SEN15901_status_t SEN15901_HW_adc_get_wind_direction_ratio(int32_t* wind_direction_ratio_permille) {
     // Local variables.
@@ -96,5 +106,6 @@ errors:
     POWER_disable(POWER_REQUESTER_ID_SEN15901, POWER_DOMAIN_ANALOG);
     return status;
 }
+#endif
 
 #endif /* SEN15901_DRIVER_DISABLE */

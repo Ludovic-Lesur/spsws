@@ -85,14 +85,14 @@ errors:
 
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 /*******************************************************************/
-void SENSORS_HW_set_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t tick_second_callback) {
+void SENSORS_HW_set_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t tick_second_callback) {
     sensors_hw_sen15901_tick_second_callback = tick_second_callback;
 }
 #endif
 
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 /*******************************************************************/
-void SENSORS_HW_get_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t* tick_second_callback) {
+void SENSORS_HW_get_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t* tick_second_callback) {
     (*tick_second_callback) = sensors_hw_sen15901_tick_second_callback;
 }
 #endif

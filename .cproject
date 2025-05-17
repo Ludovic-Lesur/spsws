@@ -69,6 +69,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sht3x-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/si1133-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sx1232-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/ultimeter-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/gps/inc&quot;"/>
@@ -100,6 +101,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sht3x-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/si1133-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sx1232-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/ultimeter-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/gps/inc&quot;"/>
@@ -235,6 +237,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sht3x-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/si1133-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sx1232-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/ultimeter-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/gps/inc&quot;"/>
@@ -266,6 +269,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sht3x-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/si1133-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/sx1232-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/ultimeter-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/power/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/gps/inc&quot;"/>

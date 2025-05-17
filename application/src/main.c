@@ -31,6 +31,7 @@
 #include "sht3x.h"
 #include "si1133.h"
 #include "sigfox_types.h"
+#include "ultimeter.h"
 // Middleware.
 #include "analog.h"
 #include "cli.h"
@@ -119,6 +120,9 @@ typedef union {
 typedef union {
     struct {
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+        unsigned ultimeter_process :1;
+#endif
         unsigned sen15901_process :1;
 #endif
         unsigned radio_enabled : 1;
@@ -236,7 +240,7 @@ typedef struct {
     volatile SPSWS_flags_t flags;
     volatile uint32_t seconds_counter;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-    SEN15901_HW_tick_second_irq_cb_t sen15901_tick_second_callback;
+    SENSORS_HW_wind_tick_second_irq_cb_t wind_tick_second_callback;
 #endif
 #ifndef SPSWS_MODE_CLI
     // Wake-up management.
@@ -266,8 +270,8 @@ static void _SPSWS_tick_second_callback(void) {
     // Update second counter.
     spsws_ctx.seconds_counter++;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-    if (spsws_ctx.sen15901_tick_second_callback != NULL) {
-        spsws_ctx.sen15901_tick_second_callback();
+    if (spsws_ctx.wind_tick_second_callback != NULL) {
+        spsws_ctx.wind_tick_second_callback();
     }
 #endif
 }
@@ -283,6 +287,14 @@ static void _SPSWS_fixed_hour_alarm_callback(void) {
 static void _SPSWS_sen15901_process_callback(void) {
     // Update local flag.
     spsws_ctx.flags.sen15901_process = 1;
+}
+#endif
+
+#if ((defined SPSWS_WIND_RAINFALL_MEASUREMENTS) && (defined SPSWS_WIND_VANE_ULTIMETER))
+/*******************************************************************/
+static void _SPSWS_ultimeter_process_callback(void) {
+    // Update local flag.
+    spsws_ctx.flags.ultimeter_process = 1;
 }
 #endif
 
@@ -318,6 +330,9 @@ static void _SPSWS_reset_measurements(void) {
     spsws_ctx.measurements.patm_abs_pa.sample_count = 0;
     spsws_ctx.measurements.patm_abs_pa.full_flag = 0;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ULTIMETER_reset_measurements();
+#endif
     SEN15901_reset_measurements();
 #endif
     // Monitoring data.
@@ -343,8 +358,13 @@ static void _SPSWS_compute_final_measurements(void) {
     int32_t generic_s32_1 = 0;
     uint32_t generic_u32 = 0;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-    SEN15901_status_t sen15901_status = SEN15901_SUCCESS;
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ULTIMETER_status_t ultimeter_status = ULTIMETER_SUCCESS;
+    ULTIMETER_wind_direction_status_t wind_direction_status = ULTIMETER_WIND_DIRECTION_STATUS_AVAILABLE;
+#else
     SEN15901_wind_direction_status_t wind_direction_status = SEN15901_WIND_DIRECTION_STATUS_AVAILABLE;
+#endif
+    SEN15901_status_t sen15901_status = SEN15901_SUCCESS;
     int32_t generic_s32_2 = 0;
 #endif
     // Temperature.
@@ -483,19 +503,33 @@ static void _SPSWS_compute_final_measurements(void) {
     // Wind speed.
     spsws_ctx.sigfox_weather_data.wind_speed_average_kmh = SPSWS_ERROR_VALUE_WIND;
     spsws_ctx.sigfox_weather_data.wind_speed_peak_kmh = SPSWS_ERROR_VALUE_WIND;
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ultimeter_status = ULTIMETER_get_wind_speed(&generic_s32_1, &generic_s32_2);
+    ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+    // Check status.
+    if (ultimeter_status == ULTIMETER_SUCCESS) {
+#else
     sen15901_status = SEN15901_get_wind_speed(&generic_s32_1, &generic_s32_2);
     SEN15901_stack_error(ERROR_BASE_SEN15901);
     // Check status.
     if (sen15901_status == SEN15901_SUCCESS) {
+#endif
         spsws_ctx.sigfox_weather_data.wind_speed_average_kmh = (generic_s32_1 / 1000);
         spsws_ctx.sigfox_weather_data.wind_speed_peak_kmh = (generic_s32_2 / 1000);
     }
     // Wind direction.
     spsws_ctx.sigfox_weather_data.wind_direction_average_two_degrees = SPSWS_ERROR_VALUE_WIND;
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ultimeter_status = ULTIMETER_get_wind_direction(&generic_s32_1, &wind_direction_status);
+    ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+    // Check status.
+    if ((ultimeter_status == ULTIMETER_SUCCESS) && (wind_direction_status == ULTIMETER_WIND_DIRECTION_STATUS_AVAILABLE)) {
+#else
     sen15901_status = SEN15901_get_wind_direction(&generic_s32_1, &wind_direction_status);
     SEN15901_stack_error(ERROR_BASE_SEN15901);
     // Check status.
     if ((sen15901_status == SEN15901_SUCCESS) && (wind_direction_status == SEN15901_WIND_DIRECTION_STATUS_AVAILABLE)) {
+#endif
         spsws_ctx.sigfox_weather_data.wind_direction_average_two_degrees = (generic_s32_1 >> 1);
     }
     // Rainfall.
@@ -680,6 +714,9 @@ static void _SPSWS_init_hw(void) {
 #endif
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
     SEN15901_status_t sen15901_status = SEN15901_SUCCESS;
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ULTIMETER_status_t ultimeter_status = ULTIMETER_SUCCESS;
+#endif
 #endif
     RTC_alarm_configuration_t rtc_alarm_config;
     uint8_t device_id_lsbyte = 0;
@@ -731,7 +768,11 @@ static void _SPSWS_init_hw(void) {
     // Init wind vane and rainfall driver.
     sen15901_status = SEN15901_init(&_SPSWS_sen15901_process_callback);
     SEN15901_stack_error(ERROR_BASE_SEN15901);
-    SENSORS_HW_get_sen15901_tick_second_callback(&spsws_ctx.sen15901_tick_second_callback);
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ultimeter_status = ULTIMETER_init(&_SPSWS_ultimeter_process_callback);
+    ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+#endif
+    SENSORS_HW_get_wind_tick_second_callback(&spsws_ctx.wind_tick_second_callback);
 #endif
     // Init LED pin.
     GPIO_configure(&GPIO_LED, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -757,6 +798,9 @@ int main(void) {
     SI1133_status_t si1133_status = SI1133_SUCCESS;
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
     SEN15901_status_t sen15901_status = SEN15901_SUCCESS;
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+    ULTIMETER_status_t ultimeter_status = ULTIMETER_SUCCESS;
+#endif
 #endif
     GPS_time_t gps_time;
     GPS_position_t gps_position;
@@ -1089,8 +1133,13 @@ int main(void) {
             // Switch to internal clock.
             _SPSWS_set_clock(0);
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+            ultimeter_status = ULTIMETER_set_wind_measurement(1);
+            ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+#else
             sen15901_status = SEN15901_set_wind_measurement(1);
             SEN15901_stack_error(ERROR_BASE_SEN15901);
+#endif
             sen15901_status = SEN15901_set_rainfall_measurement(1);
             SEN15901_stack_error(ERROR_BASE_SEN15901);
 #endif
@@ -1105,7 +1154,16 @@ int main(void) {
             IWDG_reload();
 #endif
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
-            // Check SEN15901 process flag.
+            // Check wind driver process flag.
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+            if (spsws_ctx.flags.ultimeter_process != 0) {
+                // Clear flag.
+                spsws_ctx.flags.ultimeter_process = 0;
+                // Process driver.
+                ultimeter_status = ULTIMETER_process();
+                ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+            }
+#else
             if (spsws_ctx.flags.sen15901_process != 0) {
                 // Clear flag.
                 spsws_ctx.flags.sen15901_process = 0;
@@ -1113,6 +1171,7 @@ int main(void) {
                 sen15901_status = SEN15901_process();
                 SEN15901_stack_error(ERROR_BASE_SEN15901);
             }
+#endif
 #endif
             // Check measurements period.
             if (spsws_ctx.seconds_counter >= SPSWS_MEASUREMENT_PERIOD_SECONDS) {
@@ -1134,8 +1193,13 @@ int main(void) {
             if (spsws_ctx.flags.wake_up != 0) {
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
                 // Stop wind measurement.
+#ifdef SPSWS_WIND_VANE_ULTIMETER
+                ultimeter_status = ULTIMETER_set_wind_measurement(0);
+                ULTIMETER_stack_error(ERROR_BASE_ULTIMETER);
+#else
                 sen15901_status = SEN15901_set_wind_measurement(0);
                 SEN15901_stack_error(ERROR_BASE_SEN15901);
+#endif
 #endif
                 // Clear flag and update state.
                 spsws_ctx.flags.wake_up = 0;

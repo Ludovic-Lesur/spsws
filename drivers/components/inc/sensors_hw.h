@@ -13,6 +13,10 @@
 #include "spsws_flags.h"
 #include "types.h"
 
+/*** SENSORS HW structures ***/
+
+typedef void (*SENSORS_HW_wind_tick_second_irq_cb_t)(void);
+
 /*** SENSORS HW functions ***/
 
 /*!******************************************************************
@@ -69,24 +73,24 @@ ERROR_code_t SENSORS_HW_delay_milliseconds(ERROR_code_t delay_error_base, uint32
 
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 /*!******************************************************************
- * \fn void SENSORS_HW_set_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t tick_second_callback)
- * \brief Store SEN15901 driver tick second callback address.
+ * \fn void SENSORS_HW_set_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t tick_second_callback)
+ * \brief Store wind driver tick second callback address.
  * \param[in]   tick_second_callback: Callback given by the driver.
  * \param[out]  none
  * \retval      none
  *******************************************************************/
-void SENSORS_HW_set_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t tick_second_callback);
+void SENSORS_HW_set_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t tick_second_callback);
 #endif
 
 #ifdef SPSWS_WIND_RAINFALL_MEASUREMENTS
 /*!******************************************************************
- * \fn void SENSORS_HW_get_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t* tick_second_callback)
- * \brief Read SEN15901 driver tick second callback address.
+ * \fn void SENSORS_HW_get_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t* tick_second_callback)
+ * \brief Read wind driver tick second callback address.
  * \param[in]   none
  * \param[out]  tick_second_callback: Pointer to the callback address.
  * \retval      none
  *******************************************************************/
-void SENSORS_HW_get_sen15901_tick_second_callback(SEN15901_HW_tick_second_irq_cb_t* tick_second_callback);
+void SENSORS_HW_get_wind_tick_second_callback(SENSORS_HW_wind_tick_second_irq_cb_t* tick_second_callback);
 #endif
 
 #endif /* __SENSORS_HW_H__ */
