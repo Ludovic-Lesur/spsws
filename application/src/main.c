@@ -1110,6 +1110,8 @@ int main(void) {
             spsws_ctx.state = SPSWS_STATE_ERROR_STACK;
             break;
         case SPSWS_STATE_ERROR_STACK:
+            // Import Sigfox library error stack.
+            ERROR_import_sigfox_stack();
             // Check stack.
             if (ERROR_stack_is_empty() == 0) {
                 // Read error stack.
