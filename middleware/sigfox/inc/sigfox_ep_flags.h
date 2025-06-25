@@ -203,7 +203,9 @@
  * \def SIGFOX_EP_CERTIFICATION
  * \brief Enable certification features if defined.
  *******************************************************************/
+#if ((defined HW2_0) && (defined SPSWS_MODE_CLI))
 #define SIGFOX_EP_CERTIFICATION
+#endif
 
 /*!******************************************************************
  * \def SIGFOX_EP_PUBLIC_KEY_CAPABLE
