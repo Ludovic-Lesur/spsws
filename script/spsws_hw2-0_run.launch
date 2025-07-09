@@ -19,7 +19,7 @@
     <booleanAttribute key="org.eclipse.cdt.launch.DEBUGGER_STOP_AT_MAIN" value="true"/>
     <stringAttribute key="org.eclipse.cdt.launch.DEBUGGER_STOP_AT_MAIN_SYMBOL" value="main"/>
     <stringAttribute key="org.eclipse.cdt.launch.PROGRAM_ARGUMENTS" value="-speed 4000&#10;-device STM32L071CB&#10;-If SWD&#10;script/spsws_hw2-0.jlink"/>
-    <stringAttribute key="org.eclipse.cdt.launch.PROGRAM_NAME" value="/home/ludo/jlink/JLinkExe"/>
+    <stringAttribute key="org.eclipse.cdt.launch.PROGRAM_NAME" value="${env_var:HOME}/jlink/JLinkExe"/>
     <stringAttribute key="org.eclipse.cdt.launch.PROJECT_ATTR" value="spsws"/>
     <booleanAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_AUTO_ATTR" value="false"/>
     <stringAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_ID_ATTR" value="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1628359852.595999033"/>
